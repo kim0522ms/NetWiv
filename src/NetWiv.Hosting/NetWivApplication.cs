@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace NetWiv.Hosting;
 
@@ -18,6 +19,7 @@ public sealed partial class NetWivApplication : IDisposable, IAsyncDisposable
 {
     private readonly IHost _host;
     private readonly App _app;
+    private readonly TimeSpan _shutdownTimeout;
     private int _started;
     private bool _disposed;
 
@@ -29,6 +31,7 @@ public sealed partial class NetWivApplication : IDisposable, IAsyncDisposable
         Environment = host.Services.GetRequiredService<IHostEnvironment>();
         Configuration = host.Services.GetRequiredService<IConfiguration>();
         Logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger(Environment.ApplicationName);
+        _shutdownTimeout = host.Services.GetRequiredService<IOptions<HostOptions>>().Value.ShutdownTimeout;
     }
 
     public static NetWivApplicationBuilder CreateBuilder() => CreateBuilder(new HostApplicationBuilderSettings());
@@ -52,8 +55,9 @@ public sealed partial class NetWivApplication : IDisposable, IAsyncDisposable
 
     /// <summary>
     /// Starts the host, runs the desktop event loop and stops the host. <see cref="IHostApplicationLifetime.StopApplication"/>
-    /// exits the event loop. A restart requested through <see cref="AppHandle.Restart"/> relaunches only after
-    /// hosted services have stopped and both the app and the service provider have been disposed.
+    /// exits the event loop. After the loop returns, commands still in flight are cancelled and awaited for up to
+    /// <see cref="HostOptions.ShutdownTimeout"/> before hosted services stop. A restart requested through
+    /// <see cref="AppHandle.Restart"/> relaunches only after that, once both the app and the service provider have been disposed.
     /// </summary>
     public void Run()
     {
@@ -71,10 +75,16 @@ public sealed partial class NetWivApplication : IDisposable, IAsyncDisposable
         catch
         {
             // Stop hosted services without replacing the event-loop failure.
-            try { _host.StopAsync().GetAwaiter().GetResult(); }
+            try
+            {
+                DrainInvocationsAsync().GetAwaiter().GetResult();
+                _host.StopAsync().GetAwaiter().GetResult();
+            }
             catch (Exception stopError) { HostingLog.StopFailed(Logger, stopError); }
             throw;
         }
+        // Like a server draining requests, let commands finish before their hosted services and singletons go away.
+        DrainInvocationsAsync().GetAwaiter().GetResult();
         _host.StopAsync().GetAwaiter().GetResult();
         if (restart is not null)
         {
@@ -90,12 +100,19 @@ public sealed partial class NetWivApplication : IDisposable, IAsyncDisposable
         catch (InvalidOperationException) { }
     }
 
-    /// <summary>Disposes the app and its plugins, then the service provider.</summary>
+    /// <summary>
+    /// Cancels commands in flight and waits for them for up to <see cref="HostOptions.ShutdownTimeout"/>,
+    /// then disposes the app and its plugins, then the service provider.
+    /// </summary>
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
-        try { _app.Dispose(); }
+        try
+        {
+            DrainInvocationsAsync().GetAwaiter().GetResult();
+            _app.Dispose();
+        }
         finally { _host.Dispose(); }
     }
 
@@ -103,7 +120,11 @@ public sealed partial class NetWivApplication : IDisposable, IAsyncDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        try { _app.Dispose(); }
+        try
+        {
+            await DrainInvocationsAsync().ConfigureAwait(false);
+            _app.Dispose();
+        }
         finally
         {
             if (_host is IAsyncDisposable asyncHost) await asyncHost.DisposeAsync().ConfigureAwait(false);
@@ -111,9 +132,22 @@ public sealed partial class NetWivApplication : IDisposable, IAsyncDisposable
         }
     }
 
+    private async Task DrainInvocationsAsync()
+    {
+        _app.Handle.CancelInvocations();
+        using var timeout = new CancellationTokenSource(_shutdownTimeout);
+        // Like the host after its shutdown timeout, continue rather than hang on a command that ignores cancellation.
+        if (!await _app.Handle.WaitForInvocationsAsync(timeout.Token).ConfigureAwait(false))
+            HostingLog.InvocationsTimedOut(Logger, _shutdownTimeout);
+    }
+
     private static partial class HostingLog
     {
         [LoggerMessage(EventId = 1, Level = LogLevel.Error, Message = "Hosted services failed to stop after the desktop event loop failed.")]
         internal static partial void StopFailed(ILogger logger, Exception exception);
+
+        [LoggerMessage(EventId = 2, Level = LogLevel.Warning,
+            Message = "Commands were still running after the shutdown timeout of {Timeout}; continuing shutdown without them.")]
+        internal static partial void InvocationsTimedOut(ILogger logger, TimeSpan timeout);
     }
 }

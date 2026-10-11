@@ -56,6 +56,93 @@ internal static class HostingTests
         Assert.True(first.GetString() != second.GetString(), "Two invocations shared one service scope.");
     }
 
+    internal static async Task ShutdownWaitsForCommandsInFlight()
+    {
+        var events = new ConcurrentQueue<string>();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<JsonElement>? pending = null;
+        var builder = CreateSlowCommandBuilder(events, release);
+        builder.Services.AddHostedService<RecordingHostedService>();
+        builder.Desktop.Setup(app =>
+        {
+            pending = app.Handle.InvokeAsync("slow", JsonValue.EmptyObject).AsTask();
+            app.Handle.Exit();
+        });
+        var app = builder.Build();
+        _ = Task.Delay(300).ContinueWith(_ => release.SetResult(), TaskScheduler.Default);
+
+        app.Run();
+        await app.DisposeAsync();
+        await pending!;
+
+        Assert.Equal("hosted:start|runtime:run|runtime:exit|runtime:returned|command:done|hosted:stop|singleton:disposed", string.Join("|", events));
+    }
+
+    internal static async Task DisposeWaitsForCommandsInFlight()
+    {
+        foreach (var asynchronous in new[] { true, false })
+        {
+            var events = new ConcurrentQueue<string>();
+            var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var app = CreateSlowCommandBuilder(events, release).Build();
+            var pending = app.Handle.InvokeAsync("slow", JsonValue.EmptyObject).AsTask();
+            _ = Task.Delay(300).ContinueWith(_ => release.SetResult(), TaskScheduler.Default);
+
+            if (asynchronous) await app.DisposeAsync();
+            else app.Dispose();
+            await pending;
+
+            Assert.Equal("command:done|singleton:disposed", string.Join("|", events));
+        }
+    }
+
+    internal static async Task ShutdownTimeoutBoundsHungCommands()
+    {
+        var events = new ConcurrentQueue<string>();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var records = new CapturingLoggerProvider();
+        Task<JsonElement>? pending = null;
+        var builder = CreateSlowCommandBuilder(events, release);
+        builder.Logging.AddProvider(records);
+        builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromMilliseconds(200));
+        builder.Desktop.Setup(app =>
+        {
+            pending = app.Handle.InvokeAsync("slow", JsonValue.EmptyObject).AsTask();
+            app.Handle.Exit();
+        });
+        var app = builder.Build();
+        var watch = Stopwatch.StartNew();
+        try
+        {
+            app.Run();
+            Assert.True(watch.Elapsed < TimeSpan.FromSeconds(5), "Shutdown waited past its timeout for a command that ignores cancellation.");
+            Assert.True(records.Records.Any(record => record.Level == LogLevel.Warning && record.EventId == 2 && record.Message.Contains("shutdown timeout", StringComparison.Ordinal)),
+                "An abandoned command was not reported.");
+        }
+        finally
+        {
+            release.SetResult();
+            await pending!.ContinueWith(_ => { }, TaskScheduler.Default);
+            await app.DisposeAsync();
+        }
+    }
+
+    // The "slow" command ignores its cancellation token, then uses a singleton that fails once disposed.
+    private static NetWivApplicationBuilder CreateSlowCommandBuilder(ConcurrentQueue<string> events, TaskCompletionSource release)
+    {
+        var builder = NetWivApplication.CreateBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
+        builder.Services.AddSingleton(events);
+        builder.Services.AddSingleton<TrackedSingleton>();
+        builder.Desktop.UseRuntime(new BlockingRuntime(events)).RegisterCommand("slow", async (context, _, _) =>
+        {
+            await release.Task;
+            context.Services.GetRequiredService<TrackedSingleton>().Use();
+            events.Enqueue("command:done");
+            return JsonValue.Null;
+        });
+        return builder;
+    }
+
     internal static Task StopApplicationExitsEventLoop()
     {
         // A stop requested while the event loop runs exits it; one requested during startup skips it.
@@ -126,6 +213,13 @@ internal static class HostingTests
     {
         using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         while (!File.Exists(path)) await Task.Delay(20, stop.Token);
+    }
+
+    private sealed class TrackedSingleton(ConcurrentQueue<string> events) : IDisposable
+    {
+        private bool _disposed;
+        public void Use() => ObjectDisposedException.ThrowIf(_disposed, this);
+        public void Dispose() { _disposed = true; events.Enqueue("singleton:disposed"); }
     }
 
     internal sealed class InvocationProbe

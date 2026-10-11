@@ -166,7 +166,12 @@ as with `App.Run`:
    so do not touch windows or webviews in `StartAsync`. Use
    `builder.Desktop.Setup(...)` for work that needs the UI.
 2. Run the native event loop on the calling thread.
-3. Stop the host after the loop returns.
+3. After the loop returns, cancel commands still in flight and wait for them,
+   including their scope disposal, for up to `HostOptions.ShutdownTimeout`
+   (30 seconds by default). A command that ignores cancellation past the
+   timeout is abandoned with a warning (event 2 on `NetWivApplication.Logger`), as the host
+   abandons a hosted service that does not stop in time.
+4. Stop the host.
 
 `IHostApplicationLifetime.StopApplication`, including Ctrl+C or SIGTERM from the
 console lifetime, exits the event loop. A stop requested before the loop starts
@@ -177,8 +182,9 @@ own the native UI loop.
 the app and the service provider have been disposed. `App.Run` without the host
 keeps its existing restart behavior.
 
-Disposing `NetWivApplication` disposes the app and its plugins first, then the
-service provider and its singletons.
+Disposing `NetWivApplication` performs the same bounded wait for commands in
+flight, then disposes the app and its plugins, then the service provider and its
+singletons. This also applies when the app is disposed without running.
 
 ## Without the host
 

@@ -66,10 +66,17 @@ for separate validation paths.
 ## Continuous integration
 
 The [Build and test workflow](../.github/workflows/ci.yml) runs on pushes to
-`main`, pull requests and manual dispatch. Changes limited to `docs/`, root
+`main`, pull requests and manual dispatch. Pushes limited to `docs/`, root
 `README.md` and `AGENTS.md` skip automatic runs; manual dispatch always remains
-available. If branch protection requires this workflow, account for GitHub's
-pending checks on path-filtered runs before making it required.
+available. Pull requests always run change classification and the `CI required`
+check. Documentation-only PRs skip the desktop matrix; other PRs require all
+four desktop jobs to succeed. Classification failures, cancelled builds and
+unexpected skips fail the required check.
+
+The `main` branch ruleset blocks force pushes and deletion, requires a pull
+request with resolved review conversations, and requires `CI required` from
+GitHub Actions against an up-to-date base branch. No bypass actors are configured.
+Review approval is optional so a single maintainer can merge their own PRs.
 
 Windows Server 2025 x64, Ubuntu 24.04 x64, macOS 15 Apple Silicon (`macos-15`)
 and macOS 15 Intel (`macos-15-intel`)

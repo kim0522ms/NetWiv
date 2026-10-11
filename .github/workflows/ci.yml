@@ -8,10 +8,6 @@ on:
       - 'README.md'
       - 'AGENTS.md'
   pull_request:
-    paths-ignore:
-      - 'docs/**'
-      - 'README.md'
-      - 'AGENTS.md'
   workflow_dispatch:
 
 permissions:
@@ -22,7 +18,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Classify changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      build: ${{ steps.classify.outputs.build }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Detect build inputs
+        id: classify
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [[ "$EVENT_NAME" != pull_request ]]; then
+            echo 'build=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --no-renames --name-only -z "$BASE_SHA" HEAD > "$RUNNER_TEMP/changed-paths"
+          build=false
+          while IFS= read -r -d '' file; do
+            case "$file" in
+              docs/*|README.md|AGENTS.md) ;;
+              *) build=true ;;
+            esac
+          done < "$RUNNER_TEMP/changed-paths"
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+
   desktop:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     name: ${{ matrix.rid }} build, tests and NativeAOT
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -276,3 +306,23 @@ jobs:
           path: artifacts/ci/
           retention-days: 7
           if-no-files-found: warn
+
+  required:
+    name: CI required
+    if: always()
+    needs: [changes, desktop]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require successful validation or documentation-only changes
+        shell: bash
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          BUILD_REQUIRED: ${{ needs.changes.outputs.build }}
+          DESKTOP_RESULT: ${{ needs.desktop.result }}
+        run: |
+          [[ "$CHANGES_RESULT" == success ]] || exit 1
+          case "$BUILD_REQUIRED:$DESKTOP_RESULT" in
+            true:success|false:skipped) exit 0 ;;
+            *) echo "Required validation did not pass: $BUILD_REQUIRED:$DESKTOP_RESULT"; exit 1 ;;
+          esac

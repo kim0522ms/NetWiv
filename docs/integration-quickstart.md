@@ -1,8 +1,10 @@
 # Create a React app from packages
 
 Use the NetWiv CLI to create a desktop application with a React frontend and
-C# backend. You currently need a separately supplied NuGet feed or one built
-from source. Cloning the repository does not provide a prebuilt package feed.
+C# backend. Use the `packages/` directory from a published
+[Release bundle](release-packages.md), a separately supplied NuGet feed, or one
+built from source. Release availability depends on maintainer publication;
+cloning the repository does not provide a prebuilt package feed.
 To create packages yourself, see [framework development](development.md#create-a-local-package-feed).
 Full TAURI® compatibility and release validation remain incomplete.
 

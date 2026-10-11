@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>NetWiv.Conformance</AssemblyName>
+    <RootNamespace>NetWiv.Conformance</RootNamespace>
+    <PublishAot>true</PublishAot>
+    <NetWivRuntime Condition="'$(NetWivRuntime)' == '' and $([MSBuild]::IsOSPlatform('OSX'))">wry</NetWivRuntime>
+    <NetWivRuntime Condition="'$(NetWivRuntime)' == ''">direct</NetWivRuntime>
+    <DefineConstants Condition="'$(NetWivRuntime)' == 'wry'">$(DefineConstants);NETWIV_WRY</DefineConstants>
+    <DefineConstants Condition="'$(NetWivConfigPath)' != ''">$(DefineConstants);NETWIV_EMBEDDED_CONFIG</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../frontend/images/*" LogicalName="netwiv.image.%(Filename)%(Extension)" />
+    <ProjectReference Include="..\..\..\src\NetWiv.Core\NetWiv.Core.csproj" />
+    <ProjectReference Include="..\..\..\src\NetWiv.Generators\NetWiv.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\..\src\NetWiv.Platform.Wry\NetWiv.Platform.Wry.csproj" Condition="'$(NetWivRuntime)' == 'wry'" />
+    <ProjectReference Include="..\..\..\src\NetWiv.Platform.Linux\NetWiv.Platform.Linux.csproj" Condition="'$(NetWivRuntime)' != 'wry' and $([MSBuild]::IsOSPlatform('Linux'))" />
+    <ProjectReference Include="..\..\..\src\NetWiv.Platform.Windows\NetWiv.Platform.Windows.csproj" Condition="'$(NetWivRuntime)' != 'wry' and $([MSBuild]::IsOSPlatform('Windows'))" />
+  </ItemGroup>
+  <Import Project="../../../src/NetWiv.Build/buildTransitive/NetWiv.Build.targets" />
+</Project>

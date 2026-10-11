@@ -1,0 +1,27 @@
+{
+  "generatedFrom": "tauri-cli@2.11.4",
+  "commit": "8909f221d1515955fc843808032bdc5d62209c96",
+  "commands": [
+    "init",
+    "dev",
+    "build",
+    "bundle",
+    "android",
+    "ios",
+    "migrate",
+    "info",
+    "add",
+    "remove",
+    "plugin",
+    "icon",
+    "signer",
+    "completions",
+    "permission",
+    "capability",
+    "inspect"
+  ],
+  "desktopMilestonePolicy": {
+    "android": "recognized-unsupported",
+    "ios": "recognized-unsupported"
+  }
+}

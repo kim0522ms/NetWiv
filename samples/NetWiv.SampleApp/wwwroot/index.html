@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NetWiv NativeAOT sample</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color-scheme: light dark; }
+    body { display: grid; place-content: center; min-height: 100vh; margin: 0; }
+    main { display: grid; gap: 1rem; width: min(32rem, calc(100vw - 3rem)); }
+    form { display: flex; gap: .5rem; }
+    input { flex: 1; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>NetWiv</h1>
+    <form id="greeting-form">
+      <input id="name" value="NativeAOT" aria-label="Name">
+      <button>Invoke C#</button>
+    </form>
+    <output id="result">Ready</output>
+  </main>
+  <script type="module">
+    import { invoke } from './vendor/@tauri-apps/api/core.js';
+
+    const form = document.querySelector('#greeting-form');
+    const name = document.querySelector('#name');
+    const result = document.querySelector('#result');
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      try {
+        const greeting = await invoke('greet', { name: name.value });
+        result.value = `${greeting.message} Invocation #${greeting.count}`;
+      } catch (error) {
+        result.value = String(error);
+      }
+    });
+  </script>
+</body>
+</html>

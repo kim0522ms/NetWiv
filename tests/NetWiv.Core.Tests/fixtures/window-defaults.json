@@ -1,0 +1,10 @@
+{
+  "productName": "Product name is not the window title",
+  "app": {
+    "windows": [
+      {},
+      {"label": "deferred", "create": false},
+      {"label": "named", "title": "Chosen", "width": 320, "height": 240}
+    ]
+  }
+}

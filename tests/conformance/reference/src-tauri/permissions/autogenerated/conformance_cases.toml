@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-conformance-cases"
+description = "Enables the conformance_cases command without any pre-configured scope."
+commands.allow = ["conformance_cases"]
+
+[[permission]]
+identifier = "deny-conformance-cases"
+description = "Denies the conformance_cases command without any pre-configured scope."
+commands.deny = ["conformance_cases"]

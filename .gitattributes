@@ -1,0 +1,6 @@
+# Shell entry points must remain executable by Bash after a Windows checkout.
+*.sh text eol=lf
+
+# These upstream license bytes are addressed and verified by SHA-256.
+native/third-party-licenses/texts/*.txt -text
+native/license-overrides/texts/*.txt -text

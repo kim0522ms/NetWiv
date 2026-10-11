@@ -1,0 +1,9 @@
+{
+  "app":{"security":{"capabilities":[{"identifier":"main","windows":["main"],"permissions":["first"]}]}},
+  "$netwivAcl":{"version":1,"hasAppManifest":true,"files":[{
+    "set":[
+      {"identifier":"first","description":"cycle","permissions":["second"]},
+      {"identifier":"second","description":"cycle","permissions":["first"]}
+    ]
+  }]}
+}

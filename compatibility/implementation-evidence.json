@@ -1,0 +1,825 @@
+{
+  "schemaVersion": 1,
+  "description": "Evidence for specific exercised behaviors. A matching fixture does not establish full API compatibility.",
+  "groups": [
+    {
+      "fixture": "window.effects-validation",
+      "sources": ["native/netwiv-native/src/runtime.rs"],
+      "apis": ["window.Window.setEffects", "webviewWindow.WebviewWindow.setEffects", "window.WindowOptions.windowEffects"],
+      "limits": "Both public setters validate the pinned WindowEffectsConfig, clear null/absent effects, accept supported values and preserve exact malformed-input errors. Invalid constructor options fail without allocating a window. Windows applies supported effects; Linux validates then performs the upstream no-op. Visual appearance and macOS effects are not established by this fixture."
+    },
+    {
+      "fixture": "security.frame-origins",
+      "sources": ["src/NetWiv.Core/Ipc/InitializationScript.cs", "src/NetWiv.Core/Ipc/AppHandle.Protocol.cs", "src/NetWiv.Core/Security/Acl.cs", "native/netwiv-native/src/runtime.rs"],
+      "apis": ["core.invoke", "core.isTauri"],
+      "limits": "Standard protocol IPC compares trusted and untrusted remote windows, local/remote/opaque child frames and spoofed origin fields. Windows authorizes each frame by browser Origin; pinned WebKitGTK exposes the bridge only in the main frame. Local/trusted positive controls must succeed. Isolation child frames and forced fallback transport are outside this fixture."
+    },
+    {
+      "fixture": "core.callback-lifecycle",
+      "sources": ["src/NetWiv.Core/Ipc/InitializationScript.cs", "src/NetWiv.Core/Ipc/Channel.cs"],
+      "apis": ["core.isTauri", "core.transformCallback"],
+      "limits": "Official public functions identify the native runtime and receive real native Channel messages through persistent, one-shot and absent handlers. Does not exercise callback cleanup across document replacement."
+    },
+    {
+      "fixture": "core.resource-lifecycle",
+      "sources": ["src/NetWiv.Core/Resources/ResourceTable.cs", "src/NetWiv.Core/AppHandle.cs"],
+      "apis": ["core.Resource", "core.Resource.constructor", "core.Resource.rid", "core.Resource.close"],
+      "limits": "Public base Resource wraps a real native image rid, closes it and compares exact use-after-close and duplicate-close errors. Other resource kinds have separate fixtures."
+    },
+    {
+      "fixture": "window.configured-startup",
+      "sources": ["src/NetWiv.Core/Builder.cs", "src/NetWiv.Core/Configuration/EmbeddedConfiguration.cs"],
+      "apis": ["window.getAllWindows", "webview.getAllWebviews", "window.Window.static.getByLabel", "webviewWindow.WebviewWindow.static.getByLabel", "window.Window.title"],
+      "limits": "Initial config omits the main title and includes a deferred create:false window. Checks the pinned title default and absence from native/live lookups; separate NativeAOT smoke exercises fully windowless startup."
+    },
+    {
+      "fixture": "invoke.numeric-arguments",
+      "sources": ["src/NetWiv.Core/Commands/CommandArgumentJson.cs", "src/NetWiv.Core/Commands/SerdeJsonNumber.cs"],
+      "apis": ["core.invoke"],
+      "limits": "Valid u32 boundaries and exact errors for negative, fractional, exponential and subnormal guest values. Core separately checks ten numeric types and the pinned float-format corpus; broader custom converter parity is not established."
+    },
+    {
+      "fixture": "dpi.public-shapes-and-conversions",
+      "implementation": "upstream-js",
+      "sources": [
+        "compatibility/upstream-lock.json"
+      ],
+      "apis": [
+        "dpi.LogicalPosition",
+        "dpi.LogicalPosition.constructor",
+        "dpi.LogicalPosition.__TAURI_TO_IPC_KEY__",
+        "dpi.LogicalPosition.toJSON",
+        "dpi.LogicalPosition.toPhysical",
+        "dpi.LogicalPosition.type",
+        "dpi.LogicalPosition.x",
+        "dpi.LogicalPosition.y",
+        "dpi.LogicalSize",
+        "dpi.LogicalSize.constructor",
+        "dpi.LogicalSize.__TAURI_TO_IPC_KEY__",
+        "dpi.LogicalSize.height",
+        "dpi.LogicalSize.toJSON",
+        "dpi.LogicalSize.toPhysical",
+        "dpi.LogicalSize.type",
+        "dpi.LogicalSize.width",
+        "dpi.PhysicalPosition",
+        "dpi.PhysicalPosition.constructor",
+        "dpi.PhysicalPosition.__TAURI_TO_IPC_KEY__",
+        "dpi.PhysicalPosition.toJSON",
+        "dpi.PhysicalPosition.toLogical",
+        "dpi.PhysicalPosition.type",
+        "dpi.PhysicalPosition.x",
+        "dpi.PhysicalPosition.y",
+        "dpi.PhysicalSize",
+        "dpi.PhysicalSize.constructor",
+        "dpi.PhysicalSize.__TAURI_TO_IPC_KEY__",
+        "dpi.PhysicalSize.height",
+        "dpi.PhysicalSize.toJSON",
+        "dpi.PhysicalSize.toLogical",
+        "dpi.PhysicalSize.type",
+        "dpi.PhysicalSize.width",
+        "dpi.Position",
+        "dpi.Position.constructor",
+        "dpi.Position.__TAURI_TO_IPC_KEY__",
+        "dpi.Position.position",
+        "dpi.Position.toJSON",
+        "dpi.Position.toLogical",
+        "dpi.Position.toPhysical",
+        "dpi.Size",
+        "dpi.Size.constructor",
+        "dpi.Size.__TAURI_TO_IPC_KEY__",
+        "dpi.Size.size",
+        "dpi.Size.toJSON",
+        "dpi.Size.toLogical",
+        "dpi.Size.toPhysical"
+      ],
+      "limits": "Official guest numeric/object/tagged constructors, public fields, wrapper identity, conversion classes and values at five finite scales, JSON and IPC serialization. C# integer conversion is tested separately against the pinned Rust dpi crate; this does not prove physical monitor transitions."
+    },
+    {
+      "fixture": "menu.app-assignment",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs"
+      ],
+      "apis": [
+        "menu.Menu.setAsAppMenu",
+        "menu.Menu.setAsWindowMenu"
+      ],
+      "limits": "App-menu replacements return the previous menu, existing/new windows inherit it, and explicit window menus survive app changes. Separate native tests check GTK widget detachment and Windows accelerator dispatch; visual menu interaction remains a GUI gate."
+    },
+    {
+      "fixture": "menu.item-state-roundtrip",
+      "sources": [
+        "native/netwiv-native/src/resources.rs"
+      ],
+      "apis": [
+        "menu.MenuItem.text",
+        "menu.MenuItem.setText",
+        "menu.MenuItem.isEnabled",
+        "menu.MenuItem.setEnabled",
+        "menu.MenuItem.setAccelerator",
+        "menu.CheckMenuItem.text",
+        "menu.CheckMenuItem.setText",
+        "menu.CheckMenuItem.isEnabled",
+        "menu.CheckMenuItem.setEnabled",
+        "menu.CheckMenuItem.setAccelerator",
+        "menu.CheckMenuItem.setChecked",
+        "menu.CheckMenuItem.isChecked",
+        "menu.IconMenuItem.text",
+        "menu.IconMenuItem.setText",
+        "menu.IconMenuItem.isEnabled",
+        "menu.IconMenuItem.setEnabled",
+        "menu.IconMenuItem.setAccelerator",
+        "menu.Submenu.text",
+        "menu.Submenu.setText",
+        "menu.Submenu.isEnabled",
+        "menu.Submenu.setEnabled",
+        "menu.PredefinedMenuItem.text",
+        "menu.PredefinedMenuItem.setText"
+      ],
+      "limits": "Native text and enabled getter roundtrips for four menu kinds, checked state, accelerator set/clear calls and predefined text. Does not prove keyboard shortcut activation or manual menu interaction."
+    },
+    {
+      "fixture": "menu.container-and-window-assignment",
+      "sources": [
+        "native/netwiv-native/src/resources.rs",
+        "native/netwiv-native/src/runtime.rs"
+      ],
+      "apis": [
+        "menu.Menu.append",
+        "menu.Menu.prepend",
+        "menu.Menu.insert",
+        "menu.Menu.remove",
+        "menu.Menu.removeAt",
+        "menu.Menu.get",
+        "menu.Menu.items",
+        "menu.Menu.setAsWindowMenu"
+      ],
+      "limits": "Checks ordered native item insertion/removal, returned identity, absent lookup and window-menu replacement returning the prior menu. Resource handles close after destroying the temporary window. Does not prove popup behavior or visual menu layout."
+    },
+    {
+      "fixture": "image.encoded-inputs",
+      "sources": [
+        "native/netwiv-native/src/resources.rs"
+      ],
+      "apis": [
+        "image.Image.static.fromBytes",
+        "image.Image.static.fromPath",
+        "image.Image.rgba",
+        "image.Image.size",
+        "image.ImageSize.width",
+        "image.ImageSize.height"
+      ],
+      "limits": "Exact pixels and dimensions for RGBA, 16-bit grayscale, indexed PNG transparency and multi-entry PNG ICO. Array, Uint8Array, ArrayBuffer and filesystem inputs are exercised; this is not exhaustive codec-format coverage."
+    },
+    {
+      "fixture": "image.decode-errors",
+      "sources": [
+        "native/netwiv-native/src/resources.rs"
+      ],
+      "apis": [
+        "image.Image.static.fromBytes",
+        "image.Image.static.fromPath"
+      ],
+      "limits": "Exact pinned errors for empty, unrecognized and truncated bytes plus a missing image file. File errors are compared within the same OS and locale, without adding paths to the upstream message."
+    },
+    {
+      "fixture": "webview.creation-user-agent",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs"
+      ],
+      "apis": [
+        "webview.Webview.constructor",
+        "webview.WebviewOptions.userAgent",
+        "webviewWindow.WebviewWindow.constructor"
+      ],
+      "limits": "Root and child documents report the configured navigator.userAgent for camel-case and pinned serde alias spellings. This does not establish every creation option or network header."
+    },
+    {
+      "fixture": "webview.hidden-parent-show",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs"
+      ],
+      "apis": [
+        "webviewWindow.WebviewWindow.constructor",
+        "window.Window.show",
+        "window.WindowOptions.visible"
+      ],
+      "limits": "A root created in a hidden window becomes document-visible and executes requestAnimationFrame after showing its parent. This is automated WebView visibility evidence, not a manual pixel/input inspection."
+    },
+    {
+      "fixture": "webview.root-auto-resize",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs",
+        "native/netwiv-native/src/relative_bounds.rs"
+      ],
+      "apis": [
+        "webviewWindow.WebviewWindow.constructor",
+        "webview.Webview.static.getByLabel",
+        "webview.Webview.position",
+        "webview.Webview.size"
+      ],
+      "limits": "Implicit root WebView fills an undecorated window when it grows and shrinks. Does not establish all combined-window methods or decorated Wayland geometry."
+    },
+    {
+      "fixture": "webview.relative-auto-resize",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs",
+        "native/netwiv-native/src/relative_bounds.rs"
+      ],
+      "apis": [
+        "webview.Webview.setAutoResize",
+        "webview.Webview.setSize",
+        "webview.Webview.setPosition"
+      ],
+      "limits": "On Windows, child position and size retain parent proportions; disabling freezes bounds, enabling captures current bounds and setters update their own ratios. On Linux, pinned Tauri's GTK Box owns allocation and bounds setters do not override it; the fixture checks that actual behavior, not successful position control. Uses the public setter because the pinned create command rejects an autoResize option. Native arithmetic also has fractional-DPI unit coverage; monitor migration remains a GUI gate."
+    },
+    {
+      "fixture": "window.native-flags",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs",
+        "docs/pinned-upstream-behavior.md"
+      ],
+      "apis": [
+        "window.Window.setClosable",
+        "window.Window.isClosable",
+        "window.Window.setDecorations",
+        "window.Window.isDecorated",
+        "window.Window.setEnabled",
+        "window.Window.isEnabled",
+        "window.Window.setAlwaysOnTop",
+        "window.Window.isAlwaysOnTop",
+        "window.Window.setMinimizable",
+        "window.Window.isMinimizable",
+        "window.Window.setMaximizable",
+        "window.Window.isMaximizable",
+        "window.Window.show",
+        "window.Window.hide",
+        "window.Window.isVisible"
+      ],
+      "limits": "Checks false/true getter roundtrips and visibility transitions. Linux minimize/maximize button setters are upstream no-ops. Linux topmost getter observations are compared after the WM hint; X11 can apply ABOVE while pinned tao's getter stays false. Does not claim Linux button suppression, reliable topmost readback or manual input validation."
+    },
+    {
+      "fixture": "window.resize-and-dpi",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs",
+        "src/NetWiv.Core/Events/NativeEvents.cs"
+      ],
+      "apis": [
+        "window.Window.scaleFactor",
+        "window.Window.innerSize",
+        "window.Window.outerSize",
+        "window.Window.setSize",
+        "window.Window.onResized"
+      ],
+      "limits": "Checks requested logical/physical inner sizes, matching native resize event payloads and physical size wrappers on an undecorated window. Decorated Wayland CSD geometry, mixed-DPI monitor migration and interactive size-constraint enforcement remain separate acceptance scenarios."
+    },
+    {
+      "fixture": "window.maximize-and-fullscreen",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs"
+      ],
+      "apis": [
+        "window.Window.maximize",
+        "window.Window.unmaximize",
+        "window.Window.toggleMaximize",
+        "window.Window.isMaximized",
+        "window.Window.setFullscreen",
+        "window.Window.isFullscreen"
+      ],
+      "limits": "Waits for each native state transition and restoration on a shown window. Does not claim minimization, kiosk policy or manual compositor shortcut behavior."
+    },
+    {
+      "fixture": "webview.reparent-capability",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs",
+        "src/NetWiv.Core/AppHandle.cs"
+      ],
+      "apis": [
+        "webview.Webview.reparent"
+      ],
+      "limits": "Same unchanged guest code checks window capability before move, after move, after reload and after return. Retained C# parent handles are additionally checked by the NativeAOT Wry smoke."
+    },
+    {
+      "fixture": "menu.items-lifecycle",
+      "sources": [
+        "native/netwiv-native/src/resources.rs",
+        "src/NetWiv.Core/Api/Menu.cs",
+        "docs/pinned-upstream-behavior.md"
+      ],
+      "apis": [
+        "menu.Menu.get",
+        "menu.MenuItem.static.new",
+        "menu.MenuItem.text",
+        "menu.MenuItem.setText",
+        "menu.MenuItem.isEnabled",
+        "menu.MenuItem.setEnabled",
+        "menu.MenuItem.setAccelerator",
+        "menu.MenuItem.close",
+        "menu.CheckMenuItem.static.new",
+        "menu.CheckMenuItem.isChecked",
+        "menu.CheckMenuItem.setChecked",
+        "menu.CheckMenuItem.setAccelerator",
+        "menu.CheckMenuItem.close",
+        "menu.IconMenuItem.static.new",
+        "menu.IconMenuItem.setIcon",
+        "menu.IconMenuItem.close",
+        "menu.PredefinedMenuItem.static.new",
+        "menu.PredefinedMenuItem.text",
+        "menu.PredefinedMenuItem.close",
+        "menu.Submenu.static.new",
+        "menu.Submenu.items",
+        "menu.Submenu.append",
+        "menu.Submenu.prepend",
+        "menu.Submenu.insert",
+        "menu.Submenu.remove",
+        "menu.Submenu.removeAt",
+        "menu.Submenu.close",
+        "menu.AboutMetadata.name",
+        "menu.AboutMetadata.version",
+        "menu.AboutMetadata.authors",
+        "menu.AboutMetadata.icon"
+      ],
+      "limits": "Selected item creation/state, icon updates, About metadata construction, container order and alias closure. Detached Windows checked-state fallback is recorded separately. Pointer events, accelerator activation and About dialog rendering are separate GUI gates."
+    },
+    {
+      "fixture": "menu.payload-variants",
+      "sources": [
+        "native/netwiv-native/src/menu_payload.rs",
+        "native/netwiv-native/src/resources.rs"
+      ],
+      "apis": [
+        "menu.Menu.static.new",
+        "menu.MenuOptions.items"
+      ],
+      "limits": "Pinned untagged nested payload precedence and fallback, including invalid optional variants falling through to a plain item."
+    },
+    {
+      "fixture": "menu.argument-errors",
+      "sources": [
+        "native/netwiv-native/src/menu_payload.rs",
+        "native/netwiv-native/src/resources.rs"
+      ],
+      "apis": [
+        "menu.Menu.static.new",
+        "menu.PredefinedMenuItem.static.new",
+        "menu.MenuItem.static.new"
+      ],
+      "limits": "Exact Serde errors for selected invalid About metadata, nested payload and enabled flag; not all argument diagnostics."
+    },
+    {
+      "fixture": "core.convert-file-src-http",
+      "sources": [
+        "src/NetWiv.Core/Ipc/InitializationScript.cs",
+        "src/NetWiv.Core/Assets/FileAssetProtocol.cs",
+        "src/NetWiv.Core/Security/FileScope.cs",
+        "native/netwiv-native/src/runtime.rs"
+      ],
+      "apis": [
+        "core.convertFileSrc"
+      ],
+      "limits": "Configured text file GET/HEAD/Range, deny/missing responses and platform CORS boundaries. Full MIME detection, dynamic scopes, symlink races and cross-document origins require additional evidence."
+    },
+    {
+      "fixture": "security.literal-command-permissions",
+      "sources": [
+        "src/NetWiv.Core/Security/Acl.cs"
+      ],
+      "apis": [
+        "core.invoke"
+      ],
+      "limits": "Exact command allow/deny keys, including literal stars; remote URLPattern is not covered."
+    },
+    {
+      "fixture": "security.permission-set-scopes",
+      "sources": [
+        "src/NetWiv.Cli/Commands/EffectivePermissions.cs",
+        "src/NetWiv.Core/Configuration/EmbeddedAcl.cs",
+        "src/NetWiv.Core/Builder.cs",
+        "src/NetWiv.Core/Security/Acl.cs"
+      ],
+      "apis": [
+        "core.invoke"
+      ],
+      "limits": "CLI-built file-only app permissions, nested sets and ordered per-command scopes. Global/plugin scopes and live permission-file reload require additional fixtures."
+    },
+    {
+      "fixture": "app.metadata",
+      "sources": [
+        "src/NetWiv.Core/BuiltIn/BuiltInCommands.cs"
+      ],
+      "apis": [
+        "app.getIdentifier",
+        "app.getName",
+        "app.getVersion",
+        "app.getTauriVersion"
+      ]
+    },
+    {
+      "fixture": "app.desktop-platform-contract",
+      "sources": [
+        "src/NetWiv.Core/BuiltIn/ApplicationCommands.cs"
+      ],
+      "apis": [
+        "app.getBundleType",
+        "app.supportsMultipleWindows",
+        "app.fetchDataStoreIdentifiers",
+        "app.removeDataStore",
+        "app.show",
+        "app.hide",
+        "app.setDockVisibility"
+      ],
+      "limits": "Unbundled desktop values and valid arguments only; Apple platform behavior is outside this milestone."
+    },
+    {
+      "fixture": "invoke.json",
+      "sources": [
+        "src/NetWiv.Core/AppHandle.cs",
+        "src/NetWiv.Core/Ipc/InitializationScript.cs"
+      ],
+      "apis": [
+        "core.invoke"
+      ]
+    },
+    {
+      "fixture": "invoke.serialization",
+      "sources": [
+        "src/NetWiv.Core/Ipc/InitializationScript.cs"
+      ],
+      "apis": [
+        "core.invoke"
+      ],
+      "limits": "Selected JSON, Date, Map, byte-array and custom serialization inputs."
+    },
+    {
+      "fixture": "invoke.error",
+      "sources": [
+        "src/NetWiv.Core/AppHandle.cs"
+      ],
+      "apis": [
+        "core.invoke"
+      ]
+    },
+    {
+      "fixture": "invoke.invalid-arguments",
+      "sources": [
+        "src/NetWiv.Core/Commands/CommandArgumentJson.cs",
+        "src/NetWiv.Generators/CommandGenerator.cs"
+      ],
+      "apis": [
+        "core.invoke"
+      ],
+      "limits": "Selected missing/null/scalar/DTO-field failures, not every serde diagnostic."
+    },
+    {
+      "fixture": "invoke.bytes",
+      "sources": [
+        "src/NetWiv.Core/AppHandle.cs"
+      ],
+      "apis": [
+        "core.invoke"
+      ]
+    },
+    {
+      "fixture": "channel.ordered",
+      "sources": [
+        "src/NetWiv.Core/Ipc/Channel.cs"
+      ],
+      "apis": [
+        "core.Channel.constructor",
+        "core.Channel.onmessage",
+        "core.Channel",
+        "core.Channel.id",
+        "core.Channel.toJSON",
+        "core.Channel.__TAURI_TO_IPC_KEY__",
+        "core.SERIALIZE_TO_IPC_FN"
+      ],
+      "limits": "Constructor and replacement handler identity, callback id range, public serialization hook and toJSON, followed by three real ordered messages. Does not simulate transport reordering."
+    },
+    {
+      "fixture": "event.listen-emit-unlisten",
+      "sources": [
+        "src/NetWiv.Core/AppHandle.cs",
+        "src/NetWiv.Core/BuiltIn/BuiltInCommands.cs"
+      ],
+      "apis": [
+        "event.listen",
+        "event.emit"
+      ],
+      "limits": "One listener, event delivery and removal; additional target/lifecycle cases are in Core tests."
+    },
+    {
+      "fixture": "event.target-matrix-and-once",
+      "sources": [
+        "src/NetWiv.Core/AppHandle.cs",
+        "src/NetWiv.Core/Events/EventBus.cs"
+      ],
+      "apis": [
+        "event.listen",
+        "event.emitTo",
+        "event.once"
+      ],
+      "limits": "Eight target kinds/labels, ordered delivery barriers and one-shot unlisten; native GUI gestures remain separate."
+    },
+    {
+      "fixture": "event.name-validation",
+      "sources": [
+        "src/NetWiv.Core/Events/EventName.cs",
+        "src/NetWiv.Core/Events/EventNameRanges.g.cs",
+        "src/NetWiv.Core/BuiltIn/CommandArguments.cs"
+      ],
+      "apis": [
+        "event.listen",
+        "event.emit"
+      ],
+      "limits": "Empty names, selected Unicode 17 alphabetic values and invalid punctuation/marks; name predicate generated from pinned Rust."
+    },
+    {
+      "fixture": "path.contract",
+      "sources": [
+        "src/NetWiv.Core/BuiltIn/BuiltInCommands.cs"
+      ],
+      "apis": [
+        "path.sep",
+        "path.homeDir",
+        "path.isAbsolute"
+      ]
+    },
+    {
+      "fixture": "path.lexical-boundaries",
+      "sources": [
+        "src/NetWiv.Core/BuiltIn/BuiltInCommands.cs"
+      ],
+      "apis": [
+        "path.normalize",
+        "path.join",
+        "path.dirname",
+        "path.basename",
+        "path.extname",
+        "path.isAbsolute",
+        "path.resolve"
+      ],
+      "limits": "Fifteen lexical inputs and eight resolution sequences on the selected OS; full Windows verbatim-prefix coverage remains pending."
+    },
+    {
+      "fixture": "path.all-directories-and-resources",
+      "sources": [
+        "native/netwiv-native/src/paths.rs",
+        "src/NetWiv.Platform.Wry/WryDesktopRuntime.cs"
+      ],
+      "apis": [
+        "path.audioDir",
+        "path.cacheDir",
+        "path.configDir",
+        "path.dataDir",
+        "path.localDataDir",
+        "path.documentDir",
+        "path.downloadDir",
+        "path.pictureDir",
+        "path.publicDir",
+        "path.videoDir",
+        "path.resourceDir",
+        "path.tempDir",
+        "path.appConfigDir",
+        "path.appDataDir",
+        "path.appLocalDataDir",
+        "path.appCacheDir",
+        "path.appLogDir",
+        "path.desktopDir",
+        "path.executableDir",
+        "path.fontDir",
+        "path.homeDir",
+        "path.runtimeDir",
+        "path.templateDir",
+        "path.resolveResource",
+        "path.delimiter"
+      ],
+      "limits": "Same-host directory values and unavailable-directory errors; resource executable roots differ and are normalized only after checking absolute roots and exact resource suffix mapping."
+    },
+    {
+      "fixture": "window.current",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs",
+        "src/NetWiv.Core/Ipc/InitializationScript.cs"
+      ],
+      "apis": [
+        "window.getCurrentWindow",
+        "window.Window.title",
+        "window.Window.isVisible",
+        "window.Window.label"
+      ]
+    },
+    {
+      "fixture": "webview-window.lifecycle",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs",
+        "src/NetWiv.Core/AppHandle.cs"
+      ],
+      "apis": [
+        "webviewWindow.WebviewWindow.constructor",
+        "webviewWindow.getAllWebviewWindows",
+        "webviewWindow.WebviewWindow.once",
+        "webviewWindow.WebviewWindow.close"
+      ],
+      "limits": "Creation, discovery, typed native close-request target routing, PreventDefault, listener removal and closure."
+    },
+    {
+      "fixture": "window.color-union",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs",
+        "docs/pinned-upstream-behavior.md"
+      ],
+      "apis": [
+        "window.Window.setBackgroundColor",
+        "webview.Webview.setBackgroundColor"
+      ],
+      "limits": "Pinned public argument-name discrepancy plus separate value-based native decoding; successful calls do not prove visual color changes."
+    },
+    {
+      "fixture": "window.creation-validation",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs"
+      ],
+      "apis": [
+        "window.Window.constructor",
+        "webviewWindow.WebviewWindow.constructor",
+        "window.getAllWindows",
+        "window.Window.destroy"
+      ],
+      "limits": "Selected invalid types/unknown fields/labels, Unicode construction and no mutation after rejection."
+    },
+    {
+      "fixture": "window.numeric-and-stale-handles",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs"
+      ],
+      "apis": [
+        "window.Window.setBadgeCount",
+        "window.Window.setProgressBar",
+        "window.Window.setSize",
+        "window.Window.setPosition",
+        "window.Window.close",
+        "window.Window.destroy"
+      ],
+      "limits": "Malformed numeric rejection and stale-handle errors only; native badge/progress rendering and full geometry remain separate."
+    },
+    {
+      "fixture": "webview.child-lifecycle",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs",
+        "docs/pinned-upstream-behavior.md"
+      ],
+      "apis": [
+        "webview.Webview.constructor",
+        "webview.getAllWebviews",
+        "webview.Webview.reparent",
+        "webview.Webview.close",
+        "webview.Webview.size"
+      ],
+      "limits": "Reference unstable feature enabled. Invalid label, child layout, absent reparent destination, pinned parent field mismatch, close and repeated close."
+    },
+    {
+      "fixture": "window.property-roundtrip",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs"
+      ],
+      "apis": [
+        "window.Window.title",
+        "window.Window.setTitle",
+        "window.Window.isResizable",
+        "window.Window.setResizable"
+      ]
+    },
+    {
+      "fixture": "webview.bounds",
+      "sources": [
+        "native/netwiv-native/src/runtime.rs"
+      ],
+      "apis": [
+        "webview.getCurrentWebview",
+        "webview.Webview.position",
+        "webview.Webview.size"
+      ],
+      "limits": "Physical coordinate types and positive size, not exact cross-monitor DPI geometry."
+    },
+    {
+      "fixture": "image.resource",
+      "sources": [
+        "src/NetWiv.Core/BuiltIn/BuiltInCommands.cs",
+        "src/NetWiv.Core/Resources/ResourceTable.cs"
+      ],
+      "apis": [
+        "image.Image.static.new",
+        "image.Image.size",
+        "image.Image.rgba",
+        "image.Image.close"
+      ],
+      "limits": "One RGBA pixel, resource closure, use after close and repeated close errors. Only opaque resource IDs are normalized."
+    },
+    {
+      "fixture": "menu.resource",
+      "sources": [
+        "native/netwiv-native/src/resources.rs"
+      ],
+      "apis": [
+        "menu.Menu.static.new",
+        "menu.Menu.items",
+        "menu.Menu.close"
+      ],
+      "limits": "Construction, item enumeration and closure. Pointer interaction is a separate GUI gate."
+    },
+    {
+      "fixture": "tray.resource",
+      "sources": [
+        "native/netwiv-native/src/resources.rs"
+      ],
+      "apis": [
+        "tray.TrayIcon.static.new",
+        "tray.TrayIcon.static.getById",
+        "tray.TrayIcon.static.removeById",
+        "tray.TrayIcon.setVisible"
+      ],
+      "limits": "Tray host required on Linux; pointer events are a separate GUI gate."
+    },
+    {
+      "fixture": "dpi.conversion-and-ipc",
+      "implementation": "upstream-js",
+      "sources": [
+        "compatibility/upstream-lock.json"
+      ],
+      "apis": [
+        "dpi.LogicalPosition.constructor",
+        "dpi.PhysicalPosition.constructor",
+        "dpi.LogicalSize.constructor",
+        "dpi.PhysicalSize.constructor",
+        "dpi.Position.constructor",
+        "dpi.Size.constructor",
+        "dpi.LogicalSize.toPhysical",
+        "dpi.PhysicalSize.toLogical"
+      ],
+      "limits": "Selected fractional conversions and tagged serialization through invoke."
+    },
+    {
+      "fixture": "mocks.public-functions",
+      "implementation": "upstream-js",
+      "sources": [
+        "compatibility/upstream-lock.json"
+      ],
+      "apis": [
+        "mocks.mockIPC",
+        "mocks.mockWindows",
+        "mocks.mockConvertFileSrc",
+        "mocks.clearMocks"
+      ],
+      "limits": "Runs in a worker with a test window global, outside native-injected internals, using unchanged official modules."
+    },
+    {
+      "fixture": "invoke.unknown-command",
+      "sources": [
+        "src/NetWiv.Core/AppHandle.cs"
+      ],
+      "apis": [
+        "core.invoke"
+      ],
+      "limits": "ACL permits literal command keys, but missing handlers produce the pinned rejection instead of native forwarding."
+    },
+    {
+      "fixture": "event.large-payload",
+      "sources": [
+        "src/NetWiv.Core/AppHandle.cs"
+      ],
+      "apis": [
+        "event.emit",
+        "event.listen"
+      ],
+      "limits": "Large escaped Unicode event data retains pinned object-literal __proto__ semantics, separately from invoke response parsing."
+    },
+    {
+      "fixture": "invoke.large-payload",
+      "sources": [
+        "src/NetWiv.Core/Ipc/CallbackScript.cs"
+      ],
+      "apis": [
+        "core.invoke"
+      ],
+      "limits": "Large escaped Unicode JSON and own __proto__ data property across native IPC."
+    },
+    {
+      "fixture": "plugin.configuration",
+      "sources": [
+        "src/NetWiv.Core/Plugins/Plugin.cs",
+        "src/NetWiv.Core/Configuration/EmbeddedConfiguration.cs",
+        "src/NetWiv.Build/Configuration/ConfigLoader.cs"
+      ],
+      "apis": [
+        "core.invoke"
+      ],
+      "limits": "Typed plugin config is read at initialization and returned by a capability-authorized statically registered plugin command."
+    }
+  ],
+  "knownGaps": [
+    "Isolation behavior beyond the separate 17-public-case differential suite and two NetWiv-private security regressions.",
+    "Dynamic file-asset scope and malformed input cases beyond the translated scope tests and scoped file/HTTP-range fixture.",
+    "URLPattern combinations beyond the 363-pattern / 3364-decision pinned oracle matrix; frame behavior beyond the standard protocol fixture, including isolation child frames and forced fallback transport.",
+    "All API arguments, errors, permissions, lifecycle and platform branches beyond the listed fixtures.",
+    "Complete integrated GUI and installed-package acceptance, and matched performance measurements."
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "./upstream-lock.schema.json",
+  "profile": "tauri-v2.11",
+  "verifiedAt": "2026-09-08",
+  "runtime": {
+    "version": "2.11.5",
+    "tag": "tauri-v2.11.5",
+    "commit": "7cd71369c00978a3783b6ae3e9972358abbe4ae6",
+    "archive": "https://github.com/tauri-apps/tauri/archive/7cd71369c00978a3783b6ae3e9972358abbe4ae6.tar.gz",
+    "archiveSha256": "ebb62a9a58aff337611bbc3b5a0764c067d57998312ea49bf799550052fff392",
+    "referenceFeatures": ["default", "tray-icon", "unstable", "image-png", "image-ico", "protocol-asset"],
+    "referenceFeaturePurpose": "Full desktop conformance includes child Webviews, PNG/ICO image decoding and scoped file asset URLs. These explicitly enabled upstream features are part of this profile, not claims about a default Tauri build."
+  },
+  "api": {
+    "name": "@tauri-apps/api",
+    "version": "2.11.1",
+    "tag": "@tauri-apps/api-v2.11.1",
+    "commit": "6f6ab1207bb3923c2721fbc67d2fdb1c8deb0c7a",
+    "tarball": "https://registry.npmjs.org/@tauri-apps/api/-/api-2.11.1.tgz",
+    "integrity": "sha512-M2FPuYND2m+wh5hfW9ZpSdxMPdEJovPBWwoHJmwUpysTYNHaOkVFN419m/K0LIgjb/7KU2vBgsUepJWugQCvAA=="
+  },
+  "cli": {
+    "name": "@tauri-apps/cli",
+    "version": "2.11.4",
+    "tag": "@tauri-apps/cli-v2.11.4",
+    "commit": "8909f221d1515955fc843808032bdc5d62209c96",
+    "sourceArchive": "https://github.com/tauri-apps/tauri/archive/8909f221d1515955fc843808032bdc5d62209c96.tar.gz",
+    "sourceArchiveSha256": "1718a576b18e511979ac81f4d40813b74f2a129935260da6af7be1d3fed97d48",
+    "tarball": "https://registry.npmjs.org/@tauri-apps/cli/-/cli-2.11.4.tgz",
+    "integrity": "sha512-R8xGtMpwyetawSqm9kYOuMmEqkhUbvcUy8n0aNXIxollKBLESUu5f4Fx+64hgASYm1H+jSWq6jCW6zqTnH6hqQ==",
+    "configSchemaSha256": "923a41898c978c93616b9c1b6ae4d346f5586987459cfa877bacea21e7c85f1a"
+  },
+  "build": {
+    "version": "2.6.3",
+    "tag": "tauri-build-v2.6.3",
+    "commit": "6f6ab1207bb3923c2721fbc67d2fdb1c8deb0c7a",
+    "sourceArchive": "https://github.com/tauri-apps/tauri/archive/6f6ab1207bb3923c2721fbc67d2fdb1c8deb0c7a.tar.gz",
+    "sourceArchiveSha256": "4f63eb62ceb1498c07c2de31b08ecf7d65ad40f236662e9237adbfa54da968ee"
+  },
+  "tooling": {
+    "typescript": {
+      "version": "6.0.3",
+      "tarball": "https://registry.npmjs.org/typescript/-/typescript-6.0.3.tgz",
+      "integrity": "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="
+    }
+  }
+}

@@ -1,0 +1,40 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>NetWiv wry integration</title>
+<style>body{font:17px system-ui;background:#f7f6f1;color:#182f2a;padding:24px}button{padding:10px 18px}pre{white-space:pre-wrap}</style></head>
+<body><h1>NetWiv · wry</h1><p id="label"></p><button id="invoke">Invoke C#</button><pre id="result">Starting…</pre><button id="finish">Finish inspection</button>
+<script type="module">
+import { invoke, Channel, convertFileSrc } from './core.js';
+const label = window.__TAURI_INTERNALS__.metadata.currentWebview.label;
+document.querySelector('#label').textContent = label;
+document.querySelector('#invoke').onclick = async () => {
+ document.querySelector('#result').textContent = await invoke('greet', {name: label});
+};
+document.querySelector('#finish').onclick = () => invoke('finish_gui');
+try {
+ const file = await invoke('asset_path');
+ const response = await fetch(convertFileSrc(file));
+ if (response.status !== 200 || await response.text() !== 'NetWiv asset') throw Error('Scoped asset response/origin mismatch');
+ const value = await invoke('echo', {input: [label, 42, true]});
+ if (JSON.stringify(value) !== JSON.stringify([label, 42, true])) throw Error('JSON IPC mismatch');
+ const values = [];
+ const channel = new Channel(); channel.onmessage = value => values.push(value);
+ await invoke('stream', {channel});
+ const deadline = performance.now() + 5000;
+ while (values.length < 3 && performance.now() < deadline) await new Promise(r => setTimeout(r, 10));
+ if (JSON.stringify(values) !== '[0,1,2]') throw Error('Channel mismatch');
+ const probe = await invoke('probe_url');
+ await new Promise((resolve, reject) => {
+   const frame = document.createElement('iframe'); frame.hidden = true;
+   const timer = setTimeout(() => { window.removeEventListener('message', receive); frame.remove(); reject(Error('Origin probe timed out')); }, 5000);
+   const receive = event => {
+     if (event.source !== frame.contentWindow || event.origin !== probe || event.data?.kind !== 'netwiv-origin-probe') return;
+     clearTimeout(timer); window.removeEventListener('message', receive); frame.remove();
+     if (event.data.bridge || event.data.parentReadable) reject(Error('Remote iframe can access the Core bridge'));
+     else resolve();
+   };
+   window.addEventListener('message', receive); frame.src = probe + '/frame'; document.body.append(frame);
+ });
+ document.querySelector('#result').textContent = 'PASS: official API invoke, JSON and Channel';
+ await invoke('ready', {label});
+} catch (error) { document.querySelector('#result').textContent = String(error); await invoke('failed', {error:String(error)}); }
+</script></body></html>

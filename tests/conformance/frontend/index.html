@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>NetWiv Tauri conformance</title>
+    <script type="importmap">
+      {"imports":{
+        "@tauri-apps/api/app":"./vendor/@tauri-apps/api/app.js",
+        "@tauri-apps/api/core":"./vendor/@tauri-apps/api/core.js",
+        "@tauri-apps/api/dpi":"./vendor/@tauri-apps/api/dpi.js",
+        "@tauri-apps/api/event":"./vendor/@tauri-apps/api/event.js",
+        "@tauri-apps/api/image":"./vendor/@tauri-apps/api/image.js",
+        "@tauri-apps/api/menu":"./vendor/@tauri-apps/api/menu.js",
+        "@tauri-apps/api/path":"./vendor/@tauri-apps/api/path.js",
+        "@tauri-apps/api/tray":"./vendor/@tauri-apps/api/tray.js",
+        "@tauri-apps/api/webview":"./vendor/@tauri-apps/api/webview.js",
+        "@tauri-apps/api/webviewWindow":"./vendor/@tauri-apps/api/webviewWindow.js",
+        "@tauri-apps/api/window":"./vendor/@tauri-apps/api/window.js"
+      }}
+    </script>
+  </head>
+  <body>
+    <h1>NetWiv Tauri v2.11 conformance</h1>
+    <pre id="report">running</pre>
+    <script>
+      const reportHarnessError = async error => {
+        document.querySelector('#report').textContent = String(error)
+        try {
+          await window.__TAURI_INTERNALS__.invoke('conformance_record', {
+            result: { type: 'harness-error', error: String(error) }
+          })
+          await window.__TAURI_INTERNALS__.invoke('conformance_finish')
+        } catch {}
+      }
+      window.addEventListener('error', event => reportHarnessError(event.error || event.message))
+      window.addEventListener('unhandledrejection', event => reportHarnessError(event.reason))
+    </script>
+    <script type="module" src="./suite.js"></script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+<!doctype html>
+<html><head><meta charset="UTF-8"><title>creation options probe</title></head>
+<body>creation options probe<script type="module">
+import { emit, listen } from './vendor/@tauri-apps/api/event.js';
+import { getCurrentWebview } from './vendor/@tauri-apps/api/webview.js';
+const label = getCurrentWebview().label;
+await listen('creation-paint', () => requestAnimationFrame(() => {
+  void emit('creation-painted', { label, visibility: document.visibilityState });
+}));
+await emit('creation-ready', { label, userAgent: navigator.userAgent });
+</script></body></html>

@@ -1,0 +1,9 @@
+{
+  "productName": "Fixture",
+  "version": "1.0.0",
+  "identifier": "dev.netwiv.fixture",
+  "build": { "devUrl": "http://localhost:1420", "beforeDevCommand": "frontend dev" },
+  "app": { "windows": [{ "label": "main", "width": 800 }], "security": { "capabilities": ["default", "remote"] } },
+  "bundle": { "active": true, "targets": ["nsis", "msi"] },
+  "plugins": { "sample": { "enabled": true } }
+}

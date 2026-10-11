@@ -1,0 +1,16 @@
+{
+  "app":{"security":{"capabilities":[{"identifier":"main","windows":["main"],"permissions":["both","outer","replace","default"]}]}},
+  "$netwivAcl":{"version":1,"hasAppManifest":true,"files":[
+    {"permission":[{"identifier":"replace","commands":{"allow":["old"]}}]},
+    {"permission":[
+      {"identifier":"replace","commands":{"allow":["new"]}},
+      {"identifier":"both","commands":{"allow":["nested"]}},
+      {"identifier":"leaf","commands":{"allow":["top"]}}
+    ],"set":[
+      {"identifier":"both","description":"top-level set wins","permissions":["leaf"]},
+      {"identifier":"outer","description":"nested permission wins","permissions":["both"]},
+      {"identifier":"unused","description":"not traversed","permissions":["missing"]},
+      {"identifier":"cycle","description":"not traversed","permissions":["cycle"]}
+    ]}
+  ]}
+}

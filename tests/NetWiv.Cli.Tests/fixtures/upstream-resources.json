@@ -1,0 +1,295 @@
+{
+  "notice": "Copyright 2019-2024 Tauri Programme within The Commons Conservancy; Apache-2.0 OR MIT",
+  "source": "crates/tauri-utils/src/resources.rs",
+  "sourceSha256": "66111e061092d9c3281f06fa8a683d9d5c178248d996d24bb6824aecf67d7e99",
+  "files": [
+    "src-tauri/tauri.conf.json",
+    "src-tauri/some-other-json.json",
+    "src-tauri/Cargo.toml",
+    "src-tauri/Tauri.toml",
+    "src-tauri/build.rs",
+    "src-tauri/some-folder/some-file.txt",
+    "src/assets/javascript.svg",
+    "src/assets/tauri.svg",
+    "src/assets/rust.svg",
+    "src/assets/lang/en.json",
+    "src/assets/lang/ar.json",
+    "src/sounds/lang/es.wav",
+    "src/sounds/lang/fr.wav",
+    "src/textures/ground/earth.tex",
+    "src/textures/ground/sand.tex",
+    "src/textures/water.tex",
+    "src/textures/fire.tex",
+    "src/tiles/sky/grey.tile",
+    "src/tiles/sky/yellow.tile",
+    "src/tiles/grass.tile",
+    "src/tiles/stones.tile",
+    "src/index.html",
+    "src/style.css",
+    "src/script.js",
+    "src/dir/another-dir/file1.txt",
+    "src/dir/another-dir2/file2.txt"
+  ],
+  "cases": [
+    {
+      "name": "resource_paths_iter_slice_allow_walk",
+      "allowWalk": true,
+      "input": [
+        "../empty-directory",
+        "../src/script.js",
+        "../src/assets",
+        "../src/index.html",
+        "../src/sounds",
+        "../src/textures/**/*",
+        "*.toml",
+        "*.conf.json"
+      ],
+      "expected": [
+        [
+          "../src/script.js",
+          "_up_/src/script.js"
+        ],
+        [
+          "../src/assets/javascript.svg",
+          "_up_/src/assets/javascript.svg"
+        ],
+        [
+          "../src/assets/tauri.svg",
+          "_up_/src/assets/tauri.svg"
+        ],
+        [
+          "../src/assets/rust.svg",
+          "_up_/src/assets/rust.svg"
+        ],
+        [
+          "../src/assets/lang/en.json",
+          "_up_/src/assets/lang/en.json"
+        ],
+        [
+          "../src/assets/lang/ar.json",
+          "_up_/src/assets/lang/ar.json"
+        ],
+        [
+          "../src/index.html",
+          "_up_/src/index.html"
+        ],
+        [
+          "../src/sounds/lang/es.wav",
+          "_up_/src/sounds/lang/es.wav"
+        ],
+        [
+          "../src/sounds/lang/fr.wav",
+          "_up_/src/sounds/lang/fr.wav"
+        ],
+        [
+          "../src/textures/ground/earth.tex",
+          "_up_/src/textures/ground/earth.tex"
+        ],
+        [
+          "../src/textures/ground/sand.tex",
+          "_up_/src/textures/ground/sand.tex"
+        ],
+        [
+          "../src/textures/water.tex",
+          "_up_/src/textures/water.tex"
+        ],
+        [
+          "../src/textures/fire.tex",
+          "_up_/src/textures/fire.tex"
+        ],
+        [
+          "Cargo.toml",
+          "Cargo.toml"
+        ],
+        [
+          "Tauri.toml",
+          "Tauri.toml"
+        ],
+        [
+          "tauri.conf.json",
+          "tauri.conf.json"
+        ]
+      ],
+      "errorsOnly": false
+    },
+    {
+      "name": "resource_paths_iter_slice_no_walk",
+      "allowWalk": false,
+      "input": [
+        "../src/script.js",
+        "../src/assets",
+        "../src/index.html",
+        "../src/sounds",
+        "*.toml",
+        "*.conf.json"
+      ],
+      "expected": [
+        [
+          "../src/script.js",
+          "_up_/src/script.js"
+        ],
+        [
+          "../src/index.html",
+          "_up_/src/index.html"
+        ],
+        [
+          "Cargo.toml",
+          "Cargo.toml"
+        ],
+        [
+          "Tauri.toml",
+          "Tauri.toml"
+        ],
+        [
+          "tauri.conf.json",
+          "tauri.conf.json"
+        ]
+      ],
+      "errorsOnly": false
+    },
+    {
+      "name": "resource_paths_iter_map_allow_walk",
+      "allowWalk": true,
+      "input": {
+        "../src/script.js": "main.js",
+        "../src/assets": "",
+        "../src/index.html": "frontend/index.html",
+        "../src/sounds": "voices",
+        "../src/textures/*": "textures",
+        "../src/tiles/**/*": "tiles",
+        "*.toml": "",
+        "*.conf.json": "json",
+        "./some-folder/": "some-target-folder/",
+        "../non-existent-file": "asd",
+        "../non/*": "asd"
+      },
+      "expected": [
+        [
+          "../src/script.js",
+          "main.js"
+        ],
+        [
+          "../src/assets/javascript.svg",
+          "javascript.svg"
+        ],
+        [
+          "../src/assets/tauri.svg",
+          "tauri.svg"
+        ],
+        [
+          "../src/assets/rust.svg",
+          "rust.svg"
+        ],
+        [
+          "../src/assets/lang/en.json",
+          "lang/en.json"
+        ],
+        [
+          "../src/assets/lang/ar.json",
+          "lang/ar.json"
+        ],
+        [
+          "../src/index.html",
+          "frontend/index.html"
+        ],
+        [
+          "../src/sounds/lang/es.wav",
+          "voices/lang/es.wav"
+        ],
+        [
+          "../src/sounds/lang/fr.wav",
+          "voices/lang/fr.wav"
+        ],
+        [
+          "../src/textures/water.tex",
+          "textures/water.tex"
+        ],
+        [
+          "../src/textures/fire.tex",
+          "textures/fire.tex"
+        ],
+        [
+          "../src/tiles/grass.tile",
+          "tiles/grass.tile"
+        ],
+        [
+          "../src/tiles/stones.tile",
+          "tiles/stones.tile"
+        ],
+        [
+          "../src/tiles/sky/grey.tile",
+          "tiles/grey.tile"
+        ],
+        [
+          "../src/tiles/sky/yellow.tile",
+          "tiles/yellow.tile"
+        ],
+        [
+          "Cargo.toml",
+          "Cargo.toml"
+        ],
+        [
+          "Tauri.toml",
+          "Tauri.toml"
+        ],
+        [
+          "tauri.conf.json",
+          "json/tauri.conf.json"
+        ],
+        [
+          "some-folder/some-file.txt",
+          "some-target-folder/some-file.txt"
+        ]
+      ],
+      "errorsOnly": false
+    },
+    {
+      "name": "resource_paths_iter_map_no_walk",
+      "allowWalk": false,
+      "input": {
+        "../src/script.js": "main.js",
+        "../src/assets": "",
+        "../src/index.html": "frontend/index.html",
+        "../src/sounds": "voices",
+        "*.toml": "",
+        "*.conf.json": "json"
+      },
+      "expected": [
+        [
+          "../src/script.js",
+          "main.js"
+        ],
+        [
+          "../src/index.html",
+          "frontend/index.html"
+        ],
+        [
+          "Cargo.toml",
+          "Cargo.toml"
+        ],
+        [
+          "Tauri.toml",
+          "Tauri.toml"
+        ],
+        [
+          "tauri.conf.json",
+          "json/tauri.conf.json"
+        ]
+      ],
+      "errorsOnly": false
+    },
+    {
+      "name": "resource_paths_errors",
+      "allowWalk": false,
+      "input": {
+        "../non-existent-file": "file",
+        "../non-existent-dir": "dir",
+        "../src": "dir2",
+        "../non-existent-glob-dir/*": "glob",
+        "../src/dir/*": "dir3"
+      },
+      "expected": [],
+      "errorsOnly": true
+    }
+  ]
+}

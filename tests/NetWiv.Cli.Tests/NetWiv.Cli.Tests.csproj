@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PublishAot>false</PublishAot>
+    <IsAotCompatible>false</IsAotCompatible>
+    <IsTrimmable>false</IsTrimmable>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="fixtures/upstream-resources.json" LogicalName="upstream-resources.json" />
+    <EmbeddedResource Include="fixtures/upstream-categories.json" LogicalName="upstream-categories.json" />
+    <ProjectReference Include="..\..\src\NetWiv.Build\NetWiv.Build.csproj" />
+    <ProjectReference Include="..\..\src\NetWiv.Cli\NetWiv.Cli.csproj" />
+  </ItemGroup>
+</Project>

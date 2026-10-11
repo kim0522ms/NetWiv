@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsAotCompatible>true</IsAotCompatible>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsTrimmable>true</IsTrimmable>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../NetWiv.Core/Security/LabelPattern.cs" Link="Packaging/LabelPattern.cs" />
+    <ProjectReference Include="../NetWiv.Build.Tasks/NetWiv.Build.Tasks.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <PackageReference Include="Tomlyn" Version="2.10.1" />
+    <None Include="../../THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="" />
+    <None Include="ThirdParty/Json5/LICENSE.txt" Pack="true" PackagePath="licenses/Json5-LICENSE.txt" />
+    <None Include="buildTransitive\NetWiv.Build.targets" Pack="true" PackagePath="buildTransitive\NetWiv.Build.targets" />
+    <None Include="../NetWiv.Build.Tasks/bin/$(Configuration)/net10.0/NetWiv.Build.Tasks.dll" Pack="true" PackagePath="tools/net10.0/" />
+  </ItemGroup>
+</Project>

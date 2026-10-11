@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk" TreatAsLocalProperty="PublishAot">
+  <PropertyGroup>
+    <PublishAot>false</PublishAot>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <PackageId>NetWiv.Generators</PackageId>
+    <PackageType>Analyzer</PackageType>
+    <Description>NativeAOT-safe command and plugin source generators for NetWiv.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="NetWiv.Generators.Tests" />
+    <None Include="../../licenses/dotnet-runtime-MIT.txt" Pack="true" PackagePath="licenses/" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all" />
+    <None Include="$(OutputPath)$(AssemblyName).dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
+  </ItemGroup>
+</Project>

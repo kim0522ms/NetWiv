@@ -1,0 +1,12 @@
+{
+  "identifier": "dev.netwiv.isolation-reference",
+  "build": { "frontendDist": "web-assets" },
+  "app": {
+    "windows": [{ "label": "main", "title": "Tauri isolation reference", "width": 740, "height": 520 }],
+    "security": {
+      "pattern": { "use": "isolation", "options": { "dir": "../isolation" } },
+      "csp": "default-src 'self' data:; script-src 'self'; style-src 'self'; connect-src 'self' ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": { "active": false, "icon": ["../../conformance/reference/src-tauri/icons/icon.ico", "../../conformance/reference/src-tauri/icons/icon.png"] }
+}

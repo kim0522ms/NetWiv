@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk" TreatAsLocalProperty="PublishAot">
+  <PropertyGroup>
+    <PackageId>NetWiv.Templates</PackageId>
+    <PackageType>Template</PackageType>
+    <Title>NetWiv desktop application templates</Title>
+    <Description>React and C# desktop starter with generated frontend bindings.</Description>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <PublishAot>false</PublishAot>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="../../templates/react-app/**/*" Exclude="../../templates/react-app/**/node_modules/**;../../templates/react-app/**/bin/**;../../templates/react-app/**/obj/**;../../templates/react-app/dist/**;../../templates/react-app/src/generated/**;../../templates/react-app/.template.config/template.json" Pack="true" PackagePath="content/react" />
+  </ItemGroup>
+  <Target Name="NetWivVersionTemplate" BeforeTargets="_GetPackageFiles">
+    <PropertyGroup>
+      <_NetWivTemplateJson>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/../../templates/react-app/.template.config/template.json').Replace('&quot;defaultValue&quot;: &quot;0.1.0-dev&quot;', '&quot;defaultValue&quot;: &quot;$(Version)&quot;'))</_NetWivTemplateJson>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(IntermediateOutputPath)versioned-template.json" Lines="$(_NetWivTemplateJson)" Overwrite="true" WriteOnlyWhenDifferent="true" Encoding="UTF-8" />
+    <ItemGroup>
+      <Content Include="$(IntermediateOutputPath)versioned-template.json" Pack="true" PackagePath="content/react/.template.config/template.json" />
+    </ItemGroup>
+  </Target>
+</Project>

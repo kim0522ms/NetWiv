@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>netwiv</AssemblyName>
+    <RootNamespace>NetWiv.Cli</RootNamespace>
+    <PublishAot>true</PublishAot>
+    <StripSymbols>true</StripSymbols>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>netwiv</ToolCommandName>
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+    <PackageId>NetWiv.Cli</PackageId>
+    <Version>0.1.0-dev</Version>
+    <Description>Build, develop, inspect, and package NetWiv desktop applications.</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Shared/PermissionIdentifier.cs" Link="Commands/PermissionIdentifier.cs" />
+    <Compile Include="../Shared/CapabilityValidation.cs" Link="Commands/CapabilityValidation.cs" />
+    <ProjectReference Include="..\NetWiv.Build\NetWiv.Build.csproj" />
+    <None Include="../../THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="" />
+    <None Include="../NetWiv.Build/ThirdParty/Json5/LICENSE.txt" Pack="true" PackagePath="licenses/Json5-LICENSE.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\templates\**\*" Exclude="../../templates/**/node_modules/**;../../templates/**/bin/**;../../templates/**/obj/**;../../templates/**/dist/**;../../templates/react-app/src/generated/**" Link="templates\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Pack="false" />
+  </ItemGroup>
+</Project>

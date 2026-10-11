@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-restricted"
+description = "Enables the restricted command without any pre-configured scope."
+commands.allow = ["restricted"]
+
+[[permission]]
+identifier = "deny-restricted"
+description = "Denies the restricted command without any pre-configured scope."
+commands.deny = ["restricted"]

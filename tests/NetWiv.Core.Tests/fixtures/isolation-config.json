@@ -1,0 +1,10 @@
+{
+  "identifier": "dev.netwiv.isolation-tests",
+  "app": {
+    "security": {
+      "pattern": { "use": "isolation", "options": { "dir": "isolation" } },
+      "csp": "default-src 'self'; script-src 'self'",
+      "headers": { "X-Isolation-Test": "configured" }
+    }
+  }
+}

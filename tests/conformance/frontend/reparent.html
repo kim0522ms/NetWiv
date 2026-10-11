@@ -1,0 +1,13 @@
+<!doctype html><html><head><meta charset="UTF-8"><title>reparent probe</title></head><body>
+<script type="module">
+import { invoke } from './vendor/@tauri-apps/api/core.js';
+import { emit, listen } from './vendor/@tauri-apps/api/event.js';
+await listen('reparent-probe', async event => {
+  if (event.payload === 'reload') { location.reload(); return; }
+  let result;
+  try { result = { allowed: true, value: await invoke('echo_json', { input: true }) }; }
+  catch (error) { result = { allowed: false, error: String(error) }; }
+  await emit('reparent-response', { step: event.payload, ...result });
+});
+await emit('reparent-ready', true);
+</script></body></html>

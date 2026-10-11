@@ -1,0 +1,16 @@
+<Project>
+  <Target Name="BuildReactFrontend" BeforeTargets="AssignTargetPaths"
+          DependsOnTargets="ResolveProjectReferences"
+          Condition="'$(DesignTimeBuild)' != 'true' and '$(NetWivDevelopment)' != 'true' and '$(NetWivBindingsOnly)' != 'true'">
+    <!-- Re-evaluate after Vite creates files and removes the previous hashed assets. -->
+    <ItemGroup>
+      <EmbeddedResource Remove="@(EmbeddedResource)" Condition="$([System.String]::Copy('%(EmbeddedResource.LogicalName)').StartsWith('netwiv.assets.'))" />
+    </ItemGroup>
+    <ItemGroup>
+      <_ReactAssets Include="$(NetWivFrontendDist)/**/*" />
+    </ItemGroup>
+    <ItemGroup>
+      <EmbeddedResource Include="@(_ReactAssets)" LogicalName="netwiv.assets.%(_ReactAssets.RecursiveDir)%(_ReactAssets.Filename)%(_ReactAssets.Extension)" />
+    </ItemGroup>
+  </Target>
+</Project>

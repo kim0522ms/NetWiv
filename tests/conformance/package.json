@@ -1,0 +1,15 @@
+{
+  "name": "@netwiv/tauri-v2.11-conformance",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-frontend.mjs",
+    "compare": "node scripts/compare-results.mjs results/reference.jsonl results/netwiv.jsonl",
+    "test": "node --test scripts/*.test.mjs",
+    "verify": "node scripts/verify-fixtures.mjs && node --test scripts/*.test.mjs"
+  },
+  "pinnedDependencies": {
+    "@tauri-apps/api": "2.11.1",
+    "@tauri-apps/cli": "2.11.4"
+  }
+}

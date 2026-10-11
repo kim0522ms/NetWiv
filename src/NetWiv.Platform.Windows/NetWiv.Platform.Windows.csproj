@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetWiv.Core\NetWiv.Core.csproj" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3537.50" GeneratePathProperty="true" ExcludeAssets="compile;build;buildTransitive" />
+    <Content Include="$(PkgMicrosoft_Web_WebView2)\runtimes\win-x64\native\WebView2Loader.dll"
+             Link="WebView2Loader.dll"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest"
+             Pack="true"
+             PackagePath="runtimes\win-x64\native" />
+  </ItemGroup>
+</Project>

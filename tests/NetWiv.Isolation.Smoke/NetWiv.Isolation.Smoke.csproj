@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PublishAot>true</PublishAot>
+    <NetWivConfigPath>$(MSBuildProjectDirectory)/netwiv.conf.json</NetWivConfigPath>
+    <NetWivFrontendDist>$(MSBuildProjectDirectory)/frontend</NetWivFrontendDist>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/NetWiv.Platform.Wry/NetWiv.Platform.Wry.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Generators/NetWiv.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../src/NetWiv.Build/NetWiv.Build.csproj" ReferenceOutputAssembly="false" />
+    <EmbeddedResource Include="../../samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api/core.js" LogicalName="netwiv.assets.core.js" />
+    <EmbeddedResource Include="../../samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api/external/tslib/tslib.es6.js" LogicalName="netwiv.assets.external/tslib/tslib.es6.js" />
+  </ItemGroup>
+  <Import Project="../../src/NetWiv.Build/buildTransitive/NetWiv.Build.targets" />
+</Project>

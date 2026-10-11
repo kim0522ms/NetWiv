@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-stream-numbers"
+description = "Enables the stream_numbers command without any pre-configured scope."
+commands.allow = ["stream_numbers"]
+
+[[permission]]
+identifier = "deny-stream-numbers"
+description = "Denies the stream_numbers command without any pre-configured scope."
+commands.deny = ["stream_numbers"]

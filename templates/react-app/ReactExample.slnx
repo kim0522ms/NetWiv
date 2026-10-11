@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="src-netwiv/ReactExample.csproj" />
+  <Project Path="ReactExample.Frontend.esproj">
+    <Build Project="true" />
+  </Project>
+</Solution>

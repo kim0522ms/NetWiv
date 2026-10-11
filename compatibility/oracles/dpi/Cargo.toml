@@ -1,0 +1,8 @@
+[package]
+name = "netwiv-dpi-oracle"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dpi = "=0.1.2"

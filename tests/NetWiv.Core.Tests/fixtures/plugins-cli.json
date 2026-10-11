@@ -1,0 +1,13 @@
+{
+  "plugins": {
+    "cli": {
+      "args": [
+        { "name": "verbose", "short": "v" },
+        { "name": "type", "short": "t", "takesValue": true, "multiple": true, "possibleValues": ["foo", "bar"] }
+      ],
+      "subcommands": {
+        "run": { "args": [{ "name": "debug" }] }
+      }
+    }
+  }
+}

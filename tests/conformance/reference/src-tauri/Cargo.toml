@@ -1,0 +1,17 @@
+[package]
+name = "netwiv-tauri-reference"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[build-dependencies]
+tauri-build = "=2.6.3"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "=2.11.5", features = ["tray-icon", "unstable", "image-png", "image-ico", "protocol-asset"] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

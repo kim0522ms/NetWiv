@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Reload probe</title></head><body>Reload probe
+<script type="module">
+import { invoke, Channel } from './core.js';
+try {
+  const previous = sessionStorage.getItem('netwiv-old-callbacks');
+  if (!previous) {
+    const channel = new Channel();
+    void invoke('pending_reload', {channel});
+    // This smoke-only instrumentation observes whether any obsolete callback is
+    // delivered. Application compatibility does not include private internals.
+    const ids = [...window.__TAURI_INTERNALS__.callbacks.keys()];
+    await invoke('reload_barrier');
+    sessionStorage.setItem('netwiv-old-callbacks', JSON.stringify(ids));
+    location.reload();
+  } else {
+    const ids = new Set(JSON.parse(previous));
+    const run = window.__TAURI_INTERNALS__.runCallback;
+    let stale = false;
+    window.__TAURI_INTERNALS__.runCallback = (id, value) => {
+      if (ids.has(id)) stale = true;
+      return run(id, value);
+    };
+    await invoke('release_reload');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    sessionStorage.removeItem('netwiv-old-callbacks');
+    await invoke('reload_complete', {stale});
+  }
+} catch (error) { await invoke('failed', {error: String(error)}); }
+</script></body></html>

@@ -1,0 +1,24 @@
+{
+  "name": "netwiv-vanilla-ts-example",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "bindings": "node scripts/generate-bindings.mjs",
+    "predev": "node scripts/generate-bindings.mjs",
+    "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
+    "build": "node scripts/generate-bindings.mjs && tsc --noEmit && vite build",
+    "desktop:dev": "dotnet tool restore && dotnet tool run netwiv -- dev -- --dev",
+    "desktop:build": "dotnet tool restore && dotnet tool run netwiv -- build --no-bundle"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.11.1"
+  },
+  "devDependencies": {
+    "vite": "8.2.2",
+    "typescript": "6.0.3"
+  }
+}

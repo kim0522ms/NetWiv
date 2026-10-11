@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-always-fails"
+description = "Enables the always_fails command without any pre-configured scope."
+commands.allow = ["always_fails"]
+
+[[permission]]
+identifier = "deny-always-fails"
+description = "Denies the always_fails command without any pre-configured scope."
+commands.deny = ["always_fails"]

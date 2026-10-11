@@ -1,0 +1,29 @@
+{
+  "productName": "__APP_NAME__",
+  "version": "0.1.0",
+  "identifier": "com.example.__IDENTIFIER__",
+  "build": {
+    "beforeDevCommand": __BEFORE_DEV_COMMAND__,
+    "beforeBuildCommand": __BEFORE_BUILD_COMMAND__,
+    "devUrl": __DEV_URL__,
+    "frontendDist": __FRONTEND_DIST__,
+    "dotnetProject": "NetWiv.App.csproj"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "__WINDOW_TITLE__",
+        "width": 800,
+        "height": 600
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icon.svg"],
+    "license": "Apache-2.0",
+    "shortDescription": "__APP_NAME__ desktop application"
+  }
+}

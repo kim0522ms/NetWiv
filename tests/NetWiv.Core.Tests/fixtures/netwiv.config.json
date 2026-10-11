@@ -1,0 +1,23 @@
+{
+  "productName": "Configured",
+  "version": "2.3.4",
+  "identifier": "test.configured",
+  "build": { "devUrl": "http://localhost:1420/" },
+  "app": {
+    "windows": [{ "label": "configured", "title": "Configured Window", "url": "index.html", "width": 640, "height": 480 }],
+    "security": {
+      "freezePrototype": true,
+      "csp": { "default-src": ["'self'"], "img-src": ["'self'", "data:"] },
+      "devCsp": "default-src 'none'",
+      "headers": { "Cross-Origin-Opener-Policy": "same-origin" },
+      "capabilities": [{
+        "identifier": "configured",
+        "windows": ["configured"],
+        "permissions": [
+          "core:app:allow-name",
+          { "identifier": "allow-scoped", "allow": [{ "path": "$HOME/read" }], "deny": [{ "path": "$HOME/private" }] }
+        ]
+      }]
+    }
+  }
+}

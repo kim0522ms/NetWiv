@@ -1,0 +1,12 @@
+{
+  "productName": "NetWiv React example",
+  "version": "0.1.0",
+  "identifier": "dev.netwiv.reactexample",
+  "build": {
+    "dotnetProject": "ReactExample.csproj",
+    "frontendDist": "../dist",
+    "devUrl": "http://127.0.0.1:5173/",
+    "beforeDevCommand": "npm run dev"
+  },
+  "bundle": { "active": false }
+}

@@ -1,0 +1,12 @@
+<!doctype html><html><title>Custom protocol fixture</title><body>
+<script type="module">
+import { invoke } from './core.js';
+import { emitTo } from './event.js';
+try {
+  const result = await invoke('echo_json', { input: 'custom document IPC' });
+  const response = await fetch('./echo', { method: 'POST', body: new Uint8Array([0, 255, 42]) });
+  await emitTo('main', 'custom-protocol-finished', {
+    result, label: response.headers.get('X-Webview'), bytes: [...new Uint8Array(await response.arrayBuffer())]
+  });
+} catch (error) { await emitTo('main', 'custom-protocol-finished', { error: String(error) }); }
+</script></body></html>

@@ -1,0 +1,1616 @@
+{
+  "serde": "1.0.229",
+  "serdeJson": "1.0.151",
+  "vectors": [
+    {
+      "input": "null",
+      "results": {
+        "byte": {
+          "error": "invalid type: null, expected u8"
+        },
+        "double": {
+          "error": "invalid type: null, expected f64"
+        },
+        "float": {
+          "error": "invalid type: null, expected f32"
+        },
+        "int": {
+          "error": "invalid type: null, expected i32"
+        },
+        "long": {
+          "error": "invalid type: null, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: null, expected i8"
+        },
+        "short": {
+          "error": "invalid type: null, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: null, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: null, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: null, expected u16"
+        }
+      }
+    },
+    {
+      "input": "true",
+      "results": {
+        "byte": {
+          "error": "invalid type: boolean `true`, expected u8"
+        },
+        "double": {
+          "error": "invalid type: boolean `true`, expected f64"
+        },
+        "float": {
+          "error": "invalid type: boolean `true`, expected f32"
+        },
+        "int": {
+          "error": "invalid type: boolean `true`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: boolean `true`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: boolean `true`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: boolean `true`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: boolean `true`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: boolean `true`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: boolean `true`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "{}",
+      "results": {
+        "byte": {
+          "error": "invalid type: map, expected u8"
+        },
+        "double": {
+          "error": "invalid type: map, expected f64"
+        },
+        "float": {
+          "error": "invalid type: map, expected f32"
+        },
+        "int": {
+          "error": "invalid type: map, expected i32"
+        },
+        "long": {
+          "error": "invalid type: map, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: map, expected i8"
+        },
+        "short": {
+          "error": "invalid type: map, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: map, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: map, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: map, expected u16"
+        }
+      }
+    },
+    {
+      "input": "[]",
+      "results": {
+        "byte": {
+          "error": "invalid type: sequence, expected u8"
+        },
+        "double": {
+          "error": "invalid type: sequence, expected f64"
+        },
+        "float": {
+          "error": "invalid type: sequence, expected f32"
+        },
+        "int": {
+          "error": "invalid type: sequence, expected i32"
+        },
+        "long": {
+          "error": "invalid type: sequence, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: sequence, expected i8"
+        },
+        "short": {
+          "error": "invalid type: sequence, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: sequence, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: sequence, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: sequence, expected u16"
+        }
+      }
+    },
+    {
+      "input": "\"number\"",
+      "results": {
+        "byte": {
+          "error": "invalid type: string \"number\", expected u8"
+        },
+        "double": {
+          "error": "invalid type: string \"number\", expected f64"
+        },
+        "float": {
+          "error": "invalid type: string \"number\", expected f32"
+        },
+        "int": {
+          "error": "invalid type: string \"number\", expected i32"
+        },
+        "long": {
+          "error": "invalid type: string \"number\", expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: string \"number\", expected i8"
+        },
+        "short": {
+          "error": "invalid type: string \"number\", expected i16"
+        },
+        "uint": {
+          "error": "invalid type: string \"number\", expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: string \"number\", expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: string \"number\", expected u16"
+        }
+      }
+    },
+    {
+      "input": "0",
+      "results": {
+        "byte": {
+          "ok": "0"
+        },
+        "double": {
+          "ok": "0.0"
+        },
+        "float": {
+          "ok": "0.0"
+        },
+        "int": {
+          "ok": "0"
+        },
+        "long": {
+          "ok": "0"
+        },
+        "sbyte": {
+          "ok": "0"
+        },
+        "short": {
+          "ok": "0"
+        },
+        "uint": {
+          "ok": "0"
+        },
+        "ulong": {
+          "ok": "0"
+        },
+        "ushort": {
+          "ok": "0"
+        }
+      }
+    },
+    {
+      "input": "-0",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `-0.0`, expected u8"
+        },
+        "double": {
+          "ok": "-0.0"
+        },
+        "float": {
+          "ok": "-0.0"
+        },
+        "int": {
+          "error": "invalid type: floating point `-0.0`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `-0.0`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `-0.0`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `-0.0`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `-0.0`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `-0.0`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `-0.0`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "0.0",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `0.0`, expected u8"
+        },
+        "double": {
+          "ok": "0.0"
+        },
+        "float": {
+          "ok": "0.0"
+        },
+        "int": {
+          "error": "invalid type: floating point `0.0`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `0.0`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `0.0`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `0.0`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `0.0`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `0.0`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `0.0`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "1",
+      "results": {
+        "byte": {
+          "ok": "1"
+        },
+        "double": {
+          "ok": "1.0"
+        },
+        "float": {
+          "ok": "1.0"
+        },
+        "int": {
+          "ok": "1"
+        },
+        "long": {
+          "ok": "1"
+        },
+        "sbyte": {
+          "ok": "1"
+        },
+        "short": {
+          "ok": "1"
+        },
+        "uint": {
+          "ok": "1"
+        },
+        "ulong": {
+          "ok": "1"
+        },
+        "ushort": {
+          "ok": "1"
+        }
+      }
+    },
+    {
+      "input": "1.0",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `1.0`, expected u8"
+        },
+        "double": {
+          "ok": "1.0"
+        },
+        "float": {
+          "ok": "1.0"
+        },
+        "int": {
+          "error": "invalid type: floating point `1.0`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `1.0`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `1.0`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `1.0`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `1.0`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `1.0`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `1.0`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "1e0",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `1.0`, expected u8"
+        },
+        "double": {
+          "ok": "1.0"
+        },
+        "float": {
+          "ok": "1.0"
+        },
+        "int": {
+          "error": "invalid type: floating point `1.0`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `1.0`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `1.0`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `1.0`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `1.0`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `1.0`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `1.0`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "-1",
+      "results": {
+        "byte": {
+          "error": "invalid value: integer `-1`, expected u8"
+        },
+        "double": {
+          "ok": "-1.0"
+        },
+        "float": {
+          "ok": "-1.0"
+        },
+        "int": {
+          "ok": "-1"
+        },
+        "long": {
+          "ok": "-1"
+        },
+        "sbyte": {
+          "ok": "-1"
+        },
+        "short": {
+          "ok": "-1"
+        },
+        "uint": {
+          "error": "invalid value: integer `-1`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid value: integer `-1`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid value: integer `-1`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "0.5",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `0.5`, expected u8"
+        },
+        "double": {
+          "ok": "0.5"
+        },
+        "float": {
+          "ok": "0.5"
+        },
+        "int": {
+          "error": "invalid type: floating point `0.5`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `0.5`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `0.5`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `0.5`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `0.5`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `0.5`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `0.5`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "-0.5",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `-0.5`, expected u8"
+        },
+        "double": {
+          "ok": "-0.5"
+        },
+        "float": {
+          "ok": "-0.5"
+        },
+        "int": {
+          "error": "invalid type: floating point `-0.5`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `-0.5`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `-0.5`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `-0.5`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `-0.5`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `-0.5`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `-0.5`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "255",
+      "results": {
+        "byte": {
+          "ok": "255"
+        },
+        "double": {
+          "ok": "255.0"
+        },
+        "float": {
+          "ok": "255.0"
+        },
+        "int": {
+          "ok": "255"
+        },
+        "long": {
+          "ok": "255"
+        },
+        "sbyte": {
+          "error": "invalid value: integer `255`, expected i8"
+        },
+        "short": {
+          "ok": "255"
+        },
+        "uint": {
+          "ok": "255"
+        },
+        "ulong": {
+          "ok": "255"
+        },
+        "ushort": {
+          "ok": "255"
+        }
+      }
+    },
+    {
+      "input": "256",
+      "results": {
+        "byte": {
+          "error": "invalid value: integer `256`, expected u8"
+        },
+        "double": {
+          "ok": "256.0"
+        },
+        "float": {
+          "ok": "256.0"
+        },
+        "int": {
+          "ok": "256"
+        },
+        "long": {
+          "ok": "256"
+        },
+        "sbyte": {
+          "error": "invalid value: integer `256`, expected i8"
+        },
+        "short": {
+          "ok": "256"
+        },
+        "uint": {
+          "ok": "256"
+        },
+        "ulong": {
+          "ok": "256"
+        },
+        "ushort": {
+          "ok": "256"
+        }
+      }
+    },
+    {
+      "input": "-129",
+      "results": {
+        "byte": {
+          "error": "invalid value: integer `-129`, expected u8"
+        },
+        "double": {
+          "ok": "-129.0"
+        },
+        "float": {
+          "ok": "-129.0"
+        },
+        "int": {
+          "ok": "-129"
+        },
+        "long": {
+          "ok": "-129"
+        },
+        "sbyte": {
+          "error": "invalid value: integer `-129`, expected i8"
+        },
+        "short": {
+          "ok": "-129"
+        },
+        "uint": {
+          "error": "invalid value: integer `-129`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid value: integer `-129`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid value: integer `-129`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "128",
+      "results": {
+        "byte": {
+          "ok": "128"
+        },
+        "double": {
+          "ok": "128.0"
+        },
+        "float": {
+          "ok": "128.0"
+        },
+        "int": {
+          "ok": "128"
+        },
+        "long": {
+          "ok": "128"
+        },
+        "sbyte": {
+          "error": "invalid value: integer `128`, expected i8"
+        },
+        "short": {
+          "ok": "128"
+        },
+        "uint": {
+          "ok": "128"
+        },
+        "ulong": {
+          "ok": "128"
+        },
+        "ushort": {
+          "ok": "128"
+        }
+      }
+    },
+    {
+      "input": "65535",
+      "results": {
+        "byte": {
+          "error": "invalid value: integer `65535`, expected u8"
+        },
+        "double": {
+          "ok": "65535.0"
+        },
+        "float": {
+          "ok": "65535.0"
+        },
+        "int": {
+          "ok": "65535"
+        },
+        "long": {
+          "ok": "65535"
+        },
+        "sbyte": {
+          "error": "invalid value: integer `65535`, expected i8"
+        },
+        "short": {
+          "error": "invalid value: integer `65535`, expected i16"
+        },
+        "uint": {
+          "ok": "65535"
+        },
+        "ulong": {
+          "ok": "65535"
+        },
+        "ushort": {
+          "ok": "65535"
+        }
+      }
+    },
+    {
+      "input": "65536",
+      "results": {
+        "byte": {
+          "error": "invalid value: integer `65536`, expected u8"
+        },
+        "double": {
+          "ok": "65536.0"
+        },
+        "float": {
+          "ok": "65536.0"
+        },
+        "int": {
+          "ok": "65536"
+        },
+        "long": {
+          "ok": "65536"
+        },
+        "sbyte": {
+          "error": "invalid value: integer `65536`, expected i8"
+        },
+        "short": {
+          "error": "invalid value: integer `65536`, expected i16"
+        },
+        "uint": {
+          "ok": "65536"
+        },
+        "ulong": {
+          "ok": "65536"
+        },
+        "ushort": {
+          "error": "invalid value: integer `65536`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "-32769",
+      "results": {
+        "byte": {
+          "error": "invalid value: integer `-32769`, expected u8"
+        },
+        "double": {
+          "ok": "-32769.0"
+        },
+        "float": {
+          "ok": "-32769.0"
+        },
+        "int": {
+          "ok": "-32769"
+        },
+        "long": {
+          "ok": "-32769"
+        },
+        "sbyte": {
+          "error": "invalid value: integer `-32769`, expected i8"
+        },
+        "short": {
+          "error": "invalid value: integer `-32769`, expected i16"
+        },
+        "uint": {
+          "error": "invalid value: integer `-32769`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid value: integer `-32769`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid value: integer `-32769`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "32768",
+      "results": {
+        "byte": {
+          "error": "invalid value: integer `32768`, expected u8"
+        },
+        "double": {
+          "ok": "32768.0"
+        },
+        "float": {
+          "ok": "32768.0"
+        },
+        "int": {
+          "ok": "32768"
+        },
+        "long": {
+          "ok": "32768"
+        },
+        "sbyte": {
+          "error": "invalid value: integer `32768`, expected i8"
+        },
+        "short": {
+          "error": "invalid value: integer `32768`, expected i16"
+        },
+        "uint": {
+          "ok": "32768"
+        },
+        "ulong": {
+          "ok": "32768"
+        },
+        "ushort": {
+          "ok": "32768"
+        }
+      }
+    },
+    {
+      "input": "4294967295",
+      "results": {
+        "byte": {
+          "error": "invalid value: integer `4294967295`, expected u8"
+        },
+        "double": {
+          "ok": "4294967295.0"
+        },
+        "float": {
+          "ok": "4294967300.0"
+        },
+        "int": {
+          "error": "invalid value: integer `4294967295`, expected i32"
+        },
+        "long": {
+          "ok": "4294967295"
+        },
+        "sbyte": {
+          "error": "invalid value: integer `4294967295`, expected i8"
+        },
+        "short": {
+          "error": "invalid value: integer `4294967295`, expected i16"
+        },
+        "uint": {
+          "ok": "4294967295"
+        },
+        "ulong": {
+          "ok": "4294967295"
+        },
+        "ushort": {
+          "error": "invalid value: integer `4294967295`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "4294967296",
+      "results": {
+        "byte": {
+          "error": "invalid value: integer `4294967296`, expected u8"
+        },
+        "double": {
+          "ok": "4294967296.0"
+        },
+        "float": {
+          "ok": "4294967300.0"
+        },
+        "int": {
+          "error": "invalid value: integer `4294967296`, expected i32"
+        },
+        "long": {
+          "ok": "4294967296"
+        },
+        "sbyte": {
+          "error": "invalid value: integer `4294967296`, expected i8"
+        },
+        "short": {
+          "error": "invalid value: integer `4294967296`, expected i16"
+        },
+        "uint": {
+          "error": "invalid value: integer `4294967296`, expected u32"
+        },
+        "ulong": {
+          "ok": "4294967296"
+        },
+        "ushort": {
+          "error": "invalid value: integer `4294967296`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "-2147483649",
+      "results": {
+        "byte": {
+          "error": "invalid value: integer `-2147483649`, expected u8"
+        },
+        "double": {
+          "ok": "-2147483649.0"
+        },
+        "float": {
+          "ok": "-2147483600.0"
+        },
+        "int": {
+          "error": "invalid value: integer `-2147483649`, expected i32"
+        },
+        "long": {
+          "ok": "-2147483649"
+        },
+        "sbyte": {
+          "error": "invalid value: integer `-2147483649`, expected i8"
+        },
+        "short": {
+          "error": "invalid value: integer `-2147483649`, expected i16"
+        },
+        "uint": {
+          "error": "invalid value: integer `-2147483649`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid value: integer `-2147483649`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid value: integer `-2147483649`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "2147483648",
+      "results": {
+        "byte": {
+          "error": "invalid value: integer `2147483648`, expected u8"
+        },
+        "double": {
+          "ok": "2147483648.0"
+        },
+        "float": {
+          "ok": "2147483600.0"
+        },
+        "int": {
+          "error": "invalid value: integer `2147483648`, expected i32"
+        },
+        "long": {
+          "ok": "2147483648"
+        },
+        "sbyte": {
+          "error": "invalid value: integer `2147483648`, expected i8"
+        },
+        "short": {
+          "error": "invalid value: integer `2147483648`, expected i16"
+        },
+        "uint": {
+          "ok": "2147483648"
+        },
+        "ulong": {
+          "ok": "2147483648"
+        },
+        "ushort": {
+          "error": "invalid value: integer `2147483648`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "9223372036854775807",
+      "results": {
+        "byte": {
+          "error": "invalid value: integer `9223372036854775807`, expected u8"
+        },
+        "double": {
+          "ok": "9.223372036854776e+18"
+        },
+        "float": {
+          "ok": "9.223372e+18"
+        },
+        "int": {
+          "error": "invalid value: integer `9223372036854775807`, expected i32"
+        },
+        "long": {
+          "ok": "9223372036854775807"
+        },
+        "sbyte": {
+          "error": "invalid value: integer `9223372036854775807`, expected i8"
+        },
+        "short": {
+          "error": "invalid value: integer `9223372036854775807`, expected i16"
+        },
+        "uint": {
+          "error": "invalid value: integer `9223372036854775807`, expected u32"
+        },
+        "ulong": {
+          "ok": "9223372036854775807"
+        },
+        "ushort": {
+          "error": "invalid value: integer `9223372036854775807`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "9223372036854775808",
+      "results": {
+        "byte": {
+          "error": "invalid value: integer `9223372036854775808`, expected u8"
+        },
+        "double": {
+          "ok": "9.223372036854776e+18"
+        },
+        "float": {
+          "ok": "9.223372e+18"
+        },
+        "int": {
+          "error": "invalid value: integer `9223372036854775808`, expected i32"
+        },
+        "long": {
+          "error": "invalid value: integer `9223372036854775808`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid value: integer `9223372036854775808`, expected i8"
+        },
+        "short": {
+          "error": "invalid value: integer `9223372036854775808`, expected i16"
+        },
+        "uint": {
+          "error": "invalid value: integer `9223372036854775808`, expected u32"
+        },
+        "ulong": {
+          "ok": "9223372036854775808"
+        },
+        "ushort": {
+          "error": "invalid value: integer `9223372036854775808`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "-9223372036854775808",
+      "results": {
+        "byte": {
+          "error": "invalid value: integer `-9223372036854775808`, expected u8"
+        },
+        "double": {
+          "ok": "-9.223372036854776e+18"
+        },
+        "float": {
+          "ok": "-9.223372e+18"
+        },
+        "int": {
+          "error": "invalid value: integer `-9223372036854775808`, expected i32"
+        },
+        "long": {
+          "ok": "-9223372036854775808"
+        },
+        "sbyte": {
+          "error": "invalid value: integer `-9223372036854775808`, expected i8"
+        },
+        "short": {
+          "error": "invalid value: integer `-9223372036854775808`, expected i16"
+        },
+        "uint": {
+          "error": "invalid value: integer `-9223372036854775808`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid value: integer `-9223372036854775808`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid value: integer `-9223372036854775808`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "-9223372036854775809",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `-9.223372036854776e+18`, expected u8"
+        },
+        "double": {
+          "ok": "-9.223372036854776e+18"
+        },
+        "float": {
+          "ok": "-9.223372e+18"
+        },
+        "int": {
+          "error": "invalid type: floating point `-9.223372036854776e+18`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `-9.223372036854776e+18`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `-9.223372036854776e+18`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `-9.223372036854776e+18`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `-9.223372036854776e+18`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `-9.223372036854776e+18`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `-9.223372036854776e+18`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "18446744073709551615",
+      "results": {
+        "byte": {
+          "error": "invalid value: integer `18446744073709551615`, expected u8"
+        },
+        "double": {
+          "ok": "1.8446744073709552e+19"
+        },
+        "float": {
+          "ok": "1.8446744e+19"
+        },
+        "int": {
+          "error": "invalid value: integer `18446744073709551615`, expected i32"
+        },
+        "long": {
+          "error": "invalid value: integer `18446744073709551615`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid value: integer `18446744073709551615`, expected i8"
+        },
+        "short": {
+          "error": "invalid value: integer `18446744073709551615`, expected i16"
+        },
+        "uint": {
+          "error": "invalid value: integer `18446744073709551615`, expected u32"
+        },
+        "ulong": {
+          "ok": "18446744073709551615"
+        },
+        "ushort": {
+          "error": "invalid value: integer `18446744073709551615`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "18446744073709551616",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `1.8446744073709552e+19`, expected u8"
+        },
+        "double": {
+          "ok": "1.8446744073709552e+19"
+        },
+        "float": {
+          "ok": "1.8446744e+19"
+        },
+        "int": {
+          "error": "invalid type: floating point `1.8446744073709552e+19`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `1.8446744073709552e+19`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `1.8446744073709552e+19`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `1.8446744073709552e+19`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `1.8446744073709552e+19`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `1.8446744073709552e+19`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `1.8446744073709552e+19`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "1e-7",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `1e-7`, expected u8"
+        },
+        "double": {
+          "ok": "1e-7"
+        },
+        "float": {
+          "ok": "1e-7"
+        },
+        "int": {
+          "error": "invalid type: floating point `1e-7`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `1e-7`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `1e-7`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `1e-7`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `1e-7`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `1e-7`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `1e-7`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "1e-6",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `1e-6`, expected u8"
+        },
+        "double": {
+          "ok": "1e-6"
+        },
+        "float": {
+          "ok": "0.000001"
+        },
+        "int": {
+          "error": "invalid type: floating point `1e-6`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `1e-6`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `1e-6`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `1e-6`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `1e-6`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `1e-6`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `1e-6`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "1e15",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `1000000000000000.0`, expected u8"
+        },
+        "double": {
+          "ok": "1000000000000000.0"
+        },
+        "float": {
+          "ok": "1e+15"
+        },
+        "int": {
+          "error": "invalid type: floating point `1000000000000000.0`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `1000000000000000.0`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `1000000000000000.0`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `1000000000000000.0`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `1000000000000000.0`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `1000000000000000.0`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `1000000000000000.0`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "1e16",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `1e+16`, expected u8"
+        },
+        "double": {
+          "ok": "1e+16"
+        },
+        "float": {
+          "ok": "1e+16"
+        },
+        "int": {
+          "error": "invalid type: floating point `1e+16`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `1e+16`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `1e+16`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `1e+16`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `1e+16`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `1e+16`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `1e+16`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "1e20",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `1e+20`, expected u8"
+        },
+        "double": {
+          "ok": "1e+20"
+        },
+        "float": {
+          "ok": "1e+20"
+        },
+        "int": {
+          "error": "invalid type: floating point `1e+20`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `1e+20`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `1e+20`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `1e+20`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `1e+20`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `1e+20`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `1e+20`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "1e21",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `1e+21`, expected u8"
+        },
+        "double": {
+          "ok": "1e+21"
+        },
+        "float": {
+          "ok": "1e+21"
+        },
+        "int": {
+          "error": "invalid type: floating point `1e+21`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `1e+21`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `1e+21`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `1e+21`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `1e+21`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `1e+21`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `1e+21`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "100000000000000000000",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `1e+20`, expected u8"
+        },
+        "double": {
+          "ok": "1e+20"
+        },
+        "float": {
+          "ok": "1e+20"
+        },
+        "int": {
+          "error": "invalid type: floating point `1e+20`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `1e+20`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `1e+20`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `1e+20`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `1e+20`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `1e+20`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `1e+20`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "1.2345678901234567",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `1.2345678901234567`, expected u8"
+        },
+        "double": {
+          "ok": "1.2345678901234567"
+        },
+        "float": {
+          "ok": "1.2345679"
+        },
+        "int": {
+          "error": "invalid type: floating point `1.2345678901234567`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `1.2345678901234567`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `1.2345678901234567`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `1.2345678901234567`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `1.2345678901234567`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `1.2345678901234567`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `1.2345678901234567`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "1.23456789012345678",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `1.2345678901234567`, expected u8"
+        },
+        "double": {
+          "ok": "1.2345678901234567"
+        },
+        "float": {
+          "ok": "1.2345679"
+        },
+        "int": {
+          "error": "invalid type: floating point `1.2345678901234567`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `1.2345678901234567`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `1.2345678901234567`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `1.2345678901234567`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `1.2345678901234567`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `1.2345678901234567`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `1.2345678901234567`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "2.2250738585072014e-308",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `2.2250738585072014e-308`, expected u8"
+        },
+        "double": {
+          "ok": "2.2250738585072014e-308"
+        },
+        "float": {
+          "ok": "0.0"
+        },
+        "int": {
+          "error": "invalid type: floating point `2.2250738585072014e-308`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `2.2250738585072014e-308`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `2.2250738585072014e-308`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `2.2250738585072014e-308`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `2.2250738585072014e-308`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `2.2250738585072014e-308`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `2.2250738585072014e-308`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "5e-324",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `5e-324`, expected u8"
+        },
+        "double": {
+          "ok": "5e-324"
+        },
+        "float": {
+          "ok": "0.0"
+        },
+        "int": {
+          "error": "invalid type: floating point `5e-324`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `5e-324`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `5e-324`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `5e-324`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `5e-324`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `5e-324`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `5e-324`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "1e-400",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `0.0`, expected u8"
+        },
+        "double": {
+          "ok": "0.0"
+        },
+        "float": {
+          "ok": "0.0"
+        },
+        "int": {
+          "error": "invalid type: floating point `0.0`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `0.0`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `0.0`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `0.0`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `0.0`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `0.0`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `0.0`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "3.4028235e38",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `3.4028235e+38`, expected u8"
+        },
+        "double": {
+          "ok": "3.4028235e+38"
+        },
+        "float": {
+          "ok": "3.4028235e+38"
+        },
+        "int": {
+          "error": "invalid type: floating point `3.4028235e+38`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `3.4028235e+38`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `3.4028235e+38`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `3.4028235e+38`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `3.4028235e+38`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `3.4028235e+38`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `3.4028235e+38`, expected u16"
+        }
+      }
+    },
+    {
+      "input": "1e40",
+      "results": {
+        "byte": {
+          "error": "invalid type: floating point `1e+40`, expected u8"
+        },
+        "double": {
+          "ok": "1e+40"
+        },
+        "float": {
+          "ok": "null"
+        },
+        "int": {
+          "error": "invalid type: floating point `1e+40`, expected i32"
+        },
+        "long": {
+          "error": "invalid type: floating point `1e+40`, expected i64"
+        },
+        "sbyte": {
+          "error": "invalid type: floating point `1e+40`, expected i8"
+        },
+        "short": {
+          "error": "invalid type: floating point `1e+40`, expected i16"
+        },
+        "uint": {
+          "error": "invalid type: floating point `1e+40`, expected u32"
+        },
+        "ulong": {
+          "error": "invalid type: floating point `1e+40`, expected u64"
+        },
+        "ushort": {
+          "error": "invalid type: floating point `1e+40`, expected u16"
+        }
+      }
+    }
+  ]
+}

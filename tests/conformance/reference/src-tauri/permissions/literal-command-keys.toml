@@ -1,0 +1,5 @@
+[[permission]]
+identifier = "literal-command-keys"
+description = "Command keys containing stars must not expand into command patterns."
+commands.allow = ["*", "custom_*"]
+commands.deny = ["echo_*"]

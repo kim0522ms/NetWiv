@@ -1,0 +1,20 @@
+[[set]]
+identifier = "scope-pair"
+description = "Nested permissions retain separate command scopes."
+permissions = ["scope-nested"]
+
+[[set]]
+identifier = "scope-nested"
+description = "Read and write scopes."
+permissions = ["scope-read", "scope-write"]
+
+[[permission]]
+identifier = "scope-read"
+commands.allow = ["scope_read"]
+scope.allow = ["read"]
+scope.deny = ["private"]
+
+[[permission]]
+identifier = "scope-write"
+commands.allow = ["scope_write"]
+scope.allow = ["write"]

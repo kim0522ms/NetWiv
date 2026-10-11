@@ -1,0 +1,597 @@
+{
+  "notice": "Copyright 2016-2019 Cargo-Bundle developers; Copyright 2019-2024 Tauri Programme within The Commons Conservancy; MIT OR Apache-2.0",
+  "source": "crates/tauri-bundler/src/bundle/category.rs",
+  "sourceSha256": "3b7620fa45c971a867f9117e7d08cda5534614127146d01732b611101249aacc",
+  "categories": [
+    {
+      "name": "Business",
+      "canonical": "Business",
+      "desktop": "Office;",
+      "macos": "public.app-category.business"
+    },
+    {
+      "name": "DeveloperTool",
+      "canonical": "Developer Tool",
+      "desktop": "Development;",
+      "macos": "public.app-category.developer-tools"
+    },
+    {
+      "name": "Education",
+      "canonical": "Education",
+      "desktop": "Education;",
+      "macos": "public.app-category.education"
+    },
+    {
+      "name": "Entertainment",
+      "canonical": "Entertainment",
+      "desktop": "Network;",
+      "macos": "public.app-category.entertainment"
+    },
+    {
+      "name": "Finance",
+      "canonical": "Finance",
+      "desktop": "Office;Finance;",
+      "macos": "public.app-category.finance"
+    },
+    {
+      "name": "Game",
+      "canonical": "Game",
+      "desktop": "Game;",
+      "macos": "public.app-category.games"
+    },
+    {
+      "name": "ActionGame",
+      "canonical": "Action Game",
+      "desktop": "Game;ActionGame;",
+      "macos": "public.app-category.action-games"
+    },
+    {
+      "name": "AdventureGame",
+      "canonical": "Adventure Game",
+      "desktop": "Game;AdventureGame;",
+      "macos": "public.app-category.adventure-games"
+    },
+    {
+      "name": "ArcadeGame",
+      "canonical": "Arcade Game",
+      "desktop": "Game;ArcadeGame;",
+      "macos": "public.app-category.arcade-games"
+    },
+    {
+      "name": "BoardGame",
+      "canonical": "Board Game",
+      "desktop": "Game;BoardGame;",
+      "macos": "public.app-category.board-games"
+    },
+    {
+      "name": "CardGame",
+      "canonical": "Card Game",
+      "desktop": "Game;CardGame;",
+      "macos": "public.app-category.card-games"
+    },
+    {
+      "name": "CasinoGame",
+      "canonical": "Casino Game",
+      "desktop": "Game;",
+      "macos": "public.app-category.casino-games"
+    },
+    {
+      "name": "DiceGame",
+      "canonical": "Dice Game",
+      "desktop": "Game;",
+      "macos": "public.app-category.dice-games"
+    },
+    {
+      "name": "EducationalGame",
+      "canonical": "Educational Game",
+      "desktop": "Game;Education;",
+      "macos": "public.app-category.educational-games"
+    },
+    {
+      "name": "FamilyGame",
+      "canonical": "Family Game",
+      "desktop": "Game;",
+      "macos": "public.app-category.family-games"
+    },
+    {
+      "name": "KidsGame",
+      "canonical": "Kids Game",
+      "desktop": "Game;KidsGame;",
+      "macos": "public.app-category.kids-games"
+    },
+    {
+      "name": "MusicGame",
+      "canonical": "Music Game",
+      "desktop": "Game;",
+      "macos": "public.app-category.music-games"
+    },
+    {
+      "name": "PuzzleGame",
+      "canonical": "Puzzle Game",
+      "desktop": "Game;LogicGame;",
+      "macos": "public.app-category.puzzle-games"
+    },
+    {
+      "name": "RacingGame",
+      "canonical": "Racing Game",
+      "desktop": "Game;",
+      "macos": "public.app-category.racing-games"
+    },
+    {
+      "name": "RolePlayingGame",
+      "canonical": "Role-Playing Game",
+      "desktop": "Game;RolePlaying;",
+      "macos": "public.app-category.role-playing-games"
+    },
+    {
+      "name": "SimulationGame",
+      "canonical": "Simulation Game",
+      "desktop": "Game;Simulation;",
+      "macos": "public.app-category.simulation-games"
+    },
+    {
+      "name": "SportsGame",
+      "canonical": "Sports Game",
+      "desktop": "Game;SportsGame;",
+      "macos": "public.app-category.sports-games"
+    },
+    {
+      "name": "StrategyGame",
+      "canonical": "Strategy Game",
+      "desktop": "Game;StrategyGame;",
+      "macos": "public.app-category.strategy-games"
+    },
+    {
+      "name": "TriviaGame",
+      "canonical": "Trivia Game",
+      "desktop": "Game;",
+      "macos": "public.app-category.trivia-games"
+    },
+    {
+      "name": "WordGame",
+      "canonical": "Word Game",
+      "desktop": "Game;",
+      "macos": "public.app-category.word-games"
+    },
+    {
+      "name": "GraphicsAndDesign",
+      "canonical": "Graphics and Design",
+      "desktop": "Graphics;",
+      "macos": "public.app-category.graphics-design"
+    },
+    {
+      "name": "HealthcareAndFitness",
+      "canonical": "Healthcare and Fitness",
+      "desktop": "Science;",
+      "macos": "public.app-category.healthcare-fitness"
+    },
+    {
+      "name": "Lifestyle",
+      "canonical": "Lifestyle",
+      "desktop": "Education;",
+      "macos": "public.app-category.lifestyle"
+    },
+    {
+      "name": "Medical",
+      "canonical": "Medical",
+      "desktop": "Science;MedicalSoftware;",
+      "macos": "public.app-category.medical"
+    },
+    {
+      "name": "Music",
+      "canonical": "Music",
+      "desktop": "AudioVideo;Audio;Music;",
+      "macos": "public.app-category.music"
+    },
+    {
+      "name": "News",
+      "canonical": "News",
+      "desktop": "Network;News;",
+      "macos": "public.app-category.news"
+    },
+    {
+      "name": "Photography",
+      "canonical": "Photography",
+      "desktop": "Graphics;Photography;",
+      "macos": "public.app-category.photography"
+    },
+    {
+      "name": "Productivity",
+      "canonical": "Productivity",
+      "desktop": "Office;",
+      "macos": "public.app-category.productivity"
+    },
+    {
+      "name": "Reference",
+      "canonical": "Reference",
+      "desktop": "Education;",
+      "macos": "public.app-category.reference"
+    },
+    {
+      "name": "SocialNetworking",
+      "canonical": "Social Networking",
+      "desktop": "Network;",
+      "macos": "public.app-category.social-networking"
+    },
+    {
+      "name": "Sports",
+      "canonical": "Sports",
+      "desktop": "Education;Sports;",
+      "macos": "public.app-category.sports"
+    },
+    {
+      "name": "Travel",
+      "canonical": "Travel",
+      "desktop": "Education;",
+      "macos": "public.app-category.travel"
+    },
+    {
+      "name": "Utility",
+      "canonical": "Utility",
+      "desktop": "Utility;",
+      "macos": "public.app-category.utilities"
+    },
+    {
+      "name": "Video",
+      "canonical": "Video",
+      "desktop": "AudioVideo;Video;",
+      "macos": "public.app-category.video"
+    },
+    {
+      "name": "Weather",
+      "canonical": "Weather",
+      "desktop": "Science;",
+      "macos": "public.app-category.weather"
+    }
+  ],
+  "aliases": [
+    {
+      "input": "actiongame",
+      "name": "ActionGame"
+    },
+    {
+      "input": "actiongames",
+      "name": "ActionGame"
+    },
+    {
+      "input": "adventuregame",
+      "name": "AdventureGame"
+    },
+    {
+      "input": "adventuregames",
+      "name": "AdventureGame"
+    },
+    {
+      "input": "arcadegame",
+      "name": "ArcadeGame"
+    },
+    {
+      "input": "arcadegames",
+      "name": "ArcadeGame"
+    },
+    {
+      "input": "boardgame",
+      "name": "BoardGame"
+    },
+    {
+      "input": "boardgames",
+      "name": "BoardGame"
+    },
+    {
+      "input": "business",
+      "name": "Business"
+    },
+    {
+      "input": "cardgame",
+      "name": "CardGame"
+    },
+    {
+      "input": "cardgames",
+      "name": "CardGame"
+    },
+    {
+      "input": "casinogame",
+      "name": "CasinoGame"
+    },
+    {
+      "input": "casinogames",
+      "name": "CasinoGame"
+    },
+    {
+      "input": "developer",
+      "name": "DeveloperTool"
+    },
+    {
+      "input": "developertool",
+      "name": "DeveloperTool"
+    },
+    {
+      "input": "developertools",
+      "name": "DeveloperTool"
+    },
+    {
+      "input": "development",
+      "name": "DeveloperTool"
+    },
+    {
+      "input": "dicegame",
+      "name": "DiceGame"
+    },
+    {
+      "input": "dicegames",
+      "name": "DiceGame"
+    },
+    {
+      "input": "education",
+      "name": "Education"
+    },
+    {
+      "input": "educationalgame",
+      "name": "EducationalGame"
+    },
+    {
+      "input": "educationalgames",
+      "name": "EducationalGame"
+    },
+    {
+      "input": "entertainment",
+      "name": "Entertainment"
+    },
+    {
+      "input": "familygame",
+      "name": "FamilyGame"
+    },
+    {
+      "input": "familygames",
+      "name": "FamilyGame"
+    },
+    {
+      "input": "finance",
+      "name": "Finance"
+    },
+    {
+      "input": "fitness",
+      "name": "HealthcareAndFitness"
+    },
+    {
+      "input": "game",
+      "name": "Game"
+    },
+    {
+      "input": "games",
+      "name": "Game"
+    },
+    {
+      "input": "graphicdesign",
+      "name": "GraphicsAndDesign"
+    },
+    {
+      "input": "graphicsanddesign",
+      "name": "GraphicsAndDesign"
+    },
+    {
+      "input": "graphicsdesign",
+      "name": "GraphicsAndDesign"
+    },
+    {
+      "input": "healthcareandfitness",
+      "name": "HealthcareAndFitness"
+    },
+    {
+      "input": "healthcarefitness",
+      "name": "HealthcareAndFitness"
+    },
+    {
+      "input": "kidsgame",
+      "name": "KidsGame"
+    },
+    {
+      "input": "kidsgames",
+      "name": "KidsGame"
+    },
+    {
+      "input": "lifestyle",
+      "name": "Lifestyle"
+    },
+    {
+      "input": "logicgame",
+      "name": "PuzzleGame"
+    },
+    {
+      "input": "medical",
+      "name": "Medical"
+    },
+    {
+      "input": "medicalsoftware",
+      "name": "Medical"
+    },
+    {
+      "input": "music",
+      "name": "Music"
+    },
+    {
+      "input": "musicgame",
+      "name": "MusicGame"
+    },
+    {
+      "input": "musicgames",
+      "name": "MusicGame"
+    },
+    {
+      "input": "news",
+      "name": "News"
+    },
+    {
+      "input": "photography",
+      "name": "Photography"
+    },
+    {
+      "input": "productivity",
+      "name": "Productivity"
+    },
+    {
+      "input": "puzzlegame",
+      "name": "PuzzleGame"
+    },
+    {
+      "input": "puzzlegames",
+      "name": "PuzzleGame"
+    },
+    {
+      "input": "racinggame",
+      "name": "RacingGame"
+    },
+    {
+      "input": "racinggames",
+      "name": "RacingGame"
+    },
+    {
+      "input": "reference",
+      "name": "Reference"
+    },
+    {
+      "input": "roleplaying",
+      "name": "RolePlayingGame"
+    },
+    {
+      "input": "roleplayinggame",
+      "name": "RolePlayingGame"
+    },
+    {
+      "input": "roleplayinggames",
+      "name": "RolePlayingGame"
+    },
+    {
+      "input": "rpg",
+      "name": "RolePlayingGame"
+    },
+    {
+      "input": "simulationgame",
+      "name": "SimulationGame"
+    },
+    {
+      "input": "simulationgames",
+      "name": "SimulationGame"
+    },
+    {
+      "input": "socialnetwork",
+      "name": "SocialNetworking"
+    },
+    {
+      "input": "socialnetworking",
+      "name": "SocialNetworking"
+    },
+    {
+      "input": "sports",
+      "name": "Sports"
+    },
+    {
+      "input": "sportsgame",
+      "name": "SportsGame"
+    },
+    {
+      "input": "sportsgames",
+      "name": "SportsGame"
+    },
+    {
+      "input": "strategygame",
+      "name": "StrategyGame"
+    },
+    {
+      "input": "strategygames",
+      "name": "StrategyGame"
+    },
+    {
+      "input": "travel",
+      "name": "Travel"
+    },
+    {
+      "input": "triviagame",
+      "name": "TriviaGame"
+    },
+    {
+      "input": "triviagames",
+      "name": "TriviaGame"
+    },
+    {
+      "input": "utilities",
+      "name": "Utility"
+    },
+    {
+      "input": "utility",
+      "name": "Utility"
+    },
+    {
+      "input": "video",
+      "name": "Video"
+    },
+    {
+      "input": "weather",
+      "name": "Weather"
+    },
+    {
+      "input": "wordgame",
+      "name": "WordGame"
+    },
+    {
+      "input": "wordgames",
+      "name": "WordGame"
+    }
+  ],
+  "ok": [
+    {
+      "input": "Education",
+      "name": "Education"
+    },
+    {
+      "input": "Developer Tool",
+      "name": "DeveloperTool"
+    },
+    {
+      "input": " puzzle  game ",
+      "name": "PuzzleGame"
+    },
+    {
+      "input": "Role-playing game",
+      "name": "RolePlayingGame"
+    },
+    {
+      "input": "public.app-category.developer-tools",
+      "name": "DeveloperTool"
+    },
+    {
+      "input": "public.app-category.role-playing-games",
+      "name": "RolePlayingGame"
+    },
+    {
+      "input": "Development",
+      "name": "DeveloperTool"
+    },
+    {
+      "input": "LogicGame",
+      "name": "PuzzleGame"
+    },
+    {
+      "input": "RPG",
+      "name": "RolePlayingGame"
+    }
+  ],
+  "suggestions": [
+    {
+      "input": "gaming",
+      "suggestion": "Game"
+    },
+    {
+      "input": "photos",
+      "suggestion": "Photography"
+    },
+    {
+      "input": "strategery",
+      "suggestion": "Strategy Game"
+    }
+  ],
+  "wrong": [
+    "fhqwhgads",
+    "WHARRGARBL"
+  ]
+}

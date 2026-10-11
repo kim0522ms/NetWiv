@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "NetWiv contributors",
+  "classifications": ["Desktop", "WebView", "React"],
+  "identity": "NetWiv.React",
+  "name": "NetWiv React desktop application",
+  "shortName": "netwiv-react",
+  "sourceName": "ReactExample",
+  "preferNameDirectory": true,
+  "tags": { "language": "C#", "type": "project" },
+  "symbols": {
+    "NetWivVersion": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "0.1.0-dev",
+      "replaces": "0.1.0-dev",
+      "description": "Version of the NetWiv packages in your NuGet feed."
+    }
+  },
+  "sources": [{ "exclude": ["**/node_modules/**", "**/bin/**", "**/obj/**", "**/dist/**", "src/generated/**", ".template.config/**"] }]
+}

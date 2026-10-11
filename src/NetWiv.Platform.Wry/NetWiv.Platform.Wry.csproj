@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NetWivNativeDirectory Condition="'$(NetWivNativeDirectory)' == ''">$(MSBuildThisFileDirectory)..\..\artifacts\native</NetWivNativeDirectory>
+    <NetWivNativeRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</NetWivNativeRid>
+    <NetWivNativeRid Condition="'$(NetWivNativeRid)' == '' and '$(OS)' == 'Windows_NT'">win-x64</NetWivNativeRid>
+    <NetWivNativeRid Condition="'$(NetWivNativeRid)' == '' and $([MSBuild]::IsOSPlatform('OSX'))">$(NETCoreSdkRuntimeIdentifier)</NetWivNativeRid>
+    <NetWivNativeRid Condition="'$(NetWivNativeRid)' == ''">linux-x64</NetWivNativeRid>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NetWiv.Core\NetWiv.Core.csproj" />
+    <Content Include="$(NetWivNativeDirectory)\win-x64\netwiv_native.dll;$(NetWivNativeDirectory)\win-x64\WebView2Loader.dll"
+             Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+             Pack="true" PackagePath="runtimes/win-x64/native" Condition="'$(NetWivNativeRid)' == 'win-x64'" />
+    <Content Include="$(NetWivNativeDirectory)\linux-x64\libnetwiv_native.so"
+             Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+             Pack="true" PackagePath="runtimes/linux-x64/native" Condition="'$(NetWivNativeRid)' == 'linux-x64'" />
+    <None Include="$(NetWivNativeDirectory)\win-x64\netwiv_native.dll;$(NetWivNativeDirectory)\win-x64\WebView2Loader.dll"
+          Pack="true" PackagePath="runtimes/win-x64/native" Condition="'$(NetWivNativeRid)' != 'win-x64'" />
+    <None Include="$(NetWivNativeDirectory)\linux-x64\libnetwiv_native.so"
+          Pack="true" PackagePath="runtimes/linux-x64/native" Condition="'$(NetWivNativeRid)' != 'linux-x64'" />
+    <Content Include="$(NetWivNativeDirectory)/osx-arm64/libnetwiv_native.dylib"
+             Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+             Pack="true" PackagePath="runtimes/osx-arm64/native" Condition="'$(NetWivNativeRid)' == 'osx-arm64'" />
+    <None Include="$(NetWivNativeDirectory)/osx-arm64/libnetwiv_native.dylib"
+          Pack="true" PackagePath="runtimes/osx-arm64/native" Condition="'$(NetWivNativeRid)' != 'osx-arm64'" />
+    <Content Include="$(NetWivNativeDirectory)/osx-x64/libnetwiv_native.dylib"
+             Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+             Pack="true" PackagePath="runtimes/osx-x64/native" Condition="'$(NetWivNativeRid)' == 'osx-x64'" />
+    <None Include="$(NetWivNativeDirectory)/osx-x64/libnetwiv_native.dylib"
+          Pack="true" PackagePath="runtimes/osx-x64/native" Condition="'$(NetWivNativeRid)' != 'osx-x64'" />
+    <None Include="../../THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="" />
+    <None Include="../../native/THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="native-notices/" />
+    <None Include="../../native/third-party-licenses/manifest.json" Pack="true" PackagePath="native-notices/" />
+    <None Include="../../native/LIBSODIUM-LICENSE.txt" Pack="true" PackagePath="native-notices/libsodium/" />
+    <None Include="../../native/third-party-licenses/texts/*" Pack="true" PackagePath="native-notices/texts/" />
+    <None Include="../../native/license-overrides/source-proofs/*" Pack="true" PackagePath="native-notices/source-proofs/" />
+  </ItemGroup>
+  <Target Name="ValidateNativePackage" BeforeTargets="GenerateNuspec">
+    <Error Condition="!Exists('$(NetWivNativeDirectory)/win-x64/netwiv_native.dll')" Text="Build the win-x64 NetWiv native artifact before packing." />
+    <Error Condition="!Exists('$(NetWivNativeDirectory)/win-x64/WebView2Loader.dll')" Text="Copy the pinned WebView2Loader.dll with the win-x64 native artifact before packing." />
+    <Error Condition="!Exists('$(NetWivNativeDirectory)/linux-x64/libnetwiv_native.so')" Text="Build the linux-x64 NetWiv native artifact before packing." />
+    <Error Condition="!Exists('$(NetWivNativeDirectory)/osx-arm64/libnetwiv_native.dylib')" Text="Build the osx-arm64 NetWiv native artifact before packing." />
+    <Error Condition="!Exists('$(NetWivNativeDirectory)/osx-x64/libnetwiv_native.dylib')" Text="Build the osx-x64 NetWiv native artifact before packing." />
+  </Target>
+</Project>

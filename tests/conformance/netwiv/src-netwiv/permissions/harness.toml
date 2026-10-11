@@ -1,0 +1,56 @@
+[[permission]]
+identifier = "allow-asset-fixture"
+commands.allow = ["asset_fixture"]
+
+[[permission]]
+identifier = "allow-echo-json"
+commands.allow = ["echo_json"]
+
+[[permission]]
+identifier = "allow-always-fails"
+commands.allow = ["always_fails"]
+
+[[permission]]
+identifier = "allow-echo-bytes"
+commands.allow = ["echo_bytes"]
+
+[[permission]]
+identifier = "allow-stream-numbers"
+commands.allow = ["stream_numbers"]
+
+[[permission]]
+identifier = "allow-custom-default-allowed"
+commands.allow = ["custom_default_allowed"]
+
+[[permission]]
+identifier = "allow-typed-request"
+commands.allow = ["typed_request"]
+
+[[permission]]
+identifier = "allow-conformance-record"
+commands.allow = ["conformance_record"]
+
+[[permission]]
+identifier = "allow-conformance-finish"
+commands.allow = ["conformance_finish"]
+
+[[permission]]
+identifier = "allow-conformance-profile"
+commands.allow = ["conformance_profile"]
+
+[[permission]]
+identifier = "allow-conformance-cases"
+commands.allow = ["conformance_cases"]
+
+[[permission]]
+identifier = "allow-restricted"
+commands.allow = ["restricted"]
+
+[[permission]]
+identifier = "deny-echo-json"
+commands.deny = ["echo_json"]
+
+[[permission]]
+identifier = "literal-command-keys"
+commands.allow = ["*", "custom_*"]
+commands.deny = ["echo_*"]

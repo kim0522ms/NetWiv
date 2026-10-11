@@ -1,0 +1,1371 @@
+{
+  "formatVersion": 1,
+  "tests": {
+    "runtime:crates/tauri/src/app.rs:tests::is_send_sync": {
+      "classification": "language-specification",
+      "status": "excluded",
+      "upstreamSourceSha256": "50606eba378383efe0bec17c6cc192d8b68769e77fa55258129c0a783b508d08",
+      "note": "Reviewed body only instantiates the empty assert_send<T: Send> and assert_sync<T: Sync> helpers for AppHandle and AssetResolver. C# has no Send/Sync trait-bound type checking to instantiate. This exclusion covers that compile-time Rust assertion only; runtime concurrency, UI dispatch and resolver lifetime remain required business behavior and are not counted as passed by this review."
+    },
+    "runtime:crates/tauri/src/error.rs:tests::error_is_send_sync": {
+      "classification": "language-specification",
+      "status": "excluded",
+      "upstreamSourceSha256": "c46648d6df9a3e5f1bd9b27edfcf5a68a689d33d4d0cd2c794a5c6ea24e03332",
+      "note": "Reviewed body only instantiates empty Rust Send/Sync-bound helpers for Error. C# has no equivalent compile-time traits. Exception values, structured serialization and cross-thread delivery are separate business behaviors, not excluded or marked passing by this review."
+    },
+    "runtime:crates/tauri/src/webview/mod.rs:tests::webview_is_send_sync": {
+      "classification": "language-specification",
+      "status": "excluded",
+      "upstreamSourceSha256": "954cf212cb79d6b566c10b76d2ff2da05bc637cfc9f666c2f03d4e3dddf35f1c",
+      "note": "Reviewed body consists only of empty assert_send<Webview> and assert_sync<Webview> instantiations. The Rust trait-bound assertion has no C# counterpart. Shared-handle lifetime, UI-thread affinity, callback teardown and concurrent operations remain in scope and require runtime tests."
+    },
+    "runtime:crates/tauri/src/window/mod.rs:tests::window_is_send_sync": {
+      "classification": "language-specification",
+      "status": "excluded",
+      "upstreamSourceSha256": "2617d73490fbad9c2f9c52b280569b87f1096b7ae6465e89b2fd53ab83ca1cbe",
+      "note": "Reviewed body consists only of empty assert_send<Window> and assert_sync<Window> instantiations. C# cannot express those Rust compiler trait constraints. Actual cross-thread window dispatch and shutdown ownership remain required business tests; this entry is an exclusion, never a passing port."
+    },
+    "runtime:crates/tauri/src/ipc/mod.rs:tests::deserialize_invoke_response_body": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "8c18c612897de97dc4e1b3c1aa62869b66d610e85093e2015b1b6abc3418364d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/InvokeResponseTests.cs",
+          "symbol": "DeserializeInvokeResponseBody",
+          "testCase": "upstream ipc::deserialize_invoke_response_body"
+        }
+      ],
+      "note": "Preserves the upstream JSON u16 sequence, string, invalid sequence target and raw byte sequence assertions. C# supplies generated JsonTypeInfo<T> explicitly for NativeAOT; extra regressions cover empty bytes, buffer independence, widening, invalid byte elements and base64 rejection."
+    },
+    "runtime:crates/tauri-utils/src/config.rs:test::window_config_default_same_as_deserialize": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "dc7bb8f3e47bf771b5ee865da0ef451bb5ab138664ceb1f6b6370413cffe988d",
+      "netwivEvidence": [
+        {
+          "file": "native/netwiv-native/src/runtime.rs",
+          "symbol": "window_config_default_same_as_deserialize",
+          "testCase": "runtime::tests::window_config_default_same_as_deserialize"
+        }
+      ],
+      "note": "The native creation parser receives both an empty object and a serialized pinned WindowConfig::default. Its effective native options and all top-level window fields must match; optional null settings are absent rather than triggering creation setters."
+    },
+    "cli:crates/tauri-cli/src/helpers/updater_signature.rs:tests::empty_password_is_valid": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "07facbf43c9bc988952d51ede76f32a0929612aa4bc06ae0b07ea25053e64805",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/Program.cs",
+          "symbol": "SignerCompatibility",
+          "testCase": "signer artifacts interoperate with Tauri and minisign"
+        }
+      ],
+      "note": "Uses the exact upstream encrypted PRIVATE_KEY, an explicitly empty password and TAURI payload through netwiv signer. Verifies the resulting signature with the recovered public key and rejects a modified payload. NETWIV_CLI_UNDER_TEST also exercises this through the NativeAOT CLI."
+    },
+    "cli:crates/tauri-cli/src/helpers/updater_signature.rs:tests::generate_empty_password_keys_and_use": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "07facbf43c9bc988952d51ede76f32a0929612aa4bc06ae0b07ea25053e64805",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/Program.cs",
+          "symbol": "SignerCompatibility",
+          "testCase": "signer artifacts interoperate with Tauri and minisign"
+        }
+      ],
+      "note": "Generates a new keypair using --password=, decodes both Tauri key boxes, signs the original TAURI bytes and verifies with minisign. This covers the upstream newly generated empty-password key regression; it does not substitute a previously generated key fixture."
+    },
+    "runtime:crates/tauri/src/webview/mod.rs:tests::remote_origin_blocked_for_custom_commands_without_app_manifest": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "954cf212cb79d6b566c10b76d2ff2da05bc637cfc9f666c2f03d4e3dddf35f1c",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/ProtocolIpcTests.cs",
+          "symbol": "RemoteOriginWithoutAppManifest",
+          "testCase": "upstream webview::remote_origin_blocked_for_custom_commands_without_app_manifest"
+        }
+      ],
+      "note": "Preserves the upstream remote https://evil.com and local tauri://localhost requests without an app manifest, through the IPC protocol entrypoint. Also checks a registered command, exact success/error disposition and dispatch counts so an unknown-command failure cannot masquerade as an origin denial."
+    },
+    "runtime:crates/tauri/src/state.rs:tests::get_panics": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "f4539fb268deffc3a6f2f8d26bb56be1cd5e5650308251e84ad1b56c5c2d19f1",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/StateTests.cs",
+          "symbol": "GetPanics",
+          "testCase": "upstream state::get_panics"
+        }
+      ],
+      "note": "Registry behavior is ported. IDisposable and Try/out model deterministic cleanup and Option; rejected C# arguments remain caller-owned. See docs/csharp-api.md."
+    },
+    "runtime:crates/tauri/src/state.rs:tests::simple_set_get": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "f4539fb268deffc3a6f2f8d26bb56be1cd5e5650308251e84ad1b56c5c2d19f1",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/StateTests.cs",
+          "symbol": "SimpleSetGet",
+          "testCase": "upstream state::simple_set_get"
+        }
+      ],
+      "note": "Registry behavior is ported. IDisposable and Try/out model deterministic cleanup and Option; rejected C# arguments remain caller-owned. See docs/csharp-api.md."
+    },
+    "runtime:crates/tauri/src/state.rs:tests::simple_set_get_unmanage": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "f4539fb268deffc3a6f2f8d26bb56be1cd5e5650308251e84ad1b56c5c2d19f1",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/StateTests.cs",
+          "symbol": "SimpleSetGetUnmanage",
+          "testCase": "upstream state::simple_set_get_unmanage"
+        }
+      ],
+      "note": "Registry behavior is ported. IDisposable and Try/out model deterministic cleanup and Option; rejected C# arguments remain caller-owned. See docs/csharp-api.md."
+    },
+    "runtime:crates/tauri/src/state.rs:tests::dst_set_get": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "f4539fb268deffc3a6f2f8d26bb56be1cd5e5650308251e84ad1b56c5c2d19f1",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/StateTests.cs",
+          "symbol": "DstSetGet",
+          "testCase": "upstream state::dst_set_get"
+        }
+      ],
+      "note": "Registry behavior is ported. IDisposable and Try/out model deterministic cleanup and Option; rejected C# arguments remain caller-owned. See docs/csharp-api.md."
+    },
+    "runtime:crates/tauri/src/state.rs:tests::set_get_remote": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "f4539fb268deffc3a6f2f8d26bb56be1cd5e5650308251e84ad1b56c5c2d19f1",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/StateTests.cs",
+          "symbol": "SetGetRemote",
+          "testCase": "upstream state::set_get_remote"
+        }
+      ],
+      "note": "Registry behavior is ported. IDisposable and Try/out model deterministic cleanup and Option; rejected C# arguments remain caller-owned. See docs/csharp-api.md."
+    },
+    "runtime:crates/tauri/src/state.rs:tests::two_put_get": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "f4539fb268deffc3a6f2f8d26bb56be1cd5e5650308251e84ad1b56c5c2d19f1",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/StateTests.cs",
+          "symbol": "TwoPutGet",
+          "testCase": "upstream state::two_put_get"
+        }
+      ],
+      "note": "Registry behavior is ported. IDisposable and Try/out model deterministic cleanup and Option; rejected C# arguments remain caller-owned. See docs/csharp-api.md."
+    },
+    "runtime:crates/tauri/src/state.rs:tests::many_puts_only_one_succeeds": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "f4539fb268deffc3a6f2f8d26bb56be1cd5e5650308251e84ad1b56c5c2d19f1",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/StateTests.cs",
+          "symbol": "ManyPutsOnlyOneSucceeds",
+          "testCase": "upstream state::many_puts_only_one_succeeds"
+        }
+      ],
+      "note": "Registry behavior is ported. IDisposable and Try/out model deterministic cleanup and Option; rejected C# arguments remain caller-owned. See docs/csharp-api.md."
+    },
+    "runtime:crates/tauri/src/state.rs:tests::test_no_drop_on_set": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "f4539fb268deffc3a6f2f8d26bb56be1cd5e5650308251e84ad1b56c5c2d19f1",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/StateTests.cs",
+          "symbol": "NoDropOnSet",
+          "testCase": "upstream state::test_no_drop_on_set"
+        }
+      ],
+      "note": "Registry behavior is ported. IDisposable and Try/out model deterministic cleanup and Option; rejected C# arguments remain caller-owned. See docs/csharp-api.md."
+    },
+    "runtime:crates/tauri/src/state.rs:tests::drop_inners_on_drop": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "f4539fb268deffc3a6f2f8d26bb56be1cd5e5650308251e84ad1b56c5c2d19f1",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/StateTests.cs",
+          "symbol": "DropInnersOnDrop",
+          "testCase": "upstream state::drop_inners_on_drop"
+        }
+      ],
+      "note": "Registry behavior is ported. IDisposable and Try/out model deterministic cleanup and Option; rejected C# arguments remain caller-owned. See docs/csharp-api.md."
+    },
+    "runtime:crates/tauri/src/event/listener.rs:test::listeners_check_key": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "85ed903eb331f2021ee75453a21f46f3a59e22acd5ef73a4173162446bbfdeae",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamEventTests.cs",
+          "symbol": "ListenersCheckKey",
+          "testCase": "upstream event::listeners_check_key (10000 cases)"
+        }
+      ],
+      "note": "Properties use 10000 fixed-seed lowercase-string cases each; stored handlers are actually invoked, and recursive once emission has a timeout regression."
+    },
+    "runtime:crates/tauri/src/event/listener.rs:test::listeners_check_fn": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "85ed903eb331f2021ee75453a21f46f3a59e22acd5ef73a4173162446bbfdeae",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamEventTests.cs",
+          "symbol": "ListenersCheckFn",
+          "testCase": "upstream event::listeners_check_fn (10000 cases)"
+        }
+      ],
+      "note": "Properties use 10000 fixed-seed lowercase-string cases each; stored handlers are actually invoked, and recursive once emission has a timeout regression."
+    },
+    "runtime:crates/tauri/src/event/listener.rs:test::check_on_event": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "85ed903eb331f2021ee75453a21f46f3a59e22acd5ef73a4173162446bbfdeae",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamEventTests.cs",
+          "symbol": "CheckOnEvent",
+          "testCase": "upstream event::check_on_event (10000 cases)"
+        }
+      ],
+      "note": "Properties use 10000 fixed-seed lowercase-string cases each; stored handlers are actually invoked, and recursive once emission has a timeout regression."
+    },
+    "runtime:crates/tauri/src/event/listener.rs:test::event_no_deadlocks": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "85ed903eb331f2021ee75453a21f46f3a59e22acd5ef73a4173162446bbfdeae",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamEventTests.cs",
+          "symbol": "EventNoDeadlocks",
+          "testCase": "upstream event::event_no_deadlocks"
+        }
+      ],
+      "note": "Properties use 10000 fixed-seed lowercase-string cases each; stored handlers are actually invoked, and recursive once emission has a timeout regression."
+    },
+    "runtime:crates/tauri/src/scope/fs.rs:tests::path_is_escaped": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "52246bc0ac38cd14225838316f8f7a6116647abb67c41aef8e0bc79af18b1039",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/FileScopeMutationTests.cs",
+          "symbol": "PathIsEscaped",
+          "testCase": "upstream scope::path_is_escaped"
+        }
+      ],
+      "note": "Literal allow/forbid rules, canonical path variants and recursive callbacks are ported; Windows-only roots are omitted on Linux rather than counted as passed."
+    },
+    "runtime:crates/tauri/src/scope/fs.rs:tests::windows_root_paths": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "52246bc0ac38cd14225838316f8f7a6116647abb67c41aef8e0bc79af18b1039",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/FileScopeMutationTests.cs",
+          "symbol": "WindowsRootPaths",
+          "testCase": "upstream scope::windows_root_paths"
+        }
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "note": "Literal allow/forbid rules, canonical path variants and recursive callbacks are ported; Windows-only roots are omitted on Linux rather than counted as passed."
+    },
+    "runtime:crates/tauri/src/scope/fs.rs:tests::push_pattern_generated_paths": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "52246bc0ac38cd14225838316f8f7a6116647abb67c41aef8e0bc79af18b1039",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/FileScopeMutationTests.cs",
+          "symbol": "PushPatternGeneratedPaths",
+          "testCase": "upstream scope::push_pattern_generated_paths"
+        }
+      ],
+      "note": "Literal allow/forbid rules, canonical path variants and recursive callbacks are ported; Windows-only roots are omitted on Linux rather than counted as passed."
+    },
+    "runtime:crates/tauri/src/scope/fs.rs:tests::event_no_deadlocks": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "52246bc0ac38cd14225838316f8f7a6116647abb67c41aef8e0bc79af18b1039",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/FileScopeMutationTests.cs",
+          "symbol": "EventNoDeadlocks",
+          "testCase": "upstream scope::event_no_deadlocks"
+        }
+      ],
+      "note": "Literal allow/forbid rules, canonical path variants and recursive callbacks are ported; Windows-only roots are omitted on Linux rather than counted as passed."
+    },
+    "runtime:crates/tauri-utils/src/html.rs:tests::csp": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "ac50a409966214e03540b0fdb7152ed3af0255db7c5de0243f65930573187c45",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "Csp",
+          "testCase": "upstream html::csp"
+        }
+      ],
+      "note": "Both upstream HTML implementations contain the same assertions; their shared HTML5 behavior is tested against the NetWiv parser, including exact output for these fixtures."
+    },
+    "runtime:crates/tauri-utils/src/html.rs:tests::normalize_script_for_csp_test": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "ac50a409966214e03540b0fdb7152ed3af0255db7c5de0243f65930573187c45",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "NormalizeScriptForCsp",
+          "testCase": "upstream html::normalize_script_for_csp_test"
+        }
+      ],
+      "note": "Both upstream HTML implementations contain the same assertions; their shared HTML5 behavior is tested against the NetWiv parser, including exact output for these fixtures."
+    },
+    "runtime:crates/tauri-utils/src/html.rs:tests::parse_and_serialize_roundtrips": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "ac50a409966214e03540b0fdb7152ed3af0255db7c5de0243f65930573187c45",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "ParseAndSerializeRoundtrips",
+          "testCase": "upstream html::parse_and_serialize_roundtrips"
+        }
+      ],
+      "note": "Both upstream HTML implementations contain the same assertions; their shared HTML5 behavior is tested against the NetWiv parser, including exact output for these fixtures."
+    },
+    "runtime:crates/tauri-utils/src/html.rs:tests::inject_nonce_to_scripts": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "ac50a409966214e03540b0fdb7152ed3af0255db7c5de0243f65930573187c45",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "InjectNonceToScripts",
+          "testCase": "upstream html::inject_nonce_to_scripts"
+        }
+      ],
+      "note": "Both upstream HTML implementations contain the same assertions; their shared HTML5 behavior is tested against the NetWiv parser, including exact output for these fixtures."
+    },
+    "runtime:crates/tauri-utils/src/html.rs:tests::inject_nonce_to_styles": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "ac50a409966214e03540b0fdb7152ed3af0255db7c5de0243f65930573187c45",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "InjectNonceToStyles",
+          "testCase": "upstream html::inject_nonce_to_styles"
+        }
+      ],
+      "note": "Both upstream HTML implementations contain the same assertions; their shared HTML5 behavior is tested against the NetWiv parser, including exact output for these fixtures."
+    },
+    "runtime:crates/tauri-utils/src/html.rs:tests::inject_nonce_skips_existing": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "ac50a409966214e03540b0fdb7152ed3af0255db7c5de0243f65930573187c45",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "InjectNonceSkipsExisting",
+          "testCase": "upstream html::inject_nonce_skips_existing"
+        }
+      ],
+      "note": "Both upstream HTML implementations contain the same assertions; their shared HTML5 behavior is tested against the NetWiv parser, including exact output for these fixtures."
+    },
+    "runtime:crates/tauri-utils/src/html.rs:tests::inject_nonce_respects_disabled_modification": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "ac50a409966214e03540b0fdb7152ed3af0255db7c5de0243f65930573187c45",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "InjectNonceRespectsDisabledModification",
+          "testCase": "upstream html::inject_nonce_respects_disabled_modification"
+        }
+      ],
+      "note": "Both upstream HTML implementations contain the same assertions; their shared HTML5 behavior is tested against the NetWiv parser, including exact output for these fixtures."
+    },
+    "runtime:crates/tauri-utils/src/html.rs:tests::inline_isolation_replaces_src_with_content": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "ac50a409966214e03540b0fdb7152ed3af0255db7c5de0243f65930573187c45",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "InlineIsolationReplacesSrcWithContent",
+          "testCase": "upstream html::inline_isolation_replaces_src_with_content"
+        }
+      ],
+      "note": "Both upstream HTML implementations contain the same assertions; their shared HTML5 behavior is tested against the NetWiv parser, including exact output for these fixtures."
+    },
+    "runtime:crates/tauri-utils/src/html2.rs:tests::csp": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "04beee12c794585d349cf1e45850483d5f7eeea73df7268dbd2470d8675bb7b3",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "Csp",
+          "testCase": "upstream html::csp"
+        }
+      ],
+      "note": "Both upstream HTML implementations contain the same assertions; their shared HTML5 behavior is tested against the NetWiv parser, including exact output for these fixtures."
+    },
+    "runtime:crates/tauri-utils/src/html2.rs:tests::normalize_script_for_csp_test": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "04beee12c794585d349cf1e45850483d5f7eeea73df7268dbd2470d8675bb7b3",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "NormalizeScriptForCsp",
+          "testCase": "upstream html::normalize_script_for_csp_test"
+        }
+      ],
+      "note": "Both upstream HTML implementations contain the same assertions; their shared HTML5 behavior is tested against the NetWiv parser, including exact output for these fixtures."
+    },
+    "runtime:crates/tauri-utils/src/html2.rs:tests::parse_and_serialize_roundtrips": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "04beee12c794585d349cf1e45850483d5f7eeea73df7268dbd2470d8675bb7b3",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "ParseAndSerializeRoundtrips",
+          "testCase": "upstream html::parse_and_serialize_roundtrips"
+        }
+      ],
+      "note": "Both upstream HTML implementations contain the same assertions; their shared HTML5 behavior is tested against the NetWiv parser, including exact output for these fixtures."
+    },
+    "runtime:crates/tauri-utils/src/html2.rs:tests::inject_nonce_to_scripts": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "04beee12c794585d349cf1e45850483d5f7eeea73df7268dbd2470d8675bb7b3",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "InjectNonceToScripts",
+          "testCase": "upstream html::inject_nonce_to_scripts"
+        }
+      ],
+      "note": "Both upstream HTML implementations contain the same assertions; their shared HTML5 behavior is tested against the NetWiv parser, including exact output for these fixtures."
+    },
+    "runtime:crates/tauri-utils/src/html2.rs:tests::inject_nonce_to_styles": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "04beee12c794585d349cf1e45850483d5f7eeea73df7268dbd2470d8675bb7b3",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "InjectNonceToStyles",
+          "testCase": "upstream html::inject_nonce_to_styles"
+        }
+      ],
+      "note": "Both upstream HTML implementations contain the same assertions; their shared HTML5 behavior is tested against the NetWiv parser, including exact output for these fixtures."
+    },
+    "runtime:crates/tauri-utils/src/html2.rs:tests::inject_nonce_skips_existing": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "04beee12c794585d349cf1e45850483d5f7eeea73df7268dbd2470d8675bb7b3",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "InjectNonceSkipsExisting",
+          "testCase": "upstream html::inject_nonce_skips_existing"
+        }
+      ],
+      "note": "Both upstream HTML implementations contain the same assertions; their shared HTML5 behavior is tested against the NetWiv parser, including exact output for these fixtures."
+    },
+    "runtime:crates/tauri-utils/src/html2.rs:tests::inject_nonce_respects_disabled_modification": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "04beee12c794585d349cf1e45850483d5f7eeea73df7268dbd2470d8675bb7b3",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "InjectNonceRespectsDisabledModification",
+          "testCase": "upstream html::inject_nonce_respects_disabled_modification"
+        }
+      ],
+      "note": "Both upstream HTML implementations contain the same assertions; their shared HTML5 behavior is tested against the NetWiv parser, including exact output for these fixtures."
+    },
+    "runtime:crates/tauri-utils/src/html2.rs:tests::inline_isolation_replaces_src_with_content": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "04beee12c794585d349cf1e45850483d5f7eeea73df7268dbd2470d8675bb7b3",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "InlineIsolationReplacesSrcWithContent",
+          "testCase": "upstream html::inline_isolation_replaces_src_with_content"
+        }
+      ],
+      "note": "Both upstream HTML implementations contain the same assertions; their shared HTML5 behavior is tested against the NetWiv parser, including exact output for these fixtures."
+    },
+    "runtime:crates/tauri-utils/src/html2.rs:tests::append_script_to_head_test": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "04beee12c794585d349cf1e45850483d5f7eeea73df7268dbd2470d8675bb7b3",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/HtmlAssetTests.cs",
+          "symbol": "AppendScriptToHead",
+          "testCase": "upstream html2::append_script_to_head_test"
+        }
+      ],
+      "note": "Appended script and serialized document match the upstream fixture."
+    },
+    "runtime:crates/tauri-utils/src/pattern/isolation.rs:test::create_keys": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "e760d9ec544857b6145e508309d92db2437e49d8a7b752d675c62d467d7ff449",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/IsolationTests.cs",
+          "symbol": "CreateKeys",
+          "testCase": "upstream isolation::create_keys"
+        }
+      ],
+      "note": "Creates isolation keys and additionally verifies distinct origins and distinct 256-bit keys."
+    },
+    "runtime:crates/tauri/src/ipc/protocol.rs:tests::parse_invoke_request_isolation": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "f9748a000d2946863ed4bad304de9145fb3dc1e87abbe8c0143011e7b9a1e8de",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/IsolationTests.cs",
+          "symbol": "ParseInvokeRequestIsolation",
+          "testCase": "upstream ipc::parse_invoke_request_isolation"
+        }
+      ],
+      "note": "Same raw and JSON bodies, origin, callbacks, key and headers; callback dispatch also proves decryption happened before application code."
+    },
+    "runtime:crates/tauri/src/ipc/protocol.rs:tests::parse_invoke_request": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "f9748a000d2946863ed4bad304de9145fb3dc1e87abbe8c0143011e7b9a1e8de",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/ProtocolIpcTests.cs",
+          "symbol": "ParseInvokeRequest",
+          "testCase": "upstream ipc::parse_invoke_request"
+        }
+      ],
+      "note": "Same raw and JSON bodies, origin and complete request headers. Real HTTP handler adds invoke key validation and permission dispatch before response."
+    },
+    "runtime:crates/tauri-utils/src/acl/identifier.rs:tests::format": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "1176960632c775d7b25a52aae0ae98ed7660803fa4752b5c4f57fde56bb64a33",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/PermissionInputTests.cs",
+          "symbol": "Format",
+          "testCase": "upstream acl::identifier::format"
+        }
+      ],
+      "note": "Preserves every upstream fixture assertion; shared Core and CLI validation adds malformed scope and inactive-platform input regressions."
+    },
+    "runtime:crates/tauri-utils/src/acl/identifier.rs:tests::base": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "1176960632c775d7b25a52aae0ae98ed7660803fa4752b5c4f57fde56bb64a33",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/PermissionInputTests.cs",
+          "symbol": "Base",
+          "testCase": "upstream acl::identifier::base"
+        }
+      ],
+      "note": "Preserves every upstream fixture assertion; shared Core and CLI validation adds malformed scope and inactive-platform input regressions."
+    },
+    "runtime:crates/tauri-utils/src/acl/identifier.rs:tests::prefix": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "1176960632c775d7b25a52aae0ae98ed7660803fa4752b5c4f57fde56bb64a33",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/PermissionInputTests.cs",
+          "symbol": "Prefix",
+          "testCase": "upstream acl::identifier::prefix"
+        }
+      ],
+      "note": "Preserves every upstream fixture assertion; shared Core and CLI validation adds malformed scope and inactive-platform input regressions."
+    },
+    "runtime:crates/tauri-utils/src/acl/capability.rs:tests::permission_entry_de": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "c462dac16d29c2904d9ca649c36dbcb73fb49362d1d885078df46054a945fbdf",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/PermissionInputTests.cs",
+          "symbol": "PermissionEntryDe",
+          "testCase": "upstream acl::capability::permission_entry_de"
+        }
+      ],
+      "note": "Preserves every upstream fixture assertion; shared Core and CLI validation adds malformed scope and inactive-platform input regressions."
+    },
+    "runtime:crates/tauri-utils/src/acl/capability.rs:tests::capability_file_de": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "c462dac16d29c2904d9ca649c36dbcb73fb49362d1d885078df46054a945fbdf",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/Program.cs",
+          "symbol": "CapabilityFileDe",
+          "testCase": "upstream acl::capability::capability_file_de"
+        }
+      ],
+      "note": "Preserves every upstream fixture assertion; shared Core and CLI validation adds malformed scope and inactive-platform input regressions."
+    },
+    "runtime:crates/tauri/src/path/plugin.rs:tests::basename": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "d298631d5494cdf95644d840f9713b52da38fe839a73c7df5d343662864c90bc",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamPathAndUrlTests.cs",
+          "symbol": "Basename",
+          "testCase": "upstream path::basename"
+        }
+      ],
+      "note": "Preserves every pinned upstream fixture assertion."
+    },
+    "runtime:crates/tauri/src/path/plugin.rs:tests::join": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "d298631d5494cdf95644d840f9713b52da38fe839a73c7df5d343662864c90bc",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamPathAndUrlTests.cs",
+          "symbol": "Join",
+          "testCase": "upstream path::join"
+        }
+      ],
+      "note": "Preserves every pinned upstream fixture assertion."
+    },
+    "runtime:crates/tauri-utils/src/mime_type.rs:tests::should_parse_mimetype_from_uri": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "0a449edf62fa072732396366bafbc284b23512cdb712c509f6629744b12ed1ed",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamPathAndUrlTests.cs",
+          "symbol": "MimeTypeFromUri",
+          "testCase": "upstream mime_type::should_parse_mimetype_from_uri"
+        }
+      ],
+      "note": "Preserves every pinned upstream fixture assertion."
+    },
+    "runtime:crates/tauri-utils/src/acl/mod.rs:tests::url_pattern_domain_wildcard": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "d724c2b14b377cc920a25c9d3e3b749ced35974107716677299da3949308d7d2",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamPathAndUrlTests.cs",
+          "symbol": "UrlPatternDomainWildcard",
+          "testCase": "upstream acl::url_pattern_domain_wildcard"
+        }
+      ],
+      "note": "Preserves every pinned upstream fixture assertion."
+    },
+    "runtime:crates/tauri-utils/src/acl/mod.rs:tests::url_pattern_path_wildcard": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "d724c2b14b377cc920a25c9d3e3b749ced35974107716677299da3949308d7d2",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamPathAndUrlTests.cs",
+          "symbol": "UrlPatternPathWildcard",
+          "testCase": "upstream acl::url_pattern_path_wildcard"
+        }
+      ],
+      "note": "Preserves every pinned upstream fixture assertion."
+    },
+    "runtime:crates/tauri-utils/src/acl/mod.rs:tests::url_pattern_scheme_wildcard": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "d724c2b14b377cc920a25c9d3e3b749ced35974107716677299da3949308d7d2",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamPathAndUrlTests.cs",
+          "symbol": "UrlPatternSchemeWildcard",
+          "testCase": "upstream acl::url_pattern_scheme_wildcard"
+        }
+      ],
+      "note": "Preserves every pinned upstream fixture assertion."
+    },
+    "cli:crates/tauri-bundler/src/bundle/windows/msi/mod.rs:tests::validates_wix_version": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "c402e04e42eb5242cd319b55d9a6b96d1ab764c740e61875e2d3cd8769d2bb1d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/MsiVersionTests.cs",
+          "symbol": "ValidatesWixVersion",
+          "testCase": "upstream msi::validates_wix_version"
+        }
+      ],
+      "note": "Preserves every pinned upstream fixture assertion."
+    },
+    "cli:crates/tauri-bundler/src/bundle/windows/msi/mod.rs:tests::converts_version_to_wix": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "c402e04e42eb5242cd319b55d9a6b96d1ab764c740e61875e2d3cd8769d2bb1d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/MsiVersionTests.cs",
+          "symbol": "ConvertsVersionToWix",
+          "testCase": "upstream msi::converts_version_to_wix"
+        }
+      ],
+      "note": "Preserves every pinned upstream fixture assertion."
+    },
+    "runtime:crates/tauri-utils/src/config.rs:test::test_runner_config_string_format": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "dc7bb8f3e47bf771b5ee865da0ef451bb5ab138664ceb1f6b6370413cffe988d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/RunnerConfigTests.cs",
+          "symbol": "StringFormat",
+          "testCase": "upstream config::test_runner_config_string_format"
+        }
+      ],
+      "note": "Preserves the upstream string/object representation, field values, equality and serialization assertions. From/FromStr use C# constructor/Parse; actual child-process coverage verifies all three CLI execution paths."
+    },
+    "runtime:crates/tauri-utils/src/config.rs:test::test_runner_config_object_format_full": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "dc7bb8f3e47bf771b5ee865da0ef451bb5ab138664ceb1f6b6370413cffe988d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/RunnerConfigTests.cs",
+          "symbol": "ObjectFull",
+          "testCase": "upstream config::test_runner_config_object_format_full"
+        }
+      ],
+      "note": "Preserves the upstream string/object representation, field values, equality and serialization assertions. From/FromStr use C# constructor/Parse; actual child-process coverage verifies all three CLI execution paths."
+    },
+    "runtime:crates/tauri-utils/src/config.rs:test::test_runner_config_object_format_minimal": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "dc7bb8f3e47bf771b5ee865da0ef451bb5ab138664ceb1f6b6370413cffe988d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/RunnerConfigTests.cs",
+          "symbol": "ObjectMinimal",
+          "testCase": "upstream config::test_runner_config_object_format_minimal"
+        }
+      ],
+      "note": "Preserves the upstream string/object representation, field values, equality and serialization assertions. From/FromStr use C# constructor/Parse; actual child-process coverage verifies all three CLI execution paths."
+    },
+    "runtime:crates/tauri-utils/src/config.rs:test::test_runner_config_default": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "dc7bb8f3e47bf771b5ee865da0ef451bb5ab138664ceb1f6b6370413cffe988d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/RunnerConfigTests.cs",
+          "symbol": "Default",
+          "testCase": "upstream config::test_runner_config_default"
+        }
+      ],
+      "note": "The backend tool mapping is explicit: default cargo becomes dotnet. Null cwd/args and string representation are preserved; this is a planned MSBuild adaptation, not a language-impossibility exclusion."
+    },
+    "runtime:crates/tauri-utils/src/config.rs:test::test_runner_config_from_str": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "dc7bb8f3e47bf771b5ee865da0ef451bb5ab138664ceb1f6b6370413cffe988d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/RunnerConfigTests.cs",
+          "symbol": "FromStr",
+          "testCase": "upstream config::test_runner_config_from_str"
+        }
+      ],
+      "note": "Preserves the upstream string/object representation, field values, equality and serialization assertions. From/FromStr use C# constructor/Parse; actual child-process coverage verifies all three CLI execution paths."
+    },
+    "runtime:crates/tauri-utils/src/config.rs:test::test_runner_config_from_string": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "dc7bb8f3e47bf771b5ee865da0ef451bb5ab138664ceb1f6b6370413cffe988d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/RunnerConfigTests.cs",
+          "symbol": "FromString",
+          "testCase": "upstream config::test_runner_config_from_string"
+        }
+      ],
+      "note": "Preserves the upstream string/object representation, field values, equality and serialization assertions. From/FromStr use C# constructor/Parse; actual child-process coverage verifies all three CLI execution paths."
+    },
+    "runtime:crates/tauri-utils/src/config.rs:test::test_runner_config_from_str_parse": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "dc7bb8f3e47bf771b5ee865da0ef451bb5ab138664ceb1f6b6370413cffe988d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/RunnerConfigTests.cs",
+          "symbol": "FromStrParse",
+          "testCase": "upstream config::test_runner_config_from_str_parse"
+        }
+      ],
+      "note": "Preserves the upstream string/object representation, field values, equality and serialization assertions. From/FromStr use C# constructor/Parse; actual child-process coverage verifies all three CLI execution paths."
+    },
+    "runtime:crates/tauri-utils/src/config.rs:test::test_runner_config_in_build_config": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "dc7bb8f3e47bf771b5ee865da0ef451bb5ab138664ceb1f6b6370413cffe988d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/RunnerConfigTests.cs",
+          "symbol": "InBuildConfig",
+          "testCase": "upstream config::test_runner_config_in_build_config"
+        }
+      ],
+      "note": "Preserves the upstream string/object representation, field values, equality and serialization assertions. From/FromStr use C# constructor/Parse; actual child-process coverage verifies all three CLI execution paths."
+    },
+    "runtime:crates/tauri-utils/src/config.rs:test::test_runner_config_in_build_config_object": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "dc7bb8f3e47bf771b5ee865da0ef451bb5ab138664ceb1f6b6370413cffe988d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/RunnerConfigTests.cs",
+          "symbol": "InBuildConfigObject",
+          "testCase": "upstream config::test_runner_config_in_build_config_object"
+        }
+      ],
+      "note": "Preserves the upstream string/object representation, field values, equality and serialization assertions. From/FromStr use C# constructor/Parse; actual child-process coverage verifies all three CLI execution paths."
+    },
+    "runtime:crates/tauri-utils/src/config.rs:test::test_runner_config_in_full_config": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "dc7bb8f3e47bf771b5ee865da0ef451bb5ab138664ceb1f6b6370413cffe988d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/RunnerConfigTests.cs",
+          "symbol": "InFullConfig",
+          "testCase": "upstream config::test_runner_config_in_full_config"
+        }
+      ],
+      "note": "Preserves the upstream string/object representation, field values, equality and serialization assertions. From/FromStr use C# constructor/Parse; actual child-process coverage verifies all three CLI execution paths."
+    },
+    "runtime:crates/tauri-utils/src/config.rs:test::test_runner_config_equality": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "dc7bb8f3e47bf771b5ee865da0ef451bb5ab138664ceb1f6b6370413cffe988d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/RunnerConfigTests.cs",
+          "symbol": "Equality",
+          "testCase": "upstream config::test_runner_config_equality"
+        }
+      ],
+      "note": "Preserves the upstream string/object representation, field values, equality and serialization assertions. From/FromStr use C# constructor/Parse; actual child-process coverage verifies all three CLI execution paths."
+    },
+    "runtime:crates/tauri-utils/src/config.rs:test::test_runner_config_untagged_serialization": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "dc7bb8f3e47bf771b5ee865da0ef451bb5ab138664ceb1f6b6370413cffe988d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/RunnerConfigTests.cs",
+          "symbol": "UntaggedSerialization",
+          "testCase": "upstream config::test_runner_config_untagged_serialization"
+        }
+      ],
+      "note": "Preserves the upstream string/object representation, field values, equality and serialization assertions. From/FromStr use C# constructor/Parse; actual child-process coverage verifies all three CLI execution paths."
+    },
+    "runtime:crates/tauri/src/ipc/authority.rs:tests::window_glob_pattern_matches": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "6da0f6200de5d8a417d0a13b5f6b08f69dafe6f78517691cc072a1dbc7e3859b",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamAuthorityTests.cs",
+          "symbol": "WindowGlobPatternMatches",
+          "testCase": "upstream authority::window_glob_pattern_matches"
+        }
+      ],
+      "note": "Preserves upstream command, window/webview patterns, origin and resolved empty scope assertions. C# exposes the decision/scope rather than Rust internal ResolvedCommand identity."
+    },
+    "runtime:crates/tauri/src/ipc/authority.rs:tests::webview_glob_pattern_matches": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "6da0f6200de5d8a417d0a13b5f6b08f69dafe6f78517691cc072a1dbc7e3859b",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamAuthorityTests.cs",
+          "symbol": "WebviewGlobPatternMatches",
+          "testCase": "upstream authority::webview_glob_pattern_matches"
+        }
+      ],
+      "note": "Preserves upstream command, window/webview patterns, origin and resolved empty scope assertions. C# exposes the decision/scope rather than Rust internal ResolvedCommand identity."
+    },
+    "runtime:crates/tauri/src/ipc/authority.rs:tests::remote_domain_matches": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "6da0f6200de5d8a417d0a13b5f6b08f69dafe6f78517691cc072a1dbc7e3859b",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamAuthorityTests.cs",
+          "symbol": "RemoteDomainMatches",
+          "testCase": "upstream authority::remote_domain_matches"
+        }
+      ],
+      "note": "Preserves upstream command, window/webview patterns, origin and resolved empty scope assertions. C# exposes the decision/scope rather than Rust internal ResolvedCommand identity."
+    },
+    "runtime:crates/tauri/src/ipc/authority.rs:tests::remote_domain_glob_pattern_matches": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "6da0f6200de5d8a417d0a13b5f6b08f69dafe6f78517691cc072a1dbc7e3859b",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamAuthorityTests.cs",
+          "symbol": "RemoteDomainGlobPatternMatches",
+          "testCase": "upstream authority::remote_domain_glob_pattern_matches"
+        }
+      ],
+      "note": "Preserves upstream command, window/webview patterns, origin and resolved empty scope assertions. C# exposes the decision/scope rather than Rust internal ResolvedCommand identity."
+    },
+    "runtime:crates/tauri/src/ipc/authority.rs:tests::remote_context_denied": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "6da0f6200de5d8a417d0a13b5f6b08f69dafe6f78517691cc072a1dbc7e3859b",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamAuthorityTests.cs",
+          "symbol": "RemoteContextDenied",
+          "testCase": "upstream authority::remote_context_denied"
+        }
+      ],
+      "note": "Preserves upstream command, window/webview patterns, origin and resolved empty scope assertions. C# exposes the decision/scope rather than Rust internal ResolvedCommand identity."
+    },
+    "runtime:crates/tauri/src/ipc/authority.rs:tests::denied_command_takes_precendence": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "6da0f6200de5d8a417d0a13b5f6b08f69dafe6f78517691cc072a1dbc7e3859b",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamAuthorityTests.cs",
+          "symbol": "DeniedCommandTakesPrecedence",
+          "testCase": "upstream authority::denied_command_takes_precendence"
+        }
+      ],
+      "note": "Preserves upstream command, window/webview patterns, origin and resolved empty scope assertions. C# exposes the decision/scope rather than Rust internal ResolvedCommand identity."
+    },
+    "runtime:crates/tauri/src/ipc/authority.rs:tests::resolve_access_message": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "6da0f6200de5d8a417d0a13b5f6b08f69dafe6f78517691cc072a1dbc7e3859b",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UpstreamAuthorityTests.cs",
+          "symbol": "ResolveAccessMessage",
+          "testCase": "upstream authority::resolve_access_message"
+        }
+      ],
+      "note": "All six exact upstream diagnostic strings are asserted. The C# model constructs equivalent resolved command entries; additional tests cover associated permissions, deny references and inactive contexts."
+    },
+    "build:crates/tauri-build/src/lib.rs:tests::version_uses_numeric_build_metadata": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "562607e65dca4377ef4a33ade8527990c54fe176514ae460ca00260d1ca2211f",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/WindowsFileVersionTests.cs",
+          "symbol": "NumericMetadata",
+          "testCase": "upstream winres::version_uses_numeric_build_metadata"
+        }
+      ],
+      "note": "Exact upstream packed-u64 resource version assertions. The shared conversion feeds the MSBuild FileVersion and app version metadata; direct NativeAOT integration also inspects the Windows PE version resource. MSI conversion remains separate."
+    },
+    "build:crates/tauri-build/src/lib.rs:tests::version_ignores_non_numeric_composite_build_metadata": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "562607e65dca4377ef4a33ade8527990c54fe176514ae460ca00260d1ca2211f",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/WindowsFileVersionTests.cs",
+          "symbol": "CompositeMetadata",
+          "testCase": "upstream winres::version_ignores_non_numeric_composite_build_metadata"
+        }
+      ],
+      "note": "Exact upstream packed-u64 resource version assertions. The shared conversion feeds the MSBuild FileVersion and app version metadata; direct NativeAOT integration also inspects the Windows PE version resource. MSI conversion remains separate."
+    },
+    "build:crates/tauri-build/src/lib.rs:tests::version_ignores_non_numeric_build_metadata": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "562607e65dca4377ef4a33ade8527990c54fe176514ae460ca00260d1ca2211f",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/WindowsFileVersionTests.cs",
+          "symbol": "TextMetadata",
+          "testCase": "upstream winres::version_ignores_non_numeric_build_metadata"
+        }
+      ],
+      "note": "Exact upstream packed-u64 resource version assertions. The shared conversion feeds the MSBuild FileVersion and app version metadata; direct NativeAOT integration also inspects the Windows PE version resource. MSI conversion remains separate."
+    },
+    "build:crates/tauri-build/src/lib.rs:tests::version_ignores_build_metadata_that_does_not_fit_in_u16": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "562607e65dca4377ef4a33ade8527990c54fe176514ae460ca00260d1ca2211f",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/WindowsFileVersionTests.cs",
+          "symbol": "LargeMetadata",
+          "testCase": "upstream winres::version_ignores_build_metadata_that_does_not_fit_in_u16"
+        }
+      ],
+      "note": "Exact upstream packed-u64 resource version assertions. The shared conversion feeds the MSBuild FileVersion and app version metadata; direct NativeAOT integration also inspects the Windows PE version resource. MSI conversion remains separate."
+    },
+    "runtime:crates/tauri/src/ipc/format_callback.rs:test::test_serialize_js": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "e9de68956b9437f440291d37292bb9544b6c0b180029e6d2772685aa768a494d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/CallbackScriptTests.cs",
+          "symbol": "SerializeJs",
+          "testCase": "upstream format_callback::test_serialize_js"
+        }
+      ],
+      "note": "Preserves scalar/object/raw-JSON fixtures, quoted long strings and exact dangerous Unicode/backslash/apostrophe escaping. C# uses validated JsonElement values instead of Serde Serialize/RawValue. Additional tests cover byte-count threshold boundaries; the four quickcheck properties are inventoried separately and not included in this port."
+    },
+    "runtime:crates/tauri/src/ipc/format_callback.rs:test::test_serialize_js_raw": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "e9de68956b9437f440291d37292bb9544b6c0b180029e6d2772685aa768a494d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/CallbackScriptTests.cs",
+          "symbol": "SerializeJsRaw",
+          "testCase": "upstream format_callback::test_serialize_js_raw"
+        }
+      ],
+      "note": "Preserves scalar/object/raw-JSON fixtures, quoted long strings and exact dangerous Unicode/backslash/apostrophe escaping. C# uses validated JsonElement values instead of Serde Serialize/RawValue. Additional tests cover byte-count threshold boundaries; the four quickcheck properties are inventoried separately and not included in this port."
+    },
+    "runtime:crates/tauri/src/ipc/format_callback.rs:test::qc_formatting": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "e9de68956b9437f440291d37292bb9544b6c0b180029e6d2772685aa768a494d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/Program.cs",
+          "symbol": "CallbackProperties",
+          "testCase": "upstream format_callback::qc_formatting"
+        }
+      ],
+      "note": "10000 fixed-seed randomized Unicode/control/quote/backslash cases with u32 callback ids. Raw mode generates objects or strings; result modes exercise actual incoming Core IPC success/error dispatch and callback selection. C# JsonElement replaces Serde RawValue while preserving the tested callback argument representation."
+    },
+    "runtime:crates/tauri/src/ipc/format_callback.rs:test::qc_format_res": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "e9de68956b9437f440291d37292bb9544b6c0b180029e6d2772685aa768a494d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/Program.cs",
+          "symbol": "CallbackProperties",
+          "testCase": "upstream format_callback::qc_format_res"
+        }
+      ],
+      "note": "10000 fixed-seed randomized Unicode/control/quote/backslash cases with u32 callback ids. Raw mode generates objects or strings; result modes exercise actual incoming Core IPC success/error dispatch and callback selection. C# JsonElement replaces Serde RawValue while preserving the tested callback argument representation."
+    },
+    "runtime:crates/tauri/src/ipc/format_callback.rs:test::qc_formatting_raw": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "e9de68956b9437f440291d37292bb9544b6c0b180029e6d2772685aa768a494d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/Program.cs",
+          "symbol": "CallbackProperties",
+          "testCase": "upstream format_callback::qc_formatting_raw"
+        }
+      ],
+      "note": "10000 fixed-seed randomized Unicode/control/quote/backslash cases with u32 callback ids. Raw mode generates objects or strings; result modes exercise actual incoming Core IPC success/error dispatch and callback selection. C# JsonElement replaces Serde RawValue while preserving the tested callback argument representation."
+    },
+    "runtime:crates/tauri/src/ipc/format_callback.rs:test::qc_format_raw_res": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "e9de68956b9437f440291d37292bb9544b6c0b180029e6d2772685aa768a494d",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/Program.cs",
+          "symbol": "CallbackProperties",
+          "testCase": "upstream format_callback::qc_format_raw_res"
+        }
+      ],
+      "note": "10000 fixed-seed randomized Unicode/control/quote/backslash cases with u32 callback ids. Raw mode generates objects or strings; result modes exercise actual incoming Core IPC success/error dispatch and callback selection. C# JsonElement replaces Serde RawValue while preserving the tested callback argument representation."
+    },
+    "runtime:crates/tauri/src/tray/mod.rs:tests::tray_event_json_serialization": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "b17a2039dcc49226cf96d9ace88bef7bc4e019e188c085187568589e6b89e273",
+      "netwivEvidence": [
+        {
+          "file": "native/netwiv-native/src/tray_payload.rs",
+          "symbol": "tray_event_json_serialization",
+          "testCase": "tray_event_json_serialization"
+        }
+      ],
+      "note": "Exact upstream click JSON assertion against the production native encoder, including tagged Physical rectangle fields. Additional tests cover all five variants and fractional pointer versus rounded rectangle positions, and unchanged official JS consumes the emitted artifact. Linux event delivery remains upstream-unsupported; serialization tests run on both hosts."
+    },
+    "runtime:crates/tauri-utils/src/config.rs:test::parse_hex_color": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "dc7bb8f3e47bf771b5ee865da0ef451bb5ab138664ceb1f6b6370413cffe988d",
+      "netwivEvidence": [
+        {
+          "file": "native/netwiv-native/src/runtime.rs",
+          "symbol": "parse_hex_color",
+          "testCase": "parse_hex_color"
+        }
+      ],
+      "note": "All five upstream hexadecimal color vectors exercise the production parse_color path. The native adapter uses pinned tauri-utils deserialization; additional existing tests cover array and object input forms and invalid arguments."
+    },
+    "cli:crates/tauri-bundler/src/utils/mod.rs:tests::resource_relative_paths": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "39238b51f4d76c2fe7484113a2cc69ae52f47d54cfb69d2e507d4d65511f0d03",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/ResourcePathsTests.cs",
+          "symbol": "RelativePaths",
+          "testCase": "upstream resources::resource_relative_paths"
+        }
+      ],
+      "note": "All three original relative resource path assertions run against the production mapper."
+    },
+    "runtime:crates/tauri-utils/src/resources.rs:tests::resource_paths_errors": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "66111e061092d9c3281f06fa8a683d9d5c178248d996d24bb6824aecf67d7e99",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/ResourcePathsTests.cs",
+          "symbol": "Run",
+          "testCase": "upstream resources::resource_paths_errors"
+        }
+      ],
+      "note": "Original source-hash-verified inputs, 26 fixture files, destination vectors and five error classes extracted by generate-resource-fixtures.mjs; production resource expansion is exercised with upstream allow_walk settings. Ordering is normalized as in upstream."
+    },
+    "runtime:crates/tauri-utils/src/resources.rs:tests::resource_paths_iter_map_allow_walk": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "66111e061092d9c3281f06fa8a683d9d5c178248d996d24bb6824aecf67d7e99",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/ResourcePathsTests.cs",
+          "symbol": "Run",
+          "testCase": "upstream resources::resource_paths_iter_map_allow_walk"
+        }
+      ],
+      "note": "Original source-hash-verified inputs, 26 fixture files, destination vectors and five error classes extracted by generate-resource-fixtures.mjs; production resource expansion is exercised with upstream allow_walk settings. Ordering is normalized as in upstream."
+    },
+    "runtime:crates/tauri-utils/src/resources.rs:tests::resource_paths_iter_map_no_walk": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "66111e061092d9c3281f06fa8a683d9d5c178248d996d24bb6824aecf67d7e99",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/ResourcePathsTests.cs",
+          "symbol": "Run",
+          "testCase": "upstream resources::resource_paths_iter_map_no_walk"
+        }
+      ],
+      "note": "Original source-hash-verified inputs, 26 fixture files, destination vectors and five error classes extracted by generate-resource-fixtures.mjs; production resource expansion is exercised with upstream allow_walk settings. Ordering is normalized as in upstream."
+    },
+    "runtime:crates/tauri-utils/src/resources.rs:tests::resource_paths_iter_slice_allow_walk": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "66111e061092d9c3281f06fa8a683d9d5c178248d996d24bb6824aecf67d7e99",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/ResourcePathsTests.cs",
+          "symbol": "Run",
+          "testCase": "upstream resources::resource_paths_iter_slice_allow_walk"
+        }
+      ],
+      "note": "Original source-hash-verified inputs, 26 fixture files, destination vectors and five error classes extracted by generate-resource-fixtures.mjs; production resource expansion is exercised with upstream allow_walk settings. Ordering is normalized as in upstream."
+    },
+    "runtime:crates/tauri-utils/src/resources.rs:tests::resource_paths_iter_slice_no_walk": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "66111e061092d9c3281f06fa8a683d9d5c178248d996d24bb6824aecf67d7e99",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/ResourcePathsTests.cs",
+          "symbol": "Run",
+          "testCase": "upstream resources::resource_paths_iter_slice_no_walk"
+        }
+      ],
+      "note": "Original source-hash-verified inputs, 26 fixture files, destination vectors and five error classes extracted by generate-resource-fixtures.mjs; production resource expansion is exercised with upstream allow_walk settings. Ordering is normalized as in upstream."
+    },
+    "runtime:crates/tauri-utils/src/acl/resolved.rs:tests::resolves_permissions_from_other_plugins": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "f90702a2afa50b69431111154db9d0a30378d045b9e7b0b1de05dc63296169e7",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/PluginPermissionTests.cs",
+          "symbol": "OtherPlugins",
+          "testCase": "upstream resolved::resolves_permissions_from_other_plugins"
+        }
+      ],
+      "note": "All original fs/http/dialog manifests, cross-plugin references and ordered leaf identifiers are checked through PluginContext and the production ACL resolver; missing default resolves empty. Additional tests cover registration order, guest authorization, cycles and missing references."
+    },
+    "runtime:crates/tauri/src/webview/mod.rs:tests::tauri_protocol_is_local": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "954cf212cb79d6b566c10b76d2ff2da05bc637cfc9f666c2f03d4e3dddf35f1c",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UriSchemeTests.cs",
+          "symbol": "TauriProtocolIsLocal",
+          "testCase": "upstream webview::tauri_protocol_is_local"
+        }
+      ],
+      "note": "Original URL assertions run against the production IPC origin classifier. The Windows-only spoofing test is registered only on Windows, matching upstream cfg; extra tests cover registered Linux schemes, extended spoofed domains and app manifests."
+    },
+    "runtime:crates/tauri/src/webview/mod.rs:tests::windows_custom_protocol_rejects_spoofed_domain": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "954cf212cb79d6b566c10b76d2ff2da05bc637cfc9f666c2f03d4e3dddf35f1c",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/UriSchemeTests.cs",
+          "symbol": "WindowsCustomProtocolRejectsSpoofedDomain",
+          "testCase": "upstream webview::windows_custom_protocol_rejects_spoofed_domain"
+        }
+      ],
+      "note": "Original URL assertions run against the production IPC origin classifier. The Windows-only spoofing test is registered only on Windows, matching upstream cfg; extra tests cover registered Linux schemes, extended spoofed domains and app manifests."
+    },
+    "cli:crates/tauri-bundler/src/bundle/category.rs:tests::category_from_string_ok": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "3b7620fa45c971a867f9117e7d08cda5534614127146d01732b611101249aacc",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/AppCategoryTests.cs",
+          "symbol": "Valid",
+          "testCase": "upstream category::category_from_string_ok"
+        }
+      ],
+      "note": "Exact source-verified parsing, suggestion and roundtrip vectors. Shared category parser controls Linux desktop metadata; accepting macOS category names is desktop configuration behavior, not macOS runtime support."
+    },
+    "cli:crates/tauri-bundler/src/bundle/category.rs:tests::category_from_string_did_you_mean": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "3b7620fa45c971a867f9117e7d08cda5534614127146d01732b611101249aacc",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/AppCategoryTests.cs",
+          "symbol": "Suggestions",
+          "testCase": "upstream category::category_from_string_did_you_mean"
+        }
+      ],
+      "note": "Exact source-verified parsing, suggestion and roundtrip vectors. Shared category parser controls Linux desktop metadata; accepting macOS category names is desktop configuration behavior, not macOS runtime support."
+    },
+    "cli:crates/tauri-bundler/src/bundle/category.rs:tests::category_from_string_totally_wrong": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "3b7620fa45c971a867f9117e7d08cda5534614127146d01732b611101249aacc",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/AppCategoryTests.cs",
+          "symbol": "Wrong",
+          "testCase": "upstream category::category_from_string_totally_wrong"
+        }
+      ],
+      "note": "Exact source-verified parsing, suggestion and roundtrip vectors. Shared category parser controls Linux desktop metadata; accepting macOS category names is desktop configuration behavior, not macOS runtime support."
+    },
+    "cli:crates/tauri-bundler/src/bundle/category.rs:tests::ls_application_category_type_round_trip": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "3b7620fa45c971a867f9117e7d08cda5534614127146d01732b611101249aacc",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/AppCategoryTests.cs",
+          "symbol": "RoundTrip",
+          "testCase": "upstream category::ls_application_category_type_round_trip"
+        }
+      ],
+      "note": "Exact source-verified parsing, suggestion and roundtrip vectors. Shared category parser controls Linux desktop metadata; accepting macOS category names is desktop configuration behavior, not macOS runtime support."
+    },
+    "cli:crates/tauri-cli/src/helpers/config.rs:tests::merge_patches": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "3eb9677f43517ef270a2b1fc9ead9136b64e2313c0800169e01422fac17a287e",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Cli.Tests/ConfigOverlayTests.cs",
+          "symbol": "UpstreamMergePatches",
+          "testCase": "upstream config::merge_patches"
+        }
+      ],
+      "note": "Ports the original patch sequence and null-preserving composed result. Configuration integration tests additionally verify applying CLI composition once after platform patches, including null-to-object boundaries and hook/runner environment forwarding."
+    },
+    "runtime:crates/tauri/src/manager/mod.rs:test::emit": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "3b35d04bded3a068d3d9e1737d52a66a69ccfbc4b2300ec00ed6a5deaa85c79a",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/ManagerEventTests.cs",
+          "symbol": "Emit",
+          "testCase": "upstream manager::emit"
+        }
+      ],
+      "note": "Ports all four App/Window/Webview/WebviewWindow emitters, original listeners, payload assertions and exact recipient sets. emit_to also creates a later WebviewWindow through the public builder for each emitter. These are backend manager event tests using the mock runtime, as upstream does; they do not replace guest or GUI evidence."
+    },
+    "runtime:crates/tauri/src/manager/mod.rs:test::emit_to": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "3b35d04bded3a068d3d9e1737d52a66a69ccfbc4b2300ec00ed6a5deaa85c79a",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/ManagerEventTests.cs",
+          "symbol": "EmitTo",
+          "testCase": "upstream manager::emit_to"
+        }
+      ],
+      "note": "Ports all four App/Window/Webview/WebviewWindow emitters, original listeners, payload assertions and exact recipient sets. emit_to also creates a later WebviewWindow through the public builder for each emitter. These are backend manager event tests using the mock runtime, as upstream does; they do not replace guest or GUI evidence."
+    },
+    "runtime:crates/tauri/src/event/mod.rs:tests::test_illegal_event_name": {
+      "classification": "business-logic",
+      "status": "ported",
+      "upstreamSourceSha256": "dfcb7cf11d7674903f71196e64ae0fa95286757ac816bfbc3139ebdedcb25dea",
+      "netwivEvidence": [
+        {
+          "file": "tests/NetWiv.Core.Tests/RustDebugStringTests.cs",
+          "symbol": "IllegalEventName",
+          "testCase": "upstream event::test_illegal_event_name"
+        }
+      ],
+      "note": "Original invalid name and exact error message; shared Rust Debug formatter also checks every Unicode scalar against the pinned compiler oracle. Guest event deserialization retains its separate upstream error text."
+    }
+  }
+}

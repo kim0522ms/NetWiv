@@ -1,0 +1,83 @@
+<Project>
+  <PropertyGroup>
+    <_NetWivBindingsTaskAssembly>$(MSBuildThisFileDirectory)../tools/net10.0/NetWiv.Build.Tasks.dll</_NetWivBindingsTaskAssembly>
+    <_NetWivBindingsTaskAssembly Condition="!Exists('$(_NetWivBindingsTaskAssembly)')">$(MSBuildThisFileDirectory)../../NetWiv.Build.Tasks/bin/$(Configuration)/net10.0/NetWiv.Build.Tasks.dll</_NetWivBindingsTaskAssembly>
+  </PropertyGroup>
+  <UsingTask TaskName="NetWiv.Build.Tasks.ExportFrontendBindings" AssemblyFile="$(_NetWivBindingsTaskAssembly)" />
+  <UsingTask TaskName="NetWiv.Build.Tasks.GetIsolationAssets" AssemblyFile="$(_NetWivBindingsTaskAssembly)" />
+  <UsingTask TaskName="NetWiv.Build.Tasks.GetApplicationVersion" AssemblyFile="$(_NetWivBindingsTaskAssembly)" />
+  <UsingTask TaskName="NetWiv.Build.Tasks.GetBundleResources" AssemblyFile="$(_NetWivBindingsTaskAssembly)" />
+  <UsingTask TaskName="NetWiv.Build.Tasks.StageBundleResources" AssemblyFile="$(_NetWivBindingsTaskAssembly)" />
+  <Target Name="NetWivResolveBundleResources" BeforeTargets="AssignTargetPaths;_CoreCollectWatchItems"
+          Condition="'$(NetWivConfigPath)' != '' and '$(NetWivBindingsOnly)' != 'true' and '$(DesignTimeBuild)' != 'true'">
+    <NetWiv.Build.Tasks.GetBundleResources ConfigPath="$(NetWivConfigPath)" BaseDirectory="$(NetWivResourceBaseDirectory)">
+      <Output TaskParameter="Resources" ItemName="_NetWivBundleResources" />
+      <Output TaskParameter="ResolvedBaseDirectory" PropertyName="_NetWivResourceBaseDirectory" />
+    </NetWiv.Build.Tasks.GetBundleResources>
+    <ItemGroup><Watch Include="@(_NetWivBundleResources)" /></ItemGroup>
+  </Target>
+  <Target Name="NetWivStageBuildResources" AfterTargets="CopyFilesToOutputDirectory" DependsOnTargets="NetWivResolveBundleResources"
+          Condition="'$(NetWivConfigPath)' != '' and '$(NetWivBindingsOnly)' != 'true' and '$(DesignTimeBuild)' != 'true'">
+    <NetWiv.Build.Tasks.StageBundleResources Resources="@(_NetWivBundleResources)" BaseDirectory="$(_NetWivResourceBaseDirectory)" OutputDirectory="$(TargetDir)" />
+  </Target>
+  <Target Name="NetWivStagePublishResources" AfterTargets="Publish" DependsOnTargets="NetWivResolveBundleResources"
+          Condition="'$(NetWivConfigPath)' != '' and '$(NetWivBindingsOnly)' != 'true' and '$(DesignTimeBuild)' != 'true'">
+    <NetWiv.Build.Tasks.StageBundleResources Resources="@(_NetWivBundleResources)" BaseDirectory="$(_NetWivResourceBaseDirectory)" OutputDirectory="$(PublishDir)" />
+  </Target>
+  <Target Name="NetWivGenerateBuildMetadata" BeforeTargets="GetAssemblyAttributes;_CoreCollectWatchItems">
+    <NetWiv.Build.Tasks.GetApplicationVersion ConfigPath="$(NetWivConfigPath)" Condition="'$(NetWivConfigPath)' != '' and Exists('$(NetWivConfigPath)')">
+      <Output TaskParameter="FileVersion" PropertyName="_NetWivFileVersion" />
+      <Output TaskParameter="InformationalVersion" PropertyName="_NetWivInformationalVersion" />
+      <Output TaskParameter="InputFile" ItemName="Watch" />
+    </NetWiv.Build.Tasks.GetApplicationVersion>
+    <PropertyGroup>
+      <FileVersion Condition="'$(_NetWivFileVersion)' != ''">$(_NetWivFileVersion)</FileVersion>
+      <InformationalVersion Condition="'$(_NetWivInformationalVersion)' != ''">$(_NetWivInformationalVersion)</InformationalVersion>
+      <_NetWivDebugAssertions>false</_NetWivDebugAssertions>
+      <_NetWivDebugAssertions Condition="'$(Configuration)' == 'Debug'">true</_NetWivDebugAssertions>
+    </PropertyGroup>
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute" Condition="'$(_NetWivInformationalVersion)' != ''">
+        <_Parameter1>NetWiv.ConfigVersion</_Parameter1>
+        <_Parameter2>$(_NetWivInformationalVersion)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>NetWiv.DebugAssertions</_Parameter1>
+        <_Parameter2>$(_NetWivDebugAssertions)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
+  <Target Name="NetWivEmbedIsolationAssets" BeforeTargets="AssignTargetPaths"
+          Condition="('$(NetWivIsolationDist)' != '' or '$(NetWivConfigPath)' != '') and '$(NetWivBindingsOnly)' != 'true' and '$(DesignTimeBuild)' != 'true'">
+    <Error Condition="!Exists('$(_NetWivBindingsTaskAssembly)')" Text="NetWiv isolation build task is missing. Build NetWiv.Build before using source targets, or restore the complete NetWiv.Build package." />
+    <NetWiv.Build.Tasks.GetIsolationAssets ConfigPath="$(NetWivConfigPath)" IsolationDirectory="$(NetWivIsolationDist)">
+      <Output TaskParameter="Assets" ItemName="_NetWivIsolationAssets" />
+    </NetWiv.Build.Tasks.GetIsolationAssets>
+    <ItemGroup>
+      <EmbeddedResource Include="@(_NetWivIsolationAssets)" />
+      <Watch Include="@(_NetWivIsolationAssets)" />
+    </ItemGroup>
+  </Target>
+  <Target Name="NetWivExportFrontendBindings" AfterTargets="CoreCompile"
+          Condition="'$(NetWivFrontendBindingsDirectory)' != '' and '$(DesignTimeBuild)' != 'true'">
+    <Error Condition="!Exists('$(_NetWivBindingsTaskAssembly)')" Text="NetWiv binding export task is missing. Build NetWiv.Build before using source targets, or restore the complete NetWiv.Build package." />
+    <NetWiv.Build.Tasks.ExportFrontendBindings
+        AssemblyPath="@(IntermediateAssembly)"
+        OutputDirectory="$([System.IO.Path]::GetFullPath('$(NetWivFrontendBindingsDirectory)', '$(MSBuildProjectDirectory)'))" />
+  </Target>
+  <ItemGroup>
+    <Compile Remove="$(MSBuildProjectDirectory)/target/**/*.cs" />
+    <EmbeddedResource Remove="$(MSBuildProjectDirectory)/target/**/*" />
+    <None Remove="$(MSBuildProjectDirectory)/target/**/*" />
+    <Content Remove="$(MSBuildProjectDirectory)/target/**/*" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(NetWivFrontendDist)' != '' and '$(NetWivBindingsOnly)' != 'true'">
+    <EmbeddedResource Include="$(NetWivFrontendDist)\**\*" LogicalName="netwiv.assets.%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(NetWivConfigPath)' != ''">
+    <EmbeddedResource Include="$(NetWivConfigPath)" LogicalName="netwiv.config.json" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(NetWivAdditionalWatchItems)' != ''">
+    <Watch Include="$(NetWivAdditionalWatchItems)" />
+  </ItemGroup>
+</Project>

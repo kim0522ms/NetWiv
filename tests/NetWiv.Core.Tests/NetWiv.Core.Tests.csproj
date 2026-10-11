@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/NetWiv.Core/NetWiv.Core.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Fs/NetWiv.Plugin.Fs.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Dialog/NetWiv.Plugin.Dialog.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Os/NetWiv.Plugin.Os.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Process/NetWiv.Plugin.Process.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Store/NetWiv.Plugin.Store.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Opener/NetWiv.Plugin.Opener.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Log/NetWiv.Plugin.Log.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Http/NetWiv.Plugin.Http.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.ClipboardManager/NetWiv.Plugin.ClipboardManager.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Shell/NetWiv.Plugin.Shell.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.WindowState/NetWiv.Plugin.WindowState.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Websocket/NetWiv.Plugin.Websocket.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Upload/NetWiv.Plugin.Upload.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Autostart/NetWiv.Plugin.Autostart.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Positioner/NetWiv.Plugin.Positioner.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Cli/NetWiv.Plugin.Cli.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.PersistedScope/NetWiv.Plugin.PersistedScope.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Sql/NetWiv.Plugin.Sql.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.SingleInstance/NetWiv.Plugin.SingleInstance.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.DeepLink/NetWiv.Plugin.DeepLink.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Localhost/NetWiv.Plugin.Localhost.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Notification/NetWiv.Plugin.Notification.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.GlobalShortcut/NetWiv.Plugin.GlobalShortcut.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.Stronghold/NetWiv.Plugin.Stronghold.csproj" />
+    <EmbeddedResource Include="fixtures/index.html" LogicalName="netwiv.assets.index.html" />
+    <EmbeddedResource Include="fixtures/routing/**/*" Exclude="fixtures/routing/exact.txt" LogicalName="netwiv.routing.%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="fixtures/routing/exact.txt" LogicalName="netwiv.routing.route" />
+    <EmbeddedResource Include="fixtures/netwiv.config.json" LogicalName="netwiv.config.json" />
+    <EmbeddedResource Include="fixtures/invalid-config.json" LogicalName="netwiv.invalid.config.json" />
+    <EmbeddedResource Include="fixtures/acl-*.json" LogicalName="%(Filename).json" />
+    <EmbeddedResource Include="fixtures/plugins-*.json" LogicalName="%(Filename).json" />
+    <EmbeddedResource Include="fixtures/asset-config.json" LogicalName="asset-config.json" />
+    <EmbeddedResource Include="fixtures/isolation-config.json" LogicalName="isolation-config.json" />
+    <EmbeddedResource Include="fixtures/isolation/*" LogicalName="netwiv.isolation.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="fixtures/remote-url-pattern-oracle.json" LogicalName="netwiv.tests.remote-url-pattern-oracle.json" />
+    <EmbeddedResource Include="fixtures/dpi-0.1.2.json" LogicalName="netwiv.tests.dpi-0.1.2.json" />
+    <EmbeddedResource Include="fixtures/command-numbers.json" LogicalName="netwiv.tests.command-numbers.json" />
+    <EmbeddedResource Include="fixtures/window-defaults.json" LogicalName="window-defaults.json" />
+    <EmbeddedResource Include="fixtures/no-windows.json" LogicalName="no-windows.json" />
+  </ItemGroup>
+</Project>

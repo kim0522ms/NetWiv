@@ -1,0 +1,5 @@
+{
+  "identifier": "reparent-events",
+  "webviews": ["moving-child"],
+  "permissions": ["core:event:default"]
+}

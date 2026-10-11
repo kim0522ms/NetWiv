@@ -1,0 +1,147 @@
+{
+  "rust": {
+    "channel": "1.95.0",
+    "commit": "59807616e1fa2540724bfbac14d7976d7e4a3860",
+    "profile": "minimal"
+  },
+  "libsodiumSource": {
+    "version": "1.0.22",
+    "source": "https://github.com/jedisct1/libsodium/releases/tag/1.0.22-RELEASE",
+    "sourceContainer": {
+      "url": "https://static.crates.io/crates/libsodium-sys-stable/libsodium-sys-stable-1.24.0.crate",
+      "sha256": "72b04bf6da2c98b727af37ab62cb505f4d751b975b034a9b9ad491d333b0564e",
+      "prefix": "libsodium-sys-stable-1.24.0"
+    },
+    "windowsArchiveUrl": "https://github.com/jedisct1/libsodium/releases/download/1.0.22-RELEASE/libsodium-1.0.22-msvc.zip",
+    "signatureVerification": "libsodium-sys-stable 1.24.0 minisign public key",
+    "linuxArchiveSha256": "b20a92e7ec25b285eafa349d721a5bb27e3a8ba94c0816630a127883f1d1b3ab",
+    "linuxSignatureSha256": "2162883303fb903068519916871476b192d5cf31d5e412378db8ae05a0c05895",
+    "windowsArchiveSha256": "3e03a726fac4bc09cb61d8f29d658ef7a5eca0811de59082130414f7ca2e4279",
+    "windowsSignatureSha256": "3210cf4d985f7b192bb8d5eb2ec7f481e0f47420f144cf1069921f714bfad1d1",
+    "licenseSha256": "508a76d186356c0dd807a670ef510964f8724557024796a2c426c6c0e19ab683"
+  },
+  "packages": {
+    "arboard": {
+      "version": "3.6.1",
+      "checksum": "0348a1c054491f4bfe6ab86a7b6ab1e44e45d899005de92f58b3df180b36ddaf",
+      "features": ["image-data", "wayland-data-control@linux"]
+    },
+    "dirs": {
+      "version": "6.0.0",
+      "checksum": "c3e8aa94d75141228480295a7d0e7feb620b1a5ad9f12bc40be62411e38cce4e"
+    },
+    "global-hotkey": {
+      "version": "0.8.0",
+      "checksum": "8c386b0a4a70cb2d39fffd74480f985b6f0bfbcb934b6a6b6b7e630e448f242e",
+      "features": ["serde"]
+    },
+    "iota_stronghold": {
+      "version": "2.1.0",
+      "checksum": "8c0d301c7edbc31494d183b7d24c1bb51d3fb10fce2f3793df1baf45b6988e10"
+    },
+    "iota-crypto": {
+      "version": "0.23.2",
+      "checksum": "98a38db844c910d78825e173c083f2ef416b69cb091bba8ac1055763c6db065b",
+      "features": ["bip39"]
+    },
+    "rust-argon2": {
+      "version": "2.1.0",
+      "checksum": "9d9848531d60c9cbbcf9d166c885316c24bc0e2a9d3eba0956bb6cbbd79bc6e8"
+    },
+    "getrandom": {
+      "version": "0.3.4",
+      "checksum": "899def5c37c4fd7b2664648c28120ecec138e4d395b459e5ca34f9cce2dd77fd"
+    },
+    "zeroize": {
+      "version": "1.8.2",
+      "checksum": "b97154e67e32c85465826e8bcc1c59429aaaf107c1e4a9e53c8d8ccd5eff88d0"
+    },
+    "stronghold_engine": {
+      "version": "2.0.1",
+      "checksum": "2fd7371c42e557dd71a7f860bb2ec6b6fdb32f97a97987ccc2435fdd1f3a8615",
+      "purpose": "native test work-factor reduction"
+    },
+    "rfd": {
+      "version": "0.16.0",
+      "checksum": "a15ad77d9e70a92437d8f74c35d99b4e4691128df018833e99f90bcd36152672",
+      "features": ["gtk3@linux", "common-controls-v6@windows"]
+    },
+    "wry": {
+      "version": "0.55.1",
+      "checksum": "186f9871daa55fd9c016578b810d149de58367113db7fb72b462d2323ce19514",
+      "features": ["protocol", "os-webview", "linux-body@linux", "x11@linux"]
+    },
+    "tao": {
+      "version": "0.35.3",
+      "checksum": "d1c93047acf68669466a34690ac58cca7010bd1b201e1ec86f1fd0a75d3dd4a9",
+      "features": ["rwh_06", "x11@linux", "dbus@linux"]
+    },
+    "muda": {
+      "version": "0.19.3",
+      "checksum": "1dd04e60bc0b07438a6771710ee1698f98f6ebbc7f89b61264af1563b8aeb878",
+      "features": ["serde", "gtk@linux", "common-controls-v6@windows"]
+    },
+    "notify-rust": {
+      "version": "4.11.0",
+      "checksum": "5312f837191c317644f313f7b2b39f9cb1496570c74f7c17152dd3961219551f"
+    },
+    "tray-icon": {
+      "version": "0.24.2",
+      "checksum": "045979e3f037cd18ad1cb2a419dfda133c5c29c9f3453370079f2255d46c257e",
+      "features": ["serde", "gtk@linux", "common-controls-v6@windows"]
+    },
+    "url": {
+      "version": "2.5.8",
+      "checksum": "ff67a8a4397373c3ef660812acab3268222035010ab8680ec4215f38ba3d0eed"
+    },
+    "png": {
+      "version": "0.17.16",
+      "checksum": "82151a2fc869e011c153adc57cf2789ccb8d9906ce52c0b39a6b5697749d7526",
+      "purpose": "native test fixture encoding"
+    },
+    "image": {
+      "version": "0.25.10",
+      "checksum": "85ab80394333c02fe689eaf900ab500fbd0c2213da414687ebf995a65d5a6104",
+      "features": ["ico", "png"]
+    },
+    "tauri-utils": {
+      "version": "2.9.3",
+      "checksum": "3e176a18e67764923c4f1ce66f25ae4abe5f688384d5eb1a0fa6c77f3d90f887",
+      "features": []
+    },
+    "embed-resource": {
+      "version": "3.0.11",
+      "checksum": "fbfdaacccebec3b28e4866b8973543c7647797db5ada1bdab552e48fe665fbbd",
+      "target": "windows"
+    },
+    "windows": {
+      "version": "0.61.3",
+      "checksum": "9babd3a767a4c1aef6900409f85f5d53ce2544ccdfaa86dad48c91782c6d6893",
+      "target": "windows",
+      "features": ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"]
+    },
+    "window-vibrancy": {
+      "version": "0.6.0",
+      "checksum": "d9bec5a31f3f9362f2258fd0e9c9dd61a9ca432e7306cc78c444258f0dce9a9c",
+      "target": "windows,macos"
+    },
+    "objc2": {
+      "version": "0.6.4",
+      "checksum": "3a12a8ed07aefc768292f076dc3ac8c48f3781c8f2d5851dd3d98950e8c5a89f",
+      "target": "macos"
+    },
+    "objc2-app-kit": {
+      "version": "0.3.2",
+      "checksum": "d49e936b501e5c5bf01fda3a9452ff86dc3ea98ad5f283e1455153142d97518c",
+      "target": "macos",
+      "features": [
+        "NSApplication",
+        "NSResponder",
+        "NSScreen",
+        "NSWindow",
+        "NSView"
+      ]
+    }
+  },
+  "transitiveLock": "Cargo.lock"
+}

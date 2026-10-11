@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-custom-default-allowed"
+description = "Enables the custom_default_allowed command without any pre-configured scope."
+commands.allow = ["custom_default_allowed"]
+
+[[permission]]
+identifier = "deny-custom-default-allowed"
+description = "Denies the custom_default_allowed command without any pre-configured scope."
+commands.deny = ["custom_default_allowed"]

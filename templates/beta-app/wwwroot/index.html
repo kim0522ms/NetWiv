@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My NetWiv app</title>
+  <style>
+    body { margin: 48px auto; padding: 0 24px; max-width: 640px; font: 16px/1.6 system-ui; color: #18332e; background: #f6f7f4; }
+    h1 { font-size: 36px; margin-bottom: 8px; }
+    form { display: flex; gap: 12px; margin: 28px 0; }
+    input, button { font: inherit; padding: 10px 16px; border: 1px solid #a1b1a6; border-radius: 6px; }
+    input { flex: 1; min-width: 0; } button { background: #18332e; color: white; cursor: pointer; }
+    pre { padding: 20px; background: white; border: 1px solid #d8dfd8; white-space: pre-wrap; }
+    code { font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>My NetWiv app</h1>
+  <p>HTML·JavaScript에서 C# 명령을 호출해 보세요.</p>
+  <form id="greeting"><input id="name" aria-label="이름" value="NetWiv"><button>인사하기</button></form>
+  <pre id="result" aria-live="polite">준비되었습니다.</pre>
+  <p><code>Program.cs</code>에서 C# 명령을, <code>wwwroot/index.html</code>에서 화면을 수정하세요.</p>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

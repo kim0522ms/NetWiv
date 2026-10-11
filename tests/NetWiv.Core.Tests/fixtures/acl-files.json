@@ -1,0 +1,21 @@
+{
+  "identifier": "test.acl.files",
+  "app": { "security": { "capabilities": [{
+    "identifier": "main", "windows": ["main"],
+    "permissions": [{"identifier": "default", "allow": ["extension"]}, {"identifier": "default", "allow": ["second"]}]
+  }] } },
+  "$netwivAcl": {
+    "version": 1, "hasAppManifest": true,
+    "files": [{
+      "default": {"permissions": ["nested", "core:app:allow-name", "windows-only", "linux-only", "macos-only"]},
+      "set": [{"identifier": "nested", "description": "Two distinct scopes", "permissions": ["read", "write"]}],
+      "permission": [
+        {"identifier": "read", "commands": {"allow": ["read"]}, "scope": {"allow": ["read"], "deny": ["private"]}},
+        {"identifier": "write", "commands": {"allow": ["write"]}, "scope": {"allow": ["write"]}},
+        {"identifier": "windows-only", "commands": {"allow": ["windows_command"]}, "platforms": ["windows"]},
+        {"identifier": "linux-only", "commands": {"allow": ["linux_command"]}, "platforms": ["linux"]},
+        {"identifier": "macos-only", "commands": {"allow": ["macOS_command"]}, "platforms": ["macOS"]}
+      ]
+    }]
+  }
+}

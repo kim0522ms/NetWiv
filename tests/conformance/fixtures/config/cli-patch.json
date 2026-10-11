@@ -1,0 +1,4 @@
+{
+  "app": { "security": { "capabilities": ["cli"] } },
+  "plugins": { "sample": null }
+}

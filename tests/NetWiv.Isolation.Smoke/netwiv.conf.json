@@ -1,0 +1,10 @@
+{
+  "identifier": "dev.netwiv.isolation-smoke",
+  "app": {
+    "windows": [{ "label": "main", "title": "NetWiv isolation NativeAOT test", "width": 740, "height": 520 }],
+    "security": {
+      "pattern": { "use": "isolation", "options": { "dir": "isolation" } },
+      "csp": "default-src 'self' data:; script-src 'self'; style-src 'self'; connect-src 'self' ipc: http://ipc.localhost"
+    }
+  }
+}

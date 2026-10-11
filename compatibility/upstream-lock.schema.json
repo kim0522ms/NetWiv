@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["profile", "runtime", "api", "cli", "build"],
+  "properties": {
+    "profile": { "const": "tauri-v2.11" },
+    "runtime": { "$ref": "#/$defs/source" },
+    "api": { "$ref": "#/$defs/package" },
+    "cli": { "$ref": "#/$defs/package" },
+    "build": { "$ref": "#/$defs/source" }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "required": ["version", "commit"],
+      "properties": {
+        "version": { "type": "string" },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+      }
+    },
+    "package": {
+      "allOf": [
+        { "$ref": "#/$defs/source" },
+        {
+          "type": "object",
+          "required": ["name", "tarball", "integrity"],
+          "properties": {
+            "name": { "type": "string" },
+            "tarball": { "type": "string", "format": "uri" },
+            "integrity": { "type": "string", "pattern": "^sha512-" }
+          }
+        }
+      ]
+    }
+  }
+}

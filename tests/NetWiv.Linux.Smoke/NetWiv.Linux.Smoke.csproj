@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+    <PublishAot>true</PublishAot>
+    <SelfContained>true</SelfContained>
+    <StripSymbols>true</StripSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\NetWiv.Platform.Linux\NetWiv.Platform.Linux.csproj" />
+  </ItemGroup>
+</Project>

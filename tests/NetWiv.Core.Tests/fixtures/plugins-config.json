@@ -1,0 +1,8 @@
+{
+  "plugins": {
+    "configured": { "message": "한글 configuration", "count": 42 },
+    "scalar": [1, null, true],
+    "explicit-null": null,
+    "invalid": { "message": "wrong count", "count": "forty-two" }
+  }
+}

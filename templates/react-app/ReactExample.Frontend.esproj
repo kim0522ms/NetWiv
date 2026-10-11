@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.Build.NoTargets/3.7.134">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <DefaultProjectTypeGuid>{54a90642-561a-4bb1-a94e-469adee60c69}</DefaultProjectTypeGuid>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <IsPackable>false</IsPackable>
+    <IsPublishable>false</IsPublishable>
+    <StartupCommand>npm run dev</StartupCommand>
+    <BuildCommand>npm run build</BuildCommand>
+    <BuildOutputFolder>$(MSBuildProjectDirectory)/dist</BuildOutputFolder>
+    <ShouldRunBuildScript>true</ShouldRunBuildScript>
+    <ShouldRunBuildScript Condition="'$(DesignTimeBuild)' == 'true' or '$(NetWivDevelopment)' == 'true' or '$(NetWivBindingsOnly)' == 'true'">false</ShouldRunBuildScript>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectCapability Include="JSProjectSystem" />
+    <None Include="src/**/*;public/**/*;scripts/**/*;package.json;package-lock.json;index.html;vite.config.*;*config.json" />
+  </ItemGroup>
+  <Target Name="RestoreFrontendDependencies"
+          Condition="'$(ShouldRunBuildScript)' == 'true'"
+          Inputs="$(MSBuildProjectDirectory)/package.json;$(MSBuildProjectDirectory)/package-lock.json"
+          Outputs="$(MSBuildProjectDirectory)/node_modules/.netwiv-restore">
+    <Exec Command="npm ci --no-audit --no-fund" WorkingDirectory="$(MSBuildProjectDirectory)" />
+    <Touch Files="$(MSBuildProjectDirectory)/node_modules/.netwiv-restore" AlwaysCreate="true" />
+  </Target>
+  <Target Name="BuildFrontendAssets" BeforeTargets="CoreCompile" DependsOnTargets="RestoreFrontendDependencies"
+          Condition="'$(ShouldRunBuildScript)' == 'true'">
+    <Exec Command="$(BuildCommand)" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+</Project>

@@ -1,0 +1,198 @@
+//! AppKit operations kept behind the shared native runtime contract.
+use serde_json::Value;
+use tao::{
+    dpi::{LogicalPosition, LogicalSize, PhysicalPosition, PhysicalSize},
+    monitor::MonitorHandle,
+    platform::macos::{MonitorHandleExtMacOS, WindowBuilderExtMacOS, WindowExtMacOS},
+    window::{Window, WindowBuilder},
+};
+use tauri_utils::{TitleBarStyle, WindowEffect, WindowEffectState, config::WindowEffectsConfig};
+use window_vibrancy::{NSVisualEffectMaterial as Material, NSVisualEffectState as State};
+
+pub(crate) fn configure_window(
+    mut builder: WindowBuilder,
+    extra: &Value,
+) -> Result<WindowBuilder, String> {
+    let style: TitleBarStyle = serde_json::from_value(
+        extra
+            .get("titleBarStyle")
+            .cloned()
+            .unwrap_or(Value::String("Visible".into())),
+    )
+    .map_err(|e| e.to_string())?;
+    builder = builder
+        .with_titlebar_transparent(style != TitleBarStyle::Visible)
+        .with_fullsize_content_view(style == TitleBarStyle::Overlay)
+        .with_title_hidden(
+            serde_json::from_value::<Option<bool>>(
+                extra.get("hiddenTitle").cloned().unwrap_or(Value::Null),
+            )
+            .map_err(|e| e.to_string())?
+            .unwrap_or(false),
+        )
+        .with_automatic_window_tabbing(false);
+    if let Some(identifier) = serde_json::from_value::<Option<String>>(
+        extra
+            .get("tabbingIdentifier")
+            .cloned()
+            .unwrap_or(Value::Null),
+    )
+    .map_err(|e| e.to_string())?
+    {
+        builder = builder
+            .with_automatic_window_tabbing(true)
+            .with_tabbing_identifier(&identifier);
+    }
+    if let Some(position) = extra
+        .get("trafficLightPosition")
+        .filter(|value| !value.is_null())
+    {
+        let x = position["x"]
+            .as_f64()
+            .ok_or("trafficLightPosition requires x")?;
+        let y = position["y"]
+            .as_f64()
+            .ok_or("trafficLightPosition requires y")?;
+        builder = builder.with_traffic_light_inset(LogicalPosition::new(x, y));
+    }
+    Ok(builder)
+}
+
+pub(crate) fn set_title_bar_style(window: &Window, value: &Value) -> Result<(), String> {
+    let style: TitleBarStyle = serde_json::from_value(value.clone()).map_err(|e| e.to_string())?;
+    window.set_titlebar_transparent(style != TitleBarStyle::Visible);
+    window.set_fullsize_content_view(style == TitleBarStyle::Overlay);
+    Ok(())
+}
+
+pub(crate) fn monitor_work_area(
+    monitor: &MonitorHandle,
+) -> (PhysicalPosition<i32>, PhysicalSize<u32>) {
+    let Some(screen) = monitor.ns_screen() else {
+        return (monitor.position(), monitor.size());
+    };
+    // SAFETY: Tao supplies a live NSScreen and this function runs on the AppKit thread.
+    let screen = unsafe { &*screen.cast::<objc2_app_kit::NSScreen>() };
+    let frame = screen.frame();
+    let visible = screen.visibleFrame();
+    // Cocoa is bottom-left based; Tao uses a top-left physical desktop origin.
+    let scale = monitor.scale_factor();
+    let offset: PhysicalPosition<i32> = LogicalPosition::new(
+        visible.origin.x - frame.origin.x,
+        frame.size.height - (visible.origin.y - frame.origin.y) - visible.size.height,
+    )
+    .to_physical(scale);
+    let origin = monitor.position();
+    (
+        PhysicalPosition::new(origin.x + offset.x, origin.y + offset.y),
+        LogicalSize::new(visible.size.width, visible.size.height).to_physical(scale),
+    )
+}
+
+#[allow(deprecated)]
+fn material(effect: WindowEffect) -> Option<Material> {
+    Some(match effect {
+        WindowEffect::AppearanceBased => Material::AppearanceBased,
+        WindowEffect::Light => Material::Light,
+        WindowEffect::Dark => Material::Dark,
+        WindowEffect::MediumLight => Material::MediumLight,
+        WindowEffect::UltraDark => Material::UltraDark,
+        WindowEffect::Titlebar => Material::Titlebar,
+        WindowEffect::Selection => Material::Selection,
+        WindowEffect::Menu => Material::Menu,
+        WindowEffect::Popover => Material::Popover,
+        WindowEffect::Sidebar => Material::Sidebar,
+        WindowEffect::HeaderView => Material::HeaderView,
+        WindowEffect::Sheet => Material::Sheet,
+        WindowEffect::WindowBackground => Material::WindowBackground,
+        WindowEffect::HudWindow => Material::HudWindow,
+        WindowEffect::FullScreenUI => Material::FullScreenUI,
+        WindowEffect::Tooltip => Material::Tooltip,
+        WindowEffect::ContentBackground => Material::ContentBackground,
+        WindowEffect::UnderWindowBackground => Material::UnderWindowBackground,
+        WindowEffect::UnderPageBackground => Material::UnderPageBackground,
+        _ => return None,
+    })
+}
+
+pub(crate) fn set_effects(
+    window: &Window,
+    config: Option<WindowEffectsConfig>,
+) -> Result<(), String> {
+    let Some(config) = config else {
+        return window_vibrancy::clear_vibrancy(window)
+            .map(|_| ())
+            .map_err(|e| e.to_string());
+    };
+    if let Some(effect) = config.effects.into_iter().find_map(material) {
+        let state = config.state.map(|state| match state {
+            WindowEffectState::FollowsWindowActiveState => State::FollowsWindowActiveState,
+            WindowEffectState::Active => State::Active,
+            WindowEffectState::Inactive => State::Inactive,
+        });
+        window_vibrancy::apply_vibrancy(window, effect, state, config.radius)
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn event_loop_rejects_worker_threads_without_entering_appkit() {
+        unsafe extern "C" fn callback(
+            _: *mut std::ffi::c_void,
+            _: u32,
+            _: u64,
+            _: *const u8,
+            _: usize,
+            _: *const u8,
+            _: usize,
+        ) -> i32 {
+            panic!("no callbacks expected");
+        }
+        let shared =
+            std::sync::Arc::new(crate::runtime::Shared::new(callback, std::ptr::null_mut()));
+        let config =
+            serde_json::from_value(json!({"initializationScript":"", "windows":[]})).unwrap();
+        assert!(
+            crate::runtime::run(shared, config)
+                .unwrap_err()
+                .contains("process main thread")
+        );
+    }
+
+    #[test]
+    fn macos_options_validate_before_creating_a_window() {
+        assert!(configure_window(WindowBuilder::new(), &json!({"titleBarStyle":"Overlay", "hiddenTitle":true, "trafficLightPosition":{"x":12,"y":16}})).is_ok());
+        assert!(configure_window(WindowBuilder::new(), &json!({"titleBarStyle":42})).is_err());
+        assert!(
+            configure_window(
+                WindowBuilder::new(),
+                &json!({"trafficLightPosition":{"x":12}})
+            )
+            .is_err()
+        );
+        assert!(
+            configure_window(
+                WindowBuilder::new(),
+                &json!({"trafficLightPosition":{"x":"bad","y":12}})
+            )
+            .is_err()
+        );
+        assert!(
+            configure_window(
+                WindowBuilder::new(),
+                &json!({"trafficLightPosition":null,"tabbingIdentifier":null,"hiddenTitle":null})
+            )
+            .is_ok()
+        );
+        assert!(configure_window(WindowBuilder::new(), &json!({"hiddenTitle":"yes"})).is_err());
+        assert!(configure_window(WindowBuilder::new(), &json!({"tabbingIdentifier":42})).is_err());
+        assert!(material(WindowEffect::Sidebar).is_some());
+        assert!(material(WindowEffect::Mica).is_none());
+    }
+}

@@ -1,0 +1,9 @@
+{
+  "identifier": "dev.netwiv.asset-test",
+  "app": {
+    "security": {
+      "assetProtocol": { "enable": true, "scope": [] },
+      "headers": { "X-Embedded-Asset": "yes" }
+    }
+  }
+}

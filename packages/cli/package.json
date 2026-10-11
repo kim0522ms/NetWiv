@@ -1,0 +1,21 @@
+{
+  "name": "@netwiv/cli",
+  "version": "0.1.0-dev",
+  "description": "NetWiv desktop application CLI",
+  "license": "Apache-2.0",
+  "type": "commonjs",
+  "bin": {
+    "netwiv": "bin/netwiv.js"
+  },
+  "files": [
+    "bin",
+    "native",
+    "native-tools.json",
+    "LICENSE-APACHE",
+    "NOTICE",
+    "THIRD-PARTY-NOTICES.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

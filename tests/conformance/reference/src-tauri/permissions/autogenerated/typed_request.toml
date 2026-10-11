@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-typed-request"
+description = "Enables the typed_request command without any pre-configured scope."
+commands.allow = ["typed_request"]
+
+[[permission]]
+identifier = "deny-typed-request"
+description = "Denies the typed_request command without any pre-configured scope."
+commands.deny = ["typed_request"]

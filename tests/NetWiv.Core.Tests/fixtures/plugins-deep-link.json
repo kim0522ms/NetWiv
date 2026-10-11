@@ -1,0 +1,7 @@
+{
+  "plugins": {
+    "deep-link": {
+      "desktop": [{ "schemes": ["netwiv-test"] }]
+    }
+  }
+}

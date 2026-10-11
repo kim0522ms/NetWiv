@@ -1,0 +1,7 @@
+{
+  "identifier": "default",
+  "description": "Default permissions for __PLUGIN_NAME__",
+  "commands": {
+    "allow": ["ping"]
+  }
+}

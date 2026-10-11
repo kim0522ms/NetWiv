@@ -1,0 +1,5 @@
+{
+  "build": { "beforeDevCommand": null },
+  "app": { "windows": [{ "label": "main", "width": 1024 }] },
+  "bundle": { "targets": ["nsis"] }
+}

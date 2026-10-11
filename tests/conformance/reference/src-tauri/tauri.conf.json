@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../../compatibility/generated/tauri.config.schema.json",
+  "productName": "NetWiv Conformance",
+  "version": "0.1.0",
+  "identifier": "dev.netwiv.conformance",
+  "plugins": { "contract": { "message": "한글 plugin configuration", "count": 42 } },
+  "build": { "frontendDist": "../../dist" },
+  "app": {
+    "windows": [{ "label": "main", "visible": true }, { "label": "deferred-config", "create": false }],
+    "security": {
+      "capabilities": ["default", "reparent-events", { "identifier": "remote-probe", "local": false, "remote": { "urls": ["http://127.0.0.1:18191"] }, "windows": ["main", "conformance-child"], "permissions": ["allow-echo-json"] }, { "identifier": "inactive-denial", "local": false, "windows": ["*"], "permissions": ["deny-echo-json"] }],
+      "assetProtocol": { "enable": true, "scope": { "allow": ["$TEMP/netwiv-conformance-assets/**"], "deny": ["$TEMP/netwiv-conformance-assets/**/secret.txt"] } }
+    }
+  },
+  "bundle": { "active": false }
+}

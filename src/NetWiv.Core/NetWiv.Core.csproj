@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Shared/PermissionIdentifier.cs" Link="Security/PermissionIdentifier.cs" />
+    <Compile Include="../Shared/CapabilityValidation.cs" Link="Security/CapabilityValidation.cs" />
+    <PackageReference Include="AngleSharp" Version="1.5.2" />
+    <InternalsVisibleTo Include="NetWiv.Core.Tests" />
+    <EmbeddedResource Include="Assets/bundle-type.txt" LogicalName="netwiv.bundle.type" />
+    <EmbeddedResource Include="Security/Isolation/*.js" LogicalName="netwiv.isolation-runtime.%(Filename)%(Extension)" />
+    <None Include="../../THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="" />
+    <None Include="../../licenses/AngleSharp-MIT.txt" Pack="true" PackagePath="licenses/" />
+  </ItemGroup>
+</Project>

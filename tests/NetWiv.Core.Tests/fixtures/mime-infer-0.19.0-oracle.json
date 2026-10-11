@@ -1,0 +1,578 @@
+{
+  "source": {
+    "crate": "infer",
+    "version": "0.19.0",
+    "gitCommit": "4256ea07165a9393186b6c190541fac4b5e6f9f5",
+    "repository": "https://github.com/bojand/infer",
+    "prefixBytes": 8192
+  },
+  "entries": [
+    {
+      "file": "sample_48kbps.opus",
+      "length": 612692,
+      "sha256": "64571f56bb973c078ec784472944aff0b88ba0c88456c95ff3eb86f5e0c1357d",
+      "prefixLength": 8192,
+      "prefixSha256": "dff8432815b783a1edf5139c07bb4fe2e8841c91cb71a6ab65335ed5d820c84e",
+      "fullMime": "audio/opus",
+      "prefixMime": "audio/opus"
+    },
+    {
+      "file": "sample_elf",
+      "length": 1353824,
+      "sha256": "2bda5c357c5aaf16e46f0e8a9a8634fdbd56ee1b1d9badef0b8793d440edd94a",
+      "prefixLength": 8192,
+      "prefixSha256": "0acf42379dc3c9e01b13dcb16dc41f430c5f0c430a5e460f8f437a25afc373d9",
+      "fullMime": "application/x-executable",
+      "prefixMime": "application/x-executable"
+    },
+    {
+      "file": "sample_mach_fat",
+      "length": 1244928,
+      "sha256": "5c90ec3507016430a6067da37e1fcfc9faebd663b62032bc46524af667191ddd",
+      "prefixLength": 8192,
+      "prefixSha256": "71d1b7577db5a2acdebe86d8fbae8016c72ea9a66f7a362cf1e36fa043bc896c",
+      "fullMime": "application/x-mach-binary",
+      "prefixMime": "application/x-mach-binary"
+    },
+    {
+      "file": "sample_mach_ppc",
+      "length": 450568,
+      "sha256": "06b0515f7779a51a8362a32428d4f8de1bd30021ed2ab5092cb8f9a87a0fe4fd",
+      "prefixLength": 8192,
+      "prefixSha256": "5326ca07c850d602fca9680a05350e95103d3f47a7e42a2bbc240e27641cbdec",
+      "fullMime": "application/x-mach-binary",
+      "prefixMime": "application/x-mach-binary"
+    },
+    {
+      "file": "sample_mach_x64",
+      "length": 39584,
+      "sha256": "bb38e04ca01881df5e6b92e2231f3173ee6d610b32af3068e8fe6b001c51a10f",
+      "prefixLength": 8192,
+      "prefixSha256": "a2f0261d8ccbd414fbaf065a19f04690a8c10f2f568124e5f33f81bdb4f1984a",
+      "fullMime": "application/x-mach-binary",
+      "prefixMime": "application/x-mach-binary"
+    },
+    {
+      "file": "sample_mach_x86",
+      "length": 35696,
+      "sha256": "f6192f91dbf2bb98d846a0e409bcd2895cb8e04016f0476c3c4d22af3713f5e0",
+      "prefixLength": 8192,
+      "prefixSha256": "e262ebd730aef94c3abf2fc3ae05bcd762dd6edb89941d8f651d9da4c0c845a9",
+      "fullMime": "application/x-mach-binary",
+      "prefixMime": "application/x-mach-binary"
+    },
+    {
+      "file": "sample_multi.djvu",
+      "length": 1155,
+      "sha256": "57cc39ed342e2f805ebe67a433cdc0276bc77f32e15112ca892ea3d8de3a040e",
+      "prefixLength": 1155,
+      "prefixSha256": "57cc39ed342e2f805ebe67a433cdc0276bc77f32e15112ca892ea3d8de3a040e",
+      "fullMime": "image/vnd.djvu",
+      "prefixMime": "image/vnd.djvu"
+    },
+    {
+      "file": "sample_single.djvu",
+      "length": 372,
+      "sha256": "693067a9693f9e8bdcd2f74d56c26d0ff05f8a2cf114a80b06f1c9367cb7d8a4",
+      "prefixLength": 372,
+      "prefixSha256": "693067a9693f9e8bdcd2f74d56c26d0ff05f8a2cf114a80b06f1c9367cb7d8a4",
+      "fullMime": "image/vnd.djvu",
+      "prefixMime": "image/vnd.djvu"
+    },
+    {
+      "file": "sample.ape",
+      "length": 2462664,
+      "sha256": "11671a8798e710b85d209155d8cc810b8f6770c599991df059b87fc82bb4ac7c",
+      "prefixLength": 8192,
+      "prefixSha256": "3bc4857032dd0acd16a6b4f0151a9496ef0f8cda76c3415039e0a17f13f48e46",
+      "fullMime": "audio/x-ape",
+      "prefixMime": "audio/x-ape"
+    },
+    {
+      "file": "sample.avi",
+      "length": 901160,
+      "sha256": "a3b08f95179ef2d26c3777cc01e569047749e6bc28e2ef158b90c19f046dcd3f",
+      "prefixLength": 8192,
+      "prefixSha256": "116c9035d70537a3c74f007203b72184dd7d29fb045a425de970a73c9bcb51fd",
+      "fullMime": "video/x-msvideo",
+      "prefixMime": "video/x-msvideo"
+    },
+    {
+      "file": "sample.avif",
+      "length": 2375,
+      "sha256": "a6f984cf349e09e852667d1f29c55a1f6540c3c8fc084c87e62f7f1132a70f26",
+      "prefixLength": 2375,
+      "prefixSha256": "a6f984cf349e09e852667d1f29c55a1f6540c3c8fc084c87e62f7f1132a70f26",
+      "fullMime": "image/avif",
+      "prefixMime": "image/avif"
+    },
+    {
+      "file": "sample.bmp",
+      "length": 130682,
+      "sha256": "f23cab8ea2aac153eca18a576997b28417e62a922cf0d89d8c63844f8bb169d6",
+      "prefixLength": 8192,
+      "prefixSha256": "1addb6f06b3acb482b8a54d67746e63aa7cab9498263e92884f96374e030197a",
+      "fullMime": "image/bmp",
+      "prefixMime": "image/bmp"
+    },
+    {
+      "file": "sample.class",
+      "length": 425,
+      "sha256": "fce5eb53a2dba093e68bd24ceb19c43c4df874e29fd98f9aa6350a0f9421fdcc",
+      "prefixLength": 425,
+      "prefixSha256": "fce5eb53a2dba093e68bd24ceb19c43c4df874e29fd98f9aa6350a0f9421fdcc",
+      "fullMime": "application/java",
+      "prefixMime": "application/java"
+    },
+    {
+      "file": "sample.cpio",
+      "length": 1024,
+      "sha256": "47d3449f9507b6c67deebcbc6bf275808beab6bf9ce1382965f23795abfe7497",
+      "prefixLength": 1024,
+      "prefixSha256": "47d3449f9507b6c67deebcbc6bf275808beab6bf9ce1382965f23795abfe7497",
+      "fullMime": "application/x-cpio",
+      "prefixMime": "application/x-cpio"
+    },
+    {
+      "file": "sample.db",
+      "length": 12288,
+      "sha256": "56be66332f277cacc084247ced13f1914bb9ed09f83b007be0f317f9a62041f7",
+      "prefixLength": 8192,
+      "prefixSha256": "1a3a45a90d0c7425f2d037619902e42e0275afb24685a245bc21be3cfcf89c1d",
+      "fullMime": "application/vnd.sqlite3",
+      "prefixMime": "application/vnd.sqlite3"
+    },
+    {
+      "file": "sample.der",
+      "length": 926,
+      "sha256": "db0058d27543d0b5e547ea1b23ee51ade6e17403e62d088325cf8ec5652deb0e",
+      "prefixLength": 926,
+      "prefixSha256": "db0058d27543d0b5e547ea1b23ee51ade6e17403e62d088325cf8ec5652deb0e",
+      "fullMime": "application/x-x509-ca-cert",
+      "prefixMime": "application/x-x509-ca-cert"
+    },
+    {
+      "file": "sample.doc",
+      "length": 22528,
+      "sha256": "1427685dd1aeb50007f540ca1cd8ca5a72133b792bae870d70a5d6f412318c3e",
+      "prefixLength": 8192,
+      "prefixSha256": "6c580220d2730b88ac6f79b41007aef3e0ff9b419846dd9903c1bcaaf8350bf9",
+      "fullMime": "application/msword",
+      "prefixMime": "application/x-ole-storage"
+    },
+    {
+      "file": "sample.docx",
+      "length": 11481,
+      "sha256": "d36a3b5d95f04c331a3af694121d664e08be756f99af57089a5e84051883747f",
+      "prefixLength": 8192,
+      "prefixSha256": "35928011abfe45582628061c840e2bd6f79129c553abcef9ba4ec6d6527673bc",
+      "fullMime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "prefixMime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    },
+    {
+      "file": "sample.dsf",
+      "length": 14114908,
+      "sha256": "0728ee035aa2f7a76d9527cf58634ec153b8a38481d7c9d24fc37957521c1d5c",
+      "prefixLength": 8192,
+      "prefixSha256": "80de8f6625bfcdbc0c71eb9557bb798d83bfbf591df32771e3b4f8bd68d915dd",
+      "fullMime": "audio/x-dsf",
+      "prefixMime": "audio/x-dsf"
+    },
+    {
+      "file": "sample.epub",
+      "length": 2432,
+      "sha256": "0cfb44b37f52e35b133ba9314cc6760a089f88c11ce32b397439989a0121ed48",
+      "prefixLength": 2432,
+      "prefixSha256": "0cfb44b37f52e35b133ba9314cc6760a089f88c11ce32b397439989a0121ed48",
+      "fullMime": "application/epub+zip",
+      "prefixMime": "application/epub+zip"
+    },
+    {
+      "file": "sample.exe",
+      "length": 1413632,
+      "sha256": "7db04ba0b6f9abd296cd564cfc7da887934e1681aff1cc9f0c1c080aa3158289",
+      "prefixLength": 8192,
+      "prefixSha256": "b3d9cac5e064b47f0339f268b8e96069ecf0b875e7d7da8c4ee5f2a7f8645a1c",
+      "fullMime": "application/vnd.microsoft.portable-executable",
+      "prefixMime": "application/vnd.microsoft.portable-executable"
+    },
+    {
+      "file": "sample.flv",
+      "length": 1051185,
+      "sha256": "61bcaf70a1758d1dc0f5eb8d8ce42b1b02ebb1f2d25795135331c340394b8c9d",
+      "prefixLength": 8192,
+      "prefixSha256": "452c156fbb72b9087369799c818d07b0fa46ae8a0f6356d42b4e41496f1d3fde",
+      "fullMime": "video/x-flv",
+      "prefixMime": "video/x-flv"
+    },
+    {
+      "file": "sample.gif",
+      "length": 25127,
+      "sha256": "d6fa2da62aed167f305f6b7e5110bd7869b9294896f920c58e9e57b95c9de96b",
+      "prefixLength": 8192,
+      "prefixSha256": "3da8d801ce17a0493f7d0d73821324e5fa8a11ed79375b1d2a65ee48ee9f0dae",
+      "fullMime": "image/gif",
+      "prefixMime": "image/gif"
+    },
+    {
+      "file": "sample.heic",
+      "length": 337522,
+      "sha256": "546ee3abafcb6d04ede0390e6419cae61e02846d40ac3ddf38cda63a4e5a1dda",
+      "prefixLength": 8192,
+      "prefixSha256": "3137ae249a23ef4f2fe4af203f5168360d1ac5ce0ddfd2bbc16589b0d04c2533",
+      "fullMime": "image/heif",
+      "prefixMime": "image/heif"
+    },
+    {
+      "file": "sample.html",
+      "length": 167,
+      "sha256": "ac517248862614c0762033cc3c1cca73834289189e0a1c2fe925c1a67d5f9684",
+      "prefixLength": 167,
+      "prefixSha256": "ac517248862614c0762033cc3c1cca73834289189e0a1c2fe925c1a67d5f9684",
+      "fullMime": "text/html",
+      "prefixMime": "text/html"
+    },
+    {
+      "file": "sample.ico",
+      "length": 68829,
+      "sha256": "4853c3c219b88209f003bd73ed8a93c68ce282c00491fce72fd5365369cf410d",
+      "prefixLength": 8192,
+      "prefixSha256": "2c4270f79be543667959b2dcb672792fe5a199e83ad76683c84e07135d537d39",
+      "fullMime": "image/vnd.microsoft.icon",
+      "prefixMime": "image/vnd.microsoft.icon"
+    },
+    {
+      "file": "sample.jpg",
+      "length": 20324,
+      "sha256": "50723405f6511310ddb68f21988f22d4b05e4e8f5c18122f1562c95558a8a793",
+      "prefixLength": 8192,
+      "prefixSha256": "9a7075c3ffff14271fca54861511d5dc6686c710ca5f45192ffddd395aa5f8ff",
+      "fullMime": "image/jpeg",
+      "prefixMime": "image/jpeg"
+    },
+    {
+      "file": "sample.mkv",
+      "length": 1052413,
+      "sha256": "6c6135a4dfdd19c5d9c55918b9501440bc0e250350c7de1a6e803b13469dbd64",
+      "prefixLength": 8192,
+      "prefixSha256": "cf90dc67161868223fb5c46c1e04d1b405aab7a4ca26935c983f63d5ef7d33db",
+      "fullMime": "video/x-matroska",
+      "prefixMime": "video/x-matroska"
+    },
+    {
+      "file": "sample.mobi",
+      "length": 9090,
+      "sha256": "5663240c2b6f90b4553c45979ade28c6258f0ff1abb862b5b1326b1ab2dddc5a",
+      "prefixLength": 8192,
+      "prefixSha256": "273228ea85d6250fd1c39cd6535474bdc3244d3ddefd91cc69794568003f102d",
+      "fullMime": "application/x-mobipocket-ebook",
+      "prefixMime": "application/x-mobipocket-ebook"
+    },
+    {
+      "file": "sample.mov",
+      "length": 94981,
+      "sha256": "8c1e484ff2c162f511d0fb034c60819e03bd2188df6d3d95aad24f22d49dc122",
+      "prefixLength": 8192,
+      "prefixSha256": "eb6209ce8fb46bc8d0cce492c898bddf3882491b774036eea7df72a4a81c2df2",
+      "fullMime": "video/quicktime",
+      "prefixMime": "video/quicktime"
+    },
+    {
+      "file": "sample.mp3",
+      "length": 443926,
+      "sha256": "7e2ff94a87ec49018844d915832acc9bffce3138688a9f2913a69316441fcb7e",
+      "prefixLength": 8192,
+      "prefixSha256": "9249093e81677a0842d222bcd394a059930576c7476e02e4b53d34a46e439d64",
+      "fullMime": "audio/mpeg",
+      "prefixMime": "audio/mpeg"
+    },
+    {
+      "file": "sample.mp4",
+      "length": 2232547,
+      "sha256": "e8afe8587083835cdf813d7e2099a8f3b5fa8e623cb50e66f0dfa1a22db1bd85",
+      "prefixLength": 8192,
+      "prefixSha256": "67f10582222f944c6f84aaeedbad3695fc86a197b163c54687379e767a8ddb12",
+      "fullMime": "video/mp4",
+      "prefixMime": "video/mp4"
+    },
+    {
+      "file": "sample.odp",
+      "length": 18037,
+      "sha256": "9cf8f1c679164c0adecaf95844cf3be8b87f5841f0b4f80f81481f248de87cb2",
+      "prefixLength": 8192,
+      "prefixSha256": "93f766db164d589b26d0702b19ad98021db3feb7a28c6f44f59f2c8a0da7b91c",
+      "fullMime": "application/vnd.oasis.opendocument.presentation",
+      "prefixMime": "application/vnd.oasis.opendocument.presentation"
+    },
+    {
+      "file": "sample.ods",
+      "length": 6819,
+      "sha256": "771b22487b9d7e43369167a66413057996d02e45065edb85b811120a10d7d4a4",
+      "prefixLength": 6819,
+      "prefixSha256": "771b22487b9d7e43369167a66413057996d02e45065edb85b811120a10d7d4a4",
+      "fullMime": "application/vnd.oasis.opendocument.spreadsheet",
+      "prefixMime": "application/vnd.oasis.opendocument.spreadsheet"
+    },
+    {
+      "file": "sample.odt",
+      "length": 135879,
+      "sha256": "8432fd79b9b49f0e6303123c8b47a159a6631ec5999a56e95ec8d9bf3c1d9753",
+      "prefixLength": 8192,
+      "prefixSha256": "839ba3446f91f3d36bc9d3faa7959b54f0add7fea9b0b5d4cb5385e753b8630e",
+      "fullMime": "application/vnd.oasis.opendocument.text",
+      "prefixMime": "application/vnd.oasis.opendocument.text"
+    },
+    {
+      "file": "sample.ora",
+      "length": 357248,
+      "sha256": "d481762423caaa31e61148971d7605392facc1cb0859772e3eba76062d13fe8d",
+      "prefixLength": 8192,
+      "prefixSha256": "365f76efc78ea03fb4c701f7814e33ee46af32d5827c9092d10fb3a0638dc44b",
+      "fullMime": "image/openraster",
+      "prefixMime": "image/openraster"
+    },
+    {
+      "file": "sample.par2",
+      "length": 24,
+      "sha256": "daedf6088f918145a5b536eb37e4b1edab0a98301098cb05f7b186b2f1e30cf3",
+      "prefixLength": 24,
+      "prefixSha256": "daedf6088f918145a5b536eb37e4b1edab0a98301098cb05f7b186b2f1e30cf3",
+      "fullMime": "application/x-par2",
+      "prefixMime": "application/x-par2"
+    },
+    {
+      "file": "sample.pdf",
+      "length": 13777,
+      "sha256": "78046ff4cdefb3ac9175d3c72d307f449d4c532f76a200814b6f471eaa02fc67",
+      "prefixLength": 8192,
+      "prefixSha256": "9a66197155565aa620e2d0ce4e15c126ecd94209552cbb78c066ed3b8fae68d9",
+      "fullMime": "application/pdf",
+      "prefixMime": "application/pdf"
+    },
+    {
+      "file": "sample.pem",
+      "length": 1732,
+      "sha256": "e02a201f5b6830811fc172568a6abc81863550a5622ccfe8575497c03b69d51b",
+      "prefixLength": 1732,
+      "prefixSha256": "e02a201f5b6830811fc172568a6abc81863550a5622ccfe8575497c03b69d51b",
+      "fullMime": "application/x-x509-ca-cert",
+      "prefixMime": "application/x-x509-ca-cert"
+    },
+    {
+      "file": "sample.png",
+      "length": 60873,
+      "sha256": "eda9a160d2adb414ed8af98c38fa89423aa152042f8ff33032ef9c8f421d160f",
+      "prefixLength": 8192,
+      "prefixSha256": "e633fe57d65224ea4f66fc918658ad218bc30a4ecc8d19cbb6095733f390553f",
+      "fullMime": "image/png",
+      "prefixMime": "image/png"
+    },
+    {
+      "file": "sample.ppt",
+      "length": 46080,
+      "sha256": "1aea4f8a05a1c29b944575de514f1a34a1881ae6dc40a133201b4c63ef5a2ed2",
+      "prefixLength": 8192,
+      "prefixSha256": "4dc1126cc466b3cb4369533feed08799e332b3bf9115dae026a5bd3e89cd5580",
+      "fullMime": "application/vnd.ms-powerpoint",
+      "prefixMime": "application/x-ole-storage"
+    },
+    {
+      "file": "sample.pptx",
+      "length": 33244,
+      "sha256": "4592affba970a2bf1e12c68c67d55508990872b02a6d02de9ac7e7f170023b3c",
+      "prefixLength": 8192,
+      "prefixSha256": "846ec5ac17f364c7c8599f8946201aa324df3e7d61c57a35d2464f02195c3b2d",
+      "fullMime": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "prefixMime": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    },
+    {
+      "file": "sample.psd",
+      "length": 248934,
+      "sha256": "ac5e5623e192d11c14e7c1685fb8ab029ab29b9f1f54a15ed7eaf6ee0368b77b",
+      "prefixLength": 8192,
+      "prefixSha256": "ea06ea1de0e14105e00327a2e058d19adc2df6e0e9d93f324cb8ceed2cc16bd6",
+      "fullMime": "image/vnd.adobe.photoshop",
+      "prefixMime": "image/vnd.adobe.photoshop"
+    },
+    {
+      "file": "sample.sh",
+      "length": 13,
+      "sha256": "cd1ad6cfe6098c568b7395cb8b568b0efc7ca4281d419216d446fc8aa11955ba",
+      "prefixLength": 13,
+      "prefixSha256": "cd1ad6cfe6098c568b7395cb8b568b0efc7ca4281d419216d446fc8aa11955ba",
+      "fullMime": "text/x-shellscript",
+      "prefixMime": "text/x-shellscript"
+    },
+    {
+      "file": "sample.skippable.zst",
+      "length": 105,
+      "sha256": "ced93d7e0dbb0f38f0c8bd2ef26ca74c34de62778a1ccc8338d1348641c942b1",
+      "prefixLength": 105,
+      "prefixSha256": "ced93d7e0dbb0f38f0c8bd2ef26ca74c34de62778a1ccc8338d1348641c942b1",
+      "fullMime": "application/zstd",
+      "prefixMime": "application/zstd"
+    },
+    {
+      "file": "sample.tar.bz3",
+      "length": 127,
+      "sha256": "25d8e76652dfb5ad641ebb5671e762fc554ab9e6c2fa1b1eba9abb5e1493521c",
+      "prefixLength": 127,
+      "prefixSha256": "25d8e76652dfb5ad641ebb5671e762fc554ab9e6c2fa1b1eba9abb5e1493521c",
+      "fullMime": "application/vnd.bzip3",
+      "prefixMime": "application/vnd.bzip3"
+    },
+    {
+      "file": "sample.tar.lz4",
+      "length": 119,
+      "sha256": "91cb58b051f64218e30bcc26ce9fc726ee9848317fb6b7528aa5a6cf72f10e70",
+      "prefixLength": 119,
+      "prefixSha256": "91cb58b051f64218e30bcc26ce9fc726ee9848317fb6b7528aa5a6cf72f10e70",
+      "fullMime": "application/x-lz4",
+      "prefixMime": "application/x-lz4"
+    },
+    {
+      "file": "sample.tar.zst",
+      "length": 113,
+      "sha256": "71d927fda9904592a3db3a7de9ff5591c8d8bca3175bb8e4d0a2493641e87964",
+      "prefixLength": 113,
+      "prefixSha256": "71d927fda9904592a3db3a7de9ff5591c8d8bca3175bb8e4d0a2493641e87964",
+      "fullMime": "application/zstd",
+      "prefixMime": "application/zstd"
+    },
+    {
+      "file": "sample.tif",
+      "length": 130932,
+      "sha256": "15582b32cdaf5e08766d384ef9997e68e20be4b41011c7cbc085ba7305d81b2f",
+      "prefixLength": 8192,
+      "prefixSha256": "5a16e9afa8fc694f625c46d426ee0b698dfb07f1624786329cfe049e477d71a1",
+      "fullMime": "image/tiff",
+      "prefixMime": "image/tiff"
+    },
+    {
+      "file": "sample.ttf",
+      "length": 223652,
+      "sha256": "f89b8f08815a5044704b06b038a02d4db9e7c84118d21795bb34d99f776b991d",
+      "prefixLength": 8192,
+      "prefixSha256": "df878581577e41c63d7e448549408c4f7fb7413f0816665ea46cb2fbbb5f0d84",
+      "fullMime": "application/font-sfnt",
+      "prefixMime": "application/font-sfnt"
+    },
+    {
+      "file": "sample.wasm",
+      "length": 71,
+      "sha256": "7441c4584d1e81d71cdd0088e90c7ec91fd7329cffd353016387a66a96a517ce",
+      "prefixLength": 71,
+      "prefixSha256": "7441c4584d1e81d71cdd0088e90c7ec91fd7329cffd353016387a66a96a517ce",
+      "fullMime": "application/wasm",
+      "prefixMime": "application/wasm"
+    },
+    {
+      "file": "sample.webm",
+      "length": 229455,
+      "sha256": "6c8f8dd7317a27ec0f5870213b6763058a825e00037e874b1119b81c41a7d158",
+      "prefixLength": 8192,
+      "prefixSha256": "343169eaf2048f5732bcab48d21cde4141a517d65ee383ed3a961151cb09d3ce",
+      "fullMime": "video/webm",
+      "prefixMime": "video/webm"
+    },
+    {
+      "file": "sample.xls",
+      "length": 25600,
+      "sha256": "c7b16891b5a08373fe3a2cbf75e98e5a57a164922c31b001c638038650b65e14",
+      "prefixLength": 8192,
+      "prefixSha256": "6f3dc3b26c3ff60c2b296623c71ba15ef7e4c077b7f5f1fa5a2322037c483508",
+      "fullMime": "application/vnd.ms-excel",
+      "prefixMime": "application/x-ole-storage"
+    },
+    {
+      "file": "sample.xlsx",
+      "length": 8653,
+      "sha256": "dfe82c14c21833281858d41c7811a65cab1dd0334c7fea1de3beae38cd339169",
+      "prefixLength": 8192,
+      "prefixSha256": "37a3da98bd05d90acdc8ff032e7a0eeb26de06752227b224932266076c52ec64",
+      "fullMime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "prefixMime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    },
+    {
+      "file": "sample.xml",
+      "length": 99,
+      "sha256": "7a2ad02c81b654188aa1d1cb6f956bcea5d3bd7b5b149d9ba8dd2dd4cfa31d44",
+      "prefixLength": 99,
+      "prefixSha256": "7a2ad02c81b654188aa1d1cb6f956bcea5d3bd7b5b149d9ba8dd2dd4cfa31d44",
+      "fullMime": "text/xml",
+      "prefixMime": "text/xml"
+    },
+    {
+      "file": "sample2.heic",
+      "length": 433595,
+      "sha256": "a79bd95f17c1cd382b23226d0bc73514c5ea8911898c8407d169fbfd43b42955",
+      "prefixLength": 8192,
+      "prefixSha256": "dcf4cf43e80dbd1862ea05d26c0c2d5ccfe83db02a01100a66ce1103ebcc05df",
+      "fullMime": "image/heif",
+      "prefixMime": "image/heif"
+    },
+    {
+      "file": "sample2.mov",
+      "length": 24,
+      "sha256": "e69a10d0929e583ba5d978516cbadff554bd576b2fe3d96e9465541e3094c7eb",
+      "prefixLength": 24,
+      "prefixSha256": "e69a10d0929e583ba5d978516cbadff554bd576b2fe3d96e9465541e3094c7eb",
+      "fullMime": "video/quicktime",
+      "prefixMime": "video/quicktime"
+    },
+    {
+      "file": "sample2.tif",
+      "length": 70238,
+      "sha256": "b3046e373c13f794693e78e5f6a577b649ece0313725b4c8f76184ba56497e31",
+      "prefixLength": 8192,
+      "prefixSha256": "39f005dc78bda55636da38f9b5851d80fe6bef6b7152baee807027b5ae484329",
+      "fullMime": "image/tiff",
+      "prefixMime": "image/tiff"
+    },
+    {
+      "file": "sample2.xml",
+      "length": 121,
+      "sha256": "790dd1924f969d29f4a4b2eea912c0b4c20acbcb669e4487fa0ad44723f8d613",
+      "prefixLength": 121,
+      "prefixSha256": "790dd1924f969d29f4a4b2eea912c0b4c20acbcb669e4487fa0ad44723f8d613",
+      "fullMime": "text/xml",
+      "prefixMime": "text/xml"
+    },
+    {
+      "file": "sample3.tif",
+      "length": 131722,
+      "sha256": "6d27b19f4c574f56dd1a8cac62709dc965ef00ca044f9035554dc9e10429476a",
+      "prefixLength": 8192,
+      "prefixSha256": "cd23889747644abcd4070a5c11a0e5cbbd476f19d505d20327dcbcc50c09fc8d",
+      "fullMime": "image/tiff",
+      "prefixMime": "image/tiff"
+    },
+    {
+      "file": "sample4.tif",
+      "length": 64182,
+      "sha256": "e165053c6096356cbc03385e6e45ea977ab68c31845a8aaf859d6a083905ce41",
+      "prefixLength": 8192,
+      "prefixSha256": "273d0a466f95ea1fdcedce45c02ceba21013ec61b07ed0f9ad1a545c998839e7",
+      "fullMime": "image/tiff",
+      "prefixMime": "image/tiff"
+    },
+    {
+      "file": "sample5.tif",
+      "length": 16752,
+      "sha256": "4925bac1c2a2d00d8f5e6e0fcf9bc4223b0a975950fd48fcb90f43ed5e13c468",
+      "prefixLength": 8192,
+      "prefixSha256": "bed3b396dbe79cea431e1f6c7657a1b784f226e6244739cf7744bbb07cd4533a",
+      "fullMime": "image/tiff",
+      "prefixMime": "image/tiff"
+    },
+    {
+      "file": "spline_on_first_frame.jxl",
+      "length": 76,
+      "sha256": "70f753c0de4ccc28859b3aa5c6810030784c1b6989831c81b9f72d4ca9776193",
+      "prefixLength": 76,
+      "prefixSha256": "70f753c0de4ccc28859b3aa5c6810030784c1b6989831c81b9f72d4ca9776193",
+      "fullMime": "image/jxl",
+      "prefixMime": "image/jxl"
+    }
+  ]
+}

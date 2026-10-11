@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-conformance-finish"
+description = "Enables the conformance_finish command without any pre-configured scope."
+commands.allow = ["conformance_finish"]
+
+[[permission]]
+identifier = "deny-conformance-finish"
+description = "Denies the conformance_finish command without any pre-configured scope."
+commands.deny = ["conformance_finish"]

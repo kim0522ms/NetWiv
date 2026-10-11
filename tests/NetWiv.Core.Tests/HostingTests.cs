@@ -207,12 +207,12 @@ internal static class HostingTests
     internal static int RestartProbe(string root)
     {
         var second = File.Exists(Path.Combine(root, "first"));
-        File.WriteAllText(Path.Combine(root, second ? "second-started" : "first"), Environment.ProcessId.ToString());
+        ConcurrentFile.Publish(Path.Combine(root, second ? "second-started" : "first"), Environment.ProcessId.ToString());
         var builder = NetWivApplication.CreateBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
         builder.Services.AddHostedService(_ => new SlowStopHostedService(root, second));
         builder.Desktop.UseRuntime(new BlockingRuntime(new())).Setup(app =>
         {
-            if (second) { File.WriteAllText(Path.Combine(root, "second-ready"), "ready"); app.Handle.Exit(); }
+            if (second) { ConcurrentFile.Publish(Path.Combine(root, "second-ready"), "ready"); app.Handle.Exit(); }
             else app.Handle.Restart();
         });
         using var app = builder.Build();
@@ -236,7 +236,7 @@ internal static class HostingTests
             // Keep the hosted service stopping long enough for an early relaunch to become visible.
             await Task.Delay(1000);
             var early = File.Exists(Path.Combine(root, "second-started"));
-            File.WriteAllText(Path.Combine(root, "release"), "release");
+            ConcurrentFile.Publish(Path.Combine(root, "release"), "release");
             await first.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
             Assert.Equal(0, first.ExitCode);
             await WaitFor(Path.Combine(root, "second-ready"));
@@ -245,10 +245,9 @@ internal static class HostingTests
         }
         finally
         {
-            File.WriteAllText(Path.Combine(root, "release"), "release");
+            ConcurrentFile.Publish(Path.Combine(root, "release"), "release");
             if (first is { HasExited: false }) { first.Kill(true); await first.WaitForExitAsync(); }
             first?.Dispose();
-            await Task.Delay(200);
             Directory.Delete(root, true);
         }
     }
@@ -326,8 +325,8 @@ internal static class HostingTests
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            if (second) { File.WriteAllText(Path.Combine(root, "second-stopped"), "done"); return; }
-            File.WriteAllText(Path.Combine(root, "stopping"), "waiting");
+            if (second) { ConcurrentFile.Publish(Path.Combine(root, "second-stopped"), "done"); return; }
+            ConcurrentFile.Publish(Path.Combine(root, "stopping"), "waiting");
             await WaitFor(Path.Combine(root, "release"));
         }
     }

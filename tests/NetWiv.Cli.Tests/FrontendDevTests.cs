@@ -82,11 +82,9 @@ internal static class FrontendDevTests
         {
             while (!stop.IsCancellationRequested)
             {
-                if (File.Exists(record))
-                {
-                    var line = (await File.ReadAllLinesAsync(record)).FirstOrDefault(line => line.StartsWith(phase + "|", StringComparison.Ordinal));
-                    if (line is not null) return int.Parse(line.Split('|')[1]);
-                }
+                // The app process appends probe results while this loop reads them.
+                var line = ConcurrentFile.ReadCompleteLines(record).FirstOrDefault(line => line.StartsWith(phase + "|", StringComparison.Ordinal));
+                if (line is not null) return int.Parse(line.Split('|')[1]);
                 if (session!.IsCompleted) throw new Exception("CLI ended before the " + phase + " IPC result: " + await session);
                 await Task.Delay(100, stop.Token);
             }

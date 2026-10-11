@@ -28,6 +28,30 @@ internal static class DevReloadTests
         await watcher.WaitAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(1));
     }
 
+    internal static async Task SavingRetry()
+    {
+        var attempts = 0;
+        var loaded = await DevCommand.RetryWhileSavingAsync(
+            () => ++attempts < 3 ? throw new IOException("in use") : "loaded", CancellationToken.None);
+        if (loaded != "loaded" || attempts != 3) throw new Exception("A briefly held configuration file was not retried.");
+
+        attempts = 0;
+        try
+        {
+            await DevCommand.RetryWhileSavingAsync<string>(() => { attempts++; throw new IOException("still in use"); }, CancellationToken.None, attempts: 4);
+            throw new Exception("A persistently held configuration file was reported as loaded.");
+        }
+        catch (IOException) when (attempts == 4) { }
+
+        attempts = 0;
+        try
+        {
+            await DevCommand.RetryWhileSavingAsync<string>(() => { attempts++; throw new UnauthorizedAccessException(); }, CancellationToken.None);
+            throw new Exception("A permission failure was swallowed.");
+        }
+        catch (UnauthorizedAccessException) when (attempts == 1) { }
+    }
+
     internal static async Task Run(bool aot)
     {
         var root = Path.Combine(Path.GetTempPath(), "netwiv-dev-reload-" + Guid.NewGuid().ToString("N"));
@@ -66,6 +90,15 @@ internal static class DevReloadTests
         var permission = Path.Combine(permissions, "access.toml");
         void WritePermission(string command) => File.WriteAllText(permission,
             $"[[permission]]\nidentifier = \"access\"\ncommands.allow = [\"{command}\"]\n");
+        // Like an editor that keeps the file open after saving; Windows then rejects the watcher's read.
+        async Task WritePermissionHeldOpen(string command)
+        {
+            await using var editor = new FileStream(permission, FileMode.Create, FileAccess.Write, FileShare.None);
+            await editor.WriteAsync(System.Text.Encoding.UTF8.GetBytes($"[[permission]]\nidentifier = \"access\"\ncommands.allow = [\"{command}\"]\n"));
+            await editor.FlushAsync();
+            // Longer than the reload's immediate retries, so the periodic retry must pick the release up.
+            await Task.Delay(2500);
+        }
         WritePermission("one");
         var dotnet = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH")
             ?? (OperatingSystem.IsLinux() && File.Exists("/opt/dotnet/dotnet") ? "/opt/dotnet/dotnet" : "dotnet");
@@ -80,7 +113,7 @@ internal static class DevReloadTests
         try
         {
             pids.Add(await WaitForRun("first|one"));
-            WritePermission("two");
+            await WritePermissionHeldOpen("two");
             pids.Add(await WaitForRun("first|two"));
             await RequireStopped(pids[0]);
             File.WriteAllText(overlay, "{\"productName\":\"second\"}");
@@ -91,21 +124,21 @@ internal static class DevReloadTests
             await RequireStopped(pids[2]);
             WritePermission("three");
             pids.Add(await WaitForRun("second|three"));
-            var runCount = File.ReadAllLines(outputFile).Length;
+            var runCount = ConcurrentFile.ReadCompleteLines(outputFile).Length;
             await Task.Delay(1000, stop.Token);
-            if (File.ReadAllLines(outputFile).Length != runCount)
+            if (ConcurrentFile.ReadCompleteLines(outputFile).Length != runCount)
                 throw new Exception("Unrelated output beside the overlay triggered another restart.");
             var externalResources = Path.Combine(root, "external-resources");
             Directory.CreateDirectory(externalResources);
             File.WriteAllText(Path.Combine(externalResources, "initial.txt"), "initial");
             File.WriteAllText(overlay, """{"productName":"second","bundle":{"resources":{"../external-resources/*.txt":"data"}}}""");
-            await Until(() => File.ReadAllLines(outputFile).Length > runCount);
-            pids.Add(int.Parse(File.ReadAllLines(outputFile)[^1].Split('|')[0]));
+            await Until(() => ConcurrentFile.ReadCompleteLines(outputFile).Length > runCount);
+            pids.Add(int.Parse(ConcurrentFile.ReadCompleteLines(outputFile)[^1].Split('|')[0]));
             await RequireStopped(pids[^2]);
-            runCount = File.ReadAllLines(outputFile).Length;
+            runCount = ConcurrentFile.ReadCompleteLines(outputFile).Length;
             File.WriteAllText(Path.Combine(externalResources, "added.txt"), "new glob match");
-            await Until(() => File.ReadAllLines(outputFile).Length > runCount);
-            pids.Add(int.Parse(File.ReadAllLines(outputFile)[^1].Split('|')[0]));
+            await Until(() => ConcurrentFile.ReadCompleteLines(outputFile).Length > runCount);
+            pids.Add(int.Parse(ConcurrentFile.ReadCompleteLines(outputFile)[^1].Split('|')[0]));
             await RequireStopped(pids[^2]);
             completed = true;
         }
@@ -137,8 +170,7 @@ internal static class DevReloadTests
             string? match = null;
             await Until(() =>
             {
-                if (File.Exists(outputFile))
-                    match = File.ReadAllLines(outputFile).LastOrDefault(line => line.EndsWith("|" + expected, StringComparison.Ordinal));
+                match = ConcurrentFile.ReadCompleteLines(outputFile).LastOrDefault(line => line.EndsWith("|" + expected, StringComparison.Ordinal));
                 return match is not null;
             });
             var matched = match ?? throw new Exception("No matching development run.");

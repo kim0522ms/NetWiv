@@ -10,16 +10,16 @@ internal static class RestartLifecycleTests
     internal static int Probe(string root)
     {
         var second = File.Exists(Path.Combine(root, "first"));
-        File.WriteAllText(Path.Combine(root, second ? "second-started" : "first"), Environment.ProcessId.ToString());
+        ConcurrentFile.Publish(Path.Combine(root, second ? "second-started" : "first"), Environment.ProcessId.ToString());
         using var runtime = new ProbeRuntime();
         using var app = new Builder().UseRuntime(runtime).Metadata(new("Restart test", "1.0", "dev.netwiv." + Path.GetFileName(root)))
             // Delay cleanup before SingleInstance releases its lock; startup must wait for all disposal.
             .Plugin(new DisposalBarrier(root, second))
-            .Plugin(new SingleInstancePlugin((_, _, _) => File.WriteAllText(Path.Combine(root, "duplicate"), "unexpected second instance")))
+            .Plugin(new SingleInstancePlugin((_, _, _) => ConcurrentFile.Publish(Path.Combine(root, "duplicate"), "unexpected second instance")))
             .Plugin(new ProcessPlugin())
             .Setup(value =>
             {
-                if (second) { File.WriteAllText(Path.Combine(root, "second-ready"), "ready"); value.Handle.Exit(); }
+                if (second) { ConcurrentFile.Publish(Path.Combine(root, "second-ready"), "ready"); value.Handle.Exit(); }
                 else value.Handle.InvokeAsync("plugin:process|restart", JsonValue.EmptyObject).AsTask().GetAwaiter().GetResult();
             }).Build();
         app.Run();
@@ -42,7 +42,7 @@ internal static class RestartLifecycleTests
             // Exercise a real process launch during a deliberately slow cleanup.
             await Task.Delay(1000);
             var early = File.Exists(Path.Combine(root, "second-started"));
-            File.WriteAllText(Path.Combine(root, "release"), "release");
+            ConcurrentFile.Publish(Path.Combine(root, "release"), "release");
             await first.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
             Assert.Equal(0, first.ExitCode);
             await WaitFor(Path.Combine(root, "second-ready"));
@@ -52,7 +52,7 @@ internal static class RestartLifecycleTests
         }
         finally
         {
-            File.WriteAllText(Path.Combine(root, "release"), "release");
+            ConcurrentFile.Publish(Path.Combine(root, "release"), "release");
             if (first is { HasExited: false }) { first.Kill(true); await first.WaitForExitAsync(); }
             first?.Dispose();
             Directory.Delete(root, true);
@@ -71,8 +71,8 @@ internal static class RestartLifecycleTests
         public void Initialize(PluginContext context) { }
         public void Dispose()
         {
-            if (second) { File.WriteAllText(Path.Combine(root, "second-disposed"), "done"); return; }
-            File.WriteAllText(Path.Combine(root, "disposing"), "waiting");
+            if (second) { ConcurrentFile.Publish(Path.Combine(root, "second-disposed"), "done"); return; }
+            ConcurrentFile.Publish(Path.Combine(root, "disposing"), "waiting");
             WaitFor(Path.Combine(root, "release")).GetAwaiter().GetResult();
         }
     }

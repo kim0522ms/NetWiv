@@ -7,6 +7,7 @@
     <ProjectReference Include="../../src/NetWiv.Core/NetWiv.Core.csproj" />
     <ProjectReference Include="../../src/NetWiv.Hosting/NetWiv.Hosting.csproj" />
     <ProjectReference Include="../../src/NetWiv.Generators/NetWiv.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <Compile Include="../Shared/ConcurrentFile.cs" Link="ConcurrentFile.cs" />
     <ProjectReference Include="../../src/NetWiv.Plugin.Fs/NetWiv.Plugin.Fs.csproj" />
     <ProjectReference Include="../../src/NetWiv.Plugin.Dialog/NetWiv.Plugin.Dialog.csproj" />
     <ProjectReference Include="../../src/NetWiv.Plugin.Os/NetWiv.Plugin.Os.csproj" />

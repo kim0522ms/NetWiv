@@ -10,12 +10,12 @@ internal static class ShellLifetimeTests
         {
             var info = StartInfo(root, "leaf");
             using var child = Process.Start(info)!;
-            File.WriteAllText(Path.Combine(root, "parent"), Environment.ProcessId.ToString());
+            ConcurrentFile.Publish(Path.Combine(root, "parent"), Environment.ProcessId.ToString());
             await child.WaitForExitAsync();
         }
         else
         {
-            File.WriteAllText(Path.Combine(root, "leaf"), Environment.ProcessId.ToString());
+            ConcurrentFile.Publish(Path.Combine(root, "leaf"), Environment.ProcessId.ToString());
             await Task.Delay(Timeout.Infinite);
         }
         return 0;
@@ -86,16 +86,9 @@ internal static class ShellLifetimeTests
     private static async Task<Process> WaitForProcess(string path)
     {
         using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        while (true)
-        {
-            try
-            {
-                if (File.Exists(path) && int.TryParse(await File.ReadAllTextAsync(path, stop.Token), out var id)) return Process.GetProcessById(id);
-            }
-            // The probe may still be writing the file; Windows rejects a concurrent read with a sharing violation.
-            catch (IOException) { }
-            await Task.Delay(20, stop.Token);
-        }
+        // The probe publishes the file atomically, so once it exists it is complete and closed.
+        while (!File.Exists(path)) await Task.Delay(20, stop.Token);
+        return Process.GetProcessById(int.Parse(await File.ReadAllTextAsync(path, stop.Token)));
     }
 
     private static bool IsRunning(Process process)

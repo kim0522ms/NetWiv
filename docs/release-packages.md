@@ -63,9 +63,13 @@ and NativeAOT validation before exporting native inputs. A packaging job then
 collects those exact files and runs `scripts/pack-integration.ps1`, including
 Hosting and every managed plugin. The bundle validator checks package versions,
 the expected package set, license notices and all five native payload files
-against the CI inputs. A fresh consumer installs the packaged CLI, creates an
-app, publishes the desktop smoke from package references with NativeAOT, and
-executes its windowless startup check on Linux.
+against the CI inputs. Three fresh Linux consumer jobs reuse that single bundle,
+each with only SDK/runtime 8, 9 or 10 visible in a private installation. They
+install the packaged CLI, build and run a generated .NET 8 React app through its
+GUI/IPC smoke flow, and verify its actual runtime major. Each job also publishes
+a desktop smoke consumer with NativeAOT for its own target framework and executes
+windowless startup and configuration binding. All three must pass before the
+draft Release job runs. See [SDK compatibility](dotnet-compatibility.md).
 
 The final job creates a **draft Release**, attaches the ZIP and its SHA-256
 checksum, and sets prerelease status for tags such as `v0.1.0-beta.1`.

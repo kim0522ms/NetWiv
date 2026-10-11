@@ -40,11 +40,19 @@ macOS x64. Separate Linux jobs exercise SDK/runtime 9 and 10 with the same
 `net8.0` source libraries, managed tests and NativeAOT Core tests; they do not
 rebuild Rust. The `CI required` check includes these jobs.
 
-Release packaging builds one feed, then installs the CLI, builds a generated
-solution, and publishes/runs a package-only desktop smoke consumer for each of
-`net8.0`, `net9.0` and `net10.0`. That check also executes configuration binding
-from the packaged Hosting dependency with NativeAOT and warnings as
-errors. It does not publish to NuGet.org.
+Release packaging builds one feed and reuses it in three separate consumer
+jobs. Each job installs SDK/runtime 8, 9 or 10 in a private `DOTNET_ROOT`, removes
+any extra LTS runtime installed by `setup-dotnet`, and verifies that no other
+runtime major is visible. A mixed installation or an ambient runtime-policy
+override fails the check.
+
+Each job installs and runs the packaged CLI, builds the generated React solution,
+and executes its unchanged `net8.0` apphost through the WebView/IPC smoke flow.
+A test probe inside the generated app asserts its actual runtime major. It then
+publishes/runs a package-only NativeAOT desktop consumer targeting `net8.0`,
+`net9.0` or `net10.0`, including configuration binding from the packaged Hosting
+dependency with warnings as errors. The draft Release job requires all three
+consumer jobs to pass. No package is published to NuGet.org.
 
 To select a newer test runtime while keeping library/package targets at .NET 8:
 
@@ -71,7 +79,7 @@ Local validation on macOS 15.4 / Apple Silicon (2026-10-11):
 | CLI tests | 99 passed, 2 skipped | 99 passed, 2 skipped | 99 passed, 2 skipped |
 | NativeAOT Core | 203 passed, 2 skipped | 203 passed, 2 skipped | 203 passed, 2 skipped |
 | NativeAOT desktop | Windowless + 3 GUI passes | Windowless + 3 GUI passes | Windowless + 3 GUI passes |
-| Package-only CLI / generated solution / NativeAOT + binding | Passed, only runtime 8 installed | Passed, only runtime 9 installed | Passed, only runtime 10 installed |
+| Package-only CLI / generated managed GUI + IPC / NativeAOT + binding | Passed, only runtime 8 installed | Passed, only runtime 9 installed | Passed, only runtime 10 installed |
 
 The native adapter binaries were reused; Rust was not changed. Core skips cover
 Windows-specific behavior and the optional external inference corpus. CLI skips
@@ -82,9 +90,12 @@ feature lists, invalid feature rejection, configuration reload and child cleanup
 
 A previous feasibility run had one AppKit `NSViewUpdateVibrancyForSubtree`
 SIGTRAP on .NET 8. It did not reproduce in these three consecutive GUI runs per
-version; no root cause or native crash fix is claimed. Windows, Linux, Intel Mac
-and minimum-OS execution need their own CI/hardware evidence. The workflow
-changes here are not themselves proof that those remote checks have passed.
+version; no root cause or native crash fix is claimed. The original backport
+commit `c3dcb24` subsequently passed [all four desktop CI jobs and SDK 9/10
+checks](https://github.com/kim0522ms/NetWiv/actions/runs/38138372341).
+Minimum-OS acceptance still needs separate hardware evidence. The isolated
+Release consumer gate added after review was exercised locally on macOS for all
+three majors; its Linux release jobs still require a tagged workflow run.
 
 ---
 

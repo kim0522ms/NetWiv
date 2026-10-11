@@ -7,6 +7,27 @@ param(
 $ErrorActionPreference = 'Stop'
 $repository = Split-Path $PSScriptRoot -Parent
 $Feed = [IO.Path]::GetFullPath($Feed)
+# SDK selection alone does not isolate the runtimes used by net8.0 apphosts.
+$major = $TargetFramework.Substring(3).Split('.')[0]
+$sdk = & dotnet --version
+if ($LASTEXITCODE -ne 0 -or $sdk -notlike "$major.*") { throw "Expected SDK major $major, found $sdk." }
+$runtimes = @(& dotnet --list-runtimes)
+if ($LASTEXITCODE -ne 0 -or !($runtimes -match "^Microsoft\.NETCore\.App $major\.") -or
+    @($runtimes | Where-Object { $_ -notmatch "^\S+ $major\." }).Count) {
+    throw "Expected only runtime major $major in the selected dotnet installation: $($runtimes -join '; ')"
+}
+$dotnetRoot = Split-Path (Get-Command dotnet).Source -Parent
+if (!$env:DOTNET_ROOT -or [IO.Path]::GetFullPath($env:DOTNET_ROOT) -ne $dotnetRoot) {
+    throw 'DOTNET_ROOT must point to the selected private dotnet installation.'
+}
+foreach ($name in 'DOTNET_ROOT_X64', 'DOTNET_ROOT_ARM64', 'DOTNET_ROOT_X86', 'DOTNET_ROOT(x86)') {
+    $value = [Environment]::GetEnvironmentVariable($name)
+    if ($value -and [IO.Path]::GetFullPath($value) -ne $dotnetRoot) { throw "$name points outside the isolated dotnet installation." }
+}
+foreach ($name in 'DOTNET_ROLL_FORWARD', 'DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX') {
+    if ([Environment]::GetEnvironmentVariable($name)) { throw "$name would override the application's runtime policy." }
+}
+Write-Output "Validating SDK $sdk with only runtime major $major"
 $workspace = Join-Path ([IO.Path]::GetTempPath()) ('netwiv-package-check-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $workspace | Out-Null
 $previousPackages = $env:NUGET_PACKAGES
@@ -24,11 +45,34 @@ try {
         $cli = Join-Path $workspace ('tools/netwiv' + $(if ($IsWindows) { '.exe' } else { '' }))
         $reportedVersion = & $cli --version
         if ($LASTEXITCODE -ne 0 -or $reportedVersion -ne "netwiv-cli $Version") { throw "Incorrect CLI version: $reportedVersion" }
-        & $cli new PackageExample --template vanilla --source $Feed
+        & $cli new PackageExample --template react --source $Feed
         if ($LASTEXITCODE -ne 0) { throw 'CLI template creation from the installed package failed.' }
-        & dotnet build PackageExample/PackageExample.sln -c Debug -p:NetWivDevelopment=true
+        @'
+internal static class ManagedRuntimeProbe
+{
+    [System.Runtime.CompilerServices.ModuleInitializer]
+    internal static void Verify()
+    {
+        if (Environment.Version.Major != __MAJOR__)
+            throw new Exception("Generated app used an unexpected runtime: " + Environment.Version);
+        Console.WriteLine("PASS managed runtime " + Environment.Version.Major);
+    }
+}
+'@.Replace('__MAJOR__', $major) | Set-Content PackageExample/src-netwiv/ManagedRuntimeProbe.cs
+        & dotnet build PackageExample/PackageExample.sln -c Debug -warnaserror
         if ($LASTEXITCODE -ne 0) { throw 'Generated solution or packaged MSBuild tasks failed.' }
         if (!(Get-ChildItem PackageExample/src/generated -File)) { throw 'Packaged frontend generator produced no bindings.' }
+        $managed = Join-Path $workspace ('PackageExample/src-netwiv/bin/Debug/net8.0/PackageExample' + $(if ($IsWindows) { '.exe' } else { '' }))
+        if ($IsLinux) {
+            $managedOutput = @(& xvfb-run -a bash (Join-Path $repository 'scripts/run-linux-smoke-desktop.sh') $managed x11 --smoke-test)
+        }
+        else { $managedOutput = @(& $managed --smoke-test) }
+        $managedExit = $LASTEXITCODE
+        $managedOutput | Write-Output
+        if ($managedExit -ne 0 -or !($managedOutput -contains "PASS managed runtime $major") -or
+            !($managedOutput -contains 'PASS: React form → generated C# → JSON')) {
+            throw 'Generated managed application smoke failed.'
+        }
 
         # Reuse the real desktop smoke source, replacing every project reference with the packaged dependency.
         $source = Join-Path $repository 'tests/NetWiv.Desktop.Smoke'
@@ -95,7 +139,7 @@ internal sealed class PackageOptions { public string Value { get; set; } = ""; }
         if ($LASTEXITCODE -ne 0) { throw 'Package-only native startup failed.' }
     }
     finally { Pop-Location }
-    Write-Output "PASS ${TargetFramework}: packaged CLI, generated solution, configuration binding and package-only NativeAOT startup"
+    Write-Output "PASS ${TargetFramework}: packaged CLI, generated managed GUI/IPC, configuration binding and package-only NativeAOT startup"
 }
 finally {
     $env:NUGET_PACKAGES = $previousPackages

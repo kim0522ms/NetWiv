@@ -242,7 +242,10 @@ else Console.WriteLine("SKIP pinned infer corpus: NETWIV_INFER_TESTDATA is not c
 
 var failed = 0;
 if (OperatingSystem.IsMacOS())
+{
     tests.Add(("external opening rejects missing macOS reveal items before any launch", ExternalOpenTests.MacRevealValidation));
+    tests.Add(("external opening canonicalizes macOS reveal links and rejects broken targets", ExternalOpenTests.MacRevealLinks));
+}
 
 var selected = args.Length == 0 ? tests : args.Length == 2 && args[0] == "--filter"
     ? tests.Where(test => test.Name.Contains(args[1], StringComparison.OrdinalIgnoreCase)).ToList()

@@ -54,13 +54,13 @@ public sealed class OpenerPlugin : IPlugin
             macReveal?.ArgumentList.Add("-R");
             foreach (var item in paths.EnumerateArray())
             {
-                var path = Path.GetFullPath(item.GetString() ?? throw new InvokeException("Reveal path must be a string."));
+                var requested = item.GetString() ?? throw new InvokeException("Reveal path must be a string.");
                 if (macReveal is not null)
                 {
-                    if (!File.Exists(path) && !Directory.Exists(path)) throw new InvokeException("The path does not exist.");
-                    macReveal.ArgumentList.Add(path);
+                    macReveal.ArgumentList.Add(MacRevealPath.Resolve(requested));
                     continue;
                 }
+                var path = Path.GetFullPath(requested);
                 var folder = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
                 if (folder is null || !Directory.Exists(folder)) throw new InvokeException("The parent directory does not exist.");
                 if (OperatingSystem.IsWindows())

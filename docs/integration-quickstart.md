@@ -13,10 +13,10 @@ Full TAURI® compatibility and release validation remain incomplete.
 - Windows: .NET 8 or later SDK, WebView2 Runtime and a Node.js version supported by the
   template. The React template declares Node.js `^20.19.0 || >=22.12.0`.
 - Windows NativeAOT builds: Visual Studio C++ Build Tools and Windows SDK.
-- Linux: .NET 8 or later SDK, GTK3, WebKitGTK 4.1, Node.js and NativeAOT build dependencies.
+- Linux: .NET 8 or later SDK, GTK3, WebKitGTK 4.1 and Node.js; NativeAOT additionally needs its native build dependencies.
   Build Linux distributions on a Linux host.
-- macOS 12+: .NET 8 or later SDK, Xcode Command Line Tools and the template's Node.js
-  version. WKWebView/AppKit are supplied by macOS. Use SDK and native package
+- macOS 12+: .NET 8 or later SDK and the template's Node.js version. NativeAOT
+  additionally needs Xcode Command Line Tools. WKWebView/AppKit are supplied by macOS. Use SDK and native package
   assets for the Mac's architecture; see the [macOS guide](macos.md).
 - A feed containing matching versions of `NetWiv.Cli`, the SDK and native runtime
   packages. Ordinary React app development does not require Cargo.
@@ -95,11 +95,15 @@ loading and debugging validation remain incomplete.
 
 ## Publish an executable
 
+Consumer apps use regular .NET by default. NativeAOT is optional: pass `--aot`
+to `netwiv build`, or `-p:PublishAot=true` to `dotnet publish`. See
+[deployment modes](deployment.md) for runtime requirements and existing-app migration.
+
 Run from the project root:
 
 ```powershell
 npm run build
-dotnet publish src-netwiv -c Release -r win-x64 -p:PublishAot=true -o publish/win-x64
+dotnet publish src-netwiv -c Release -r win-x64 --self-contained true -p:PublishAot=false -p:PublishTrimmed=false -o publish/win-x64
 & ./publish/win-x64/MyNetWivApp.exe
 ```
 

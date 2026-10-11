@@ -46,8 +46,9 @@ any extra LTS runtime installed by `setup-dotnet`, and verifies that no other
 runtime major is visible. A mixed installation or an ambient runtime-policy
 override fails the check.
 
-Each job installs and runs the packaged CLI, builds the generated React solution,
-and executes its unchanged `net8.0` apphost through the WebView/IPC smoke flow.
+Each job installs and runs the packaged CLI, publishes the generated React
+solution via `netwiv build --framework-dependent`, and executes its `net8.0`
+apphost through the WebView/IPC smoke flow.
 A test probe inside the generated app asserts its actual runtime major. It then
 publishes/runs a package-only NativeAOT desktop consumer targeting `net8.0`,
 `net9.0` or `net10.0`, including configuration binding from the packaged Hosting

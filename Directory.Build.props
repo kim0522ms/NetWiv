@@ -10,7 +10,7 @@
     <Version>0.1.0-dev</Version>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <Authors>NetWiv contributors</Authors>
-    <Description>NativeAOT-first .NET runtime and tooling compatible with Tauri 2.</Description>
+    <Description>.NET runtime and tooling with optional NativeAOT publishing, compatible with Tauri 2.</Description>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
   <ItemGroup>

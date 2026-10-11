@@ -294,7 +294,7 @@ direct-binding backends reject enabled asset configuration explicitly. Dynamic
 scope mutation is exposed through `AppHandle.AssetProtocolScope()` and
 `FileScope` allow/forbid methods, snapshots and change events.
 
-Application restore, managed development and NativeAOT publish use the native
+Application restore, managed development and managed/NativeAOT publishing use the native
 assets already in NuGet. They do not execute Cargo or download a runtime library
 at startup. Deployment currently uses the NativeAOT application plus the
 platform DLL/SO and its documented OS dependencies. Framework maintainers build

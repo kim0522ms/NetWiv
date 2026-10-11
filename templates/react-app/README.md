@@ -68,15 +68,17 @@ public static Greeting Greet(string name, State<GreetingCounter> counter)
 
 명령은 `.InvokeHandler("greet")`로 등록합니다. `[assembly: GenerateFrontendBindings]`가 JS/TS 생성을 켭니다. 새 반환 DTO를 만들면 `AppJsonContext`에 `[JsonSerializable(typeof(MyDto))]`를 추가하세요. 생성된 파일은 직접 수정하지 마세요. 원래 `invoke` API도 그대로 쓸 수 있습니다.
 
-## NativeAOT 배포
+## .NET 배포 (NativeAOT 선택 가능)
 
 ```powershell
-dotnet publish src-netwiv -c Release -r win-x64 -p:PublishAot=true -o publish/win-x64
+dotnet publish src-netwiv -c Release -r win-x64 --self-contained true -p:PublishAot=false -p:PublishTrimmed=false -o publish/win-x64
 ```
+
+일반 .NET 배포가 기본입니다. `netwiv build --aot` 또는 `dotnet publish -p:PublishAot=true`로 NativeAOT를 선택할 수 있습니다. 설치된 런타임을 쓰려면 `netwiv build --framework-dependent`를 사용하세요.
 
 Windows NativeAOT 빌드에는 C++ Build Tools와 Windows SDK가 필요합니다. 실행 파일은 `publish/win-x64/ReactExample.exe`이며 DLL을 포함한 publish 폴더 전체가 필요합니다. Linux에서는 해당 OS에서 `-r linux-x64`로 빌드하고 GTK3·WebKitGTK 4.1을 설치하세요.
 
-macOS에서는 Xcode Command Line Tools와 CPU에 맞는 .NET SDK·NetWiv 네이티브 패키지가 필요합니다.
+macOS에서는 CPU에 맞는 .NET SDK·NetWiv 네이티브 패키지가 필요하며, NativeAOT를 선택하면 Xcode Command Line Tools도 필요합니다.
 Apple Silicon은 `-r osx-arm64`, Intel은 `-r osx-x64`로 해당 Mac에서 빌드하세요.
 실행 파일과 `.dylib`를 포함한 publish 폴더 전체를 사용하세요. AppKit 이벤트 루프는
 프로세스의 메인 스레드에서 실행해야 하므로 생성된 동기 `Main`을 유지하세요.

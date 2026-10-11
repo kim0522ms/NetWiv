@@ -40,7 +40,7 @@ and read that path with `System.IO`. The JavaScript path API resolves names; it
 does not grant filesystem read access. Frontend file reads require a filesystem
 plugin and appropriate capabilities; see the [plugin guide](official-plugins.md).
 
-`NetWiv.Build` stages resources for managed builds, NativeAOT publish and
+`NetWiv.Build` stages resources for managed builds, managed/NativeAOT publishing and
 `publish --no-build`. The CLI also refreshes resources before standalone bundling.
 Development watchers include selected external resource paths and newly matched
 glob files. Removed or remapped resources are removed from the corresponding

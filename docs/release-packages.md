@@ -65,7 +65,8 @@ Hosting and every managed plugin. The bundle validator checks package versions,
 the expected package set, license notices and all five native payload files
 against the CI inputs. Three fresh Linux consumer jobs reuse that single bundle,
 each with only SDK/runtime 8, 9 or 10 visible in a private installation. They
-install the packaged CLI, build and run a generated .NET 8 React app through its
+install the packaged CLI, publish and run a generated .NET 8 React app with
+`netwiv build --framework-dependent` through its
 GUI/IPC smoke flow, and verify its actual runtime major. Each job also publishes
 a desktop smoke consumer with NativeAOT for its own target framework and executes
 windowless startup and configuration binding. All three must pass before the

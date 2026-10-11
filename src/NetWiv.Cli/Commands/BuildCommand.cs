@@ -6,11 +6,14 @@ internal static class BuildCommand
 {
     public static async Task<int> RunAsync(string[] args, TextWriter output, string workingDirectory, CancellationToken cancellationToken)
     {
-        if (args.Contains("--help")) { await output.WriteLineAsync("Usage: netwiv build [--debug] [--no-bundle] [-b BUNDLES] [-t TARGET] [-c CONFIG] [-f FEATURES] [-- RUNNER_ARGS]"); return 0; }
+        if (args.Contains("--help")) { await output.WriteLineAsync("Usage: netwiv build [--debug] [--aot | --framework-dependent] [--no-bundle] [-b BUNDLES] [-t TARGET] [-c CONFIG] [-f FEATURES] [-- RUNNER_ARGS]"); return 0; }
         var arguments = new CommandArguments(args);
         var runnerArgs = arguments.TakeAfterSeparator();
         var debug = arguments.TakeFlag("--debug", "-d");
         var noBundle = arguments.TakeFlag("--no-bundle");
+        var aot = arguments.TakeFlag("--aot");
+        var frameworkDependent = arguments.TakeFlag("--framework-dependent");
+        if (aot && frameworkDependent) throw new ArgumentException("--aot cannot be combined with --framework-dependent.");
         var noSign = arguments.TakeFlag("--no-sign");
         var bundles = arguments.TakeOption("--bundles", "-b");
         var runner = arguments.TakeOption("--runner", "-r");
@@ -32,11 +35,13 @@ internal static class BuildCommand
         var publishDirectory = Path.Combine(config.ProjectDirectory, "target", target.RequestedTarget, profile);
         var artifactsDirectory = Path.Combine(config.ProjectDirectory, "target", target.RequestedTarget, "msbuild-artifacts");
         var effectiveConfig = CommandConfig.WriteEffectiveConfig(config, target, debug);
+        // A mode switch must not leave a previous runtime or managed DLL in the new payload.
+        if (Directory.Exists(publishDirectory)) Directory.Delete(publishDirectory, true);
         Directory.CreateDirectory(publishDirectory);
         var publishArguments = new List<string>
         {
             "publish", project, "-c", configuration, "-r", target.RuntimeIdentifier,
-            "--self-contained", "true", "-p:PublishAot=true", "-p:ContinuousIntegrationBuild=true",
+            "-p:ContinuousIntegrationBuild=true",
             $"-p:NetWivFeatures={string.Join("%3B", features)}", $"-p:NetWivConfigPath={effectiveConfig}",
             $"-p:NetWivResourceBaseDirectory={config.ConfigDirectory}",
             "--artifacts-path", artifactsDirectory, "-o", publishDirectory
@@ -45,9 +50,13 @@ internal static class BuildCommand
         if (config.String("build", "frontendDist") is { } frontend && !Uri.TryCreate(frontend, UriKind.Absolute, out _))
             publishArguments.Add($"-p:NetWivFrontendDist={Path.GetFullPath(frontend, config.ConfigDirectory)}");
         publishArguments.AddRange(runnerArgs);
+        // CLI deployment modes are authoritative even for older AOT-first templates.
+        publishArguments.AddRange(["--self-contained", frameworkDependent ? "false" : "true",
+            $"-p:PublishAot={aot.ToString().ToLowerInvariant()}", "-p:UseAppHost=true"]);
+        if (!aot) publishArguments.AddRange(["-p:PublishTrimmed=false", "-p:PublishSingleFile=false"]);
         if (CommandConfig.IsolationDirectory(config) is { } isolation) publishArguments.Add($"-p:NetWivIsolationDist={isolation}");
 
-        await output.WriteLineAsync($"NativeAOT publishing {Path.GetFileName(project)} for {target.RuntimeIdentifier}...");
+        await output.WriteLineAsync($"{(aot ? "NativeAOT" : frameworkDependent ? "Framework-dependent .NET" : "Self-contained .NET")} publishing {Path.GetFileName(project)} for {target.RuntimeIdentifier}...");
         var result = await ProcessRunner.RunAsync(CommandRunner.Create(config, runner, publishArguments, environment), cancellationToken);
         if (result.ExitCode != 0) return result.ExitCode;
         // MSBuild project references may produce the frontend during publish.
@@ -76,7 +85,7 @@ internal static class BuildCommand
     {
         var binaryName = config.String("mainBinaryName") ?? Path.GetFileNameWithoutExtension(project);
         var binary = Path.Combine(publishDirectory, binaryName + (OperatingSystem.IsWindows() ? ".exe" : string.Empty));
-        if (!File.Exists(binary)) throw new FileNotFoundException($"NativeAOT publish did not produce expected application binary: {binary}");
+        if (!File.Exists(binary)) throw new FileNotFoundException($"Publish did not produce expected application binary: {binary}");
         return binary;
     }
 }

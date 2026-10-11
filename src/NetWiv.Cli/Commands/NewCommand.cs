@@ -116,7 +116,7 @@ internal static class NewCommand
             _ => $"  {manager} install\n  {RunCommand(manager, "desktop:dev")}",
         });
         await output.WriteLineAsync($"IDE: open {name}.sln and run the {name} C# project.");
-        await output.WriteLineAsync("NativeAOT build: dotnet tool restore && dotnet tool run netwiv -- build --no-bundle");
+        await output.WriteLineAsync("Build: dotnet tool restore && dotnet tool run netwiv -- build --no-bundle (add --aot for NativeAOT)");
         return 0;
     }
 

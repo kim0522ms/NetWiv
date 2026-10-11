@@ -2,9 +2,10 @@
 
 NetWiv's Wry backend supports WKWebView/AppKit on macOS. The managed SDK,
 C ABI and unchanged `@tauri-apps/api` guest remain shared with Windows/Linux.
-The deployment baseline is macOS 12.0; framework and application builds require
-Xcode Command Line Tools, a .NET SDK selected by `global.json` (8 or later), and (for framework
-maintainers only) Rust 1.95.0. Frontend builds require the toolchain selected by the template.
+The deployment baseline is macOS 12.0. Consumer builds require a .NET SDK
+selected by `global.json` (8 or later). NativeAOT builds additionally need Xcode
+Command Line Tools; framework native builds also need Rust 1.95.0. Frontend
+builds require the toolchain selected by the template.
 WKWebView is provided by macOS.
 
 | CPU | CLI target | .NET RID | Native asset |
@@ -78,7 +79,9 @@ netwiv build --target aarch64-apple-darwin --bundles app
 netwiv bundle --target aarch64-apple-darwin --bundles dmg --no-sign
 ```
 
-`netwiv build` still publishes NativeAOT. `netwiv bundle` uses the existing
+`netwiv build` defaults to self-contained managed .NET. Use `--aot` for NativeAOT
+or `--framework-dependent` for an installed runtime; see [deployment](deployment.md).
+`netwiv bundle` uses the existing
 publish output for the **same target spelling**. Both `.app` and `.dmg` are
 selected by `bundle.targets: "all"`. The defaults use the current Mac architecture.
 With `src-netwiv/netwiv.conf.json`, output is under the application root's
@@ -124,7 +127,10 @@ signature must be renewed after patching bundle metadata on Apple Silicon.
 An ad-hoc signature permits local execution; it does not establish Developer ID
 trust or Gatekeeper acceptance. Libraries, executable and bundle are signed in
 that order; configured identity signing enables hardened runtime and timestamping.
-Entitlements are applied to the executable and bundle. Signing errors fail the
+Managed apps also require entitlements appropriate for the .NET JIT when using
+Developer ID hardened-runtime signing; only ad-hoc managed bundle execution is
+covered by the automated tests. Entitlements are applied to the executable and
+bundle. Signing errors fail the
 command. Notarization, App Store distribution, custom frameworks/Info.plist,
 DMG layout customization and trusted distribution on a clean Mac remain outside
 this implementation. DMGs contain the app and an `/Applications` link.

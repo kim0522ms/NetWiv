@@ -26,6 +26,57 @@ public sealed class CommandGeneratorTests
     }
 
     [Fact]
+    public void ResolvesServiceParametersWithoutFrontendArgumentsOrSerializers()
+    {
+        var result = Run("""
+            using Microsoft.Extensions.DependencyInjection;
+            using NetWiv;
+            [assembly: GenerateFrontendBindings]
+            public enum Slot { First, Second }
+            public sealed class Clock { }
+            public interface IOptional { }
+            public static class Commands
+            {
+                [Command] public static void Tick(
+                    [FromServices] Clock clock,
+                    [FromServices] IOptional? optional,
+                    [FromKeyedServices("utc")] Clock utc,
+                    [FromKeyedServices(3L)] Clock numbered,
+                    [FromKeyedServices(Slot.Second)] Clock slotted,
+                    [FromServices] AppHandle handle) { }
+            }
+            """);
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.DoesNotContain(result.CompilationDiagnostics, static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.Contains("ServiceProviderServiceExtensions.GetRequiredService<global::Clock>(context.Services)", result.GeneratedSource, StringComparison.Ordinal);
+        Assert.Contains("ServiceProviderServiceExtensions.GetService<global::IOptional>(context.Services)", result.GeneratedSource, StringComparison.Ordinal);
+        Assert.Contains("GetRequiredKeyedService<global::Clock>(context.Services, \"utc\")", result.GeneratedSource, StringComparison.Ordinal);
+        Assert.Contains("GetRequiredKeyedService<global::Clock>(context.Services, (long)3)", result.GeneratedSource, StringComparison.Ordinal);
+        Assert.Contains("GetRequiredKeyedService<global::Clock>(context.Services, (global::Slot)(1))", result.GeneratedSource, StringComparison.Ordinal);
+        // An explicit attribute wins over type-based injection.
+        Assert.Contains("GetRequiredService<global::NetWiv.AppHandle>(context.Services)", result.GeneratedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DeserializeArgument", result.GeneratedSource, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("[FromServices, FromKeyedServices(\"a\")] Clock clock")]
+    [InlineData("[FromKeyedServices] Clock clock")]
+    [InlineData("[FromKeyedServices(1.5)] Clock clock")]
+    public void RejectsAmbiguousOrUnsupportedServiceParameters(string parameter)
+    {
+        var result = Run($$"""
+            using Microsoft.Extensions.DependencyInjection;
+            using NetWiv;
+            public sealed class Clock { }
+            public static class Commands
+            {
+                [Command] public static void Tick({{parameter}}) { }
+            }
+            """);
+        Assert.Contains(result.GeneratorDiagnostics, static diagnostic => diagnostic.Id == "DTOXGEN010");
+    }
+
+    [Fact]
     public void GeneratesStaticAotBindingsForTypedAsyncCommand()
     {
         const string source = """

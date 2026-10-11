@@ -182,6 +182,11 @@ consumes the expanded `netwiv.config.json` resource. Typed commands must declare
 the source-generated `JsonSerializerContext` through `[CommandJsonContext]`;
 see the generator tests and conformance application for an executable example.
 
+To use dependency injection, configuration, options, `ILogger` and hosted
+services, build the app with `NetWiv.Hosting` instead; see
+[Generic Host integration](hosting.md). `Builder.UseServiceProvider` and
+`Builder.UseLoggerFactory` connect an existing provider without the host.
+
 ## Security and lifecycle
 
 Without an app command manifest, registered application commands are allowed

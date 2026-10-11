@@ -111,6 +111,10 @@ internal static class RunnerConfigTests
                 var args = observed["args"]!.AsArray();
                 Equal(mode == "managed" ? "run" : "publish", args[0]!.GetValue<string>());
                 Equal("--runner-flag", args[1]!.GetValue<string>()); Equal("two words", args[2]!.GetValue<string>());
+                // Development sessions select the Generic Host Development environment unless the caller chose one.
+                var inherited = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
+                Equal(string.IsNullOrEmpty(inherited) && mode != "build" ? "Development" : inherited,
+                    observed["environment"]?.GetValue<string>());
             }
         }
         finally { Environment.SetEnvironmentVariable("NETWIV_RUNNER_PROBE_OUTPUT", prior); Directory.Delete(root, true); }

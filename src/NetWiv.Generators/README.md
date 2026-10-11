@@ -32,8 +32,10 @@ Do not emit this context from another source generator. Roslyn does not define
 an ordering in which one generator can consume another generator's output.
 
 `AppHandle`, `InvokeContext`, `State<T>`, and `CancellationToken` parameters are
-injected. Other parameters bind from an object property with the same C#
-parameter name. `Task`, `Task<T>`, `ValueTask`, `ValueTask<T>`, synchronous
+injected. Parameters marked `[FromServices]` or `[FromKeyedServices(key)]`
+resolve from the invocation's service scope; see
+[Generic Host integration](../../docs/hosting.md). Other parameters bind from an
+object property with the same C# parameter name. `Task`, `Task<T>`, `ValueTask`, `ValueTask<T>`, synchronous
 values, and `void` are supported.
 
 An attribute generates a binding but does not expose the command. Select the

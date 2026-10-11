@@ -101,7 +101,7 @@ new package version and an unused output directory:
 # Output feed: artifacts/integration/0.1.0-local.1/packages
 ```
 
-This packages Core, Generators, Build, Wry, CLI and the managed plugins, and
+This packages Core, Hosting, Generators, Build, Wry, CLI and the managed plugins, and
 writes package SHA-256 hashes. It refuses an existing output directory and does
 not publish to a remote feed. Use a new version for changed contents to avoid
 NuGet cache collisions. Supply the resulting `packages` directory and version

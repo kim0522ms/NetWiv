@@ -7,3 +7,4 @@ Rule ID | Category | Severity | Notes
 --------|----------|----------|--------------------
 DTOXGEN008 | NetWiv.Generators | Error | Invalid plugin type
 DTOXGEN009 | NetWiv.Generators | Error | Frontend wire type cannot be inferred
+DTOXGEN010 | NetWiv.Generators | Error | Invalid service parameter

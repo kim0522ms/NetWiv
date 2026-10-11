@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <PackageId>NetWiv.Hosting</PackageId>
+    <Description>.NET Generic Host integration for NetWiv: dependency injection, configuration, options, logging and hosted services.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../NetWiv.Core/NetWiv.Core.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+  </ItemGroup>
+</Project>

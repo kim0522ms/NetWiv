@@ -22,6 +22,7 @@ if (Environment.GetEnvironmentVariable("NETWIV_RUNNER_PROBE_OUTPUT") is { } runn
 {
     var record = new System.Text.Json.Nodes.JsonObject { ["cwd"] = Environment.CurrentDirectory,
         ["pid"] = Environment.ProcessId, ["patch"] = Environment.GetEnvironmentVariable("TAURI_CONFIG"),
+        ["environment"] = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT"),
         ["args"] = new System.Text.Json.Nodes.JsonArray(args.Select(arg => (System.Text.Json.Nodes.JsonNode?)System.Text.Json.Nodes.JsonValue.Create(arg)).ToArray()) };
     File.WriteAllText(runnerProbe, record.ToJsonString());
     if (Environment.GetEnvironmentVariable("NETWIV_RUNNER_PROBE_WAIT") is { } runnerWait)

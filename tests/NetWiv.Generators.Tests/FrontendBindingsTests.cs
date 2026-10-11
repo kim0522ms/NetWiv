@@ -55,6 +55,22 @@ public sealed class FrontendBindingsTests
     }
 
     [Fact]
+    public void ServiceParametersAreNotFrontendArguments()
+    {
+        var result = Generate(Preamble + """
+            public sealed class Clock { }
+            public static class Commands {
+                [Command] public static int Tick(int step, [FromServices] Clock clock,
+                    [Microsoft.Extensions.DependencyInjection.FromKeyedServices("utc")] Clock utcClock) => step;
+            }
+            """);
+        Assert.Empty(result.Errors);
+        var bindings = Read(result.Compilation);
+        Assert.Contains("\"tick\": (args: { \"step\": number }, options?: InvokeOptions) => Promise<number>", bindings.TypeScript);
+        Assert.DoesNotContain("clock", bindings.TypeScript, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void DtoNamesFollowClrTypesAndStayStableWhenCommandsAreAdded()
     {
         const string model = """

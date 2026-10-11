@@ -18,6 +18,7 @@ framework. Public documentation is maintained in English.
 | Reference | Topics |
 | --- | --- |
 | [C# SDK](csharp-api.md) | Commands, state, events, ownership and lifecycle |
+| [Generic Host](hosting.md) | Dependency injection, configuration, options, logging and hosted services |
 | [Frontend bindings](frontend-generator.md) | JS/TS generation and serialization support |
 | [Menus](menu-csharp-api.md) | Icons, menu items and About metadata |
 | [Plugin configuration](plugin-configuration.md) | Settings, registration and capability permissions |

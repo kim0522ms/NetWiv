@@ -6,6 +6,7 @@ using NetWiv.Plugin.SingleInstance;
 
 if (args is ["--shell-execution-probe", var shellRoot, var shellRole]) return await ShellLifetimeTests.Probe(shellRoot, shellRole);
 if (args is ["--restart-probe", var restartRoot]) return RestartLifecycleTests.Probe(restartRoot);
+if (args is ["--hosted-restart-probe", var hostedRoot]) return HostingTests.RestartProbe(hostedRoot);
 
 if (args.Length >= 2 && args[0] == "--single-instance-child")
 {
@@ -42,6 +43,12 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("P1 document close cancels streaming HTTP and releases both handles", InvocationLifetimeTests.HttpStreamingOnClose),
     ("P1 restart waits for cleanup and releases single-instance ownership", RestartLifecycleTests.RestartAfterCleanup),
     ("local app IPC succeeds through facade", LocalAppIpcSucceeds),
+    ("IPC and command diagnostics use the configured logger factory", LoggingTests.CommandPipeline),
+    ("log plugin forwards webview records to the configured logger factory", LoggingTests.WebviewRecordsUseLoggerFactory),
+    ("hosting wires services, options and AppHandle around the event loop lifecycle", HostingTests.ServicesConfigurationAndLifecycle),
+    ("hosting StopApplication exits a running event loop and skips one not yet started", HostingTests.StopApplicationExitsEventLoop),
+    ("hosting generated commands resolve scoped, keyed and AppHandle services", HostingTests.GeneratedCommandsResolveServices),
+    ("hosting restart relaunches only after hosted services stop", HostingTests.RestartWaitsForHostedServices),
     ("upstream ipc::deserialize_invoke_response_body", InvokeResponseTests.DeserializeInvokeResponseBody),
     ("invoke response deserialization preserves binary and JSON boundaries", InvokeResponseTests.BinaryAndJsonBoundaries),
     ("command input ignores JSON-ignored and non-deserializable members", PropertyInputTests.IgnoredMembers),

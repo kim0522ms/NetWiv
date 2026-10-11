@@ -1,11 +1,27 @@
 using System.Text.Json;
 using System.Text;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace NetWiv.Plugin.Log;
 
-/// <summary>Receives records from the official log guest and writes to the app log directory.</summary>
+/// <summary>
+/// Receives records from the official log guest and writes to the app log directory.
+/// When the app has a logger factory, records are also written to the <c>NetWiv.Webview</c> logger
+/// and the plugin's direct stdout output is replaced by the configured logging providers.
+/// </summary>
 public sealed class LogPlugin : IPlugin
 {
+    private const string LoggerCategory = "NetWiv.Webview";
+    private static readonly EventId RecordEvent = new(1, "WebviewLog");
+    private static readonly Action<ILogger, string, string, Exception?>[] Writers =
+    [
+        LoggerMessage.Define<string, string>(LogLevel.Trace, RecordEvent, "{Message}{Source}"),
+        LoggerMessage.Define<string, string>(LogLevel.Debug, RecordEvent, "{Message}{Source}"),
+        LoggerMessage.Define<string, string>(LogLevel.Information, RecordEvent, "{Message}{Source}"),
+        LoggerMessage.Define<string, string>(LogLevel.Warning, RecordEvent, "{Message}{Source}"),
+        LoggerMessage.Define<string, string>(LogLevel.Error, RecordEvent, "{Message}{Source}"),
+    ];
     private readonly object _gate = new();
     private readonly int _minimumLevel;
     private readonly int _maxFileBytes;
@@ -47,9 +63,11 @@ public sealed class LogPlugin : IPlugin
         var file = OptionalString(args, "file");
         var line = args.TryGetProperty("line", out var lineValue) && lineValue.ValueKind == JsonValueKind.Number
             ? lineValue.GetRawText() : null;
-        var record = $"{DateTimeOffset.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}[webview][{LevelName(level)}] {message}";
-        if (location is not null) record += " (" + location + ")";
-        if (file is not null) record += " [" + file + (line is null ? "" : ":" + line) + "]";
+        var source = "";
+        if (location is not null) source += " (" + location + ")";
+        if (file is not null) source += " [" + file + (line is null ? "" : ":" + line) + "]";
+        var record = $"{DateTimeOffset.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}[webview][{LevelName(level)}] {message}{source}";
+        var forwarded = context.App.LoggerFactory is not NullLoggerFactory;
         var bytes = Encoding.UTF8.GetBytes(record + Environment.NewLine);
         if (bytes.Length > _maxFileBytes)
         {
@@ -76,8 +94,9 @@ public sealed class LogPlugin : IPlugin
                 }
             }
             using (var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read)) stream.Write(bytes);
-            Console.Out.WriteLine(record);
+            if (!forwarded) Console.Out.WriteLine(record);
         }
+        if (forwarded) Writers[level - 1](context.App.LoggerFactory.CreateLogger(LoggerCategory), message, source, null);
         using var payload = JsonDocument.Parse("{\"level\":" + level + ",\"message\":" + JsonValue.From(record).GetRawText() + "}");
         context.App.Emit("log://log", payload.RootElement);
         return JsonValue.Null;

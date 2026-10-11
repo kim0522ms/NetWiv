@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="src/NetWiv.Core/NetWiv.Core.csproj" />
+  <Project Path="src/NetWiv.Hosting/NetWiv.Hosting.csproj" />
   <Project Path="src/NetWiv.Plugin.Fs/NetWiv.Plugin.Fs.csproj" />
   <Project Path="src/NetWiv.Plugin.Dialog/NetWiv.Plugin.Dialog.csproj" />
   <Project Path="src/NetWiv.Plugin.Os/NetWiv.Plugin.Os.csproj" />

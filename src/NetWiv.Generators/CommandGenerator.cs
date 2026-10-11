@@ -17,6 +17,8 @@ public sealed class CommandGenerator : IIncrementalGenerator
     private const string JsonContextAttributeName = "NetWiv.CommandJsonContextAttribute";
     private const string PluginAttributeName = "NetWiv.PluginAttribute";
     private const string PluginExportAttributeName = "NetWiv.PluginExportAttribute";
+    private const string FromServicesAttributeName = "NetWiv.FromServicesAttribute";
+    private const string FromKeyedServicesAttributeName = "Microsoft.Extensions.DependencyInjection.FromKeyedServicesAttribute";
 
     private static readonly DiagnosticDescriptor InvalidMethod = new(
         "DTOXGEN001", "Invalid command method",
@@ -51,6 +53,11 @@ public sealed class CommandGenerator : IIncrementalGenerator
     private static readonly DiagnosticDescriptor DuplicateInjection = new(
         "DTOXGEN007", "Duplicate injected parameter",
         "Command '{0}' has more than one injected parameter of type '{1}'",
+        "NetWiv.Generators", DiagnosticSeverity.Error, true);
+
+    private static readonly DiagnosticDescriptor InvalidServiceParameter = new(
+        "DTOXGEN010", "Invalid service parameter",
+        "Parameter '{0}' on command '{1}' must use exactly one of [FromServices] or [FromKeyedServices(key)] with a constant string, integer, char, bool, enum or null key",
         "NetWiv.Generators", DiagnosticSeverity.Error, true);
 
     private static readonly DiagnosticDescriptor InvalidPlugin = new(
@@ -333,7 +340,16 @@ public sealed class CommandGenerator : IIncrementalGenerator
         var needsJson = false;
         foreach (var parameter in method.Parameters)
         {
-            var injection = GetInjection(parameter.Type);
+            var service = GetServiceBinding(parameter, out var invalidService);
+            if (invalidService)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    InvalidServiceParameter, parameter.Locations.FirstOrDefault(), parameter.Name, method.Name));
+                return false;
+            }
+
+            // A service attribute takes precedence over type-based injection.
+            var injection = service is not null ? "Service:" + parameter.Name : GetInjection(parameter.Type);
             if (injection is not null && !injectionKinds.Add(injection))
             {
                 context.ReportDiagnostic(Diagnostic.Create(
@@ -353,7 +369,7 @@ public sealed class CommandGenerator : IIncrementalGenerator
                 needsJson |= !IsJsonElement(parameter.Type) && !IsChannel(parameter.Type) && !IsByteArray(parameter.Type);
             }
 
-            parameters.Add(new ParameterModel(parameter, injection));
+            parameters.Add(new ParameterModel(parameter, injection, service));
         }
 
         var returnModel = GetReturnModel(method.ReturnType);
@@ -432,6 +448,80 @@ public sealed class CommandGenerator : IIncrementalGenerator
             "System.Threading.CancellationToken" => "CancellationToken",
             _ => null,
         };
+    }
+
+    private static ServiceBinding? GetServiceBinding(IParameterSymbol parameter, out bool invalid)
+    {
+        invalid = false;
+        ServiceBinding? binding = null;
+        foreach (var attribute in parameter.GetAttributes())
+        {
+            ServiceBinding? current;
+            switch (attribute.AttributeClass?.ToDisplayString())
+            {
+                case FromServicesAttributeName:
+                    current = new ServiceBinding(null);
+                    break;
+                case FromKeyedServicesAttributeName:
+                    // The parameterless constructor selects runtime key inheritance, which has no command scope meaning.
+                    var key = attribute.ConstructorArguments.Length == 1 ? RenderServiceKey(attribute.ConstructorArguments[0]) : null;
+                    if (key is null)
+                    {
+                        invalid = true;
+                        return null;
+                    }
+                    current = new ServiceBinding(key);
+                    break;
+                default:
+                    continue;
+            }
+
+            if (binding is not null)
+            {
+                invalid = true;
+                return null;
+            }
+            binding = current;
+        }
+
+        return binding;
+    }
+
+    private static string? RenderServiceKey(TypedConstant key)
+    {
+        if (key.IsNull)
+        {
+            return "null";
+        }
+
+        if (key.Kind == TypedConstantKind.Enum)
+        {
+            return "(" + key.Type!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) + ")(" +
+                Convert.ToString(key.Value, CultureInfo.InvariantCulture) + ")";
+        }
+
+        if (key.Value is string text)
+        {
+            return Literal(text);
+        }
+
+        // Keys are compared as boxed objects, so the literal keeps its exact primitive type.
+        return key.Kind == TypedConstantKind.Primitive && key.Value is not (float or double)
+            ? "(" + key.Type!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) + ")" +
+                Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatPrimitive(key.Value!, quoteStrings: true, useHexadecimalNumbers: false)
+            : null;
+    }
+
+    private static string RenderServiceResolution(IParameterSymbol parameter, ServiceBinding service)
+    {
+        var optional = parameter.NullableAnnotation == NullableAnnotation.Annotated;
+        var type = parameter.Type.WithNullableAnnotation(NullableAnnotation.NotAnnotated)
+            .ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        return service.KeyExpression is null
+            ? "global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions." +
+                (optional ? "GetService<" : "GetRequiredService<") + type + ">(context.Services)"
+            : "global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions." +
+                (optional ? "GetKeyedService<" : "GetRequiredKeyedService<") + type + ">(context.Services, " + service.KeyExpression + ")";
     }
 
     private static ReturnModel? GetReturnModel(ITypeSymbol type)
@@ -681,7 +771,11 @@ public sealed class CommandGenerator : IIncrementalGenerator
                 builder.Append(", ");
             }
             var parameter = command.Parameters[parameterIndex];
-            if (parameter.Injection is { } injection && injection.StartsWith("State:", StringComparison.Ordinal))
+            if (parameter.Service is { } service)
+            {
+                builder.Append(RenderServiceResolution(parameter.Symbol, service));
+            }
+            else if (parameter.Injection is { } injection && injection.StartsWith("State:", StringComparison.Ordinal))
             {
                 builder.Append("context.State<")
                     .Append(((INamedTypeSymbol)parameter.Symbol.Type).TypeArguments[0]
@@ -809,14 +903,24 @@ public sealed class CommandGenerator : IIncrementalGenerator
 
     private sealed class ParameterModel
     {
-        public ParameterModel(IParameterSymbol symbol, string? injection)
+        public ParameterModel(IParameterSymbol symbol, string? injection, ServiceBinding? service)
         {
             Symbol = symbol;
             Injection = injection;
+            Service = service;
         }
 
         public IParameterSymbol Symbol { get; }
         public string? Injection { get; }
+        public ServiceBinding? Service { get; }
+    }
+
+    private sealed class ServiceBinding
+    {
+        public ServiceBinding(string? keyExpression) => KeyExpression = keyExpression;
+
+        /// <summary>A C# expression for the service key, or null for an unkeyed service.</summary>
+        public string? KeyExpression { get; }
     }
 
     private struct ReturnModel

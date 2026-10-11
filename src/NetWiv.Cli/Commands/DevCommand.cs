@@ -34,6 +34,9 @@ internal static class DevCommand
         var features = CommandConfig.Features(config, featuresArg);
         var watchFolders = ResolveWatchFolders(config, additionalWatch);
         var environment = HookEnvironment.Create(target, !release, config);
+        // Generic Host apps read IHostEnvironment from DOTNET_ENVIRONMENT, as `dotnet run` launch profiles set it.
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")))
+            environment = With(environment, "DOTNET_ENVIRONMENT", "Development");
         Process? hook = null;
         Task? hookMonitor = null;
         int? hookExitCode = null;

@@ -46,16 +46,22 @@ public sealed partial class App : IDisposable
 
     public void Run()
     {
+        if (RunEventLoop() is { } restart)
+        {
+            Dispose();
+            using var process = System.Diagnostics.Process.Start(restart) ?? throw new InvokeException("The application could not restart.");
+        }
+    }
+
+    /// <summary>Runs the native event loop and returns a pending restart without disposing or relaunching.</summary>
+    internal System.Diagnostics.ProcessStartInfo? RunEventLoop()
+    {
         ObjectDisposedException.ThrowIf(_disposed, this);
         _runtime.Run(Handle.CreateRuntimeContext(() =>
         {
             foreach (var setup in _setup) setup(this);
         }));
-        if (Handle.TakeRestart() is { } restart)
-        {
-            Dispose();
-            using var process = System.Diagnostics.Process.Start(restart) ?? throw new InvokeException("The application could not restart.");
-        }
+        return Handle.TakeRestart();
     }
 
     public void Dispose()

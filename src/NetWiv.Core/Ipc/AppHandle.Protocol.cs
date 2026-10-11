@@ -65,7 +65,11 @@ public sealed partial class AppHandle
             }
             else throw new InvokeException($"content type {contentType} is not implemented");
         }
-        catch (Exception error) { return Respond(500, "text/plain", Encoding.UTF8.GetBytes(error.Message)); }
+        catch (Exception error)
+        {
+            CoreLog.RejectedRequest(_ipcLogger, request.WebviewLabel, error.Message);
+            return Respond(500, "text/plain", Encoding.UTF8.GetBytes(error.Message));
+        }
 
         try
         {

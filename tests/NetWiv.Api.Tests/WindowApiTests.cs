@@ -268,7 +268,9 @@ public sealed class WindowApiTests
         Assert.Equal("NetWiv", await AppApi.GetNameAsync(app.Handle));
         Assert.Equal("1.0.0", await AppApi.GetVersionAsync(app.Handle));
         Assert.Equal("com.netwiv.app", await AppApi.GetIdentifierAsync(app.Handle));
-        Assert.Equal("2.11.5", await AppApi.GetTauriVersionAsync(app.Handle));
+        // Intentional difference: NetWiv does not embed the framework, so the version is unavailable (docs/api-status.md).
+        var tauriVersion = await Assert.ThrowsAsync<InvokeException>(() => AppApi.GetTauriVersionAsync(app.Handle));
+        Assert.Equal("NetWiv does not embed the TAURI framework; its version is unavailable.", tauriVersion.Message);
         Assert.Equal(Path.Combine("folder", "child"), await PathApi.JoinAsync(
             app.Handle, ["folder", "child"]));
         Assert.Equal("txt", await PathApi.ExtensionNameAsync(app.Handle, "file.txt"));

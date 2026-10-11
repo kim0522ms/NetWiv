@@ -38,6 +38,18 @@ stop_panel() {
   stop_children "$child"
 }
 
+remove_config() {
+  local directory=$1 attempt
+  # dbus-run-session can return before its activated xfconfd finishes flushing
+  # settings. Retry only deletion of our private directory while it winds down.
+  for ((attempt=0; attempt<30; attempt++)); do
+    if rm -rf -- "$directory" 2>"$NETWIV_DESKTOP_LOG/config-cleanup.log"; then return 0; fi
+    sleep 0.1
+  done
+  cat "$NETWIV_DESKTOP_LOG/config-cleanup.log" >&2
+  return 1
+}
+
 # A dedicated Xfce panel provides the StatusNotifierWatcher required by Ayatana.
 # Keep its configuration and DBus session separate from the user's desktop.
 if [[ "${1:-}" == "--session" ]]; then
@@ -103,7 +115,7 @@ cat >"$config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml" <<'XML'
 XML
 Xephyr "$display" -screen 1280x800 -br -nolisten tcp >"$NETWIV_DESKTOP_LOG/xephyr.log" 2>&1 &
 xephyr=$!
-trap 'result=$?; if ! stop_children "$xephyr"; then result=125; fi; rm -rf -- "$config"; exit "$result"' EXIT
+trap 'result=$?; if ! stop_children "$xephyr"; then result=125; fi; if ! remove_config "$config" && [[ $result == 0 ]]; then result=125; fi; exit "$result"' EXIT
 export DISPLAY="$display"
 for ((attempt=0; attempt<50; attempt++)); do
   if timeout 2s xdpyinfo >/dev/null 2>&1; then break; fi

@@ -92,6 +92,8 @@ jobs:
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
       DOTNET_NOLOGO: '1'
+      DOTNET_INSTALL_DIR: ${{ github.workspace }}/artifacts/ci-dotnet
+      DOTNET_ROOT: ${{ github.workspace }}/artifacts/ci-dotnet
       NUGET_PACKAGES: ${{ github.workspace }}/.packages
       CARGO_BUILD_JOBS: '2'
       CARGO_TERM_COLOR: always
@@ -106,8 +108,17 @@ jobs:
           persist-credentials: false
 
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        id: sdk
         with:
-          global-json-file: global.json
+          dotnet-version: '8.0.x'
+
+      - name: Pin the baseline SDK (ignore other preinstalled SDKs)
+        shell: pwsh
+        env:
+          SDK_VERSION: ${{ steps.sdk.outputs.dotnet-version }}
+        run: |
+          @{ sdk = @{ version = $env:SDK_VERSION; rollForward = 'disable'; allowPrerelease = $false } } |
+            ConvertTo-Json | Set-Content global.json
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -190,7 +201,7 @@ jobs:
           key: ${{ steps.native-cache.outputs.cache-primary-key }}
 
       - name: Build .NET solution
-        run: dotnet build NetWiv.slnx -c Release -bl:artifacts/ci/build.binlog
+        run: dotnet build NetWiv.sln -c Release -bl:artifacts/ci/build.binlog
 
       - name: Core tests
         run: dotnet run --project tests/NetWiv.Core.Tests -c Release --no-build 2>&1 | tee artifacts/ci/core-tests.log
@@ -331,10 +342,60 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
+  sdk-compatibility:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    name: .NET ${{ matrix.major }} SDK and runtime compatibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        major: [9, 10]
+    env:
+      NetWivTestFramework: net${{ matrix.major }}.0
+      DOTNET_NOLOGO: '1'
+      DOTNET_INSTALL_DIR: ${{ github.workspace }}/artifacts/ci-dotnet
+      DOTNET_ROOT: ${{ github.workspace }}/artifacts/ci-dotnet
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        id: sdk
+        with:
+          dotnet-version: '${{ matrix.major }}.0.x'
+      - name: Pin the SDK under test
+        shell: pwsh
+        env:
+          SDK_VERSION: ${{ steps.sdk.outputs.dotnet-version }}
+        run: |
+          @{ sdk = @{ version = $env:SDK_VERSION; rollForward = 'disable'; allowPrerelease = $false } } |
+            ConvertTo-Json | Set-Content global.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: Prepare AOT and CLI test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang zlib1g-dev
+          node scripts/prepare-test-tools.mjs
+      - name: Build and test managed consumers
+        run: |
+          dotnet --info
+          dotnet run --project tests/NetWiv.Core.Tests -c Release
+          dotnet run --project tests/NetWiv.Cli.Tests -c Release
+          dotnet test tests/NetWiv.Generators.Tests -c Release
+          dotnet test tests/NetWiv.Api.Tests -c Release
+      - name: Publish and execute NativeAOT Core tests
+        run: |
+          dotnet publish tests/NetWiv.Core.Tests -c Release -r linux-x64 -p:PublishAot=true -o artifacts/sdk-core-aot
+          ./artifacts/sdk-core-aot/NetWiv.Core.Tests
+
   required:
     name: CI required
     if: always()
-    needs: [changes, desktop]
+    needs: [changes, desktop, sdk-compatibility]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -344,9 +405,10 @@ jobs:
           CHANGES_RESULT: ${{ needs.changes.result }}
           BUILD_REQUIRED: ${{ needs.changes.outputs.build }}
           DESKTOP_RESULT: ${{ needs.desktop.result }}
+          SDK_RESULT: ${{ needs.sdk-compatibility.result }}
         run: |
           [[ "$CHANGES_RESULT" == success ]] || exit 1
-          case "$BUILD_REQUIRED:$DESKTOP_RESULT" in
-            true:success|false:skipped) exit 0 ;;
-            *) echo "Required validation did not pass: $BUILD_REQUIRED:$DESKTOP_RESULT"; exit 1 ;;
+          case "$BUILD_REQUIRED:$DESKTOP_RESULT:$SDK_RESULT" in
+            true:success:success|false:skipped:skipped) exit 0 ;;
+            *) echo "Required validation did not pass: $BUILD_REQUIRED:$DESKTOP_RESULT:$SDK_RESULT"; exit 1 ;;
           esac

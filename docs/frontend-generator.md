@@ -30,11 +30,11 @@ The standalone CLI export is also available:
 
 ```sh
 dotnet build path/to/App.csproj
-netwiv bindings path/to/bin/Debug/net10.0/App.dll frontend/src/generated
+netwiv bindings path/to/bin/Debug/net8.0/App.dll frontend/src/generated
 ```
 
 During framework development the CLI can be run with
-`dotnet src/NetWiv.Cli/bin/Release/net10.0/netwiv.dll bindings ...` after building
+`dotnet src/NetWiv.Cli/bin/Release/net8.0/netwiv.dll bindings ...` after building
 the CLI. The exporter reads PE metadata, not a loaded assembly; module
 initializers, static constructors and app setup do not execute. It needs the
 managed DLL before NativeAOT compilation, not the final native executable.
@@ -115,9 +115,9 @@ change. JavaScript command names, argument keys and JSON wire shapes are unchang
 - The generator maps property-level `JsonIgnoreCondition`
   `WhenWriting` to input-only members and `WhenReading` to output-only setters.
   Constructor-bound properties still accept input with `WhenReading`, matching
-  actual source-generated .NET 10 deserialization. Ignored directions do not
+  actual source-generated System.Text.Json 10 deserialization. Ignored directions do not
   require an otherwise unused converter/type mapping. It also
-  accepts context-wide directional defaults. Actual .NET 10 source-generated
+  accepts context-wide directional defaults. Actual System.Text.Json 10 source-generated
   metadata still reads members under `WhenReading`; `WhenWriting` output members
   without a property override are optional because the fast serializer omits
   them while metadata serialization includes them. Both paths have oracle tests.
@@ -133,7 +133,7 @@ change. JavaScript command names, argument keys and JSON wire shapes are unchang
   `string`/`JsonElement` into `[key: string]: unknown` on the corresponding DTO
   interface. Known members retain their types and requiredness. Both Dictionary
   and IDictionary are supported; the CLR extension member is not a named wire
-  property. Getter-only properties and directional ignores follow actual .NET 10
+  property. Getter-only properties and directional ignores follow actual System.Text.Json 10
   serialization; included readonly fields can collect data. Additional output
   values require TypeScript narrowing. Object-valued dictionaries, required
   extension members, constructor-bound extension data and custom converters

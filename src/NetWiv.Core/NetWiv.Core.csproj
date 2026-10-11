@@ -7,6 +7,7 @@
   <ItemGroup>
     <Compile Include="../Shared/PermissionIdentifier.cs" Link="Security/PermissionIdentifier.cs" />
     <Compile Include="../Shared/CapabilityValidation.cs" Link="Security/CapabilityValidation.cs" />
+    <PackageReference Include="System.Text.Json" Version="10.0.12" />
     <PackageReference Include="AngleSharp" Version="1.5.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />

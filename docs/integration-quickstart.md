@@ -10,12 +10,12 @@ Full TAURI® compatibility and release validation remain incomplete.
 
 ## Prerequisites
 
-- Windows: .NET 10 SDK, WebView2 Runtime and a Node.js version supported by the
+- Windows: .NET 8 or later SDK, WebView2 Runtime and a Node.js version supported by the
   template. The React template declares Node.js `^20.19.0 || >=22.12.0`.
 - Windows NativeAOT builds: Visual Studio C++ Build Tools and Windows SDK.
-- Linux: .NET 10 SDK, GTK3, WebKitGTK 4.1, Node.js and NativeAOT build dependencies.
+- Linux: .NET 8 or later SDK, GTK3, WebKitGTK 4.1, Node.js and NativeAOT build dependencies.
   Build Linux distributions on a Linux host.
-- macOS 12+: .NET 10 SDK, Xcode Command Line Tools and the template's Node.js
+- macOS 12+: .NET 8 or later SDK, Xcode Command Line Tools and the template's Node.js
   version. WKWebView/AppKit are supplied by macOS. Use SDK and native package
   assets for the Mac's architecture; see the [macOS guide](macos.md).
 - A feed containing matching versions of `NetWiv.Cli`, the SDK and native runtime
@@ -87,7 +87,7 @@ cancellation and resource ownership are described in the [C# SDK](csharp-api.md)
 
 ## Solutions and IDEs
 
-The generated `MyNetWivApp.slnx` includes the C# project and a `.Frontend.esproj`.
+The generated `MyNetWivApp.sln` includes the C# project and a `.Frontend.esproj`.
 Use the C# project as the IDE launch target. See
 [using the generated app](project-creation.md#use-the-generated-app) for build
 integration and development-server workflows. Actual Rider/Visual Studio solution

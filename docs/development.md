@@ -6,7 +6,7 @@ Run the commands below from the repository root.
 
 ## Prerequisites
 
-Use .NET 10 and the pinned Rust toolchain for native adapter builds. Windows
+Use .NET SDK 8.0.406 or later (including 9 and 10) and the pinned Rust toolchain for native adapter builds. Windows
 requires WebView2, the C++ build tools and Windows SDK. The Linux baseline is
 Ubuntu 24.04 with GTK3, WebKitGTK 4.1 and NativeAOT/native linker dependencies.
 macOS requires Xcode Command Line Tools and uses the system WKWebView; see the
@@ -27,7 +27,7 @@ Linux/macOS. Build each platform on its matching host. On WSL, use a Linux files
 separate Windows/Linux outputs to avoid mixed restore metadata and intermediates.
 
 ```sh
-dotnet build NetWiv.slnx -c Release
+dotnet build NetWiv.sln -c Release
 dotnet run --project tests/NetWiv.Core.Tests -c Release --no-build
 node scripts/prepare-test-tools.mjs
 # On macOS, also export the NETWIV_MINISIGN_PATH printed by this helper.
@@ -153,3 +153,5 @@ TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
 WRY is a trademark of The Tauri Programme within the Commons Conservancy.
 
 NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.
+
+See [SDK compatibility](dotnet-compatibility.md) for the .NET 8 baseline and the separate 9/10 consumer tests.

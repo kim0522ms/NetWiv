@@ -1,6 +1,6 @@
 # Support and validation
 
-NetWiv is a .NET 10 NativeAOT desktop framework under active development.
+NetWiv is a .NET 8 or later NativeAOT desktop framework under active development.
 The source includes a working application SDK, native runtime and build tooling;
 this does not establish complete TAURI® compatibility or release acceptance.
 Package installation is described in the [quickstart](integration-quickstart.md).

@@ -48,7 +48,10 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
-          global-json-file: global.json
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: native-*
@@ -56,7 +59,11 @@ jobs:
           merge-multiple: true
       - name: Pack the local feed
         shell: pwsh
-        run: ./scripts/pack-integration.ps1 -Version $env:RELEASE_VERSION -OutputDirectory artifacts/release-feed
+        run: |
+          $sdk = ((dotnet --list-sdks | Where-Object { $_ -match '^8\.' } | Select-Object -Last 1) -split ' ')[0]
+          @{ sdk = @{ version = $sdk; rollForward = 'disable'; allowPrerelease = $false } } |
+            ConvertTo-Json | Set-Content global.json
+          ./scripts/pack-integration.ps1 -Version $env:RELEASE_VERSION -OutputDirectory artifacts/release-feed
       - name: Validate and bundle packages with licenses and checksums
         run: >-
           python3 scripts/release-packages.py bundle
@@ -70,7 +77,13 @@ jobs:
             xvfb xserver-xephyr xfwm4 xfce4-panel dbus-x11 x11-utils
       - name: Verify CLI installation, templates and package-only NativeAOT
         shell: pwsh
-        run: ./scripts/test-package-feed.ps1 -Feed artifacts/release-feed/packages -Version $env:RELEASE_VERSION
+        run: |
+          foreach ($major in 8, 9, 10) {
+            $sdk = ((dotnet --list-sdks | Where-Object { $_ -match "^$major\." } | Select-Object -Last 1) -split ' ')[0]
+            @{ sdk = @{ version = $sdk; rollForward = 'disable'; allowPrerelease = $false } } |
+              ConvertTo-Json | Set-Content global.json
+            ./scripts/test-package-feed.ps1 -Feed artifacts/release-feed/packages -Version $env:RELEASE_VERSION -TargetFramework "net$major.0"
+          }
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: release-bundle

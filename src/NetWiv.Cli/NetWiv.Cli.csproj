@@ -1,9 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <RollForward>Major</RollForward>
     <AssemblyName>netwiv</AssemblyName>
     <RootNamespace>NetWiv.Cli</RootNamespace>
-    <PublishAot>true</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
+    <PublishAot Condition="'$(RuntimeIdentifier)' != ''">true</PublishAot>
     <StripSymbols>true</StripSymbols>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>netwiv</ToolCommandName>

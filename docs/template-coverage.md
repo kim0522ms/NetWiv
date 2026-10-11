@@ -17,7 +17,7 @@ through `netwiv init` and `netwiv new`.
 | Angular TS | `angular` | npm |
 | Preact JS / TS | `preact`, `preact-ts` | npm |
 | Yew, Leptos, Sycamore, Dioxus | `yew`, `leptos`, `sycamore`, `dioxus` | Cargo + Trunk |
-| Blazor WebAssembly | `blazor` | .NET 10 |
+| Blazor WebAssembly | `blazor` | Selected .NET SDK (8, 9 or 10) |
 
 JS/TS templates accept `--manager npm|pnpm|yarn|bun|deno`. Rust/WASM accepts only
 `cargo`, and Blazor only `dotnet`. Default npm templates include lockfiles;
@@ -32,7 +32,7 @@ netwiv new MyBlazorApp --template blazor --source $feed
 netwiv new MyYewApp --template yew --source $feed
 ```
 
-Every choice generates a C# backend, `NetWiv.*` NuGet references, a `.slnx`
+Every choice generates a C# backend, `NetWiv.*` NuGet references, a `.sln`
 solution, configuration and calls based on `@tauri-apps/api`. JS/TS templates
 generate command bindings during the build. Blazor and Rust/WASM bundle two
 pinned official API ES modules as static assets and invoke the C# `greet`

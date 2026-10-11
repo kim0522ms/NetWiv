@@ -1,7 +1,8 @@
 #requires -Version 7.0
 param(
     [Parameter(Mandatory)][string]$Feed,
-    [Parameter(Mandatory)][string]$Version
+    [Parameter(Mandatory)][string]$Version,
+    [ValidateSet("net8.0", "net9.0", "net10.0")][string]$TargetFramework = "net8.0"
 )
 $ErrorActionPreference = 'Stop'
 $repository = Split-Path $PSScriptRoot -Parent
@@ -25,6 +26,9 @@ try {
         if ($LASTEXITCODE -ne 0 -or $reportedVersion -ne "netwiv-cli $Version") { throw "Incorrect CLI version: $reportedVersion" }
         & $cli new PackageExample --template vanilla --source $Feed
         if ($LASTEXITCODE -ne 0) { throw 'CLI template creation from the installed package failed.' }
+        & dotnet build PackageExample/PackageExample.sln -c Debug -p:NetWivDevelopment=true
+        if ($LASTEXITCODE -ne 0) { throw 'Generated solution or packaged MSBuild tasks failed.' }
+        if (!(Get-ChildItem PackageExample/src/generated -File)) { throw 'Packaged frontend generator produced no bindings.' }
 
         # Reuse the real desktop smoke source, replacing every project reference with the packaged dependency.
         $source = Join-Path $repository 'tests/NetWiv.Desktop.Smoke'
@@ -35,7 +39,7 @@ try {
         $projectPath = Join-Path $smoke 'NetWiv.Desktop.Smoke.csproj'
         $project = [xml](Get-Content -LiteralPath $projectPath -Raw)
         $properties = $project.Project.PropertyGroup
-        foreach ($setting in @{ TargetFramework='net10.0'; ImplicitUsings='enable'; Nullable='enable'; TreatWarningsAsErrors='true' }.GetEnumerator()) {
+        foreach ($setting in @{ TargetFramework=$TargetFramework; ImplicitUsings='enable'; Nullable='enable'; TreatWarningsAsErrors='true' }.GetEnumerator()) {
             $element = $project.CreateElement($setting.Key)
             $element.InnerText = $setting.Value
             [void]$properties.AppendChild($element)
@@ -60,6 +64,27 @@ try {
             }
         }
         $project.Save($projectPath)
+        @'
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using NetWiv.Hosting;
+
+internal static class PackageBindingProbe
+{
+    [System.Runtime.CompilerServices.ModuleInitializer]
+    internal static void Verify()
+    {
+        var builder = NetWivApplication.CreateBuilder(new Microsoft.Extensions.Hosting.HostApplicationBuilderSettings { DisableDefaults = true });
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["Probe:Value"] = "bound" });
+        builder.Services.Configure<PackageOptions>(builder.Configuration.GetSection("Probe"));
+        using var provider = builder.Services.BuildServiceProvider();
+        if (provider.GetRequiredService<IOptions<PackageOptions>>().Value.Value != "bound")
+            throw new Exception("Packaged NativeAOT configuration binding failed.");
+    }
+}
+internal sealed class PackageOptions { public string Value { get; set; } = ""; }
+'@ | Set-Content -LiteralPath (Join-Path $smoke 'PackageBindingProbe.cs')
         & dotnet publish $projectPath -c Release -p:PublishAot=true -o published
         if ($LASTEXITCODE -ne 0) { throw 'Package-only NativeAOT publish failed.' }
         $executable = Join-Path $workspace ('published/NetWiv.Desktop.Smoke' + $(if ($IsWindows) { '.exe' } else { '' }))
@@ -70,7 +95,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Package-only native startup failed.' }
     }
     finally { Pop-Location }
-    Write-Output 'PASS packaged CLI version, template creation and package-only NativeAOT native startup'
+    Write-Output "PASS ${TargetFramework}: packaged CLI, generated solution, configuration binding and package-only NativeAOT startup"
 }
 finally {
     $env:NUGET_PACKAGES = $previousPackages

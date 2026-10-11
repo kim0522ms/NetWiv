@@ -17,7 +17,7 @@ internal static class RustDebugStringTests
             hash.AppendData(Encoding.UTF8.GetBytes(RustDebugString.Format(new Rune(value).ToString()) + "\n"));
         }
         Assert.Equal("1c62555c93d63747f1d39bbc077bd81afbdf1fdafcba54d4a0b2c26d86b83b3d",
-            Convert.ToHexStringLower(hash.GetHashAndReset()));
+            Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant());
         Assert.Equal("\"a\\u{301}👩\\u{200d}💻\\u{10ffff}\"", RustDebugString.Format("a\u0301👩\u200d💻\U0010ffff"));
         Assert.Equal("string \"\\0\\u{8}\\u{c}\\t\\n\\r\\u{1b}\"",
             CommandArgumentJson.Unexpected(JsonValue.From("\0\b\f\t\n\r\u001b")));

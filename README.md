@@ -4,9 +4,9 @@
 
 **Web frontends. C# backends. Native desktop apps.**
 
-A .NET 10 NativeAOT desktop framework built on OS WebViews.
+A .NET 8+ NativeAOT desktop framework built on OS WebViews.
 
-![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?style=flat-square)
+![.NET 8+](https://img.shields.io/badge/.NET-8%2B-512BD4?style=flat-square)
 ![NativeAOT](https://img.shields.io/badge/NativeAOT-0078D4?style=flat-square)
 ![Windows, Linux and macOS](https://img.shields.io/badge/Windows%20%7C%20Linux%20%7C%20macOS-desktop-334155?style=flat-square)
 
@@ -100,7 +100,7 @@ flowchart TB
         UI <--> Guest
     end
 
-    subgraph managed[".NET 10 · NativeAOT release"]
+    subgraph managed[".NET 8+ · NativeAOT release"]
         Core["NetWiv.Core<br/>IPC · permissions · events · resources"]
         App["Your C# commands · state · plugins"]
         Adapter["NetWiv.Platform.Desktop"]
@@ -148,9 +148,14 @@ a supplied package feed; replace both the feed path and `PACKAGE_VERSION`
 with actual values before running it. A fresh clone contains no prebuilt feed;
 maintainers can [create one from source](docs/development.md#create-a-local-package-feed).
 
-**Windows prerequisites:** .NET 10 SDK, Node.js and WebView2 Runtime.
+This backport targets `net8.0` and can be consumed by .NET 8, 9 and 10 applications.
+The existing `0.1.0-beta.1` bundle still requires .NET 10; use packages built from
+this branch for .NET 8/9. See [SDK compatibility](docs/dotnet-compatibility.md)
+for SDK selection, runtime behavior and validation limits.
+
+**Windows prerequisites:** .NET 8 or later SDK, Node.js and WebView2 Runtime.
 NativeAOT release builds also need Visual Studio C++ Build Tools and Windows SDK.
-On macOS 12+, use .NET 10, Node.js and Xcode Command Line Tools; WKWebView is
+On macOS 12+, use .NET 8 or later, Node.js and Xcode Command Line Tools; WKWebView is
 provided by the OS. Follow the [macOS guide](docs/macos.md) and the
 [zsh quickstart](docs/integration-quickstart.md#create-the-project).
 
@@ -210,10 +215,10 @@ API references, and framework development documentation.
 ## Development
 
 See the [framework development guide](docs/development.md) for prerequisites
-and package creation. Build and run managed checks with .NET 10:
+and package creation. Build and run managed checks with .NET 8 or later:
 
 ```sh
-dotnet build NetWiv.slnx -c Release
+dotnet build NetWiv.sln -c Release
 dotnet run --project tests/NetWiv.Core.Tests -c Release --no-build
 dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build
 dotnet test tests/NetWiv.Generators.Tests -c Release --no-build

@@ -16,7 +16,7 @@ function run(command, args, cwd = repo) {
   assert.equal(result.status, 0, result.error?.message ?? `Failed: ${command} ${args.join(' ')}`);
 }
 run(dotnet, ['build', 'src/NetWiv.Cli', '-c', 'Release', '--disable-build-servers']);
-run(dotnet, [path.join(repo, 'src/NetWiv.Cli/bin/Release/net10.0/netwiv.dll'), 'init', '--ci', '--directory', root, '--app-name', 'VersionProbe', '--netwiv-source', repo]);
+run(dotnet, [path.join(repo, 'src/NetWiv.Cli/bin/Release/net8.0/netwiv.dll'), 'init', '--ci', '--directory', root, '--app-name', 'VersionProbe', '--netwiv-source', repo]);
 const configPath = path.join(root, 'src-netwiv/netwiv.conf.json');
 const config = JSON.parse(await readFile(configPath, 'utf8'));
 config.version = '../package.json';

@@ -6,8 +6,9 @@
     <IsTrimmable>false</IsTrimmable>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Build.Framework" HintPath="$(MSBuildBinPath)/Microsoft.Build.Framework.dll" Private="false" />
-    <Reference Include="Microsoft.Build.Utilities.Core" HintPath="$(MSBuildBinPath)/Microsoft.Build.Utilities.Core.dll" Private="false" />
+    <!-- Compile against the .NET 8 MSBuild contract; the host supplies these assemblies. -->
+    <PackageReference Include="Microsoft.Build.Framework" Version="17.11.48" PrivateAssets="all" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.11.48" PrivateAssets="all" ExcludeAssets="runtime" />
     <Compile Include="../NetWiv.Build/Frontend/FrontendBindings.cs" Link="FrontendBindings.cs" />
     <Compile Include="../NetWiv.Build/Configuration/WindowsFileVersion.cs" Link="WindowsFileVersion.cs" />
     <Compile Include="../NetWiv.Build/Configuration/ApplicationVersion.cs" Link="ApplicationVersion.cs" />

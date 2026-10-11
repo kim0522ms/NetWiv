@@ -26,7 +26,7 @@ internal static class CommandNumberTests
         // --format-oracle in compatibility/oracles/command-numbers produces the
         // same deterministic bit corpus using the pinned serde_json formatter.
         Assert.Equal("8c0bf850d4341827952227d8faaf82df993b78711a7ddd727e0f240cd075fa81",
-            Convert.ToHexStringLower(hash.GetHashAndReset()));
+            Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant());
         return Task.CompletedTask;
     }
 

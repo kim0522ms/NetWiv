@@ -17,7 +17,15 @@ and logging abstractions, and the existing `Builder` API is unchanged.
 
 Reference `NetWiv.Hosting` next to `NetWiv.Platform.Desktop` and
 `NetWiv.Generators`, all at the same version. Desktop settings that previously
-went on `Builder` go on `builder.Desktop`:
+went on `Builder` go on `builder.Desktop`.
+
+The package targets .NET 8 and is also consumable from .NET 9/10 applications.
+Its transitive build properties enable `EnableConfigurationBindingGenerator`
+for NativeAOT-safe configuration binding on SDK 8/9. Source project references
+outside this repository should enable that property in the application project
+as well (NuGet imports the property automatically).
+
+Example:
 
 ```csharp
 using System.Text.Json.Serialization;

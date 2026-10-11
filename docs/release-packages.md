@@ -40,7 +40,7 @@ netwiv new MyNetWivApp --template react --source "$feed"
 
 Keep the feed at that location; generated projects refer to its absolute path.
 Use `dotnet tool update` if the CLI is already installed. You still need the
-.NET 10 SDK, your frontend toolchain and platform WebView/NativeAOT prerequisites.
+.NET 8 or later SDK, your frontend toolchain and platform WebView/NativeAOT prerequisites.
 Continue with the repository's
 [package quickstart](https://github.com/kim0522ms/NetWiv/blob/main/docs/integration-quickstart.md).
 

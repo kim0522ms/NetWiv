@@ -1,0 +1,7 @@
+<Project>
+  <Import Project="../Directory.Build.props" />
+  <PropertyGroup>
+    <!-- Exercise newer consumer runtimes without changing the shipped net8.0 libraries. -->
+    <TargetFramework Condition="'$(NetWivTestFramework)' != ''">$(NetWivTestFramework)</TargetFramework>
+  </PropertyGroup>
+</Project>

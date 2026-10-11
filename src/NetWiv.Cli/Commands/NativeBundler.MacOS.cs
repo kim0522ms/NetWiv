@@ -83,7 +83,7 @@ internal static partial class NativeBundler
         }
         var value = config.String("bundle", "macOS", "minimumSystemVersion") ?? "12.0";
         if (!System.Version.TryParse(value, out var parsed) || parsed < new System.Version(12, 0))
-            throw new NetWivConfigException("NetWiv's .NET 10 macOS baseline requires minimumSystemVersion 12.0 or newer.");
+            throw new NetWivConfigException("NetWiv's macOS baseline requires minimumSystemVersion 12.0 or newer.");
         return value;
     }
 

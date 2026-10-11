@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- SDK 8/9 do not enable the AOT-safe configuration binder by default. -->
+    <EnableConfigurationBindingGenerator Condition="'$(EnableConfigurationBindingGenerator)' == ''">true</EnableConfigurationBindingGenerator>
+  </PropertyGroup>
+</Project>

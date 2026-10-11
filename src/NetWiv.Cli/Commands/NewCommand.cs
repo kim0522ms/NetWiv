@@ -115,7 +115,7 @@ internal static class NewCommand
             "dotnet" => "  dotnet tool restore\n  dotnet tool run netwiv -- dev -- --dev",
             _ => $"  {manager} install\n  {RunCommand(manager, "desktop:dev")}",
         });
-        await output.WriteLineAsync($"IDE: open {name}.slnx and run the {name} C# project.");
+        await output.WriteLineAsync($"IDE: open {name}.sln and run the {name} C# project.");
         await output.WriteLineAsync("NativeAOT build: dotnet tool restore && dotnet tool run netwiv -- build --no-bundle");
         return 0;
     }
@@ -155,7 +155,7 @@ internal static class NewCommand
     {
         ClearReactFrontend(project);
         var frontend = Path.Combine(project, "frontend");
-        await RunDotnet(["new", "blazorwasm", "--framework", "net10.0", "--no-restore", "--name", "NetWivUi", "--output", frontend], project, token);
+        await RunDotnet(["new", "blazorwasm", "--no-restore", "--name", "NetWivUi", "--output", frontend], project, token);
         var overlay = Path.Combine(AppContext.BaseDirectory, "templates", "frontends", "blazor");
         File.Copy(Path.Combine(overlay, "Pages", "Home.razor"), Path.Combine(frontend, "Pages", "Home.razor"), overwrite: true);
         File.Copy(Path.Combine(overlay, "netwiv.js"), Path.Combine(frontend, "wwwroot", "netwiv.js"));
@@ -165,7 +165,7 @@ internal static class NewCommand
             .Replace("</body>", "<script type=\"module\" src=\"netwiv.js\"></script>\n</body>", StringComparison.Ordinal);
         File.WriteAllText(indexPath, index);
         File.Delete(Path.Combine(project, "scripts", "generate-bindings.mjs"));
-        File.WriteAllText(Path.Combine(project, "README.md"), "# NetWiv + Blazor\n\nThe frontend is a .NET 10 Blazor WebAssembly project in `frontend/`. Run `dotnet tool restore` then `dotnet tool run netwiv -- dev -- --dev`. The desktop backend is in `src-netwiv/`.\n" + TemplateNotice);
+        File.WriteAllText(Path.Combine(project, "README.md"), "# NetWiv + Blazor\n\nThe frontend is a Blazor WebAssembly project targeting the selected .NET SDK in `frontend/`. Run `dotnet tool restore` then `dotnet tool run netwiv -- dev -- --dev`. The desktop backend is in `src-netwiv/`.\n" + TemplateNotice);
     }
 
     private static void ClearReactFrontend(string project)

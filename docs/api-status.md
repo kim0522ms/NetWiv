@@ -954,7 +954,7 @@ The following table groups .NET functionality by **feature**. It is not a one-to
 | CLI-SIGNER | netwiv signer generate·sign | **Implemented** | Key/signature format support through minisign. The updater runtime remains unimplemented. | [SignerCommand](../src/NetWiv.Cli/Commands/SignerCommand.cs) |
 | CLI-BUNDLE | MSI, NSIS, deb, rpm, AppImage, app and DMG generation | **Implemented** | Generation paths exist and require OS-specific packaging tools. macOS supports ad-hoc/identity signing configuration; notarization is not implemented. Installation/execution/removal acceptance for all formats remains incomplete. | [NativeBundler](../src/NetWiv.Cli/Commands/NativeBundler.cs), [support and validation](implementation-status.md) |
 | SDK-NUGET | RID-specific native assets / app consumption without Rust | **Implemented** | Native assets cover win-x64, linux-x64, osx-arm64 and osx-x64. macOS package-only consumption remains unverified; separate from public NuGet distribution. | [Getting started](integration-quickstart.md) |
-| TEMPLATE-IDE | React .slnx and .esproj / IDE build integration | **Implemented** | Build integration exists with automated execution evidence. Actual Rider/VS solution loading and debugger GUI acceptance remain unverified. | [Template](../templates/react-app/ReactExample.slnx), [support and validation](implementation-status.md) |
+| TEMPLATE-IDE | React .sln and .esproj / IDE build integration | **Implemented** | Build integration exists with automated execution evidence. Actual Rider/VS solution loading and debugger GUI acceptance remain unverified. | [Template](../templates/react-app/ReactExample.sln), [support and validation](implementation-status.md) |
 
 ## Remaining validation and update rules
 

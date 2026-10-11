@@ -142,6 +142,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("signer artifacts interoperate with Tauri and minisign", SignerCompatibility),
     ("CLI reports unknown commands", UnknownCommand),
     ("asset protocol configuration retains strict scope types", AssetProtocolConfiguration),
+    ("managed dev without watching overrides features and rejects invalid names", DevReloadTests.NoWatchFeatures),
     ("managed dev reloads permissions and overlays and cleans up children", () => DevReloadTests.Run(false)),
     ("AOT dev reloads permissions and overlays and cleans up children", () => DevReloadTests.Run(true))
 };

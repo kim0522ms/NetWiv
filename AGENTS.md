@@ -46,7 +46,5 @@ upstream name.
   C# owns the public SDK, IPC policy, source generation and CLI.
 - Native Rust is allowed. Ordinary NuGet consumers must not need Cargo; native
   binaries are built explicitly by framework maintainers and delivered per RID.
-- All work is performed by the main agent. Do not create, resume, or delegate
-  work to sub-agents; the user explicitly prohibited further sub-agent use.
 - Batch Computer Use after implementation and automated validation checkpoints.
   Do not alternate individual edits with repeated manual GUI checks.

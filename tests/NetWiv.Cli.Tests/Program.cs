@@ -82,6 +82,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("parsed syntax does not bypass config validation", ParsedSyntaxStillValidated),
     ("x64 target mapping is explicit", TargetMapping),
     ("payload staging preserves paths and excludes bundle", PayloadStaging),
+    ("payload staging never traverses excluded bundle symlinks", PayloadStagingExcludedLinks),
     ("upstream resources::resource_relative_paths", ResourcePathsTests.RelativePaths),
     ("upstream resources::resource_paths_iter_slice_allow_walk", () => ResourcePathsTests.Run("resource_paths_iter_slice_allow_walk")),
     ("upstream resources::resource_paths_iter_slice_no_walk", () => ResourcePathsTests.Run("resource_paths_iter_slice_no_walk")),
@@ -144,14 +145,16 @@ var tests = new (string Name, Func<Task> Run)[]
 };
 
 var failures = 0;
-var selected = args.Length == 0 ? tests : args.Length == 2 && args[0] == "--filter"
-    ? tests.Where(test => test.Name.Contains(args[1], StringComparison.OrdinalIgnoreCase)).ToArray()
-    : throw new ArgumentException("Usage: NetWiv.Cli.Tests [--filter text]");
+var selected = args.Length == 0 ? tests : args.Length == 2 && args[0] is "--filter" or "--exclude"
+    ? tests.Where(test => test.Name.Contains(args[1], StringComparison.OrdinalIgnoreCase) == (args[0] == "--filter")).ToArray()
+    : throw new ArgumentException("Usage: NetWiv.Cli.Tests [--filter text | --exclude text]");
 if (selected.Length == 0) throw new ArgumentException("The test filter matched no cases.");
 foreach (var test in selected)
 {
-    try { await test.Run(); Console.WriteLine($"PASS {test.Name}"); }
-    catch (Exception exception) { failures++; Console.Error.WriteLine($"FAIL {test.Name}: {exception}"); }
+    Console.WriteLine($"RUN {test.Name}");
+    var timer = System.Diagnostics.Stopwatch.StartNew();
+    try { await test.Run(); Console.WriteLine($"PASS {test.Name} ({timer.Elapsed.TotalSeconds:F2}s)"); }
+    catch (Exception exception) { failures++; Console.Error.WriteLine($"FAIL {test.Name} ({timer.Elapsed.TotalSeconds:F2}s): {exception}"); }
 }
 return failures == 0 ? 0 : 1;
 
@@ -263,7 +266,52 @@ static Task PayloadStaging() => Temp(root =>
     try { copied = PayloadStager.Stage(root, external); Equal(2, copied.Count); Equal("a", File.ReadAllText(Path.Combine(external, "a", "same.txt"))); }
     finally { if (Directory.Exists(external)) Directory.Delete(external, recursive: true); }
     Throws<ArgumentException>(() => PayloadStager.Stage(root, Path.Combine(root, "staging")));
+    Throws<ArgumentException>(() => PayloadStager.Stage(root, root));
     Throws<ArgumentException>(() => PayloadStager.Stage(root, Path.GetDirectoryName(root)!));
+    return Task.CompletedTask;
+});
+
+static Task PayloadStagingExcludedLinks() => Temp(root =>
+{
+    if (OperatingSystem.IsWindows())
+    {
+        Console.WriteLine("SKIP directory symlink fixture: exercised on Unix without elevated privileges");
+        return Task.CompletedTask;
+    }
+    var outside = Directory.CreateTempSubdirectory("netwiv-staging-links-").FullName;
+    var destination = Directory.CreateTempSubdirectory("netwiv-staging-output-").FullName;
+    var blocked = Directory.CreateDirectory(Path.Combine(outside, "unreadable")).FullName;
+    var bundle = Path.Combine(root, "bundle");
+    try
+    {
+        File.WriteAllText(Path.Combine(root, "app.bin"), "application");
+        File.WriteAllText(Path.Combine(outside, "outside.txt"), "must not be visited");
+        Directory.CreateSymbolicLink(Path.Combine(outside, "cycle"), outside);
+        // A cycle alone can be silently truncated by the OS. An unreadable
+        // directory makes accidental traversal fail deterministically.
+        File.SetUnixFileMode(blocked, UnixFileMode.None);
+        Throws<UnauthorizedAccessException>(() => Directory.GetFileSystemEntries(blocked));
+        Directory.CreateDirectory(Path.Combine(bundle, "dmg", "payload"));
+        // The DMG Applications shortcut can lead to cyclic links in installed apps.
+        Directory.CreateSymbolicLink(Path.Combine(bundle, "dmg", "payload", "Applications"), outside);
+        var copied = PayloadStager.Stage(root, destination);
+        True(copied.SequenceEqual(new[] { "app.bin" }));
+        Equal("application", File.ReadAllText(Path.Combine(destination, "app.bin")));
+        True(!File.Exists(Path.Combine(destination, "outside.txt")));
+
+        Directory.Delete(bundle, true);
+        Directory.CreateSymbolicLink(bundle, outside);
+        copied = PayloadStager.Stage(root, destination);
+        True(copied.SequenceEqual(new[] { "app.bin" }));
+        Equal("must not be visited", File.ReadAllText(Path.Combine(outside, "outside.txt")));
+    }
+    finally
+    {
+        File.SetUnixFileMode(blocked, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        if (Directory.Exists(bundle)) Directory.Delete(bundle, true);
+        Directory.Delete(outside, true);
+        Directory.Delete(destination, true);
+    }
     return Task.CompletedTask;
 });
 

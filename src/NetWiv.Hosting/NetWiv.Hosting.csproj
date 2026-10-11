@@ -8,5 +8,6 @@
   <ItemGroup>
     <ProjectReference Include="../NetWiv.Core/NetWiv.Core.csproj" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <None Include="buildTransitive/NetWiv.Hosting.props" Pack="true" PackagePath="buildTransitive/NetWiv.Hosting.props" />
   </ItemGroup>
 </Project>

@@ -1,6 +1,6 @@
 # NetWiv + React
 
-React 19 + Vite 8 + 공식 `@tauri-apps/api@2.11.1` + NetWiv 예제입니다. .NET 10 SDK와 Node.js 20.19+ 또는 22.12+가 필요합니다. Windows에서는 WebView2 Runtime, Linux에서는 GTK3·WebKitGTK 4.1, macOS 12 이상에서는 시스템 WKWebView/AppKit을 사용합니다. Rust는 필요하지 않습니다. 자동 프런트엔드 생성기는 이전 `0.1.0-beta.1` 패키지에 포함되지 않았으므로 새 SDK 패키지를 사용해야 합니다.
+React 19 + Vite 8 + 공식 `@tauri-apps/api@2.11.1` + NetWiv 예제입니다. .NET 8 이상 SDK와 Node.js 20.19+ 또는 22.12+가 필요합니다. Windows에서는 WebView2 Runtime, Linux에서는 GTK3·WebKitGTK 4.1, macOS 12 이상에서는 시스템 WKWebView/AppKit을 사용합니다. Rust는 필요하지 않습니다. 자동 프런트엔드 생성기는 이전 `0.1.0-beta.1` 패키지에 포함되지 않았으므로 새 SDK 패키지를 사용해야 합니다.
 
 프로젝트의 `NuGet.Config`에 NetWiv 로컬 패키지 폴더를 추가하세요. 모든 NetWiv 패키지는 `src-netwiv/ReactExample.csproj`의 `NetWivVersion`과 같은 버전이어야 합니다. 프레임워크가 제공한 템플릿 패키지에서 생성할 수도 있습니다:
 
@@ -11,7 +11,7 @@ dotnet new netwiv-react -n MyApp --NetWivVersion 0.1.0-dev
 
 ## 바로 실행
 
-`ReactExample.slnx`를 열면 C# 앱과 `ReactExample.Frontend.esproj`가 함께 표시됩니다.
+`ReactExample.sln`를 열면 C# 앱과 `ReactExample.Frontend.esproj`가 함께 표시됩니다.
 실행/디버그 대상으로 C# 프로젝트 `ReactExample`를 선택하세요. 솔루션 빌드와
 C# 프로젝트 단독 빌드 모두 프런트엔드를 먼저 빌드하고 자산을 앱에 포함합니다.
 `.esproj`는 MIT 라이선스의 `Microsoft.Build.NoTargets/3.7.134`를 사용합니다.
@@ -26,7 +26,7 @@ npm run desktop
 
 ## React 개발 서버 사용
 
-Rider나 Visual Studio에서는 `ReactExample.slnx`를 열고 C# 프로젝트의 일반 Debug 실행을
+Rider나 Visual Studio에서는 `ReactExample.sln`를 열고 C# 프로젝트의 일반 Debug 실행을
 사용할 수도 있습니다. MSBuild가 npm 의존성 복원, C# 바인딩 생성, React 빌드와 자산
 포함을 자동 처리합니다. Node.js/npm이 IDE 프로세스의 PATH에 있어야 합니다.
 이 경로는 빌드한 React 파일을 사용하므로 화면을 수정한 뒤 다시 빌드·실행하세요.

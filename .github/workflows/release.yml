@@ -42,13 +42,14 @@ jobs:
     env:
       RELEASE_VERSION: ${{ needs.version.outputs.version }}
       DOTNET_NOLOGO: '1'
+      DOTNET_INSTALL_DIR: ${{ github.workspace }}/artifacts/pack-dotnet
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
-          global-json-file: global.json
+          dotnet-version: '8.0.x'
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: native-*
@@ -56,21 +57,16 @@ jobs:
           merge-multiple: true
       - name: Pack the local feed
         shell: pwsh
-        run: ./scripts/pack-integration.ps1 -Version $env:RELEASE_VERSION -OutputDirectory artifacts/release-feed
+        run: |
+          $sdk = ((dotnet --list-sdks | Where-Object { $_ -match '^8\.' } | Select-Object -Last 1) -split ' ')[0]
+          @{ sdk = @{ version = $sdk; rollForward = 'disable'; allowPrerelease = $false } } |
+            ConvertTo-Json | Set-Content global.json
+          ./scripts/pack-integration.ps1 -Version $env:RELEASE_VERSION -OutputDirectory artifacts/release-feed
       - name: Validate and bundle packages with licenses and checksums
         run: >-
           python3 scripts/release-packages.py bundle
           --feed artifacts/release-feed/packages --output artifacts/release
           --version "$RELEASE_VERSION" --revision "$(git rev-parse HEAD)"
-      - name: Install package consumer build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            clang zlib1g-dev libgtk-3-0t64 libwebkit2gtk-4.1-0 libayatana-appindicator3-1 libxdo3 \
-            xvfb xserver-xephyr xfwm4 xfce4-panel dbus-x11 x11-utils
-      - name: Verify CLI installation, templates and package-only NativeAOT
-        shell: pwsh
-        run: ./scripts/test-package-feed.ps1 -Feed artifacts/release-feed/packages -Version $env:RELEASE_VERSION
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: release-bundle
@@ -85,8 +81,62 @@ jobs:
           path: artifacts/release-feed/*.log
           retention-days: 7
 
-  draft:
+  package-compatibility:
     needs: [version, bundle]
+    name: Package consumers with only .NET ${{ matrix.major }} installed
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        major: [8, 9, 10]
+    env:
+      RELEASE_VERSION: ${{ needs.version.outputs.version }}
+      DOTNET_NOLOGO: '1'
+      DOTNET_INSTALL_DIR: ${{ github.workspace }}/artifacts/consumer-dotnet
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        id: sdk
+        with:
+          dotnet-version: '${{ matrix.major }}.0.x'
+      - name: Restrict the private install to the selected runtime major
+        shell: pwsh
+        env:
+          SDK_VERSION: ${{ steps.sdk.outputs.dotnet-version }}
+          RUNTIME_MAJOR: ${{ matrix.major }}
+        run: |
+          # setup-dotnet also installs the current LTS runtime. Remove that extra
+          # runtime only from this job's private installation, never the runner's.
+          Get-ChildItem "$env:DOTNET_INSTALL_DIR/shared" -Directory | Get-ChildItem -Directory |
+            Where-Object { $_.Name -notlike "$env:RUNTIME_MAJOR.*" } | Remove-Item -Recurse -Force
+          @{ sdk = @{ version = $env:SDK_VERSION; rollForward = 'disable'; allowPrerelease = $false } } |
+            ConvertTo-Json | Set-Content global.json
+          dotnet --info
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-bundle
+          path: artifacts/release
+      - name: Extract the already-built package feed
+        shell: pwsh
+        run: Expand-Archive "artifacts/release/NetWiv-$env:RELEASE_VERSION-packages.zip" artifacts/consumer-feed
+      - name: Install package consumer build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang zlib1g-dev libgtk-3-0t64 libwebkit2gtk-4.1-0 libayatana-appindicator3-1 libxdo3 \
+            xvfb xserver-xephyr xfwm4 xfce4-panel dbus-x11 x11-utils
+      - name: Execute packaged CLI, generated managed app and NativeAOT consumer
+        shell: pwsh
+        run: ./scripts/test-package-feed.ps1 -Feed artifacts/consumer-feed/packages -Version $env:RELEASE_VERSION -TargetFramework 'net${{ matrix.major }}.0'
+
+  draft:
+    needs: [version, bundle, package-compatibility]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:

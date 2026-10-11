@@ -71,7 +71,7 @@ Mac desktop session:
 ```sh
 dotnet publish tests/NetWiv.Isolation.Smoke -c Release -r osx-arm64
 mkdir -p artifacts
-NETWIV_ISOLATION_REPORT="$PWD/artifacts/macos-isolation.json" tests/NetWiv.Isolation.Smoke/bin/Release/net10.0/osx-arm64/publish/NetWiv.Isolation.Smoke
+NETWIV_ISOLATION_REPORT="$PWD/artifacts/macos-isolation.json" tests/NetWiv.Isolation.Smoke/bin/Release/net8.0/osx-arm64/publish/NetWiv.Isolation.Smoke
 ```
 
 Use `osx-x64` on Intel. Apple Silicon has passed the NetWiv encrypted IPC,

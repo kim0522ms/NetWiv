@@ -3,7 +3,7 @@
 NetWiv's Wry backend supports WKWebView/AppKit on macOS. The managed SDK,
 C ABI and unchanged `@tauri-apps/api` guest remain shared with Windows/Linux.
 The deployment baseline is macOS 12.0; framework and application builds require
-Xcode Command Line Tools, the repository-pinned .NET 10 SDK, and (for framework
+Xcode Command Line Tools, a .NET SDK selected by `global.json` (8 or later), and (for framework
 maintainers only) Rust 1.95.0. Frontend builds require the toolchain selected by the template.
 WKWebView is provided by macOS.
 
@@ -27,10 +27,10 @@ rustup toolchain install 1.95.0 --profile minimal
 node scripts/prepare-native-dependencies.mjs osx-arm64 artifacts/native-source/macos
 export SODIUM_DIST_DIR="$PWD/artifacts/native-source/macos"
 bash scripts/build-native.sh
-dotnet build NetWiv.slnx -c Release
+dotnet build NetWiv.sln -c Release
 dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r osx-arm64
-tests/NetWiv.Desktop.Smoke/bin/Release/net10.0/osx-arm64/publish/NetWiv.Desktop.Smoke
-bash scripts/test-native-startup.sh "$PWD/tests/NetWiv.Desktop.Smoke/bin/Release/net10.0/osx-arm64/publish"
+tests/NetWiv.Desktop.Smoke/bin/Release/net8.0/osx-arm64/publish/NetWiv.Desktop.Smoke
+bash scripts/test-native-startup.sh "$PWD/tests/NetWiv.Desktop.Smoke/bin/Release/net8.0/osx-arm64/publish"
 ```
 
 Use `osx-x64` on Intel. The native build script selects the host architecture,

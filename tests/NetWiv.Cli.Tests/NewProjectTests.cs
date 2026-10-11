@@ -24,9 +24,12 @@ internal static class NewProjectTests
             var frontend = project.Descendants("ProjectReference").Single();
             Check(frontend.Attribute("Include")!.Value == "../My.App.Frontend.esproj" &&
                 frontend.Attribute("ReferenceOutputAssembly")!.Value == "false", "Frontend must be a build-only project reference");
-            var solution = XDocument.Load(Path.Combine(destination, "My.App.slnx"));
-            Check(solution.Descendants("Project").Select(item => item.Attribute("Path")!.Value)
-                .SequenceEqual(new[] { "src-netwiv/My.App.csproj", "My.App.Frontend.esproj" }), "Solution paths were not personalized");
+            var solution = File.ReadAllText(Path.Combine(destination, "My.App.sln"));
+            Check(solution.Contains("src-netwiv\\My.App.csproj", StringComparison.Ordinal) &&
+                solution.Contains("My.App.Frontend.esproj", StringComparison.Ordinal) &&
+                !solution.Contains("ReactExample", StringComparison.Ordinal), "Solution paths were not personalized");
+            Check(project.Descendants("TargetFramework").Single().Value == "net8.0", "Backend must support .NET 8");
+            Check(project.Descendants("RollForward").Single().Value == "Major", "Managed app must start when only .NET 9/10 is installed");
             Check(File.Exists(Path.Combine(destination, "My.App.Frontend.esproj")), "Frontend project is missing");
             var program = File.ReadAllText(Path.Combine(destination, "src-netwiv/Program.cs"));
             Check(program.Contains("\"com.example.custom\"", StringComparison.Ordinal) && program.Contains("#if !DEBUG", StringComparison.Ordinal), "Template engine lost metadata or the development guard");
@@ -91,7 +94,7 @@ internal static class NewProjectTests
                 Check(File.Exists(Path.Combine(destination, evidence)), "Missing frontend for " + template);
                 var config = JsonNode.Parse(File.ReadAllText(Path.Combine(destination, "src-netwiv/netwiv.conf.json")))!;
                 Check(config["build"]!["dotnetProject"]!.GetValue<string>() == "Example.csproj", "Backend project mismatch: " + template);
-                Check(File.Exists(Path.Combine(destination, "Example.slnx")), "Solution missing: " + template);
+                Check(File.Exists(Path.Combine(destination, "Example.sln")), "Solution missing: " + template);
                 var backend = XDocument.Load(Path.Combine(destination, "src-netwiv/Example.csproj"));
                 Check(backend.Descendants("PackageReference").Any(item => item.Attribute("Include")?.Value == "NetWiv.Platform.Desktop"), "Desktop package missing: " + template);
                 Check(!backend.ToString().Contains("NetWiv.Platform.Wry", StringComparison.Ordinal), "Former package name leaked into " + template);

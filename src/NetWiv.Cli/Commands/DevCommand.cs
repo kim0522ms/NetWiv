@@ -99,7 +99,7 @@ internal static class DevCommand
                     environment = With(environment, "DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER", "1");
                 }
                 else processArgs.AddRange(["run", "--project", project]);
-                processArgs.AddRange(["-c", release ? "Release" : "Debug", "--property:NetWivFeatures=" + string.Join("%3B", features)]);
+                processArgs.AddRange(["-c", release ? "Release" : "Debug", "--property:NetWivFeatures=\"" + string.Join("%3B", features) + "\""]);
                 processArgs.Add("--property:NetWivDevelopment=true");
                 if (!noWatch && watchFolders.Count > 0) processArgs.Add("--property:NetWivAdditionalWatchItems=" + string.Join("%3B", watchFolders.Select(path => Path.Combine(path, "**", "*"))));
                 processArgs.Add($"--property:NetWivConfigPath={effectiveConfig}");

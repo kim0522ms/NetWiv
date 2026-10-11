@@ -8,7 +8,7 @@ const repo = process.env.NETWIV_SOURCE_ROOT ?? path.resolve(path.dirname(fileURL
 const dotnet = process.env.NETWIV_DOTNET ?? 'dotnet';
 const root = path.join(process.env.NETWIV_TEST_ARTIFACTS ?? path.join(repo, 'artifacts'), `resources-${process.platform}-${Date.now()}`);
 const rid = process.platform === 'win32' ? 'win-x64' : 'linux-x64';
-const cli = path.join(repo, 'src/NetWiv.Cli/bin/Release/net10.0/netwiv.dll');
+const cli = path.join(repo, 'src/NetWiv.Cli/bin/Release/net8.0/netwiv.dll');
 await mkdir(root, { recursive: true });
 const checks = [];
 function run(command, args, cwd = root, expected = 0) {

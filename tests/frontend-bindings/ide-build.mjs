@@ -55,11 +55,11 @@ try {
   const html = (await readFile(htmlPath, 'utf8')).replace('</head>', '<meta name="ide-check" content="first"></head>');
   await writeFile(reactPath, react);
   await writeFile(htmlPath, html);
-  const solution = path.join(app, 'IdeApp.slnx');
+  const solution = path.join(app, 'IdeApp.sln');
   const projects = await run(dotnet, ['sln', solution, 'list']);
   assert.ok(projects.includes('IdeApp.csproj') && projects.includes('IdeApp.Frontend.esproj'));
   singleFrontendBuild(await run(dotnet, ['build', solution, '-c', 'Debug', '-m:2', '-warnaserror']));
-  await smoke(path.join(app, 'src-netwiv/bin/Debug/net10.0', exe));
+  await smoke(path.join(app, 'src-netwiv/bin/Debug/net8.0', exe));
   checks.push('fresh parallel SLNX build restores npm, generates bindings, embeds assets and runs IPC with one frontend build');
   const restoreTime = (await stat(path.join(app, 'node_modules/.netwiv-restore'))).mtimeMs;
   const oldAssets = await readdir(path.join(app, 'dist/assets'));
@@ -68,7 +68,7 @@ try {
   singleFrontendBuild(await run(dotnet, ['build', 'src-netwiv', '-c', 'Debug', '-warnaserror']));
   assert.equal((await stat(path.join(app, 'node_modules/.netwiv-restore'))).mtimeMs, restoreTime);
   assert.notDeepEqual(await readdir(path.join(app, 'dist/assets')), oldAssets);
-  await smoke(path.join(app, 'src-netwiv/bin/Debug/net10.0', exe));
+  await smoke(path.join(app, 'src-netwiv/bin/Debug/net8.0', exe));
   checks.push('frontend-only edits refresh hashed embedded assets without reinstalling unchanged dependencies');
   singleFrontendBuild(await run(dotnet, ['build', 'IdeApp.Frontend.esproj', '-warnaserror']));
   const items = JSON.parse(await run(dotnet, ['msbuild', 'IdeApp.Frontend.esproj', '-getItem:None']));

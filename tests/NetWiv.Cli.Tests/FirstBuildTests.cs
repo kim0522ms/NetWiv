@@ -13,14 +13,14 @@ internal static class FirstBuildTests
                 """);
             File.WriteAllText(Path.Combine(root, "Probe.csproj"), """
                 <Project Sdk="Microsoft.NET.Sdk">
-                  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework></PropertyGroup>
+                  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework></PropertyGroup>
                   <Target Name="Frontend" BeforeTargets="AssignTargetPaths">
                     <MakeDir Directories="$(NetWivFrontendDist)" />
                     <WriteLinesToFile File="$(NetWivFrontendDist)/index.html" Lines="first build" Overwrite="true" />
                     <ItemGroup><EmbeddedResource Include="$(NetWivFrontendDist)/index.html" LogicalName="frontend" /></ItemGroup>
                   </Target>
                 </Project>
-                """);
+                """.Replace("net8.0", $"net{Environment.Version.Major}.0", StringComparison.Ordinal));
             File.WriteAllText(Path.Combine(root, "Program.cs"), """
                 using System;
                 using System.IO;
@@ -40,8 +40,8 @@ internal static class FirstBuildTests
             if (process.ExitCode != 0 || !content.Contains("first build")) throw new Exception("Published NativeAOT app did not embed the newly built frontend.");
             File.Delete(Path.Combine(root, "dist", "index.html"));
             File.WriteAllText(Path.Combine(root, "Probe.csproj"), """
-                <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>
-                """);
+                <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework></PropertyGroup></Project>
+                """.Replace("net8.0", $"net{Environment.Version.Major}.0", StringComparison.Ordinal));
             error = new StringWriter();
             result = await CliApp.RunAsync(["build", "--no-bundle"], TextWriter.Null, error, root);
             if (result == 0 || !error.ToString().Contains("index.html")) throw new Exception("Missing frontend after publish was accepted.");

@@ -52,6 +52,48 @@ internal static class DevReloadTests
         catch (UnauthorizedAccessException) when (attempts == 1) { }
     }
 
+    internal static async Task NoWatchFeatures()
+    {
+        var root = Directory.CreateTempSubdirectory("netwiv-dev-features-").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "Probe.csproj"), """
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup>
+                    <OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework>
+                    <ImplicitUsings>enable</ImplicitUsings><NetWivFeatures>project-default</NetWivFeatures>
+                  </PropertyGroup>
+                  <ItemGroup><AssemblyMetadata Include="Features" Value="$(NetWivFeatures)" /></ItemGroup>
+                </Project>
+                """.Replace("net8.0", $"net{Environment.Version.Major}.0", StringComparison.Ordinal));
+            File.WriteAllText(Path.Combine(root, "Program.cs"), """
+                using System.Reflection;
+                var value = Assembly.GetExecutingAssembly().GetCustomAttributes<AssemblyMetadataAttribute>().Single(item => item.Key == "Features").Value;
+                File.WriteAllText(args[0], value ?? "");
+                """);
+            File.WriteAllText(Path.Combine(root, "netwiv.conf.json"), """
+                {"identifier":"test.netwiv.features","build":{"dotnetProject":"Probe.csproj"}}
+                """);
+            var marker = Path.Combine(root, "features.txt");
+            var runner = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet";
+            foreach (var features in new[] { "", "alpha,beta", "invalid!" })
+            {
+                File.Delete(marker);
+                using var error = new StringWriter();
+                var code = await CliApp.RunAsync(["dev", "--no-watch", "--no-dev-server", "--runner", runner,
+                    "--features", features, "--", marker], TextWriter.Null, error, root);
+                if (features == "invalid!")
+                {
+                    if (code == 0 || File.Exists(marker) || !error.ToString().Contains("Invalid feature name"))
+                        throw new Exception("Invalid features started an application.");
+                }
+                else if (code != 0 || !File.Exists(marker) || File.ReadAllText(marker) != features.Replace(',', ';'))
+                    throw new Exception("Managed run did not override the project's default features: " + error);
+            }
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     internal static async Task Run(bool aot)
     {
         var root = Path.Combine(Path.GetTempPath(), "netwiv-dev-reload-" + Guid.NewGuid().ToString("N"));
@@ -64,18 +106,25 @@ internal static class DevReloadTests
         File.WriteAllText(Path.Combine(app, "Probe.csproj"), """
             <Project Sdk="Microsoft.NET.Sdk">
               <PropertyGroup>
-                <OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework>
+                <OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework>
+                <NetWivFeatures>project-default</NetWivFeatures>
                 <ImplicitUsings>enable</ImplicitUsings><DefaultItemExcludes>$(DefaultItemExcludes);target/**</DefaultItemExcludes>
               </PropertyGroup>
-              <ItemGroup><EmbeddedResource Include="$(NetWivConfigPath)" LogicalName="config" /></ItemGroup>
+              <ItemGroup>
+                <EmbeddedResource Include="$(NetWivConfigPath)" LogicalName="config" />
+                <AssemblyMetadata Include="Features" Value="$(NetWivFeatures)" />
+              </ItemGroup>
             </Project>
-            """);
+            """.Replace("net8.0", $"net{Environment.Version.Major}.0", StringComparison.Ordinal));
         File.WriteAllText(Path.Combine(app, "Program.cs"), """
             using System.Reflection;
             using System.Text.Json;
             using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("config")!;
             using var document = JsonDocument.Parse(stream);
             var config = document.RootElement;
+            var features = Assembly.GetExecutingAssembly().GetCustomAttributes<AssemblyMetadataAttribute>().Single(item => item.Key == "Features").Value;
+            var expected = config.GetProperty("productName").GetString() == "second" ? "alpha;beta" : "";
+            if (features != expected) throw new Exception($"Incorrect MSBuild features: '{features}', expected '{expected}'");
             using var patch = JsonDocument.Parse(Environment.GetEnvironmentVariable("TAURI_CONFIG") ?? throw new Exception("Missing CLI patch environment"));
             if (patch.RootElement.GetProperty("productName").GetString() != config.GetProperty("productName").GetString())
                 throw new Exception("Reloaded configuration and TAURI_CONFIG environment disagree");
@@ -116,7 +165,7 @@ internal static class DevReloadTests
             await WritePermissionHeldOpen("two");
             pids.Add(await WaitForRun("first|two"));
             await RequireStopped(pids[0]);
-            File.WriteAllText(overlay, "{\"productName\":\"second\"}");
+            File.WriteAllText(overlay, "{\"productName\":\"second\",\"build\":{\"features\":[\"alpha\",\"beta\"]}}");
             pids.Add(await WaitForRun("second|two"));
             await RequireStopped(pids[1]);
             File.WriteAllText(permission, "[[permission]]\nidentifier = ");
@@ -131,7 +180,7 @@ internal static class DevReloadTests
             var externalResources = Path.Combine(root, "external-resources");
             Directory.CreateDirectory(externalResources);
             File.WriteAllText(Path.Combine(externalResources, "initial.txt"), "initial");
-            File.WriteAllText(overlay, """{"productName":"second","bundle":{"resources":{"../external-resources/*.txt":"data"}}}""");
+            File.WriteAllText(overlay, """{"productName":"second","build":{"features":["alpha","beta"]},"bundle":{"resources":{"../external-resources/*.txt":"data"}}}""");
             await Until(() => ConcurrentFile.ReadCompleteLines(outputFile).Length > runCount);
             pids.Add(int.Parse(ConcurrentFile.ReadCompleteLines(outputFile)[^1].Split('|')[0]));
             await RequireStopped(pids[^2]);

@@ -92,7 +92,7 @@ Write `[Command]` C# methods in `src-netwiv/Program.cs`. JS/TS frontend code cal
 functions from `src/generated/commands.js`; JavaScript functions and TypeScript
 declarations are generated during build and development.
 
-`<AppName>.slnx` contains the C# app and `<AppName>.Frontend.esproj`. Open the
+`<AppName>.sln` contains the C# app and `<AppName>.Frontend.esproj`. Open the
 solution and select the **C# project as the run/debug target**. Without extra
 launch arguments, MSBuild prepares frontend dependencies, generates C# bindings,
 builds the frontend and embeds assets. Building the `.csproj` alone follows the
@@ -110,7 +110,7 @@ Solution/project/NativeAOT/CLI builds are covered by automated validation.
 Actual Rider/Visual Studio solution loading and debugging remain unverified.
 
 ```powershell
-dotnet build MyApp.slnx
+dotnet build MyApp.sln
 dotnet build MyApp.Frontend.esproj
 ```
 

@@ -9,6 +9,7 @@ framework. Public documentation is maintained in English.
 | --- | --- |
 | [Quickstart](integration-quickstart.md) | Prepare packages, create a React app, run it and publish with NativeAOT |
 | [Release bundles](release-packages.md) | Draft Releases, downloadable package feeds and checksums without NuGet.org publication |
+| [.NET compatibility](dotnet-compatibility.md) | .NET 8 baseline, SDK/runtime 9 and 10, packages and validation limits |
 | [macOS](macos.md) | Mac prerequisites, main-thread startup, app/DMG bundles and signing limits |
 | [Project creation](project-creation.md) | CLI options, solution structure and development/build workflows |
 | [Frontend templates](template-coverage.md) | 18 choices and their toolchain requirements |

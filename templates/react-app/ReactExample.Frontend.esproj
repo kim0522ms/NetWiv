@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.Build.NoTargets/3.7.134">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <DefaultProjectTypeGuid>{54a90642-561a-4bb1-a94e-469adee60c69}</DefaultProjectTypeGuid>
     <EnableDefaultItems>false</EnableDefaultItems>
     <IsPackable>false</IsPackable>

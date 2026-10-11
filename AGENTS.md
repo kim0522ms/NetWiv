@@ -1,6 +1,6 @@
 # Repository working agreement
 
-NetWiv is a .NET 10 NativeAOT WebView desktop framework with TAURI® v2 compatibility as an important support goal.
+NetWiv is a .NET 8 or later NativeAOT WebView desktop framework with TAURI® v2 compatibility as an important support goal.
 
 The product spelling is `NetWiv`. Public C# namespaces and NuGet IDs use
 `NetWiv`, while CLI, native libraries, configuration files and npm identifiers

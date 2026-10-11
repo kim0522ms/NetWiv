@@ -50,9 +50,17 @@ public sealed class OpenerPlugin : IPlugin
         {
             var paths = args.GetProperty("paths");
             if (paths.ValueKind != JsonValueKind.Array || paths.GetArrayLength() == 0) throw new InvokeException("Reveal requires paths.");
+            var macReveal = OperatingSystem.IsMacOS() ? new ProcessStartInfo("/usr/bin/open") { UseShellExecute = false } : null;
+            macReveal?.ArgumentList.Add("-R");
             foreach (var item in paths.EnumerateArray())
             {
                 var path = Path.GetFullPath(item.GetString() ?? throw new InvokeException("Reveal path must be a string."));
+                if (macReveal is not null)
+                {
+                    if (!File.Exists(path) && !Directory.Exists(path)) throw new InvokeException("The path does not exist.");
+                    macReveal.ArgumentList.Add(path);
+                    continue;
+                }
                 var folder = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
                 if (folder is null || !Directory.Exists(folder)) throw new InvokeException("The parent directory does not exist.");
                 if (OperatingSystem.IsWindows())
@@ -61,14 +69,10 @@ public sealed class OpenerPlugin : IPlugin
                     info.ArgumentList.Add("/select,"); info.ArgumentList.Add(path);
                     _launch(info);
                 }
-                else if (OperatingSystem.IsMacOS())
-                {
-                    var info = new ProcessStartInfo("/usr/bin/open") { UseShellExecute = false };
-                    info.ArgumentList.Add("-R"); info.ArgumentList.Add(path);
-                    _launch(info);
-                }
                 else Launch(folder, null);
             }
+            // Validate the entire batch before Finder can change its selection.
+            if (macReveal is not null) _launch(macReveal);
         }
         else throw new InvokeException("Unknown opener command.");
         return ValueTask.FromResult(JsonValue.Null);

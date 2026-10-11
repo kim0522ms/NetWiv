@@ -241,6 +241,9 @@ if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("NETWIV_INFER_
 else Console.WriteLine("SKIP pinned infer corpus: NETWIV_INFER_TESTDATA is not configured");
 
 var failed = 0;
+if (OperatingSystem.IsMacOS())
+    tests.Add(("external opening rejects missing macOS reveal items before any launch", ExternalOpenTests.MacRevealValidation));
+
 var selected = args.Length == 0 ? tests : args.Length == 2 && args[0] == "--filter"
     ? tests.Where(test => test.Name.Contains(args[1], StringComparison.OrdinalIgnoreCase)).ToList()
     : throw new ArgumentException("Usage: NetWiv.Core.Tests [--filter text]");

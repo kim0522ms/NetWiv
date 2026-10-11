@@ -21,20 +21,9 @@ connect them to your web frontend through generated JavaScript and TypeScript
 bindings. NetWiv uses **wry, tao, muda and tray-icon** behind a native adapter
 for OS WebViews, windows, menus and tray integration.
 
-**Inspired by [Tauri](https://github.com/tauri-apps/tauri), built on its ecosystem.** NetWiv borrows heavily from
-Tauri's approach to desktop apps and reuses many of the components that power
-it: **[wry](https://github.com/tauri-apps/wry)** for WebViews,
-**[tao](https://github.com/tauri-apps/tao)** for windows and the event loop,
-**[muda](https://github.com/tauri-apps/muda)** for menus,
-**[tray-icon](https://github.com/tauri-apps/tray-icon)** for system tray integration,
-and **[tauri-utils](https://github.com/tauri-apps/tauri/tree/dev/crates/tauri-utils)**
-for shared configuration types. It also targets the unchanged official
-**[@tauri-apps/api](https://github.com/tauri-apps/tauri/tree/dev/packages/api)**
-frontend package. NetWiv builds on this upstream work while implementing its
-application SDK, IPC policy and development tooling in .NET. Credit belongs to
-the Tauri contributors and the maintainers of these libraries; their original
-licenses and notices are retained. See the [pinned upstream sources](compatibility/README.md)
-and [native dependencies](native/netwiv-native/Cargo.toml).
+NetWiv is meant for teams whose backend is already .NET, and for developers who
+want to write their desktop backend in C#. It is not a replacement for Tauri or
+Rust; it offers another backend language on top of the Tauri frontend ecosystem.
 
 NetWiv is developed with extensive use of coding agents, including **Codex**
 and **Claude Code**.
@@ -62,6 +51,31 @@ NetWiv prioritizes idiomatic .NET usability and stability. Tauri compatibility
 remains an important support goal, with deliberate differences documented and
 breaking changes accompanied by impact and migration notes. Read the
 [design principles](docs/design-principles.md).
+
+## Relationship to Tauri
+
+**Inspired by [Tauri](https://github.com/tauri-apps/tauri), built on its ecosystem.** NetWiv borrows heavily from
+Tauri's approach to desktop apps and reuses many of the components that power
+it: **[wry](https://github.com/tauri-apps/wry)** for WebViews,
+**[tao](https://github.com/tauri-apps/tao)** for windows and the event loop,
+**[muda](https://github.com/tauri-apps/muda)** for menus,
+**[tray-icon](https://github.com/tauri-apps/tray-icon)** for system tray integration,
+and **[tauri-utils](https://github.com/tauri-apps/tauri/tree/dev/crates/tauri-utils)**
+for shared configuration types. It also targets the unchanged official
+**[@tauri-apps/api](https://github.com/tauri-apps/tauri/tree/dev/packages/api)**
+frontend package. NetWiv builds on this upstream work while implementing its
+application SDK, IPC policy and development tooling in .NET. Credit belongs to
+the Tauri contributors and the maintainers of these libraries; their original
+licenses and notices are retained. See the [pinned upstream sources](compatibility/README.md)
+and [native dependencies](native/netwiv-native/Cargo.toml).
+
+### Reporting issues
+
+**Report NetWiv issues to [NetWiv](https://github.com/kim0522ms/NetWiv/issues), not to Tauri.**
+NetWiv deliberately reproduces Tauri's frontend API and many of its error
+messages so that existing frontend code keeps working. A matching error message
+therefore does not mean the problem is in Tauri. If you suspect an upstream
+issue, reproduce it in an official Tauri app before reporting it there.
 
 ## Architecture
 

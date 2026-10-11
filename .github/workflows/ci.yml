@@ -3,7 +3,15 @@ name: Build and test
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+      - 'AGENTS.md'
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+      - 'AGENTS.md'
   workflow_dispatch:
 
 permissions:
@@ -48,6 +56,7 @@ jobs:
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: '1'
       DOTNET_NOLOGO: '1'
+      NUGET_PACKAGES: ${{ github.workspace }}/.packages
       CARGO_BUILD_JOBS: '2'
       CARGO_TERM_COLOR: always
       SODIUM_DIST_DIR: ${{ github.workspace }}/artifacts/native-source/ci
@@ -67,6 +76,14 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-${{ matrix.os }}-${{ matrix.rid }}-${{ hashFiles('global.json') }}-${{ hashFiles('**/*.csproj', '**/Directory.Build.*', '**/Directory.Packages.props', '**/NuGet.Config', '**/nuget.config') }}
+          restore-keys: |
+            nuget-${{ matrix.os }}-${{ matrix.rid }}-${{ hashFiles('global.json') }}-
 
       - name: Install Linux build and desktop dependencies
         if: runner.os == 'Linux'
@@ -103,6 +120,8 @@ jobs:
             ~/.cargo/git
             artifacts/native-target
           key: native-${{ matrix.os }}-${{ matrix.rid }}-${{ hashFiles('native/Cargo.lock', 'native/dependency-lock.json', 'native/rust-toolchain.toml') }}
+          restore-keys: |
+            native-${{ matrix.os }}-${{ matrix.rid }}-
 
       - name: Prepare verified libsodium inputs
         run: node scripts/prepare-native-dependencies.mjs '${{ matrix.rid }}' artifacts/native-source/ci
@@ -143,10 +162,15 @@ jobs:
       - name: Prepare pinned CLI test tools
         run: node scripts/prepare-test-tools.mjs
 
-      - name: CLI tests (including macOS app/DMG packaging)
+      - name: macOS app and DMG packaging
+        if: runner.os == 'macOS'
+        timeout-minutes: 5
+        run: dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build -- --filter 'macOS application' 2>&1 | tee artifacts/ci/macos-packaging.log
+
+      - name: CLI tests
         # The signer interoperability test executes the upstream minisign binary.
         run: |
-          dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build 2>&1 | tee artifacts/ci/cli-tests.log
+          dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build -- --exclude 'macOS application' 2>&1 | tee artifacts/ci/cli-tests.log
 
       - name: Generator tests
         run: dotnet test tests/NetWiv.Generators.Tests -c Release --no-build --logger trx --results-directory artifacts/ci/generator
@@ -154,12 +178,17 @@ jobs:
       - name: API tests
         run: dotnet test tests/NetWiv.Api.Tests -c Release --no-build --logger trx --results-directory artifacts/ci/api
 
-      - name: JavaScript harness and license tests
+      - name: Shared JavaScript harness and license tests
+        if: runner.os == 'Linux'
         run: |
-          node --test scripts/*.test.mjs tests/conformance/scripts/*.test.mjs \
+          node --test tests/conformance/scripts/*.test.mjs \
             tests/NetWiv.Isolation.Smoke/compare.test.mjs \
             compatibility/scripts/upstream-test-inventory.test.mjs \
-            native/license-provenance.test.mjs 2>&1 | tee artifacts/ci/node-tests.log
+            native/license-provenance.test.mjs 2>&1 | tee artifacts/ci/shared-node-tests.log
+
+      - name: Platform build-tool script tests
+        run: |
+          node --test scripts/*.test.mjs 2>&1 | tee artifacts/ci/node-tests.log
 
       - name: Publish Core tests with NativeAOT
         run: dotnet publish tests/NetWiv.Core.Tests -c Release -r '${{ matrix.rid }}' -p:PublishAot=true -o artifacts/ci/core-aot -bl:artifacts/ci/core-aot.binlog

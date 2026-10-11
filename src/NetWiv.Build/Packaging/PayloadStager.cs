@@ -14,8 +14,13 @@ public static class PayloadStager
             throw new ArgumentException("A staging directory inside the publish directory must be under bundle.");
         Directory.CreateDirectory(target);
         var copied = new List<string>();
-        foreach (var file in Directory.EnumerateFiles(publish, "*", SearchOption.AllDirectories)
-                     .Where(path => !FirstSegment(publish, path).Equals("bundle", comparison))
+        // Prune before recursion: previous DMGs contain an Applications link to
+        // the host filesystem, which can include cyclic links inside Xcode.
+        foreach (var file in Directory.EnumerateFileSystemEntries(publish)
+                     .Where(path => !Path.GetFileName(path).Equals("bundle", comparison))
+                     .SelectMany(path => Directory.Exists(path)
+                         ? Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories)
+                         : new[] { path })
                      .OrderBy(path => Path.GetRelativePath(publish, path), StringComparer.Ordinal))
         {
             var relative = Path.GetRelativePath(publish, file);

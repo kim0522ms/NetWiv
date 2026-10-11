@@ -66,22 +66,40 @@ for separate validation paths.
 ## Continuous integration
 
 The [Build and test workflow](../.github/workflows/ci.yml) runs on pushes to
-`main`, pull requests and manual dispatch. Windows Server 2025 x64, Ubuntu 24.04
-x64, macOS 15 Apple Silicon (`macos-15`) and macOS 15 Intel (`macos-15-intel`)
+`main`, pull requests and manual dispatch. Changes limited to `docs/`, root
+`README.md` and `AGENTS.md` skip automatic runs; manual dispatch always remains
+available. If branch protection requires this workflow, account for GitHub's
+pending checks on path-filtered runs before making it required.
+
+Windows Server 2025 x64, Ubuntu 24.04 x64, macOS 15 Apple Silicon (`macos-15`)
+and macOS 15 Intel (`macos-15-intel`)
 jobs independently build the native adapter and the .NET solution, then run
-Rust unit tests, managed Core/CLI tests, generator/API tests and JavaScript
-harness/license tests. Core and CLI are executable test harnesses and must be
+Rust unit tests, managed Core/CLI tests, generator/API tests and platform
+build-tool script tests. Platform-independent JavaScript harness, inventory and
+license tests run once in the existing Linux job, avoiding another runner setup.
+Core and CLI are executable test harnesses and must be
 run with `dotnet run`; `dotnet test` alone does not execute them.
 
 Each job publishes and executes the Core suite with NativeAOT, publishes the
 NativeAOT Wry smoke host, checks incompatible native-library startup diagnostics
 and runs the automated WebView smoke scenario. Linux uses Xvfb with a nested
 X11/Xfce desktop and tray host. Both macOS jobs additionally run windowless
-startup and NativeAOT isolation IPC checks. Their full CLI suite creates and
-executes an ad-hoc-signed Mach-O app fixture, validates its plist/resources, builds
-and verifies a DMG, and checks signing failures using real macOS tools. Native
-caches are separated by runner image and RID. Logs, test reports, build binary logs and the
-published executables are retained as workflow artifacts for seven days.
+startup and NativeAOT isolation IPC checks. A separate five-minute packaging
+step in each macOS job creates and executes an ad-hoc-signed Mach-O app fixture,
+validates its plist/resources, builds
+and verifies a DMG, rebuilds the app with the DMG's `/Applications` shortcut
+present, and checks signing failures using real macOS tools. This case is
+excluded from the remaining CLI step, so it runs exactly once. CLI logs include
+each test's start and elapsed time to make stalled cases identifiable.
+
+Managed test steps reuse the solution build with `--no-build`. NativeAOT
+publishes remain separate because they compile different executable targets;
+managed and NativeAOT execution both provide required coverage. Native and
+NuGet caches are separated by runner image and RID, with restore prefixes that
+reuse available dependencies after lock/project changes; normal build/restore
+commands still validate them. NuGet keys also include the pinned .NET SDK.
+Logs, test reports, build binary logs and the published executables are retained
+as workflow artifacts for seven days.
 
 The existing desktop-only ignored Rust test and optional external MIME corpus
 remain explicitly skipped in their suite output. Passing CI does not establish

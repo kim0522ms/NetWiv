@@ -25,12 +25,16 @@ NetWiv is meant for teams whose backend is already .NET, and for developers who
 want to write their desktop backend in C#. It is not a replacement for Tauri or
 Rust; it offers another backend language on top of the Tauri frontend ecosystem.
 
-NetWiv is developed with extensive use of coding agents, including **Codex**
-and **Claude Code**.
+NetWiv is developed and maintained using AI coding agents, including **Codex**
+and **Claude Code**. The project began with the maintainer's personal interest
+in loop harnesses that put different frontier models in adversarial roles,
+challenging one another's implementations and assumptions through repeated
+review and revision.
 
 > [!IMPORTANT]
-> NetWiv is under active development. Packages are currently provided through
-> private integration feeds. Full desktop API, security and release acceptance
+> NetWiv is still immature and under active development. If you would like to
+> try it, we recommend starting with a toy project. Packages are currently
+> provided through private integration feeds. Full desktop API, security and release acceptance
 > are still in progress; full Tauri compatibility is not claimed.
 
 ## At a glance

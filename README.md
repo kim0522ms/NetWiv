@@ -35,7 +35,8 @@ review and revision.
 > [!IMPORTANT]
 > NetWiv is still immature and under active development. If you would like to
 > try it, we recommend starting with a toy project. Packages are currently
-> provided through private integration feeds. Full desktop API, security and release acceptance
+> supplied as local feeds; [Release bundles](docs/release-packages.md) are prepared
+> as drafts for maintainer review, without publishing to NuGet.org. Full desktop API, security and release acceptance
 > are still in progress; full TAURI framework compatibility is not claimed.
 
 ## At a glance

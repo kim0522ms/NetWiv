@@ -116,7 +116,9 @@ Wayland, manual input, multi-monitor, signed installer or complete TAURI®
 conformance acceptance. The macOS 15 jobs do not establish the macOS 12 minimum
 OS baseline, Developer ID signing or notarization. Adding jobs is not evidence
 of a successful hosted run; inspect the workflow results for the exact revision.
-NuGet publication is separate from this workflow.
+NuGet publication is separate from this workflow. Version tags can reuse this
+CI to prepare a [draft Release package bundle](release-packages.md) without
+publishing to NuGet.org.
 
 ## Create a local package feed
 

@@ -9,6 +9,12 @@ on:
       - 'AGENTS.md'
   pull_request:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      release-artifacts:
+        description: Retain native libraries for the Release package bundle
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -220,6 +226,10 @@ jobs:
         run: |
           node --test scripts/*.test.mjs 2>&1 | tee artifacts/ci/node-tests.log
 
+      - name: Release bundle tests
+        if: runner.os == 'Linux'
+        run: python3 -m unittest discover -s scripts -p 'test_release_packages.py' -v
+
       - name: Publish Core tests with NativeAOT
         run: dotnet publish tests/NetWiv.Core.Tests -c Release -r '${{ matrix.rid }}' -p:PublishAot=true -o artifacts/ci/core-aot -bl:artifacts/ci/core-aot.binlog
 
@@ -297,6 +307,15 @@ jobs:
         run: |
           NETWIV_ISOLATION_REPORT="$PWD/artifacts/ci/isolation.json" \
             ./artifacts/ci/isolation-aot/NetWiv.Isolation.Smoke 2>&1 | tee artifacts/ci/isolation.log
+
+      - name: Upload validated native libraries for packaging
+        if: inputs.release-artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-${{ matrix.rid }}
+          path: artifacts/native/
+          retention-days: 1
+          if-no-files-found: error
 
       - name: Upload test logs and NativeAOT executables
         if: always()

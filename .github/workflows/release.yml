@@ -1,0 +1,115 @@
+name: Bundle Release packages
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Validate release tag
+        id: version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          version=$(python3 scripts/release-packages.py version "$RELEASE_TAG")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  validate:
+    needs: version
+    uses: ./.github/workflows/ci.yml
+    with:
+      release-artifacts: true
+
+  bundle:
+    needs: [version, validate]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      RELEASE_VERSION: ${{ needs.version.outputs.version }}
+      DOTNET_NOLOGO: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: native-*
+          path: artifacts/native
+          merge-multiple: true
+      - name: Pack the local feed
+        shell: pwsh
+        run: ./scripts/pack-integration.ps1 -Version $env:RELEASE_VERSION -OutputDirectory artifacts/release-feed
+      - name: Validate and bundle packages with licenses and checksums
+        run: >-
+          python3 scripts/release-packages.py bundle
+          --feed artifacts/release-feed/packages --output artifacts/release
+          --version "$RELEASE_VERSION" --revision "$(git rev-parse HEAD)"
+      - name: Install package consumer build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang zlib1g-dev libgtk-3-0t64 libwebkit2gtk-4.1-0 libayatana-appindicator3-1 libxdo3 \
+            xvfb xserver-xephyr xfwm4 xfce4-panel dbus-x11 x11-utils
+      - name: Verify CLI installation, templates and package-only NativeAOT
+        shell: pwsh
+        run: ./scripts/test-package-feed.ps1 -Feed artifacts/release-feed/packages -Version $env:RELEASE_VERSION
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-bundle
+          path: artifacts/release/
+          retention-days: 1
+          if-no-files-found: error
+      - name: Upload packaging diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-packaging-logs
+          path: artifacts/release-feed/*.log
+          retention-days: 7
+
+  draft:
+    needs: [version, bundle]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-bundle
+          path: release
+      - name: Create or update an unpublished Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+        shell: bash
+        run: |
+          if draft=$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft 2>/dev/null); then
+            [[ "$draft" == true ]] || { echo 'Refusing to change a published Release.'; exit 1; }
+          else
+            flags=()
+            [[ "$RELEASE_VERSION" != *-* ]] || flags+=(--prerelease)
+            gh release create "$RELEASE_TAG" --verify-tag --draft "${flags[@]}" \
+              --title "NetWiv $RELEASE_VERSION" --notes-file release/release-notes.md
+          fi
+          gh release upload "$RELEASE_TAG" release/*.zip release/SHA256SUMS --clobber

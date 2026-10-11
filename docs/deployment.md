@@ -23,7 +23,9 @@ dotnet tool run netwiv -- build --aot --no-bundle                 # NativeAOT
 
 Managed CLI publishing explicitly disables AOT, trimming and single-file
 publishing and retains an apphost executable. Reflection and dynamic loading
-remain available. `--aot` and `--framework-dependent` cannot be combined.
+remain available. NativeAOT publishing explicitly enables its required trimming,
+even when the project or forwarded arguments set `PublishTrimmed=false`.
+`--aot` and `--framework-dependent` cannot be combined.
 The selected CLI mode takes precedence over project settings and forwarded
 MSBuild arguments for these deployment properties. Direct `dotnet publish`
 continues to use the properties you specify yourself.

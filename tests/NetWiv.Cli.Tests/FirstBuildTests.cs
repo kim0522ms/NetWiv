@@ -17,8 +17,8 @@ internal static class FirstBuildTests
                 <Project Sdk="Microsoft.NET.Sdk">
                   <PropertyGroup>
                     <OutputType>Exe</OutputType><TargetFramework>net{{Environment.Version.Major}}.0</TargetFramework>
-                    <!-- Legacy app settings must not force AOT or trimming in managed CLI builds. -->
-                    <PublishAot>true</PublishAot><PublishTrimmed>true</PublishTrimmed>
+                    <!-- Project settings must not override the selected CLI deployment mode. -->
+                    <PublishAot>true</PublishAot><PublishTrimmed>{{(mode == "aot" ? "false" : "true")}}</PublishTrimmed>
                     <DefineConstants Condition="'$(PublishAot)' != 'true'">MANAGED_PROBE</DefineConstants>
                   </PropertyGroup>
                   <ItemGroup><ProjectReference Include="{{System.Security.SecurityElement.Escape(core)}}" /></ItemGroup>
@@ -87,6 +87,17 @@ internal static class FirstBuildTests
                     File.Exists(Path.Combine(publish, "NetWiv.Core.dll"))) throw new Exception("Mode switch retained managed payload: " + error);
                 content = await Execute(binary);
                 if (!content.Contains("dynamic=False")) throw new Exception("Mode switch did not execute NativeAOT.");
+            }
+            if (mode == "aot")
+            {
+                // Forwarded MSBuild properties must not disable NativeAOT's required trimming either.
+                arguments.AddRange(["--", "-p:PublishTrimmed=false"]);
+                error = new StringWriter();
+                result = await CliApp.RunAsync(arguments.ToArray(), TextWriter.Null, error, root);
+                if (result != 0) throw new Exception("Forwarded trimming override broke NativeAOT: " + error);
+                content = await Execute(binary);
+                if (!content.Contains("dynamic=False") || !content.Contains("first build"))
+                    throw new Exception("Forwarded trimming override did not produce the expected NativeAOT app.");
             }
             File.Delete(Path.Combine(root, "dist", "index.html"));
             File.WriteAllText(Path.Combine(root, "Probe.csproj"), $"<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net{Environment.Version.Major}.0</TargetFramework></PropertyGroup><ItemGroup><ProjectReference Include=\"{System.Security.SecurityElement.Escape(core)}\" /></ItemGroup></Project>");

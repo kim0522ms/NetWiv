@@ -52,8 +52,9 @@ internal static class BuildCommand
         publishArguments.AddRange(runnerArgs);
         // CLI deployment modes are authoritative even for older AOT-first templates.
         publishArguments.AddRange(["--self-contained", frameworkDependent ? "false" : "true",
-            $"-p:PublishAot={aot.ToString().ToLowerInvariant()}", "-p:UseAppHost=true"]);
-        if (!aot) publishArguments.AddRange(["-p:PublishTrimmed=false", "-p:PublishSingleFile=false"]);
+            $"-p:PublishAot={aot.ToString().ToLowerInvariant()}",
+            $"-p:PublishTrimmed={aot.ToString().ToLowerInvariant()}", "-p:UseAppHost=true"]);
+        if (!aot) publishArguments.Add("-p:PublishSingleFile=false");
         if (CommandConfig.IsolationDirectory(config) is { } isolation) publishArguments.Add($"-p:NetWivIsolationDist={isolation}");
 
         await output.WriteLineAsync($"{(aot ? "NativeAOT" : frameworkDependent ? "Framework-dependent .NET" : "Self-contained .NET")} publishing {Path.GetFileName(project)} for {target.RuntimeIdentifier}...");

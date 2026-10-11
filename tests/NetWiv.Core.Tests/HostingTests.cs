@@ -96,6 +96,50 @@ internal static class HostingTests
         }
     }
 
+    internal static async Task DisposeClosesCommandAdmission()
+    {
+        foreach (var asynchronous in new[] { true, false })
+        {
+            var events = new ConcurrentQueue<string>();
+            var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var builder = CreateSlowCommandBuilder(events, release);
+            builder.Desktop.RegisterCommand("quick", static (_, _, _) => ValueTask.FromResult(JsonValue.From("quick")));
+            var app = builder.Build();
+            var pending = app.Handle.InvokeAsync("slow", JsonValue.EmptyObject).AsTask();
+            var disposing = asynchronous ? app.DisposeAsync().AsTask() : Task.Run(app.Dispose);
+
+            // While disposal waits for "slow", a command arriving from another caller must be rejected, not admitted unawaited.
+            InvokeException? rejected = null;
+            var deadline = Stopwatch.StartNew();
+            while (rejected is null && deadline.Elapsed < TimeSpan.FromSeconds(5))
+            {
+                try { await app.Handle.InvokeAsync("quick", JsonValue.EmptyObject); await Task.Delay(10); }
+                catch (InvokeException exception) { rejected = exception; }
+            }
+            release.SetResult();
+            await disposing;
+            await pending;
+
+            Assert.True(rejected?.Message.Contains("shutting down", StringComparison.Ordinal) == true, "Disposal kept admitting commands while it drained.");
+            Assert.Equal("command:done|singleton:disposed", string.Join("|", events));
+        }
+    }
+
+    internal static async Task HostedServicesInvokeCommandsWhileStopping()
+    {
+        var events = new ConcurrentQueue<string>();
+        var builder = NetWivApplication.CreateBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
+        builder.Services.AddHostedService(services => new InvokingStopService(services.GetRequiredService<AppHandle>(), events));
+        builder.Desktop.UseRuntime(new BlockingRuntime(events))
+            .RegisterCommand("quick", static (_, _, _) => ValueTask.FromResult(JsonValue.From("quick")))
+            .Setup(app => app.Handle.Exit());
+        await using var app = builder.Build();
+
+        app.Run();
+
+        Assert.Equal("runtime:run|runtime:exit|runtime:returned|stop-invoke:quick", string.Join("|", events));
+    }
+
     internal static async Task ShutdownTimeoutBoundsHungCommands()
     {
         var events = new ConcurrentQueue<string>();
@@ -213,6 +257,14 @@ internal static class HostingTests
     {
         using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         while (!File.Exists(path)) await Task.Delay(20, stop.Token);
+    }
+
+    private sealed class InvokingStopService(AppHandle handle, ConcurrentQueue<string> events) : IHostedService
+    {
+        public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public async Task StopAsync(CancellationToken cancellationToken) =>
+            events.Enqueue("stop-invoke:" + (await handle.InvokeAsync("quick", JsonValue.EmptyObject, cancellationToken)).GetString());
     }
 
     private sealed class TrackedSingleton(ConcurrentQueue<string> events) : IDisposable

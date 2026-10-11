@@ -7,12 +7,14 @@ public sealed partial class AppHandle
     private readonly object _invocationGate = new();
     private readonly Dictionary<CancellationTokenSource, (string? Webview, ulong Document)> _invocations = [];
     private TaskCompletionSource? _invocationsDrained;
+    private bool _invocationsClosed;
 
     private CancellationTokenSource BeginInvocation(string webview, ulong document, bool trusted, CancellationToken caller)
     {
         lock (_invocationGate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_invocationsClosed) throw new InvokeException("The application is shutting down and no longer accepts commands.");
             if (!trusted && !IsCurrentDocument(webview, document)) throw new InvokeException("The originating document has been replaced.");
             var lifetime = CancellationTokenSource.CreateLinkedTokenSource(caller);
             _invocations.Add(lifetime, (trusted ? null : webview, document));
@@ -32,11 +34,18 @@ public sealed partial class AppHandle
         drained?.TrySetResult();
     }
 
-    /// <summary>Requests cooperative cancellation of every command invocation in flight.</summary>
-    internal void CancelInvocations()
+    /// <summary>
+    /// Requests cooperative cancellation of every command invocation in flight. With <paramref name="closeAdmission"/>,
+    /// new invocations are rejected from the same atomic point, so a following wait observes every admitted command.
+    /// </summary>
+    internal void CancelInvocations(bool closeAdmission = false)
     {
         CancellationTokenSource[] pending;
-        lock (_invocationGate) pending = _invocations.Keys.ToArray();
+        lock (_invocationGate)
+        {
+            _invocationsClosed |= closeAdmission;
+            pending = _invocations.Keys.ToArray();
+        }
         foreach (var lifetime in pending) _ = CancelInvocation(lifetime);
     }
 

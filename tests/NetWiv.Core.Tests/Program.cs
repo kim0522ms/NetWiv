@@ -51,6 +51,8 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("hosting shutdown waits for commands in flight before stopping services", HostingTests.ShutdownWaitsForCommandsInFlight),
     ("hosting dispose waits for commands in flight before disposing services", HostingTests.DisposeWaitsForCommandsInFlight),
     ("hosting shutdown timeout bounds commands that ignore cancellation", HostingTests.ShutdownTimeoutBoundsHungCommands),
+    ("hosting dispose atomically stops admitting commands before draining", HostingTests.DisposeClosesCommandAdmission),
+    ("hosting hosted services can invoke commands while stopping", HostingTests.HostedServicesInvokeCommandsWhileStopping),
     ("hosting restart relaunches only after hosted services stop", HostingTests.RestartWaitsForHostedServices),
     ("upstream ipc::deserialize_invoke_response_body", InvokeResponseTests.DeserializeInvokeResponseBody),
     ("invoke response deserialization preserves binary and JSON boundaries", InvokeResponseTests.BinaryAndJsonBoundaries),

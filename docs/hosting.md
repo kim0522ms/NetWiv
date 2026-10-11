@@ -171,7 +171,8 @@ as with `App.Run`:
    (30 seconds by default). A command that ignores cancellation past the
    timeout is abandoned with a warning (event 2 on `NetWivApplication.Logger`), as the host
    abandons a hosted service that does not stop in time.
-4. Stop the host.
+4. Stop the host. Commands are still accepted at this point, so a hosted
+   service can invoke one from its `StopAsync`.
 
 `IHostApplicationLifetime.StopApplication`, including Ctrl+C or SIGTERM from the
 console lifetime, exits the event loop. A stop requested before the loop starts
@@ -182,9 +183,13 @@ own the native UI loop.
 the app and the service provider have been disposed. `App.Run` without the host
 keeps its existing restart behavior.
 
-Disposing `NetWivApplication` performs the same bounded wait for commands in
-flight, then disposes the app and its plugins, then the service provider and its
-singletons. This also applies when the app is disposed without running.
+Disposing `NetWivApplication` first stops accepting commands: from that point
+`InvokeAsync` throws an `InvokeException` saying the application is shutting
+down. It then performs the same bounded wait for commands in flight, disposes
+the app and its plugins, and finally the service provider and its singletons.
+Because admission closes atomically before the wait, no command can start
+unobserved and outlive the services it uses. This also applies when the app is
+disposed without running.
 
 ## Without the host
 

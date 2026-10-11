@@ -77,14 +77,15 @@ public sealed partial class NetWivApplication : IDisposable, IAsyncDisposable
             // Stop hosted services without replacing the event-loop failure.
             try
             {
-                DrainInvocationsAsync().GetAwaiter().GetResult();
+                DrainInvocationsAsync(closeAdmission: false).GetAwaiter().GetResult();
                 _host.StopAsync().GetAwaiter().GetResult();
             }
             catch (Exception stopError) { HostingLog.StopFailed(Logger, stopError); }
             throw;
         }
         // Like a server draining requests, let commands finish before their hosted services and singletons go away.
-        DrainInvocationsAsync().GetAwaiter().GetResult();
+        // Admission stays open so hosted services can still invoke commands while they stop; Dispose closes it.
+        DrainInvocationsAsync(closeAdmission: false).GetAwaiter().GetResult();
         _host.StopAsync().GetAwaiter().GetResult();
         if (restart is not null)
         {
@@ -101,8 +102,8 @@ public sealed partial class NetWivApplication : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
-    /// Cancels commands in flight and waits for them for up to <see cref="HostOptions.ShutdownTimeout"/>,
-    /// then disposes the app and its plugins, then the service provider.
+    /// Stops accepting commands, cancels those in flight and waits for them for up to
+    /// <see cref="HostOptions.ShutdownTimeout"/>, then disposes the app and its plugins, then the service provider.
     /// </summary>
     public void Dispose()
     {
@@ -110,7 +111,7 @@ public sealed partial class NetWivApplication : IDisposable, IAsyncDisposable
         _disposed = true;
         try
         {
-            DrainInvocationsAsync().GetAwaiter().GetResult();
+            DrainInvocationsAsync(closeAdmission: true).GetAwaiter().GetResult();
             _app.Dispose();
         }
         finally { _host.Dispose(); }
@@ -122,7 +123,7 @@ public sealed partial class NetWivApplication : IDisposable, IAsyncDisposable
         _disposed = true;
         try
         {
-            await DrainInvocationsAsync().ConfigureAwait(false);
+            await DrainInvocationsAsync(closeAdmission: true).ConfigureAwait(false);
             _app.Dispose();
         }
         finally
@@ -132,9 +133,10 @@ public sealed partial class NetWivApplication : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task DrainInvocationsAsync()
+    private async Task DrainInvocationsAsync(bool closeAdmission)
     {
-        _app.Handle.CancelInvocations();
+        // Closing admission and snapshotting happen atomically, so the wait below covers every admitted command.
+        _app.Handle.CancelInvocations(closeAdmission);
         using var timeout = new CancellationTokenSource(_shutdownTimeout);
         // Like the host after its shutdown timeout, continue rather than hang on a command that ignores cancellation.
         if (!await _app.Handle.WaitForInvocationsAsync(timeout.Token).ConfigureAwait(false))

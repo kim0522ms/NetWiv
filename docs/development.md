@@ -73,10 +73,12 @@ check. Documentation-only PRs skip the desktop matrix; other PRs require all
 four desktop jobs to succeed. Classification failures, cancelled builds and
 unexpected skips fail the required check.
 
-The `main` branch ruleset blocks force pushes and deletion, requires a pull
-request with resolved review conversations, and requires `CI required` from
-GitHub Actions against an up-to-date base branch. No bypass actors are configured.
-Review approval is optional so a single maintainer can merge their own PRs.
+The `main` branch has two rulesets. History protection blocks force pushes and
+deletion without any bypass actors. A separate ruleset requires a pull request
+with resolved review conversations and `CI required` from GitHub Actions against
+an up-to-date base branch; repository administrators can bypass these PR and CI
+requirements. Review approval is optional so a single maintainer can merge their
+own PRs.
 
 Windows Server 2025 x64, Ubuntu 24.04 x64, macOS 15 Apple Silicon (`macos-15`)
 and macOS 15 Intel (`macos-15-intel`)

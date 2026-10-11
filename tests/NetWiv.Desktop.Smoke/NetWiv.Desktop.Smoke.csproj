@@ -5,7 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/NetWiv.Plugin.WindowState/NetWiv.Plugin.WindowState.csproj" />
-    <ProjectReference Include="../../src/NetWiv.Platform.Wry/NetWiv.Platform.Wry.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Platform.Desktop/NetWiv.Platform.Desktop.csproj" />
     <ProjectReference Include="../../src/NetWiv.Plugin.Stronghold/NetWiv.Plugin.Stronghold.csproj" />
     <ProjectReference Include="../../src/NetWiv.Plugin.GlobalShortcut/NetWiv.Plugin.GlobalShortcut.csproj" />
     <EmbeddedResource Include="asset-config.json" LogicalName="netwiv.config.json" />

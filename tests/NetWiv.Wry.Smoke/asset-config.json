@@ -1,5 +1,0 @@
-{
-  "app": {
-    "security": { "assetProtocol": { "enable": true, "scope": ["$TEMP/netwiv-wry-asset-*.txt"] } }
-  }
-}

@@ -5,7 +5,7 @@ licenses; this file does not relicense them.
 
 | Component | Origin | License / notice location |
 | --- | --- | --- |
-| Tauri API, configuration schema, permission/API declarations and reference runtime | https://github.com/tauri-apps/tauri | MIT OR Apache-2.0; pinned source in `compatibility/upstream-lock.json`; copied API license texts accompany its JavaScript |
+| TAURI® API, configuration schema, permission/API declarations and reference runtime | https://github.com/tauri-apps/tauri | MIT OR Apache-2.0; pinned source in `compatibility/upstream-lock.json`; copied API license texts accompany its JavaScript |
 | wry | https://github.com/tauri-apps/wry | MIT OR Apache-2.0 |
 | tao | https://github.com/tauri-apps/tao | MIT OR Apache-2.0 |
 | muda | https://github.com/tauri-apps/muda | MIT OR Apache-2.0 |
@@ -173,3 +173,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY and TAO are trademarks of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

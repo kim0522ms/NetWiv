@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using NetWiv;
-using NetWiv.Platform.Wry;
+using NetWiv.Platform.Desktop;
 using NetWiv.Plugin.Stronghold;
 using NetWiv.Plugin.GlobalShortcut;
 using NetWiv.Runtime;
@@ -32,10 +32,11 @@ internal static class Program
         if (args.Length != 0) throw new ArgumentException("Unknown smoke-test arguments.");
         using var probe = new OriginProbe();
         using var asset = new SmokeAsset();
-        var runtime = new WryDesktopRuntime();
+        var runtime = new DesktopRuntime();
         var builder = new Builder().UseRuntime(runtime).DefaultWindowIcon(SmokeIcon)
             .Plugin(new StrongholdPlugin())
             .Plugin(new GlobalShortcutPlugin())
+            .Capability(new("runtime-identity", ["core:app:allow-tauri-version"], Windows: ["main", "secondary"]))
             .OnMenuEvent((_, value) => Console.WriteLine($"MENU {value.Id}"))
             .OnTrayIconEvent((_, value) => Console.WriteLine($"TRAY {value.Type} {value.Id}"))
             .Setup(app => app.Handle.Dispatch(() =>
@@ -46,9 +47,9 @@ internal static class Program
             }))
             .UseEmbeddedAssets()
             .UseEmbeddedConfig()
-            .Window(new WindowOptions("main", "NetWiv wry — main + child", "index.html", 860, 540, default,
+            .Window(new WindowOptions("main", "NetWiv desktop — main + child", "index.html", 860, 540, default,
                 [new("main", "index.html", 0, 0, 430, 500, default), new("child", "index.html", 430, 0, 430, 500, default)]))
-            .Window("secondary", "NetWiv wry — secondary", "index.html", 440, 420, JsonValue.Parse("{\"useHttpsScheme\":true}"))
+            .Window("secondary", "NetWiv desktop — secondary", "index.html", 440, 420, JsonValue.Parse("{\"useHttpsScheme\":true}"))
             .RegisterCommand("asset_path", (_, _, _) => Value(JsonValue.From(asset.Path)))
             .RegisterCommand("probe_url", (_, _, _) => Value(JsonValue.From(probe.Url)))
             .RegisterCommand("finish_gui", (_, _, _) => { GuiComplete.TrySetResult(); return Value(JsonValue.Null); })
@@ -122,7 +123,12 @@ internal static class Program
         try
         {
             var title = await app.GetWindow("main")!.TitleAsync();
-            Require(title == "NetWiv wry — main + child", "native window title");
+            Require(title == "NetWiv desktop — main + child", "native window title");
+            await app.InvokeAsync("plugin:window|create", JsonValue.Parse("{\"options\":{\"label\":\"identity-title\",\"visible\":false}}"));
+            var identityWindow = (await app.GetWindowAsync("identity-title"))!;
+            Require(await identityWindow.TitleAsync() == "NetWiv App", "dynamic default window title");
+            await identityWindow.DestroyAsync();
+            Console.WriteLine("PASS NetWiv default window title on native runtime");
             var image = await Image.NewAsync(app, SmokeIcon.Rgba, SmokeIcon.Width, SmokeIcon.Height);
             var item = await CheckMenuItem.NewAsync(app, new("Verified", Id: "verified", Checked: true));
             var iconItem = await IconMenuItem.NewAsync(app, new("Icon item", Id: "icon-item", Icon: image));
@@ -138,7 +144,7 @@ internal static class Program
             await iconItem.SetIconAsync(null);
             await iconItem.SetIconAsync(image);
             Require(await about.TextAsync() == "About NetWiv", "native About item text");
-            var tray = await TrayIcon.NewAsync(app, new(Id: "netwiv-wry-smoke", Menu: menu, Icon: image, Tooltip: "NetWiv wry integration"));
+            var tray = await TrayIcon.NewAsync(app, new(Id: "netwiv-desktop-smoke", Menu: menu, Icon: image, Tooltip: "NetWiv desktop integration"));
             await tray.SetVisibleAsync(false); await tray.SetVisibleAsync(true);
             Require(await TrayIcon.GetByIdAsync(app, tray.Id) is not null, "native tray lookup");
             var views = await app.InvokeAsync("plugin:webview|get_all_webviews", JsonValue.EmptyObject);
@@ -278,7 +284,7 @@ internal static class Program
 
     private static int CheckNoWindows()
     {
-        using var app = new Builder().UseRuntime(new WryDesktopRuntime())
+        using var app = new Builder().UseRuntime(new DesktopRuntime())
             .UseEmbeddedConfig(assembly: typeof(Program).Assembly, resourceName: "netwiv.no-windows.json")
             .Setup(value => _ = CheckEmptyRuntime(value.Handle)).Build();
         using var watchdog = new Timer(_ =>
@@ -315,7 +321,7 @@ internal static class Program
 
     private static int CheckStartupError(string expected)
     {
-        using var app = new Builder().UseRuntime(new WryDesktopRuntime()).Build();
+        using var app = new Builder().UseRuntime(new DesktopRuntime()).Build();
         try { app.Run(); }
         catch (InvalidOperationException exception) when (exception.Message.Contains(expected, StringComparison.Ordinal))
         {

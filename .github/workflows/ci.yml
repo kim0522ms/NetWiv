@@ -8,10 +8,6 @@ on:
       - 'README.md'
       - 'AGENTS.md'
   pull_request:
-    paths-ignore:
-      - 'docs/**'
-      - 'README.md'
-      - 'AGENTS.md'
   workflow_dispatch:
 
 permissions:
@@ -22,7 +18,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Classify changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      build: ${{ steps.classify.outputs.build }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Detect build inputs
+        id: classify
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [[ "$EVENT_NAME" != pull_request ]]; then
+            echo 'build=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --no-renames --name-only -z "$BASE_SHA" HEAD > "$RUNNER_TEMP/changed-paths"
+          build=false
+          while IFS= read -r -d '' file; do
+            case "$file" in
+              docs/*|README.md|AGENTS.md) ;;
+              *) build=true ;;
+            esac
+          done < "$RUNNER_TEMP/changed-paths"
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+
   desktop:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     name: ${{ matrix.rid }} build, tests and NativeAOT
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -197,15 +227,15 @@ jobs:
         run: ./artifacts/ci/core-aot/NetWiv.Core.Tests${{ matrix.exe }} 2>&1 | tee artifacts/ci/core-aot.log
 
       - name: Publish native desktop smoke host with NativeAOT
-        run: dotnet publish tests/NetWiv.Wry.Smoke -c Release -r '${{ matrix.rid }}' -p:PublishAot=true -o artifacts/ci/wry-aot -bl:artifacts/ci/wry-aot.binlog
+        run: dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r '${{ matrix.rid }}' -p:PublishAot=true -o artifacts/ci/desktop-aot -bl:artifacts/ci/desktop-aot.binlog
 
       - name: Windows native startup diagnostics
         if: runner.os == 'Windows'
-        run: pwsh -NoProfile -File scripts/test-native-startup.ps1 -PublishedDirectory artifacts/ci/wry-aot 2>&1 | tee artifacts/ci/startup.log
+        run: pwsh -NoProfile -File scripts/test-native-startup.ps1 -PublishedDirectory artifacts/ci/desktop-aot 2>&1 | tee artifacts/ci/startup.log
 
       - name: Unix native startup diagnostics
         if: runner.os != 'Windows'
-        run: bash scripts/test-native-startup.sh artifacts/ci/wry-aot 2>&1 | tee artifacts/ci/startup.log
+        run: bash scripts/test-native-startup.sh artifacts/ci/desktop-aot 2>&1 | tee artifacts/ci/startup.log
 
       - name: Ensure Windows WebView2 Runtime
         if: runner.os == 'Windows'
@@ -240,22 +270,22 @@ jobs:
       - name: Windows NativeAOT WebView smoke
         if: runner.os == 'Windows'
         timeout-minutes: 5
-        run: ./artifacts/ci/wry-aot/NetWiv.Wry.Smoke.exe 2>&1 | tee artifacts/ci/desktop-smoke.log
+        run: ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe 2>&1 | tee artifacts/ci/desktop-smoke.log
 
       - name: Linux X11 NativeAOT WebView smoke
         if: runner.os == 'Linux'
         timeout-minutes: 5
         run: |
           xvfb-run -a -s '-screen 0 1280x800x24' \
-            bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/wry-aot/NetWiv.Wry.Smoke)" x11 \
+            bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke)" x11 \
             2>&1 | tee artifacts/ci/desktop-smoke.log
 
       - name: macOS NativeAOT WKWebView smoke
         if: runner.os == 'macOS'
         timeout-minutes: 5
         run: |
-          ./artifacts/ci/wry-aot/NetWiv.Wry.Smoke --no-window-smoke 2>&1 | tee artifacts/ci/windowless-smoke.log
-          ./artifacts/ci/wry-aot/NetWiv.Wry.Smoke 2>&1 | tee artifacts/ci/desktop-smoke.log
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --no-window-smoke 2>&1 | tee artifacts/ci/windowless-smoke.log
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke 2>&1 | tee artifacts/ci/desktop-smoke.log
 
       - name: Publish macOS isolation smoke with NativeAOT
         if: runner.os == 'macOS'
@@ -281,3 +311,23 @@ jobs:
             !artifacts/ci/**/*.WebView2/**
           retention-days: 7
           if-no-files-found: warn
+
+  required:
+    name: CI required
+    if: always()
+    needs: [changes, desktop]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require successful validation or documentation-only changes
+        shell: bash
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          BUILD_REQUIRED: ${{ needs.changes.outputs.build }}
+          DESKTOP_RESULT: ${{ needs.desktop.result }}
+        run: |
+          [[ "$CHANGES_RESULT" == success ]] || exit 1
+          case "$BUILD_REQUIRED:$DESKTOP_RESULT" in
+            true:success|false:skipped) exit 0 ;;
+            *) echo "Required validation did not pass: $BUILD_REQUIRED:$DESKTOP_RESULT"; exit 1 ;;
+          esac

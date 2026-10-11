@@ -1,4 +1,4 @@
-# NetWiv design principles and Tauri compatibility policy
+# NetWiv design principles and TAURI® compatibility policy
 
 These principles guide NetWiv APIs, development tools and runtime design.
 NetWiv prioritizes .NET developer experience and stability while supporting
@@ -61,3 +61,9 @@ limits for ancillary extensions.
 These principles apply to new features and changes to existing functionality.
 Changes to public APIs, supported platforms and distribution formats require
 individual impact analysis and migration guidance.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

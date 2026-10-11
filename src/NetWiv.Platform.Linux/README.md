@@ -28,7 +28,7 @@ request and response plumbing, window and webview sizing, script evaluation,
 GTK menu attachment, Ayatana AppIndicator lifetime, cleanup, and a second run
 on the same runtime instance.
 
-Implemented Tauri command strings cover the central window lifecycle, title,
+Implemented TAURI® command strings cover the central window lifecycle, title,
 visibility, focus, maximize/minimize/fullscreen state, size, position,
 decorations, resizability and always-on-top operations; webview focus,
 visibility, zoom, size, position and close operations; explicit GTK menu
@@ -52,3 +52,9 @@ The bindings and command names follow these upstream interfaces:
 - [Tauri 2.11.1 JavaScript webview API](https://github.com/tauri-apps/tauri/blob/tauri-v2.11.1/packages/api/src/webview.ts)
 - [Tauri 2.11.1 JavaScript menu API](https://github.com/tauri-apps/tauri/tree/tauri-v2.11.1/packages/api/src/menu)
 - [Tauri 2.11.1 JavaScript tray API](https://github.com/tauri-apps/tauri/blob/tauri-v2.11.1/packages/api/src/tray.ts)
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

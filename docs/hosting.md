@@ -15,7 +15,7 @@ and logging abstractions, and the existing `Builder` API is unchanged.
 
 ## Create an application
 
-Reference `NetWiv.Hosting` next to `NetWiv.Platform.Wry` and
+Reference `NetWiv.Hosting` next to `NetWiv.Platform.Desktop` and
 `NetWiv.Generators`, all at the same version. Desktop settings that previously
 went on `Builder` go on `builder.Desktop`:
 
@@ -27,7 +27,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NetWiv;
 using NetWiv.Hosting;
-using NetWiv.Platform.Wry;
+using NetWiv.Platform.Desktop;
 
 [assembly: CommandJsonContext(typeof(AppJsonContext))]
 
@@ -41,7 +41,7 @@ internal static class Program
         builder.Services.AddSingleton<GreetingCounter>();
 
         builder.Desktop
-            .UseRuntime(new WryDesktopRuntime())
+            .UseRuntime(new DesktopRuntime())
             .Metadata(new("Greeting", "0.1.0", "dev.example.greeting"))
             .Window("main", "Greeting", "index.html")
             .UseEmbeddedAssets()
@@ -198,7 +198,7 @@ An existing provider can be connected directly:
 ```csharp
 var services = new ServiceCollection().AddSingleton<GreetingCounter>().BuildServiceProvider();
 using var app = new Builder()
-    .UseRuntime(new WryDesktopRuntime())
+    .UseRuntime(new DesktopRuntime())
     .UseServiceProvider(services)
     .UseLoggerFactory(loggerFactory)
     .InvokeHandler("greet")
@@ -223,3 +223,9 @@ then to a no-op factory.
 optional services, per-invocation scopes and binding exclusion.
 `tests/NetWiv.Core.Tests` covers logging, host wiring, options binding,
 `StopApplication` and restart ordering with a real relaunched process.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

@@ -36,7 +36,7 @@ public sealed unsafe class LinuxDesktopRuntime : IDesktopRuntime
     public void Run(RuntimeContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        if (context.AssetProtocolEnabled) throw new NotSupportedException("The scoped asset protocol requires WryDesktopRuntime.");
+        if (context.AssetProtocolEnabled) throw new NotSupportedException("The scoped asset protocol requires DesktopRuntime.");
         if (context.Windows.Count == 0)
         {
             throw new ArgumentException("At least one window is required.", nameof(context));

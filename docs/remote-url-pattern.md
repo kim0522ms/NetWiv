@@ -25,7 +25,7 @@ Use the `.exe` suffix on Windows. The generated fixture records the oracle lock
 and upstream data hashes. It includes targeted capability boundary cases and
 constructor/path cases derived from the dependency's bundled tests. Expected
 parsing validity and URL decisions come from the Rust executable, including
-Tauri's differences from generic URLPattern defaults.
+TAURI®'s differences from generic URLPattern defaults.
 
 Managed matching uses the AOT-compatible non-backtracking regex interpreter.
 Rust bracket union, intersection, subtraction and symmetric difference are
@@ -43,3 +43,9 @@ does not establish isolation-mode IPC or remote iframe grants.
 Sources: [pinned Tauri ACL](https://github.com/tauri-apps/tauri/blob/7cd71369c00978a3783b6ae3e9972358abbe4ae6/crates/tauri-utils/src/acl/mod.rs),
 [URL Pattern Standard](https://urlpattern.spec.whatwg.org/), and the locally
 pinned `urlpattern 0.3.0` crate sources retained in Cargo's registry.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

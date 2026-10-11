@@ -1,7 +1,7 @@
 using System.Text.Json;
 using NetWiv.Runtime;
 
-namespace NetWiv.Platform.Wry;
+namespace NetWiv.Platform.Desktop;
 
 internal static class RuntimeJson
 {

@@ -58,3 +58,10 @@ main thread. The package-consumer harness above currently hardcodes Windows/Linu
 RIDs; its package-only React and restart acceptance has not been completed on
 macOS. The source-linked WKWebView smoke and macOS CLI tests provide separate
 integration evidence. See [macOS setup and validation](macos.md).
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

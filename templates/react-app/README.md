@@ -103,6 +103,12 @@ npm run smoke
 dotnet run --project src-netwiv -p:NetWivDevelopment=true -- --dev --smoke-test
 ```
 
-실제 React 폼 제출 → 공식 invoke → 생성된 C# 명령 → JSON 응답을 검사하고 종료합니다. 일반 실행에는 검사 종료 명령을 등록하지 않습니다. 전체 Tauri 호환성·보안·플랫폼 검증이 완료된 버전은 아니며, 베타 SDK의 기존 제한이 적용됩니다.
+실제 React 폼 제출 → 공식 invoke → 생성된 C# 명령 → JSON 응답을 검사하고 종료합니다. 일반 실행에는 검사 종료 명령을 등록하지 않습니다. 전체 TAURI® 호환성·보안·플랫폼 검증이 완료된 버전은 아니며, 베타 SDK의 기존 제한이 적용됩니다.
 
 구성 참고: [React의 Vite 기반 앱 안내](https://react.dev/learn/build-a-react-app-from-scratch), [Vite 사용법](https://vite.dev/guide/).
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

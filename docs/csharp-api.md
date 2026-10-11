@@ -1,8 +1,8 @@
 # C# application contract
 
 NetWiv keeps the official JavaScript package unchanged. The C# namespace is
-`NetWiv`; `NetWiv.Platform.Wry` supplies the native desktop runtime. This document
-describes the implemented integration surface, not a claim that every Tauri
+`NetWiv`; `NetWiv.Platform.Desktop` supplies the native desktop runtime. This document
+describes the implemented integration surface, not a claim that every TAURI®
 operation has passed conformance testing.
 
 ## Naming and ownership
@@ -97,7 +97,7 @@ must not treat `Restart` as an immediate process launch.
 ### Initial window configuration
 
 `UseEmbeddedConfig` respects `create: false` and the default configured title
-`Tauri App`. An explicit `app.windows` list replaces previously added windows,
+`NetWiv App`. An explicit `app.windows` list replaces previously added windows,
 including an empty list. An omitted list preserves explicit C# `Window(...)`
 calls, but loading configuration without either source of windows creates no
 implicit UI. Windows added after configuration remain explicit additions.
@@ -129,7 +129,7 @@ exact recipient/payload assertions.
 
 ## Minimal explicit-runtime application
 
-Reference `NetWiv.Core`, `NetWiv.Platform.Wry` and `NetWiv.Generators`, all at
+Reference `NetWiv.Core`, `NetWiv.Platform.Desktop` and `NetWiv.Generators`, all at
 the same version. See the [package quickstart](integration-quickstart.md) for
 feed setup. Keep `[STAThread]` on the Windows entry point. On macOS, keep a
 synchronous `Main` and call `app.Run()` on the process's original main thread;
@@ -138,7 +138,7 @@ The example below meets both requirements:
 
 ```csharp
 using NetWiv;
-using NetWiv.Platform.Wry;
+using NetWiv.Platform.Desktop;
 using System.Text.Json.Serialization;
 
 [assembly: CommandJsonContext(typeof(AppJsonContext))]
@@ -149,7 +149,7 @@ internal static class Program
     private static void Main()
     {
         using var app = new Builder()
-            .UseRuntime(new WryDesktopRuntime())
+            .UseRuntime(new DesktopRuntime())
             .Metadata(new("Greeting", "0.1.0", "dev.example.greeting"))
             .Window("main", "Greeting", "index.html")
             .UseEmbeddedAssets()
@@ -300,7 +300,14 @@ at startup. Deployment currently uses the NativeAOT application plus the
 platform DLL/SO and its documented OS dependencies. Framework maintainers build
 the native adapter separately using the pinned Rust toolchain.
 
-See [native architecture](wry-migration.md) for the supported backend and
+See [native architecture](native-architecture.md) for the supported backend and
 [validation boundaries](implementation-status.md) for outstanding coverage.
 Isolation has an automatic differential suite; full desktop acceptance remains
 unfinished. Consult the relevant conformance results for a specific behavior.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

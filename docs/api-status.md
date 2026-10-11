@@ -3,7 +3,7 @@
 Core public API counts are a **2026-09-12 source-review snapshot**.
 Plugin and SDK descriptions include later contracts; execution results do not update automatically.
 Targets: **Windows x64 / Linux x64 / macOS arm64 and x64**, official `@tauri-apps/api@2.11.1`.
-This is a source-based feature inventory, not a declaration of complete Tauri equivalence or release acceptance.
+This is a source-based feature inventory, not a declaration of complete TAURI® equivalence or release acceptance.
 
 The macOS entries below reflect the new runtime paths; historical aggregate counts
 remain the dated snapshot and are not recalculated as compatibility passes.
@@ -13,6 +13,7 @@ remain the dated snapshot and are not recalculated as compatibility passes.
 | Status | Meaning |
 | --- | --- |
 | Implemented | An execution path exists within the stated scope. For types and constants, this means the official npm declaration is provided. It does not imply individual comparison or GUI acceptance. |
+| Unsupported (intentional) | Deliberately rejected to preserve NetWiv runtime identity; this is a documented compatibility difference, not a pending implementation or a compatibility pass. |
 | Planned | Included in the support goals, with implementation or validation work remaining. This does not mean ready for use or scheduled for a specific release. |
 | Partial | Some behavior is available, with limits on features, platforms or validation. |
 | Not implemented | The feature is unavailable, including declarations that only return empty results or ignore options. Support timelines are announced separately. |
@@ -157,7 +158,7 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `app.getBundleType` | Function | **Implemented** | Application metadata and desktop command handling. | [B] [A] | 1 mapped |
 | `app.getIdentifier` | Function | **Implemented** | Application metadata and desktop command handling. | [B] [A] | 1 mapped |
 | `app.getName` | Function | **Implemented** | Application metadata and desktop command handling. | [B] [A] | 1 mapped |
-| `app.getTauriVersion` | Function | **Implemented** | Returns the compatibility-reference Tauri version 2.11.5, not the NetWiv package version. | [B] | 1 mapped |
+| `app.getTauriVersion` | Function | **Unsupported (intentional)** | Rejects because NetWiv does not embed the TAURI framework. The command identifier remains accepted; no upstream or NetWiv version is substituted. See [identity differences](implementation-status.md#runtime-identity-differences). | [B] | Not a compatibility pass |
 | `app.getVersion` | Function | **Implemented** | Application metadata and desktop command handling. | [B] [A] | 1 mapped |
 | `app.hide` | Function | **Partial** | Forwarded to the AppKit event-loop target on macOS; NativeAOT smoke exercised. Non-Apple desktop behavior remains a no-op. | [A] | 1 mapped |
 | `app.onBackButtonPress` | Function | **Not implemented** | Android back-button behavior is not implemented (outside v1). Only the JS entry point exists. | [U] [A] | No individual mapping |
@@ -995,3 +996,10 @@ Implementation status and the acceptance work below are separate. Each must be u
 [F]: ../src/NetWiv.Core/Assets/FileAssetProtocol.cs "File asset protocol"
 [H]: ../src/NetWiv.Core/Plugins/Plugin.cs "Plugin host"
 [E]: ../src/NetWiv.Core/Events/EventBus.cs "Event bus"
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY and TAO are trademarks of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

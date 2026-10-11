@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using NetWiv;
-using NetWiv.Platform.Wry;
+using NetWiv.Platform.Desktop;
 using NetWiv.Runtime;
 
 [assembly: CommandJsonContext(typeof(SmokeJsonContext))]
@@ -18,7 +18,7 @@ internal static class Program
     private static int Main()
     {
         Console.OutputEncoding = Encoding.UTF8;
-        using var app = new Builder().UseRuntime(new WryDesktopRuntime()).UseEmbeddedConfig().UseEmbeddedAssets()
+        using var app = new Builder().UseRuntime(new DesktopRuntime()).UseEmbeddedConfig().UseEmbeddedAssets()
             .RegisterGeneratedCommands().InvokeHandler(registry => registry.RegisterResponse("raw", (context, _, _) =>
                 ValueTask.FromResult(RuntimeInvokeResponse.FromBinary(context.Request.Body().Bytes))))
             .Build();

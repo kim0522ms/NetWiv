@@ -39,7 +39,7 @@ public sealed class WindowsDesktopRuntime : IDesktopRuntime
     public unsafe void Run(RuntimeContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        if (context.AssetProtocolEnabled) throw new NotSupportedException("The scoped asset protocol requires WryDesktopRuntime.");
+        if (context.AssetProtocolEnabled) throw new NotSupportedException("The scoped asset protocol requires DesktopRuntime.");
         if (!OperatingSystem.IsWindows())
         {
             throw new PlatformNotSupportedException("WindowsDesktopRuntime requires Windows.");

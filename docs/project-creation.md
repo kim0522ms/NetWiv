@@ -1,7 +1,7 @@
 # Create a NetWiv app with the .NET CLI
 
 Install `NetWiv.Cli` as a .NET tool to create applications with `netwiv new`.
-It provides [18 frontend choices corresponding to the official Tauri selector](template-coverage.md).
+It provides [18 frontend choices corresponding to the official TAURI® selector](template-coverage.md).
 The default is React + Vite + C#. Ordinary JS/TS and Blazor C# backends require
 neither Rust nor Cargo. Rust/WASM frontends require Cargo and Trunk.
 
@@ -129,3 +129,9 @@ dotnet tool run netwiv -- build --no-bundle
 Full Tauri compatibility and release acceptance remain incomplete. See
 [support and validation](implementation-status.md) and the
 [frontend generator](frontend-generator.md).
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

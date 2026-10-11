@@ -4,7 +4,7 @@ $repository = Split-Path $PSScriptRoot -Parent
 $destination = if ([IO.Path]::IsPathRooted($OutputDirectory)) { $OutputDirectory } else { Join-Path $repository $OutputDirectory }
 $feed = Join-Path $destination 'packages'
 New-Item -ItemType Directory -Path $feed -Force | Out-Null
-foreach ($project in @('NetWiv.Core', 'NetWiv.Generators', 'NetWiv.Build', 'NetWiv.Platform.Wry')) {
+foreach ($project in @('NetWiv.Core', 'NetWiv.Generators', 'NetWiv.Build', 'NetWiv.Platform.Desktop')) {
     & dotnet pack (Join-Path $repository "src/$project/$project.csproj") -c Release -p:Version=0.1.0-beta.1 -o $feed
     if ($LASTEXITCODE -ne 0) { throw "Packing $project failed." }
 }

@@ -110,7 +110,7 @@ internal static class SignerCommand
             await WriteTemporarySecretAsync(rawSecretPath, rawPrivate, cancellationToken);
             var trustedComment = $"timestamp:{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}\tfile:{Path.GetFileName(file)}";
             var input = password is null ? null : password + Environment.NewLine;
-            await RunMinisignAsync(minisign, ["-S", "-s", rawSecretPath, "-m", file, "-x", rawSignaturePath, "-c", "signature from tauri secret key", "-t", trustedComment], input, cancellationToken, interactive: password is null);
+            await RunMinisignAsync(minisign, ["-S", "-s", rawSecretPath, "-m", file, "-x", rawSignaturePath, "-c", "signature from NetWiv secret key", "-t", trustedComment], input, cancellationToken, interactive: password is null);
             var rawSignature = await File.ReadAllTextAsync(rawSignaturePath, cancellationToken);
             var encodedSignature = EncodeBox(rawSignature);
             var signaturePath = AddedExtension(file, "sig");

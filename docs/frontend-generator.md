@@ -182,7 +182,7 @@ The underlying flag semantics follow the
 input/output JSON names, recursive nullable DTOs, byte-array shapes, unsupported
 serialization features and metadata extraction without executing app code.
 Serializer comparisons use source-generated System.Text.Json metadata as the
-reference. These verify the NetWiv generator contract rather than Tauri's Rust
+reference. These verify the NetWiv generator contract rather than TAURI®'s Rust
 business-logic implementation.
 
 Export checks cover unchanged output timestamps, command rename/removal, empty
@@ -216,3 +216,9 @@ Keep Node/npm versions compatible with the template's Vite requirement.
 [React development](react-development.md#automated-verification) covers the
 separate edit/restart test. Automated native execution does not establish
 manual GUI acceptance or full Tauri compatibility.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

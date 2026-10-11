@@ -8,7 +8,7 @@
     <NetWivFrontendDist>$(MSBuildProjectDirectory)/wwwroot</NetWivFrontendDist>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="NetWiv.Platform.Wry" Version="0.1.0-beta.1" />
+    <PackageReference Include="NetWiv.Platform.Desktop" Version="0.1.0-beta.1" />
     <PackageReference Include="NetWiv.Build" Version="0.1.0-beta.1" PrivateAssets="all" />
     <PackageReference Include="NetWiv.Generators" Version="0.1.0-beta.1" PrivateAssets="all" />
   </ItemGroup>

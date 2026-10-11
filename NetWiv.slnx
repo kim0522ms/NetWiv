@@ -31,7 +31,7 @@
   <Project Path="src/NetWiv.Generators/NetWiv.Generators.csproj" />
   <Project Path="src/NetWiv.Platform.Linux/NetWiv.Platform.Linux.csproj" />
   <Project Path="src/NetWiv.Platform.Windows/NetWiv.Platform.Windows.csproj" />
-  <Project Path="src/NetWiv.Platform.Wry/NetWiv.Platform.Wry.csproj" />
+  <Project Path="src/NetWiv.Platform.Desktop/NetWiv.Platform.Desktop.csproj" />
   <Project Path="src/NetWiv.Templates/NetWiv.Templates.csproj" />
   <Project Path="samples/NetWiv.SampleApp/NetWiv.SampleApp.csproj" />
   <Project Path="tests/conformance/netwiv/NetWiv.Conformance.csproj" />
@@ -41,6 +41,6 @@
   <Project Path="tests/NetWiv.Generators.Tests/NetWiv.Generators.Tests.csproj" />
   <Project Path="tests/NetWiv.Linux.Smoke/NetWiv.Linux.Smoke.csproj" />
   <Project Path="tests/NetWiv.Windows.Smoke/NetWiv.Windows.Smoke.csproj" />
-  <Project Path="tests/NetWiv.Wry.Smoke/NetWiv.Wry.Smoke.csproj" />
+  <Project Path="tests/NetWiv.Desktop.Smoke/NetWiv.Desktop.Smoke.csproj" />
   <Project Path="tests/NetWiv.Isolation.Smoke/NetWiv.Isolation.Smoke.csproj" />
 </Solution>

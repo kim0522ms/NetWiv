@@ -13,7 +13,7 @@ internal static class BuiltInCommands
     {
         registry.Register("plugin:app|name", (_, _, _) => Value(app.Metadata.Name));
         registry.Register("plugin:app|version", (_, _, _) => Value(app.Metadata.Version));
-        registry.Register("plugin:app|tauri_version", (_, _, _) => Value("2.11.5"));
+        registry.Register("plugin:app|tauri_version", (_, _, _) => throw new InvokeException("NetWiv does not embed the TAURI framework; its version is unavailable."));
         registry.Register("plugin:app|identifier", (_, _, _) => Value(app.Metadata.Identifier));
         ApplicationCommands.Register(app, registry);
         registry.Register("plugin:resources|close", async (context, args, cancellationToken) =>

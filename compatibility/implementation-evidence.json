@@ -30,7 +30,7 @@
       "fixture": "window.configured-startup",
       "sources": ["src/NetWiv.Core/Builder.cs", "src/NetWiv.Core/Configuration/EmbeddedConfiguration.cs"],
       "apis": ["window.getAllWindows", "webview.getAllWebviews", "window.Window.static.getByLabel", "webviewWindow.WebviewWindow.static.getByLabel", "window.Window.title"],
-      "limits": "Initial config omits the main title and includes a deferred create:false window. Checks the pinned title default and absence from native/live lookups; separate NativeAOT smoke exercises fully windowless startup."
+      "limits": "Initial config omits the main title and includes a deferred create:false window. The title intentionally differs (NetWiv App), so this fixture is not a full upstream compatibility pass; checks absence from native/live lookups; separate NativeAOT smoke exercises fully windowless startup."
     },
     {
       "fixture": "invoke.numeric-arguments",
@@ -403,14 +403,14 @@
     },
     {
       "fixture": "app.metadata",
+      "limits": "This shared comparison fixture includes getTauriVersion, which NetWiv deliberately rejects. It cannot establish a passing metadata comparison; see docs/implementation-status.md#runtime-identity-differences.",
       "sources": [
         "src/NetWiv.Core/BuiltIn/BuiltInCommands.cs"
       ],
       "apis": [
         "app.getIdentifier",
         "app.getName",
-        "app.getVersion",
-        "app.getTauriVersion"
+        "app.getVersion"
       ]
     },
     {
@@ -563,7 +563,7 @@
       "fixture": "path.all-directories-and-resources",
       "sources": [
         "native/netwiv-native/src/paths.rs",
-        "src/NetWiv.Platform.Wry/WryDesktopRuntime.cs"
+        "src/NetWiv.Platform.Desktop/DesktopRuntime.cs"
       ],
       "apis": [
         "path.audioDir",

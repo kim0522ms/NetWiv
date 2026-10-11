@@ -24,13 +24,13 @@ await writeFile(configPath, JSON.stringify(config));
 await writeFile(path.join(root, 'package.json'), '{"version":"1.2.3+42"}');
 await writeFile(path.join(root, 'src-netwiv/Program.cs'), `
 using NetWiv;
-using NetWiv.Platform.Wry;
+using NetWiv.Platform.Desktop;
 using System.Reflection;
 using System.Diagnostics;
 [assembly: GenerateFrontendBindings]
 internal static class Program {
   [STAThread] static void Main() {
-    using var app = new Builder().UseRuntime(new WryDesktopRuntime()).UseEmbeddedConfig().Build();
+    using var app = new Builder().UseRuntime(new DesktopRuntime()).UseEmbeddedConfig().Build();
     if (app.Handle.Metadata.Version != "1.2.3+42") throw new Exception("Embedded app version: " + app.Handle.Metadata.Version);
     var version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version;
     if (version != "1.2.3.42") throw new Exception("Assembly file version: " + version);

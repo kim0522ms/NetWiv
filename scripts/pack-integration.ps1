@@ -12,7 +12,7 @@ if (Test-Path -LiteralPath $destination) { throw "Use a fresh output directory: 
 New-Item -ItemType Directory -Path $feed -Force | Out-Null
 
 # Build all four native RIDs explicitly before packing; consumers never need Cargo.
-$projects = @('NetWiv.Core', 'NetWiv.Hosting', 'NetWiv.Generators', 'NetWiv.Build', 'NetWiv.Platform.Wry', 'NetWiv.Cli')
+$projects = @('NetWiv.Core', 'NetWiv.Hosting', 'NetWiv.Generators', 'NetWiv.Build', 'NetWiv.Platform.Desktop', 'NetWiv.Cli')
 $projects += Get-ChildItem -LiteralPath (Join-Path $repository 'src') -Directory -Filter 'NetWiv.Plugin.*' |
     Sort-Object Name | Select-Object -ExpandProperty Name
 foreach ($project in $projects) {

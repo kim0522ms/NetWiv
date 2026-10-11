@@ -1,6 +1,8 @@
 // Matcher order and predicates ported from infer 0.19.0, MIT.
 // Compound-file validation ported from cfb 0.7.3, MIT.
 // URI fallback ported from tauri-utils 2.9.3 mime_type.rs, MIT OR Apache-2.0.
+// Tauri source copyright 2019-2024 Tauri Programme within The Commons Conservancy.
+// SPDX-License-Identifier: MIT AND (Apache-2.0 OR MIT)
 using System.Buffers.Binary;
 
 namespace NetWiv;

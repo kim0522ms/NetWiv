@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace NetWiv.Platform.Wry;
+namespace NetWiv.Platform.Desktop;
 
 internal static unsafe partial class NativeMethods
 {

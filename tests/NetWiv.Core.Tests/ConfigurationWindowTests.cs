@@ -11,7 +11,7 @@ internal static class ConfigurationWindowTests
         Assert.Equal(2, runtime.Context!.Windows.Count);
         var first = runtime.Context.Windows[0];
         Assert.Equal("main", first.Label);
-        Assert.Equal("Tauri App", first.Title);
+        Assert.Equal("NetWiv App", first.Title);
         Assert.Equal("index.html", first.Url);
         Assert.Equal(800d, first.Width);
         Assert.Equal(600d, first.Height);

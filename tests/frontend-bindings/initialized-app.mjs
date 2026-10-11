@@ -8,7 +8,7 @@ export async function checkInitializedApp({ consumer, dotnet, rid, version, run 
   const projectFile = path.join(initialized, 'src-netwiv/NetWiv.App.csproj');
   const project = await readFile(projectFile, 'utf8');
   assert.ok(project.includes(`<NetWivVersion>${version}</NetWivVersion>`));
-  assert.ok(project.includes('NetWiv.Platform.Wry') && project.includes('NetWiv.Generators'));
+  assert.ok(project.includes('NetWiv.Platform.Desktop') && project.includes('NetWiv.Generators'));
   assert.ok(!project.includes('ProjectReference') && !project.includes('__'));
   const plugin = path.join(consumer, 'scaffolded-plugin');
   const pluginFeed = path.join(consumer, 'plugin-feed');

@@ -55,6 +55,8 @@ replaces that generated publish directory, including previous bundles, to avoid
 mixing runtime files from earlier deployment modes. Keep deliverables elsewhere
 if you need to preserve them. Distribute the **whole publish directory**, not
 just its executable. Framework-dependent installers do not install .NET for you.
+[Windows installer settings](windows-installers.md) apply to all deployment modes,
+including installation scope, directory selection and shortcut arguments.
 
 Remove `--no-bundle` to use configured bundling, or pass `--bundles`. For example:
 

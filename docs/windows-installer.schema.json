@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NetWiv bundle.windows.installer extension (object only)",
+  "description": "Apply to bundle.windows.installer, not the full configuration. The CLI additionally validates Windows names, relative directories and quoted argument length.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "scope": { "enum": ["currentUser", "perMachine"], "default": "currentUser" },
+    "allowDirectorySelection": { "type": "boolean", "default": false },
+    "shortcuts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "arguments": { "type": "array", "items": { "type": "string", "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$" }, "default": [] },
+        "workingDirectory": { "type": "string", "minLength": 1, "default": "." },
+        "desktop": { "type": "boolean", "description": "Defaults to true for NSIS and false for MSI." },
+        "startMenu": { "type": "boolean", "default": true }
+      }
+    }
+  }
+}

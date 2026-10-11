@@ -172,6 +172,7 @@ public static class ConfigLoader
 
         if (root["bundle"] is JsonObject bundle)
         {
+            _ = WindowsInstallerOptions.FromJson(root);
             RequireString(bundle, "category", source);
             if (bundle["category"] is JsonValue category) _ = Packaging.AppCategory.Parse(category.GetValue<string>());
             if (bundle["resources"] is JsonArray resources) RequireStringArray(bundle, "resources", source);

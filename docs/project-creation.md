@@ -48,15 +48,18 @@ matching Mac. Bundles use system WKWebView; there is no separate WebView runtime
 installer. See [macOS](macos.md) for configuration overlays, output paths,
 Developer ID signing configuration and unimplemented notarization.
 
-Windows NSIS/MSI installers first check user- and machine-wide Evergreen WebView2
-Runtime registrations. If the runtime is absent, installation stops and directs
+Windows NSIS/MSI installers check Evergreen WebView2 Runtime registrations
+matching the installation scope: current-user packages accept user or machine
+registrations; per-machine packages require a machine registration. If the runtime is absent, installation stops and directs
 the user to Microsoft's installer page; interactive NSIS opens it only with user
 consent. Silent NSIS fails with exit code 2. Automatic runtime download and
 Fixed Version bundling are not included. MSI maintenance and removal remain
 available after the runtime is removed. Checks use the registry locations in
 [Microsoft's distribution guidance](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution).
-NSIS registers the app in the current user's installed-app list and Start menu
-and removes those entries on uninstall. MSI also manages a Start menu shortcut.
+Both formats default to current-user installation and manage Start menu shortcuts;
+NSIS also creates a desktop shortcut by default. See [Windows installer
+configuration](windows-installers.md) for per-machine scope, directory selection,
+shortcut launch arguments and upgrade/uninstall behavior.
 
 ## Creation options
 

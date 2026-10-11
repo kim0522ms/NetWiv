@@ -36,6 +36,8 @@ if (Environment.GetEnvironmentVariable("NETWIV_RUNNER_PROBE_OUTPUT") is { } runn
 
 var tests = new (string Name, Func<Task> Run)[]
 {
+    ("Windows installer options validate before hooks and tools", WindowsInstallerTests.Validation),
+    ("Windows installer options render scope lifecycle and literal arguments", WindowsInstallerTests.Rendering),
     ("macOS targets configuration and metadata", MacOsTests.Configuration),
     ("macOS application and dmg packaging with real signing tools", MacOsTests.Packaging),
     ("bundle target arrays accept supported formats and reject malformed entries", BundleTargetTests.ValidateTargets),

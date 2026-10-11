@@ -4,7 +4,7 @@
 
 **Web frontends. C# backends. Native desktop apps.**
 
-A .NET 8+ NativeAOT desktop framework built on OS WebViews.
+A .NET 8+ desktop framework built on OS WebViews, with optional NativeAOT publishing.
 
 ![.NET 8+](https://img.shields.io/badge/.NET-8%2B-512BD4?style=flat-square)
 ![NativeAOT](https://img.shields.io/badge/NativeAOT-0078D4?style=flat-square)
@@ -46,7 +46,7 @@ review and revision.
 | **C# application layer** | A .NET SDK for commands, shared state, permissions and plugins. |
 | **Frontend choice** | 18 template choices, including React, Vue, Svelte and Blazor. |
 | **Generated bindings** | JavaScript calls and TypeScript declarations generated from C# commands. |
-| **NativeAOT releases** | Native application builds with RID-specific runtime libraries delivered through NuGet. |
+| **Flexible deployment** | Self-contained .NET by default, installed-runtime deployment or optional NativeAOT. [Deployment modes](docs/deployment.md). |
 | **TAURI frontend support** | Compatibility work targets unchanged `@tauri-apps/api@2.11.1` and TAURI framework 2.11.5 behavior. |
 
 Ordinary JS/TS and Blazor application development does not require Cargo.
@@ -100,7 +100,7 @@ flowchart TB
         UI <--> Guest
     end
 
-    subgraph managed[".NET 8+ · NativeAOT release"]
+    subgraph managed[".NET 8+ · managed or NativeAOT"]
         Core["NetWiv.Core<br/>IPC · permissions · events · resources"]
         App["Your C# commands · state · plugins"]
         Adapter["NetWiv.Platform.Desktop"]
@@ -155,8 +155,8 @@ for SDK selection, runtime behavior and validation limits.
 
 **Windows prerequisites:** .NET 8 or later SDK, Node.js and WebView2 Runtime.
 NativeAOT release builds also need Visual Studio C++ Build Tools and Windows SDK.
-On macOS 12+, use .NET 8 or later, Node.js and Xcode Command Line Tools; WKWebView is
-provided by the OS. Follow the [macOS guide](docs/macos.md) and the
+On macOS 12+, use .NET 8 or later and Node.js; WKWebView is provided by the OS.
+NativeAOT builds additionally require Xcode Command Line Tools. Follow the [macOS guide](docs/macos.md) and the
 [zsh quickstart](docs/integration-quickstart.md#create-the-project).
 
 ```powershell

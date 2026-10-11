@@ -27,16 +27,25 @@ internal static partial class NativeBundler
         var executables = Path.Combine(contents, "MacOS");
         var resourcesDirectory = Path.Combine(contents, "Resources");
         Directory.CreateDirectory(executables);
+        var managed = File.Exists(Path.Combine(publishDirectory, Path.GetFileName(binary) + ".runtimeconfig.json"));
+        // Keep managed runtime data in Resources. A launcher preserves the apphost's
+        // sibling DLL/runtime resolution without treating JSON and DLLs as bundle code.
         var payload = PayloadStager.Stage(publishDirectory, resourcesDirectory);
         var binaryRelative = Path.GetRelativePath(publishDirectory, binary);
-        foreach (var relative in payload.Where(path => path == binaryRelative || path.EndsWith(".dylib", StringComparison.OrdinalIgnoreCase)))
+        foreach (var relative in payload.Where(path => !managed && (path == binaryRelative || path.EndsWith(".dylib", StringComparison.OrdinalIgnoreCase))))
         {
             var destination = Path.Combine(executables, relative);
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
             File.Move(Path.Combine(resourcesDirectory, relative), destination);
         }
         var appBinary = Path.Combine(executables, binaryRelative);
-        PatchBundleType(appBinary, "MAC");
+        var payloadBinary = managed ? Path.Combine(resourcesDirectory, binaryRelative) : appBinary;
+        if (managed)
+        {
+            var relative = ("../Resources/" + binaryRelative).Replace("'", "'\"'\"'", StringComparison.Ordinal);
+            File.WriteAllText(appBinary, "#!/bin/sh\nHERE=$(CDPATH= cd -- \"$(dirname -- \"$0\")\" && pwd) || exit 1\nexec \"$HERE\"/'" + relative + "' \"$@\"\n");
+        }
+        PatchBundleType(payloadBinary, "MAC");
         File.SetUnixFileMode(appBinary, File.GetUnixFileMode(appBinary) | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
         using (var document = JsonDocument.Parse(config.Root.ToJsonString()))
         {
@@ -56,8 +65,9 @@ internal static partial class NativeBundler
         plist.Save(Path.Combine(contents, "Info.plist"));
         // NativeAOT's linker signature is invalidated by the bundle marker patch.
         // Even --no-sign needs a fresh ad-hoc signature to execute on Apple Silicon.
-        foreach (var library in Directory.EnumerateFiles(executables, "*.dylib", SearchOption.AllDirectories))
+        foreach (var library in Directory.EnumerateFiles(managed ? resourcesDirectory : executables, "*.dylib", SearchOption.AllDirectories))
             await Sign(library, false);
+        if (managed) await Sign(payloadBinary, true);
         await Sign(appBinary, true);
         await Sign(app, true);
         await RequireSuccess("/usr/bin/codesign", ["--verify", "--deep", "--strict", app], directory, cancellationToken);

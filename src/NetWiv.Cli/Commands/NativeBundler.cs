@@ -386,6 +386,12 @@ cp "{source}/{product}.desktop" $RPM_BUILD_ROOT/usr/share/applications/{product}
     {
         if (bundleType.Length != 3 || bundleType.Any(character => character is < 'A' or > 'Z'))
             throw new ArgumentException("Bundle type marker must be exactly three uppercase ASCII characters.", nameof(bundleType));
+        // Managed apphosts contain no framework metadata: patch the staged Core assembly.
+        var directory = Path.GetDirectoryName(binary)!;
+        var name = Path.GetFileNameWithoutExtension(binary);
+        if (!OperatingSystem.IsWindows()) name = Path.GetFileName(binary);
+        if (File.Exists(Path.Combine(directory, name + ".runtimeconfig.json")))
+            binary = Path.Combine(directory, "NetWiv.Core.dll");
         var marker = Encoding.ASCII.GetBytes("__NETWIV_BUNDLE_TYPE_VAR_UNK");
         var replacement = Encoding.ASCII.GetBytes("__NETWIV_BUNDLE_TYPE_VAR_" + bundleType);
         var bytes = File.ReadAllBytes(binary);
@@ -393,10 +399,10 @@ cp "{source}/{product}.desktop" $RPM_BUILD_ROOT/usr/share/applications/{product}
         for (var index = 0; index <= bytes.Length - marker.Length; index++)
         {
             if (!bytes.AsSpan(index, marker.Length).SequenceEqual(marker)) continue;
-            if (match >= 0) throw new InvalidOperationException($"NativeAOT executable contains multiple NetWiv bundle type markers: {binary}");
+            if (match >= 0) throw new InvalidOperationException($"Published payload contains multiple NetWiv bundle type markers: {binary}");
             match = index;
         }
-        if (match < 0) throw new InvalidOperationException($"NativeAOT executable does not contain the NetWiv bundle type marker: {binary}");
+        if (match < 0) throw new InvalidOperationException($"Published payload does not contain the NetWiv bundle type marker: {binary}");
         replacement.CopyTo(bytes, match);
         File.WriteAllBytes(binary, bytes);
     }

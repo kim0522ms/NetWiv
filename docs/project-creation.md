@@ -27,7 +27,7 @@ If the global tools directory is missing from PATH, Windows users can run
 On Linux/macOS, use the same PowerShell commands with the actual package directory;
 the [quickstart](integration-quickstart.md#create-the-project) also includes zsh commands.
 Windows requires WebView2 Runtime; Linux requires GTK3 and WebKitGTK 4.1;
-macOS 12+ uses system WKWebView/AppKit and requires Xcode Command Line Tools for builds.
+macOS 12+ uses system WKWebView/AppKit; NativeAOT requires Xcode Command Line Tools.
 NativeAOT publication also requires the platform's native build tools.
 
 ## First build and platform bundles
@@ -38,7 +38,10 @@ A fresh React project with restored dependencies can therefore run
 if frontend output is still missing afterward. Existing `beforeBuildCommand`
 hooks remain supported. Use the same package version for the SDK and CLI.
 
-On macOS, `netwiv build --bundles app,dmg --no-sign` publishes NativeAOT for the
+`netwiv build` defaults to self-contained .NET; use `--framework-dependent` for
+an installed runtime or `--aot` for NativeAOT. See [deployment modes](deployment.md).
+
+On macOS, `netwiv build --bundles app,dmg --no-sign` publishes managed .NET for the
 current architecture and creates an ad-hoc-signed `.app` and a `.dmg`. Explicit
 targets are `osx-arm64` and `osx-x64` (or their Apple target triples). Build on the
 matching Mac. Bundles use system WKWebView; there is no separate WebView runtime
@@ -121,7 +124,7 @@ The `.esproj` builds the frontend once. Templates do not add a duplicate
 # Development: frontend updates, regenerated C# bindings and app restarts
 npm run desktop:dev
 
-# NativeAOT build
+# Self-contained .NET build (add --aot to opt into NativeAOT)
 dotnet tool restore
 dotnet tool run netwiv -- build --no-bundle
 ```

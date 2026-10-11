@@ -59,10 +59,15 @@ internal static class ManagedRuntimeProbe
     }
 }
 '@.Replace('__MAJOR__', $major) | Set-Content PackageExample/src-netwiv/ManagedRuntimeProbe.cs
-        & dotnet build PackageExample/PackageExample.sln -c Debug -warnaserror
+        Push-Location PackageExample
+        try { & $cli build --framework-dependent --no-bundle -- -warnaserror }
+        finally { Pop-Location }
         if ($LASTEXITCODE -ne 0) { throw 'Generated solution or packaged MSBuild tasks failed.' }
         if (!(Get-ChildItem PackageExample/src/generated -File)) { throw 'Packaged frontend generator produced no bindings.' }
-        $managed = Join-Path $workspace ('PackageExample/src-netwiv/bin/Debug/net8.0/PackageExample' + $(if ($IsWindows) { '.exe' } else { '' }))
+        $managedFiles = @(Get-ChildItem PackageExample/target -Recurse -File |
+            Where-Object { $_.Name -eq ('PackageExample' + $(if ($IsWindows) { '.exe' } else { '' })) -and $_.Directory.Name -eq 'release' })
+        if ($managedFiles.Count -ne 1) { throw 'Expected one published managed apphost.' }
+        $managed = $managedFiles[0].FullName
         if ($IsLinux) {
             $managedOutput = @(& xvfb-run -a bash (Join-Path $repository 'scripts/run-linux-smoke-desktop.sh') $managed x11 --smoke-test)
         }
@@ -72,6 +77,21 @@ internal static class ManagedRuntimeProbe
         if ($managedExit -ne 0 -or !($managedOutput -contains "PASS managed runtime $major") -or
             !($managedOutput -contains 'PASS: React form → generated C# → JSON')) {
             throw 'Generated managed application smoke failed.'
+        }
+
+        if ($IsMacOS) {
+            Push-Location PackageExample
+            try { & $cli bundle --bundles app --no-sign }
+            finally { Pop-Location }
+            if ($LASTEXITCODE -ne 0) { throw 'Generated managed application bundle failed.' }
+            $app = Join-Path (Split-Path $managed) 'bundle/macos/PackageExample.app/Contents/MacOS/PackageExample'
+            $bundledOutput = @(& $app --smoke-test)
+            $bundledExit = $LASTEXITCODE
+            $bundledOutput | Write-Output
+            if ($bundledExit -ne 0 -or !($bundledOutput -contains "PASS managed runtime $major") -or
+                !($bundledOutput -contains 'PASS: React form → generated C# → JSON')) {
+                throw 'Bundled managed application smoke failed.'
+            }
         }
 
         # Reuse the real desktop smoke source, replacing every project reference with the packaged dependency.

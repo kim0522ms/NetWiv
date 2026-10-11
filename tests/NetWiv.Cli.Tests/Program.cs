@@ -39,7 +39,10 @@ var tests = new (string Name, Func<Task> Run)[]
     ("macOS targets configuration and metadata", MacOsTests.Configuration),
     ("macOS application and dmg packaging with real signing tools", MacOsTests.Packaging),
     ("bundle target arrays accept supported formats and reject malformed entries", BundleTargetTests.ValidateTargets),
-    ("P2 first NativeAOT build creates and embeds absent frontend output", FirstBuildTests.MissingDist),
+    ("consumer publish managed self-contained and bundled execution", () => FirstBuildTests.MissingDist("managed")),
+    ("consumer publish framework-dependent and bundled execution", () => FirstBuildTests.MissingDist("framework")),
+    ("consumer publish NativeAOT embeds absent frontend output", () => FirstBuildTests.MissingDist("aot")),
+    ("consumer publish rejects conflicting deployment modes", FirstBuildTests.InvalidModes),
     ("P2 Windows installers enforce prerequisites and integrate install uninstall", async () =>
     {
         if (OperatingSystem.IsWindows()) await BundleSigningTests.Installation();
@@ -331,6 +334,18 @@ static Task BundleMarkerPatch() => Temp(root =>
     File.WriteAllText(binary, marker + marker);
     Throws<InvalidOperationException>(() => NativeBundler.PatchBundleType(binary, "RPM"));
     Throws<ArgumentException>(() => NativeBundler.PatchBundleType(binary, "bad"));
+    var runtimeConfig = Path.Combine(root, (OperatingSystem.IsWindows() ? "app" : "app.bin") + ".runtimeconfig.json");
+    File.WriteAllText(runtimeConfig, "{}");
+    Throws<FileNotFoundException>(() => NativeBundler.PatchBundleType(binary, "MAC"));
+    var core = Path.Combine(root, "NetWiv.Core.dll");
+    File.WriteAllText(core, "no marker");
+    Throws<InvalidOperationException>(() => NativeBundler.PatchBundleType(binary, "MAC"));
+    File.WriteAllText(core, marker + marker);
+    Throws<InvalidOperationException>(() => NativeBundler.PatchBundleType(binary, "MAC"));
+    File.WriteAllText(core, marker);
+    NativeBundler.PatchBundleType(binary, "MAC");
+    Equal("__NETWIV_BUNDLE_TYPE_VAR_MAC", File.ReadAllText(core));
+    Equal(marker + marker, File.ReadAllText(binary));
     Equal(@"C:\price$$\payload", NativeBundler.EscapeNsis(@"C:\price$\payload"));
     return Task.CompletedTask;
 });
@@ -362,7 +377,7 @@ static Task InitLayout() => Temp(async root =>
 {
     var repo = Directory.GetCurrentDirectory(); var stdout = new StringWriter(); var stderr = new StringWriter();
     var exit = await CliApp.RunAsync(["init", "--ci", "--directory", root, "--app-name", "Sample", "--netwiv-source", repo], stdout, stderr, repo);
-    Equal(0, exit, stderr.ToString()); var dir = Path.Combine(root, "src-netwiv"); True(File.Exists(Path.Combine(dir, "netwiv.conf.json"))); var project = File.ReadAllText(Path.Combine(dir, "NetWiv.App.csproj")); True(project.Contains("NetWiv.Core.csproj", StringComparison.Ordinal)); True(project.Contains("NetWiv.Platform.Desktop.csproj", StringComparison.Ordinal)); True(project.Contains("NetWiv.Generators.csproj", StringComparison.Ordinal)); True(File.ReadAllText(Path.Combine(dir, "Program.cs")).Contains("UseEmbeddedAssets", StringComparison.Ordinal));
+    Equal(0, exit, stderr.ToString()); var dir = Path.Combine(root, "src-netwiv"); True(File.Exists(Path.Combine(dir, "netwiv.conf.json"))); var project = File.ReadAllText(Path.Combine(dir, "NetWiv.App.csproj")); True(!project.Contains("<PublishAot>", StringComparison.Ordinal)); True(project.Contains("NetWiv.Core.csproj", StringComparison.Ordinal)); True(project.Contains("NetWiv.Platform.Desktop.csproj", StringComparison.Ordinal)); True(project.Contains("NetWiv.Generators.csproj", StringComparison.Ordinal)); True(File.ReadAllText(Path.Combine(dir, "Program.cs")).Contains("UseEmbeddedAssets", StringComparison.Ordinal));
 });
 
 static Task InitPackages() => Temp(async root =>

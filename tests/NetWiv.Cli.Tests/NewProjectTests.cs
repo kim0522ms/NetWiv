@@ -28,6 +28,7 @@ internal static class NewProjectTests
             Check(solution.Contains("src-netwiv\\My.App.csproj", StringComparison.Ordinal) &&
                 solution.Contains("My.App.Frontend.esproj", StringComparison.Ordinal) &&
                 !solution.Contains("ReactExample", StringComparison.Ordinal), "Solution paths were not personalized");
+            Check(!project.Descendants("PublishAot").Any() && !project.Descendants("IsAotCompatible").Any(), "Consumer template must not opt into AOT");
             Check(project.Descendants("TargetFramework").Single().Value == "net8.0", "Backend must support .NET 8");
             Check(project.Descendants("RollForward").Single().Value == "Major", "Managed app must start when only .NET 9/10 is installed");
             Check(File.Exists(Path.Combine(destination, "My.App.Frontend.esproj")), "Frontend project is missing");
@@ -96,6 +97,7 @@ internal static class NewProjectTests
                 Check(config["build"]!["dotnetProject"]!.GetValue<string>() == "Example.csproj", "Backend project mismatch: " + template);
                 Check(File.Exists(Path.Combine(destination, "Example.sln")), "Solution missing: " + template);
                 var backend = XDocument.Load(Path.Combine(destination, "src-netwiv/Example.csproj"));
+                Check(!backend.Descendants("PublishAot").Any() && !backend.Descendants("IsAotCompatible").Any(), "Template forces AOT: " + template);
                 Check(backend.Descendants("PackageReference").Any(item => item.Attribute("Include")?.Value == "NetWiv.Platform.Desktop"), "Desktop package missing: " + template);
                 Check(!backend.ToString().Contains("NetWiv.Platform.Wry", StringComparison.Ordinal), "Former package name leaked into " + template);
                 var readme = File.ReadAllText(Path.Combine(destination, "README.md"));

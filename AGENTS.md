@@ -1,6 +1,6 @@
 # Repository working agreement
 
-NetWiv is a .NET 8 or later NativeAOT WebView desktop framework with TAURI® v2 compatibility as an important support goal.
+NetWiv is a .NET 8 or later WebView desktop framework with optional NativeAOT publishing with TAURI® v2 compatibility as an important support goal.
 
 The product spelling is `NetWiv`. Public C# namespaces and NuGet IDs use
 `NetWiv`, while CLI, native libraries, configuration files and npm identifiers
@@ -29,7 +29,7 @@ upstream name.
 - Desktop core includes app, core, DPI, events, image, menu, path, resources, tray, window, webview and webview-window behavior.
 - The plugin host is in scope; official plugin implementations, mobile targets and Tauri v1 migration are later milestones.
 - v1 prioritizes desktop core. The updater runtime remains Not Implemented and is not a v1 completion blocker; existing CLI signer support is separate. Use [the API status table](docs/api-status.md) for user-selected ancillary extensions rather than scheduling them automatically.
-- `netwiv dev` may use the managed runtime and offers an AOT mode. `netwiv build` and release validation must publish NativeAOT.
+- `netwiv dev` and `netwiv build` default to the managed runtime; `--aot` opts into NativeAOT. Consumer publishing also supports `--framework-dependent`. Keep framework and release NativeAOT validation alongside managed consumer validation.
 - The primary config is `src-netwiv/netwiv.conf.json`; `src-tauri/tauri.conf.json` is accepted as a compatibility input.
 
 ## Change discipline

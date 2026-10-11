@@ -10,6 +10,11 @@ public sealed class ShellPlugin : IPlugin
     private static readonly string[] Commands = ["execute", "spawn", "kill", "stdin_write", "open"];
     private readonly Dictionary<int, Child> _children = [];
     private readonly object _gate = new();
+    private readonly Action<ProcessStartInfo> _open;
+
+    public ShellPlugin() : this(StartOpen) { }
+    internal ShellPlugin(Action<ProcessStartInfo> launch) => _open = launch;
+
     public string Name => "shell";
 
     public void Initialize(PluginContext context)
@@ -224,7 +229,7 @@ public sealed class ShellPlugin : IPlugin
         return cmd.GetString()!;
     }
 
-    private static void Open(JsonElement args)
+    private void Open(JsonElement args)
     {
         var target = Text(args, "path");
         if (!Uri.TryCreate(target, UriKind.Absolute, out var url) || url.Scheme is not ("http" or "https" or "mailto" or "tel"))
@@ -232,7 +237,12 @@ public sealed class ShellPlugin : IPlugin
         if (args.TryGetProperty("with", out var app) && app.ValueKind == JsonValueKind.String)
             throw new InvokeException("Shell openWith is not implemented.");
         var info = OperatingSystem.IsWindows() ? new ProcessStartInfo(target) { UseShellExecute = true }
-            : new ProcessStartInfo("xdg-open") { UseShellExecute = false, ArgumentList = { target } };
+            : new ProcessStartInfo(OperatingSystem.IsMacOS() ? "/usr/bin/open" : "xdg-open") { UseShellExecute = false, ArgumentList = { target } };
+        _open(info);
+    }
+
+    private static void StartOpen(ProcessStartInfo info)
+    {
         using var process = System.Diagnostics.Process.Start(info) ?? throw new InvokeException("No application handled the shell target.");
     }
 

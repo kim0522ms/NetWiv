@@ -8,6 +8,7 @@
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="NetWiv.Core.Tests" />
     <ProjectReference Include="../NetWiv.Core/NetWiv.Core.csproj" />
   </ItemGroup>
 </Project>

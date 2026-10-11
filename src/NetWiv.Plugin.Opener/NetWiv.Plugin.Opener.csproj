@@ -2,12 +2,14 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <IsAotCompatible>true</IsAotCompatible>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsTrimmable>true</IsTrimmable>
     <PackageId>NetWiv.Plugin.Opener</PackageId>
     <Version>0.1.0-dev</Version>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="NetWiv.Core.Tests" />
     <ProjectReference Include="../NetWiv.Core/NetWiv.Core.csproj" />
   </ItemGroup>
 </Project>

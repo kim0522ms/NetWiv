@@ -92,7 +92,7 @@ Core WKWebView support does not imply that every official plugin has macOS OS in
 | Area | Current macOS scope |
 | --- | --- |
 | OS information | `OsPlugin` currently reports `linux` for `platform` and `os_type` on every non-Windows host. macOS detection is incomplete; do not use these values to select macOS behavior. |
-| External opening | Opener URL/path/reveal operations and Shell `open` still use `xdg-open` outside Windows. macOS Launch Services/Finder integration is not implemented. |
+| External opening | Opener URL/path operations and Shell `open` use `/usr/bin/open` on macOS; Opener reveal uses `open -R` to select the item in Finder. Linux retains `xdg-open` (reveal opens the containing directory). Explicit application selection remains unsupported. |
 | Autostart and DeepLink | OS registration/query/removal paths reject macOS. Parsing explicitly supplied launch URLs is separate from OS URL activation. |
 | Log and persisted scope | Shared managed persistence is available. Core's macOS app log path is `~/Library/Logs/<identifier>`; managed regression checks do not establish installed-app behavior. |
 | Dialog, clipboard and notification | Native dependencies compile for macOS; actual dialogs, pasteboard contents, notifications and OS permission interaction remain unverified. |

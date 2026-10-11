@@ -95,6 +95,10 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("official OS guest receives synchronous platform values and guarded hostname", OsPluginTests.GuestContract),
     ("official process guest exit forwards status and restart stays permission guarded", ProcessPluginTests.ExitAndPermissions),
     ("official store guest shares handles and persists JSON on explicit save", StorePluginTests.Persistence),
+    ("external opening reports launcher failures and respects deny permissions", ExternalOpenTests.LaunchFailures),
+    ("external opening preserves opener URL/path arguments and rejects forbidden targets", ExternalOpenTests.OpenerTargets),
+    ("external opening reveals files and directories with the platform launcher", ExternalOpenTests.RevealTargets),
+    ("external opening preserves shell URL arguments and rejects forbidden targets", ExternalOpenTests.ShellTargets),
     ("official opener default scope rejects local URLs and custom executables", OpenerPluginTests.ScopeBoundaries),
     ("official log guest writes records and validates levels", LogPluginTests.Records),
     ("official HTTP guest enforces URL scope and streams a response", HttpPluginTests.Fetch),
@@ -237,6 +241,12 @@ if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("NETWIV_INFER_
 else Console.WriteLine("SKIP pinned infer corpus: NETWIV_INFER_TESTDATA is not configured");
 
 var failed = 0;
+if (OperatingSystem.IsMacOS())
+{
+    tests.Add(("external opening rejects missing macOS reveal items before any launch", ExternalOpenTests.MacRevealValidation));
+    tests.Add(("external opening canonicalizes macOS reveal links and rejects broken targets", ExternalOpenTests.MacRevealLinks));
+}
+
 var selected = args.Length == 0 ? tests : args.Length == 2 && args[0] == "--filter"
     ? tests.Where(test => test.Name.Contains(args[1], StringComparison.OrdinalIgnoreCase)).ToList()
     : throw new ArgumentException("Usage: NetWiv.Core.Tests [--filter text]");

@@ -184,8 +184,17 @@ part of the completed smoke scope. Per-window `skipTaskbar=true` is rejected on
 macOS; use `AppApi.SetDockVisibilityAsync` for the application-wide Dock entry.
 The Autostart and DeepLink OS-registration plugins remain Windows/Linux-only.
 Their macOS failure paths are tested and are not reported as supported features.
-The OS plugin still identifies non-Windows hosts as Linux, and Opener/Shell `open`
-still use `xdg-open` on macOS. These plugin paths are incomplete; consult the
+Opener URL/path opening and Shell `open` use `/usr/bin/open` on macOS.
+Opener reveal resolves each requested path through macOS `realpath`, including
+symbolic links in parent directories, then submits all canonical paths in one
+`open -R` request. Missing items, broken/cyclic links and invalid paths reject the
+whole request before Finder is launched.
+The `external opening` Core tests check launcher arguments and rejection paths
+without opening desktop applications. Local arm64 smoke checks also confirmed
+browser requests from Opener URL/`.webloc` opening and Shell URL opening;
+Finder selection itself still needs GUI acceptance.
+Explicit application selection remains unsupported. The OS plugin still identifies
+non-Windows hosts as Linux; consult the
 [plugin limits](official-plugins.md#macos-plugin-limits) before enabling them.
 
 Custom-protocol responses are queued to the native UI loop. A response submitted

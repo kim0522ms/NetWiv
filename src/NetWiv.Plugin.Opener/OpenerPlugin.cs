@@ -6,6 +6,11 @@ namespace NetWiv.Plugin.Opener;
 /// <summary>Scoped external URL and path opening for the official opener guest.</summary>
 public sealed class OpenerPlugin : IPlugin
 {
+    private readonly Action<ProcessStartInfo> _launch;
+
+    public OpenerPlugin() : this(Start) { }
+    internal OpenerPlugin(Action<ProcessStartInfo> launch) => _launch = launch;
+
     public string Name => "opener";
 
     public void Initialize(PluginContext context)
@@ -23,7 +28,7 @@ public sealed class OpenerPlugin : IPlugin
         context.PermissionSet("default", "allow-open-url", "allow-reveal-item-in-dir", "allow-default-urls");
     }
 
-    private static ValueTask<JsonElement> Execute(string command, InvokeContext context, JsonElement args, CancellationToken token)
+    private ValueTask<JsonElement> Execute(string command, InvokeContext context, JsonElement args, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
         if (command == "open_url")
@@ -45,19 +50,29 @@ public sealed class OpenerPlugin : IPlugin
         {
             var paths = args.GetProperty("paths");
             if (paths.ValueKind != JsonValueKind.Array || paths.GetArrayLength() == 0) throw new InvokeException("Reveal requires paths.");
+            var macReveal = OperatingSystem.IsMacOS() ? new ProcessStartInfo("/usr/bin/open") { UseShellExecute = false } : null;
+            macReveal?.ArgumentList.Add("-R");
             foreach (var item in paths.EnumerateArray())
             {
-                var path = Path.GetFullPath(item.GetString() ?? throw new InvokeException("Reveal path must be a string."));
+                var requested = item.GetString() ?? throw new InvokeException("Reveal path must be a string.");
+                if (macReveal is not null)
+                {
+                    macReveal.ArgumentList.Add(MacRevealPath.Resolve(requested));
+                    continue;
+                }
+                var path = Path.GetFullPath(requested);
                 var folder = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
                 if (folder is null || !Directory.Exists(folder)) throw new InvokeException("The parent directory does not exist.");
                 if (OperatingSystem.IsWindows())
                 {
                     var info = new ProcessStartInfo("explorer.exe") { UseShellExecute = false };
                     info.ArgumentList.Add("/select,"); info.ArgumentList.Add(path);
-                    Start(info);
+                    _launch(info);
                 }
                 else Launch(folder, null);
             }
+            // Validate the entire batch before Finder can change its selection.
+            if (macReveal is not null) _launch(macReveal);
         }
         else throw new InvokeException("Unknown opener command.");
         return ValueTask.FromResult(JsonValue.Null);
@@ -100,7 +115,7 @@ public sealed class OpenerPlugin : IPlugin
         args.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString()! : throw new InvokeException("Missing opener argument '" + name + "'.");
 
-    private static void Launch(string target, string? program)
+    private void Launch(string target, string? program)
     {
         ProcessStartInfo info;
         if (program is not null)
@@ -109,8 +124,8 @@ public sealed class OpenerPlugin : IPlugin
             info.ArgumentList.Add(target);
         }
         else if (OperatingSystem.IsWindows()) info = new(target) { UseShellExecute = true };
-        else { info = new("xdg-open") { UseShellExecute = false }; info.ArgumentList.Add(target); }
-        Start(info);
+        else { info = new(OperatingSystem.IsMacOS() ? "/usr/bin/open" : "xdg-open") { UseShellExecute = false }; info.ArgumentList.Add(target); }
+        _launch(info);
     }
 
     private static void Start(ProcessStartInfo info)

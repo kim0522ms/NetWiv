@@ -1,6 +1,6 @@
 # Differential desktop conformance
 
-The same browser code imports the unchanged official `@tauri-apps/api@2.11.1` package and runs in the Rust Tauri reference host and NetWiv. The build script downloads the pinned npm tarball, verifies SHA-512, and copies its JavaScript without modification.
+The same browser code imports the unchanged official `@tauri-apps/api@2.11.1` package and runs in the Rust TAURI® reference host and NetWiv. The build script downloads the pinned npm tarball, verifies SHA-512, and copies its JavaScript without modification.
 
 ```sh
 node tests/conformance/scripts/build-frontend.mjs
@@ -118,3 +118,10 @@ above do not establish WKWebView behavior.
 The Apple Silicon smoke and local app/DMG tests described in the
 [macOS guide](../../docs/macos.md) have run; the full macOS reference/candidate
 comparison described here remains unverified.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

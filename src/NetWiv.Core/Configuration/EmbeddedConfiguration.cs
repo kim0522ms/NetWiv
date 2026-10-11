@@ -111,7 +111,7 @@ internal sealed record EmbeddedConfiguration(
     private static WindowOptions ReadWindow(JsonElement value)
     {
         var label = String(value, "label") ?? "main";
-        return new(label, String(value, "title") ?? "Tauri App", String(value, "url") ?? "index.html",
+        return new(label, String(value, "title") ?? "NetWiv App", String(value, "url") ?? "index.html",
             Number(value, "width") ?? 800, Number(value, "height") ?? 600, value.Clone());
     }
 

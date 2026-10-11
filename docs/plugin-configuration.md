@@ -12,7 +12,7 @@ Place plugin values under the exact plugin name in `netwiv.conf.json`:
 
 `UseEmbeddedConfig()` loads the values before `IPlugin.Initialize`. A plugin
 receives only its own value through `PluginContext.Config`. Missing values are
-JSON null, matching Tauri's plugin store. Object, array, scalar and explicit null
+JSON null, matching TAURI®'s plugin store. Object, array, scalar and explicit null
 values are preserved. Configuration overlays merge before plugin initialization.
 
 For typed settings, supply generated System.Text.Json metadata:
@@ -76,3 +76,9 @@ and cycles fail application construction. Deny permissions retain precedence.
 
 `netwiv plugin new` uses the CLI's SDK version for NuGet references;
 `--netwiv-source` explicitly selects source references for framework development.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

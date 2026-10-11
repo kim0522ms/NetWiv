@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 using NetWiv;
-using NetWiv.Platform.Wry;
+using NetWiv.Platform.Desktop;
 
 [assembly: CommandJsonContext(typeof(AppJsonContext))]
 
@@ -11,7 +11,7 @@ internal static class Program
     {
         var smoke = args.Contains("--smoke-test", StringComparer.Ordinal);
         var builder = new Builder()
-            .UseRuntime(new WryDesktopRuntime())
+            .UseRuntime(new DesktopRuntime())
             .Metadata(new AppMetadata("My NetWiv app", "0.1.0", "dev.netwiv.starter"))
             .UseEmbeddedAssets()
             .Manage(new GreetingCounter())

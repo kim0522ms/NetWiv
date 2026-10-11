@@ -23,7 +23,7 @@
   const origin = __TEMPLATE_origin__
 
   /**
-   * @type {Uint8Array} - Injected by Tauri during runtime
+   * @type {Uint8Array} - Injected by NetWiv during runtime
    */
   const aesGcmKeyRaw = new Uint8Array(__TEMPLATE_runtime_aes_gcm_key__)
 

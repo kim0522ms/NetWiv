@@ -32,11 +32,11 @@ framework. Public documentation is maintained in English.
 
 | Reference | Topics |
 | --- | --- |
-| [Design principles](design-principles.md) | .NET usability and Tauri compatibility policy |
+| [Design principles](design-principles.md) | .NET usability and TAURI® compatibility policy |
 | [Support and validation](implementation-status.md) | Platforms, distribution and unverified areas |
 | [API status](api-status.md) | Implementation and comparison coverage for the pinned public API inventory |
 | [Platform behavior](pinned-upstream-behavior.md) | Upstream constraints and deliberate C# differences |
-| [Native architecture](wry-migration.md) | Responsibilities of .NET and Rust |
+| [Native architecture](native-architecture.md) | Responsibilities of .NET and Rust |
 | [C ABI](native-abi.md) | Memory, threads, callbacks and shutdown |
 | [Framework development](development.md) | Source builds, tests and package creation |
 | [Upstream tests](upstream-business-tests.md) | Test inventory generation, ports and exclusion criteria |
@@ -53,3 +53,9 @@ identify required inputs and working directories. Validation instructions refer
 to repository tests and commands. Keep personal paths, temporary feeds, work
 journals and execution logs in Git-ignored `.local-docs/` or `artifacts/`.
 Unimplemented and unverified behavior must remain visible in public documents.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

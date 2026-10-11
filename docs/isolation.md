@@ -1,6 +1,6 @@
 # Isolation and IPC transport
 
-NetWiv supports the pinned Tauri isolation pattern through its Wry backend.
+NetWiv supports the pinned TAURI® isolation pattern through its Wry backend.
 Use matching SDK and native package versions; older development packages may
 not provide this transport. Full security parity remains under validation.
 
@@ -79,3 +79,10 @@ Channel, forged/opaque-frame, reload and fallback smoke. This single-host run is
 not the paired Tauri differential suite above; macOS reference comparison and
 Intel execution remain open. Do not apply WebKitGTK frame/CORS observations to
 WKWebView without a matching macOS result. See [macOS validation](macos.md#validation-and-limits).
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

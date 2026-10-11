@@ -1,5 +1,6 @@
 // Adapted from urlpattern 0.3.0 (MIT), Copyright 2018-2021 the Deno authors,
 // and tauri-utils 2.9.3 (MIT OR Apache-2.0), Copyright 2019-2026 Tauri Programme.
+// SPDX-License-Identifier: MIT AND (Apache-2.0 OR MIT)
 using System.Globalization;
 using System.Net;
 using System.Text;

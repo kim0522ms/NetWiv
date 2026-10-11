@@ -6,6 +6,7 @@ namespace NetWiv.Cli;
 
 internal static class NewCommand
 {
+    private const string TemplateNotice = "\n---\n\nTAURI® is a trademark of The Tauri Programme within the Commons Conservancy.\n\nNetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.\n";
     private const string Usage = "Usage: netwiv new NAME [-t|--template TEMPLATE] [-m|--manager MANAGER] [-o|--output DIRECTORY] [--identifier ID] [--source NUGET_SOURCE]\n       netwiv new --list\nDefault template: react. Run `netwiv new --list` for all choices.";
     private static readonly string[] JavaScriptTemplates = ["vanilla", "vanilla-ts", "vue", "vue-ts", "svelte", "svelte-ts", "react", "react-ts", "solid", "solid-ts", "angular", "preact", "preact-ts"];
     private static readonly string[] RustTemplates = ["yew", "leptos", "sycamore", "dioxus"];
@@ -145,9 +146,9 @@ internal static class NewCommand
             CopyDirectory(Path.Combine(shared, "vendor"), Path.Combine(project, "vendor"));
             File.Delete(Path.Combine(project, "scripts", "generate-bindings.mjs"));
         }
-        File.WriteAllText(Path.Combine(project, "README.md"), rust
+        File.WriteAllText(Path.Combine(project, "README.md"), (rust
             ? $"# NetWiv + {template}\n\nThe C# backend needs no Cargo. This optional Rust/WASM frontend needs `rustup target add wasm32-unknown-unknown` and `cargo install trunk --locked`. Run `dotnet tool restore` then `dotnet tool run netwiv -- dev -- --dev`.\n"
-            : $"# NetWiv + {template}\n\nRun `npm ci` and `npm run desktop:dev`. Edit `src-netwiv/Program.cs` for C# commands and `src` for the frontend.\n");
+            : $"# NetWiv + {template}\n\nRun `npm ci` and `npm run desktop:dev`. Edit `src-netwiv/Program.cs` for C# commands and `src` for the frontend.\n") + TemplateNotice);
     }
 
     private static async Task ApplyBlazorFrontendAsync(string project, CancellationToken token)
@@ -164,7 +165,7 @@ internal static class NewCommand
             .Replace("</body>", "<script type=\"module\" src=\"netwiv.js\"></script>\n</body>", StringComparison.Ordinal);
         File.WriteAllText(indexPath, index);
         File.Delete(Path.Combine(project, "scripts", "generate-bindings.mjs"));
-        File.WriteAllText(Path.Combine(project, "README.md"), "# NetWiv + Blazor\n\nThe frontend is a .NET 10 Blazor WebAssembly project in `frontend/`. Run `dotnet tool restore` then `dotnet tool run netwiv -- dev -- --dev`. The desktop backend is in `src-netwiv/`.\n");
+        File.WriteAllText(Path.Combine(project, "README.md"), "# NetWiv + Blazor\n\nThe frontend is a .NET 10 Blazor WebAssembly project in `frontend/`. Run `dotnet tool restore` then `dotnet tool run netwiv -- dev -- --dev`. The desktop backend is in `src-netwiv/`.\n" + TemplateNotice);
     }
 
     private static void ClearReactFrontend(string project)

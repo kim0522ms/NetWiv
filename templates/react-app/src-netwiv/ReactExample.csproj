@@ -11,7 +11,7 @@
     <NetWivConfigPath Condition="'$(NetWivConfigPath)' == ''">$(MSBuildProjectDirectory)/netwiv.conf.json</NetWivConfigPath>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="NetWiv.Platform.Wry" Version="$(NetWivVersion)" />
+    <PackageReference Include="NetWiv.Platform.Desktop" Version="$(NetWivVersion)" />
     <PackageReference Include="NetWiv.Build" Version="$(NetWivVersion)" PrivateAssets="all" />
     <PackageReference Include="NetWiv.Generators" Version="$(NetWivVersion)" PrivateAssets="all" />
   </ItemGroup>

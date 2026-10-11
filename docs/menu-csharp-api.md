@@ -1,7 +1,7 @@
 # C# menu API
 
 The menu types in `NetWiv` map to the public `@tauri-apps/api/menu` contract pinned in
-`compatibility/upstream-lock.json`: Tauri runtime 2.11.5 and `@tauri-apps/api` 2.11.1.
+`compatibility/upstream-lock.json`: TAURI® runtime 2.11.5 and `@tauri-apps/api` 2.11.1.
 The implementation writes the upstream command names and JSON shapes directly; it does not use
 reflection-based serialization.
 
@@ -98,3 +98,10 @@ macOS. Native menu selection and checked-state changes have been exercised in
 a real Apple Silicon app; every role, system-icon appearance and About-field
 presentation have not been verified. See [API status](api-status.md) and
 [macOS limits](macos.md#validation-and-limits).
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

@@ -21,6 +21,7 @@ GeneratedCommandRegistry.Register("generated_selected", static registry =>
 
 var tests = new List<(string Name, Func<Task> Run)>
 {
+    ("runtime identity rejects a Tauri version through guest IPC", RuntimeIdentity),
     ("Document-owned resource close rejects other windows and preserves backend sharing", ResourceOwnershipTests.CloseRequiresOwner),
     ("SQLite integer parameters preserve signed 64-bit values and reject overflow", SqlPluginTests.IntegerBinding),
     ("Shell execution cancellation stops parent and descendant processes", ShellLifetimeTests.CancellationStopsProcessTree),
@@ -417,6 +418,25 @@ static Task InitializationScriptMatchesPinnedSerializer()
     Assert.Contains("} catch { return; }", script);
     Assert.DoesNotContain("Only Uint8Array is supported", script);
     return Task.CompletedTask;
+}
+
+static async Task RuntimeIdentity()
+{
+    var runtime = new FakeRuntime();
+    using var app = new Builder().UseRuntime(runtime)
+        .Metadata(new("Example", "1.2.3", "dev.example"))
+        .Capability(new("default", ["core:default"], Windows: ["main"]))
+        .Build();
+    app.Run();
+    Send(runtime, "plugin:app|tauri_version", "{}", new Uri("tauri://localhost"));
+    var response = await runtime.NextScript();
+    Assert.Contains("runCallback(2,", response);
+    Assert.Contains("NetWiv does not embed the TAURI framework", response);
+    Assert.DoesNotContain("2.11.5", response);
+    Send(runtime, "plugin:app|version", "{}", new Uri("tauri://localhost"));
+    Assert.Contains("runCallback(1,\"1.2.3\")", await runtime.NextScript());
+    Send(runtime, "plugin:app|name", "{}", new Uri("tauri://localhost"));
+    Assert.Contains("runCallback(1,\"Example\")", await runtime.NextScript());
 }
 
 static async Task CoreDefaultExpands()

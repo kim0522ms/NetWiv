@@ -1,0 +1,5 @@
+{
+  "app": {
+    "security": { "assetProtocol": { "enable": true, "scope": ["$TEMP/netwiv-desktop-asset-*.txt"] } }
+  }
+}

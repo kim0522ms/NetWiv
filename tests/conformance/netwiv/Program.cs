@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 using NetWiv;
 using NetWiv.Runtime;
 #if NETWIV_WRY
-using NetWiv.Platform.Wry;
+using NetWiv.Platform.Desktop;
 #elif WINDOWS
 using NetWiv.Platform.Windows;
 #else
@@ -55,7 +55,7 @@ internal static class Program
         using var watchdog = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var builder = new Builder()
 #if NETWIV_WRY
-            .UseRuntime(new WryDesktopRuntime())
+            .UseRuntime(new DesktopRuntime())
 #elif WINDOWS
             .UseRuntime(new WindowsDesktopRuntime())
 #else

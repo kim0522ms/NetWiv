@@ -23,7 +23,7 @@ of deriving a path from the executable directory; see [macOS bundles](macos.md#b
 A mapped file has an exact destination. A mapped directory preserves the tree
 under that directory. A mapped glob flattens matched files into its destination.
 The array form (`["../data"]`) preserves the source hierarchy, encoding each parent
-component as `_up_` and an absolute root as `_root_`, as in the pinned Tauri mapper.
+component as `_up_` and an absolute root as `_root_`, as in the pinned TAURI® mapper.
 Globs activate when the source contains `*`; `**` descends through directories.
 A literal mapped filename ending in `/` is still an exact filename, matching
 upstream's behavior; use a directory source or an explicit target filename.
@@ -58,3 +58,9 @@ checks real app/DMG resource staging and signing with native tools. It does not 
 installer installation or GUI interaction. The original six mapper tests and
 additional staging/watch regressions run with
 `dotnet run --project tests/NetWiv.Cli.Tests -c Release -- --filter resource`.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

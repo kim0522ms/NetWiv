@@ -1,6 +1,6 @@
 using System.Text.Json;
 using NetWiv;
-using NetWiv.Platform.Wry;
+using NetWiv.Platform.Desktop;
 using NetWiv.Plugin.WindowState;
 
 internal static class WindowStateSmoke
@@ -11,7 +11,7 @@ internal static class WindowStateSmoke
         var identifier = "dev.netwiv.state." + Path.GetFileName(root);
         var failure = (Exception?)null;
         string? statePath = null;
-        var runtime = new WryDesktopRuntime();
+        var runtime = new DesktopRuntime();
         using var app = new Builder().UseRuntime(runtime).Metadata(new("StateSmoke", "1.0", identifier))
             .Plugin(plugin).Window("main", "Window state smoke", "about:blank", 640, 480)
             .Setup(value => _ = Probe(value.Handle)).Build();

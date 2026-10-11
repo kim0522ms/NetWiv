@@ -1,4 +1,4 @@
-# Tauri compatibility data
+# TAURI® compatibility data
 
 Tauri is the comparison baseline, not a requirement to copy every implementation
 decision. Follow the [design principles](../docs/design-principles.md) when
@@ -51,3 +51,10 @@ source snapshot; see [macOS conformance instructions](../tests/conformance/READM
 The current Apple Silicon NativeAOT/GUI smoke is integration evidence, and Intel
 and complete macOS differential acceptance remain open. Keep generated upstream
 manifests unchanged when documenting these limits.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

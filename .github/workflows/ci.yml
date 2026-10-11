@@ -227,15 +227,15 @@ jobs:
         run: ./artifacts/ci/core-aot/NetWiv.Core.Tests${{ matrix.exe }} 2>&1 | tee artifacts/ci/core-aot.log
 
       - name: Publish native desktop smoke host with NativeAOT
-        run: dotnet publish tests/NetWiv.Wry.Smoke -c Release -r '${{ matrix.rid }}' -p:PublishAot=true -o artifacts/ci/wry-aot -bl:artifacts/ci/wry-aot.binlog
+        run: dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r '${{ matrix.rid }}' -p:PublishAot=true -o artifacts/ci/desktop-aot -bl:artifacts/ci/desktop-aot.binlog
 
       - name: Windows native startup diagnostics
         if: runner.os == 'Windows'
-        run: pwsh -NoProfile -File scripts/test-native-startup.ps1 -PublishedDirectory artifacts/ci/wry-aot 2>&1 | tee artifacts/ci/startup.log
+        run: pwsh -NoProfile -File scripts/test-native-startup.ps1 -PublishedDirectory artifacts/ci/desktop-aot 2>&1 | tee artifacts/ci/startup.log
 
       - name: Unix native startup diagnostics
         if: runner.os != 'Windows'
-        run: bash scripts/test-native-startup.sh artifacts/ci/wry-aot 2>&1 | tee artifacts/ci/startup.log
+        run: bash scripts/test-native-startup.sh artifacts/ci/desktop-aot 2>&1 | tee artifacts/ci/startup.log
 
       - name: Ensure Windows WebView2 Runtime
         if: runner.os == 'Windows'
@@ -270,22 +270,22 @@ jobs:
       - name: Windows NativeAOT WebView smoke
         if: runner.os == 'Windows'
         timeout-minutes: 5
-        run: ./artifacts/ci/wry-aot/NetWiv.Wry.Smoke.exe 2>&1 | tee artifacts/ci/desktop-smoke.log
+        run: ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe 2>&1 | tee artifacts/ci/desktop-smoke.log
 
       - name: Linux X11 NativeAOT WebView smoke
         if: runner.os == 'Linux'
         timeout-minutes: 5
         run: |
           xvfb-run -a -s '-screen 0 1280x800x24' \
-            bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/wry-aot/NetWiv.Wry.Smoke)" x11 \
+            bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke)" x11 \
             2>&1 | tee artifacts/ci/desktop-smoke.log
 
       - name: macOS NativeAOT WKWebView smoke
         if: runner.os == 'macOS'
         timeout-minutes: 5
         run: |
-          ./artifacts/ci/wry-aot/NetWiv.Wry.Smoke --no-window-smoke 2>&1 | tee artifacts/ci/windowless-smoke.log
-          ./artifacts/ci/wry-aot/NetWiv.Wry.Smoke 2>&1 | tee artifacts/ci/desktop-smoke.log
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --no-window-smoke 2>&1 | tee artifacts/ci/windowless-smoke.log
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke 2>&1 | tee artifacts/ci/desktop-smoke.log
 
       - name: Publish macOS isolation smoke with NativeAOT
         if: runner.os == 'macOS'

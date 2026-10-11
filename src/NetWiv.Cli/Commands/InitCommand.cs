@@ -26,7 +26,7 @@ internal static class InitCommand
         if (tauriPath is not null) throw new NotSupportedException("--tauri-path selects Rust crates and has no .NET project equivalent; use --netwiv-source for local NetWiv projects.");
         if (log) throw new NotSupportedException("--log configures Rust tracing and has no .NET initialization equivalent.");
         ValidateName(appName, "application name");
-        if (sourceRoot is not null && !File.Exists(Path.Combine(sourceRoot, "src", "NetWiv.Platform.Wry", "NetWiv.Platform.Wry.csproj")))
+        if (sourceRoot is not null && !File.Exists(Path.Combine(sourceRoot, "src", "NetWiv.Platform.Desktop", "NetWiv.Platform.Desktop.csproj")))
             throw new DirectoryNotFoundException($"--netwiv-source is not a NetWiv source checkout: {sourceRoot}");
 
         var target = Path.Combine(destination, "src-netwiv");
@@ -38,11 +38,11 @@ internal static class InitCommand
         var template = FindTemplateDirectory();
         var references = sourceRoot is null
             ? """
-                  <PackageReference Include="NetWiv.Platform.Wry" Version="$(NetWivVersion)" />
+                  <PackageReference Include="NetWiv.Platform.Desktop" Version="$(NetWivVersion)" />
                   <PackageReference Include="NetWiv.Build" Version="$(NetWivVersion)" PrivateAssets="all" />
                   <PackageReference Include="NetWiv.Generators" Version="$(NetWivVersion)" PrivateAssets="all" />
               """
-            : string.Join(Environment.NewLine, new[] { "NetWiv.Core", "NetWiv.Platform.Wry", "NetWiv.Build", "NetWiv.Generators" }.Select(name =>
+            : string.Join(Environment.NewLine, new[] { "NetWiv.Core", "NetWiv.Platform.Desktop", "NetWiv.Build", "NetWiv.Generators" }.Select(name =>
                 $"    <ProjectReference Include=\"{XmlEscape(Relative(target, Path.Combine(sourceRoot, "src", name, name + ".csproj")))}\""
                 + (name == "NetWiv.Generators" ? " OutputItemType=\"Analyzer\" ReferenceOutputAssembly=\"false\"" : name == "NetWiv.Build" ? " ReferenceOutputAssembly=\"false\"" : "") + " />"));
         var buildImport = sourceRoot is null ? string.Empty

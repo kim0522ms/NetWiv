@@ -1,5 +1,5 @@
 using NetWiv;
-using NetWiv.Platform.Wry;
+using NetWiv.Platform.Desktop;
 using System.Text.Json.Serialization;
 
 [assembly: CommandJsonContext(typeof(AppJsonContext))]
@@ -11,7 +11,7 @@ internal static class Program
   private static void Main()
   {
     new Builder()
-      .UseRuntime(new WryDesktopRuntime())
+      .UseRuntime(new DesktopRuntime())
       .InvokeHandler("greet")
       .Window("main", "__WINDOW_TITLE__", "index.html")
 #if NETWIV_DEV

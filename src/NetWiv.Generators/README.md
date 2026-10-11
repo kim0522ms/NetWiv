@@ -37,7 +37,7 @@ parameter name. `Task`, `Task<T>`, `ValueTask`, `ValueTask<T>`, synchronous
 values, and `void` are supported.
 
 An attribute generates a binding but does not expose the command. Select the
-commands for an application explicitly, as with Tauri's `generate_handler!`:
+commands for an application explicitly, as with TAURI®'s `generate_handler!`:
 
 ```csharp
 new Builder()
@@ -58,3 +58,9 @@ parameterless constructor. The generator registers a static factory with
 application that references `NetWiv.Generators` as an analyzer discovers those
 exports in referenced plugin assemblies and emits typed factories that keep the
 plugins reachable under NativeAOT. No reflection or runtime activation is used.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

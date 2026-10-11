@@ -29,7 +29,7 @@ Both options are additive ABI 2 JSON fields; older native builds reject unknown
 fields rather than silently running without the requested protocol.
 Core resolves the two
 data roots separately: the first is the OS local data root, the second includes
-the app identifier. They must not be interchanged when applying Tauri config.
+the app identifier. They must not be interchanged when applying TAURI® config.
 The optional
 icon contains RGBA bytes as JSON integers and is copied during initialization.
 Webview entries are
@@ -101,3 +101,10 @@ its HTTP response. A browser/CSP transport failure switches that document to Wry
 postMessage; its body/header semantics follow the pinned Tauri fallback.
 Frame/origin authenticity is an acceptance requirement, not established merely
 by trusting guest-provided labels, a page URL, or an invoke token.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

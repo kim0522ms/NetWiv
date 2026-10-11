@@ -28,9 +28,9 @@ node scripts/prepare-native-dependencies.mjs osx-arm64 artifacts/native-source/m
 export SODIUM_DIST_DIR="$PWD/artifacts/native-source/macos"
 bash scripts/build-native.sh
 dotnet build NetWiv.slnx -c Release
-dotnet publish tests/NetWiv.Wry.Smoke -c Release -r osx-arm64
-tests/NetWiv.Wry.Smoke/bin/Release/net10.0/osx-arm64/publish/NetWiv.Wry.Smoke
-bash scripts/test-native-startup.sh "$PWD/tests/NetWiv.Wry.Smoke/bin/Release/net10.0/osx-arm64/publish"
+dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r osx-arm64
+tests/NetWiv.Desktop.Smoke/bin/Release/net10.0/osx-arm64/publish/NetWiv.Desktop.Smoke
+bash scripts/test-native-startup.sh "$PWD/tests/NetWiv.Desktop.Smoke/bin/Release/net10.0/osx-arm64/publish"
 ```
 
 Use `osx-x64` on Intel. The native build script selects the host architecture,
@@ -63,7 +63,7 @@ bundles is a separate tool.
 
 ## Application workflow
 
-Use the existing `NetWiv.Platform.Wry` runtime with a synchronous `Main` entry
+Use the existing `NetWiv.Platform.Desktop` runtime with a synchronous `Main` entry
 point. AppKit must run on the process's original main thread. Do not start
 `app.Run()` from `Task.Run` or after an asynchronous `Main` continuation.
 The native adapter rejects an off-main-thread start with a diagnostic. Install
@@ -88,7 +88,7 @@ exact paths. Launch the `.app` through Finder or `open "/path/to/App.app"`;
 run `Contents/MacOS/<main-binary>` directly when you need terminal diagnostics.
 
 Platform overlays are `netwiv.macos.conf.json` (or the accepted Tauri/json5/TOML
-equivalent). Capability/permission platform values retain Tauri's `"macOS"`
+equivalent). Capability/permission platform values retain TAURI®'s `"macOS"`
 spelling. Hook variables use `TAURI_ENV_PLATFORM=darwin`,
 `TAURI_ENV_FAMILY=unix` and `TAURI_ENV_ARCH=aarch64` or `x86_64`.
 
@@ -159,7 +159,7 @@ Logs, reports and published executables are uploaded for seven days. See the
 A configured job is not a passing hosted run; Intel execution remains unverified
 until its job succeeds. Neither macOS 15 job establishes macOS 12 acceptance.
 
-The NativeAOT Wry smoke exercises real WKWebView guest invoke/Channel, scoped
+The NativeAOT desktop smoke exercises real WKWebView guest invoke/Channel, scoped
 assets, multiple windows, native menu/tray/image operations, reparenting, async
 close, document invalidation, remote-origin denial, macOS title bars/effects,
 Dock/app visibility and log paths. The isolation smoke additionally exercises
@@ -201,7 +201,7 @@ cargo +1.95.0 test --locked --manifest-path native/netwiv-native/Cargo.toml
 The focused CLI checks create temporary real Mach-O executables, stage resources,
 create app/DMG artifacts, verify signatures/plists/images and exercise signing
 failures. The Rust tests check off-main-thread rejection without creating AppKit
-objects on a worker. Run the published Wry smoke with `--no-window-smoke` for
+objects on a worker. Run the published desktop smoke with `--no-window-smoke` for
 windowless app/menu/tray startup and teardown, or set
 `NETWIV_SMOKE_HOLD_MS=120000` before ordinary execution for GUI inspection.
 See [isolation smoke](isolation.md#macos-source-linked-smoke) and
@@ -213,3 +213,10 @@ harnesses still select Windows/Linux RIDs. They must be extended before being
 used as macOS package-consumer evidence. Keep per-run logs, coverage, toolchain
 versions, source/binary hashes and skips in ignored `artifacts/`; do not convert
 a source-linked smoke result into package-only or release acceptance.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY and TAO are trademarks of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

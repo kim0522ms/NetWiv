@@ -14,7 +14,7 @@
 }
 ```
 
-The default command is `dotnet`, the explicit MSBuild counterpart of Tauri's
+The default command is `dotnet`, the explicit MSBuild counterpart of TAURI®'s
 default `cargo`. An explicit `--runner` replaces the entire configured runner,
 including cwd/args. Relative cwd resolves from the configuration directory,
 corresponding to Tauri's backend directory. Optional cwd/args may be absent or
@@ -91,3 +91,9 @@ capability platform filters use `"macOS"`. Hooks receive
 and .NET RIDs. Standalone `bundle` must use the same target spelling as the
 preceding `build` because that spelling selects the output directory.
 See the [macOS workflow](macos.md#application-workflow).
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

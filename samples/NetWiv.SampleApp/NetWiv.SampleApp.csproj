@@ -7,7 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NetWiv.Core\NetWiv.Core.csproj" />
-    <ProjectReference Include="..\..\src\NetWiv.Platform.Wry\NetWiv.Platform.Wry.csproj" />
+    <ProjectReference Include="..\..\src\NetWiv.Platform.Desktop\NetWiv.Platform.Desktop.csproj" />
     <ProjectReference Include="..\..\src\NetWiv.Generators\NetWiv.Generators.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />

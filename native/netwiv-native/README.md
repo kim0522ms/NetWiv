@@ -78,7 +78,7 @@ same-origin before capturing the Core invoke key. Isolation mode still uses a
 strict top-frame guard. Remote iframe grants are not considered compatible
 until an adversarial frame suite proves the boundary on each engine, including
 WKWebView. NetWiv's macOS isolation/remote-origin smoke is separate from the
-full pinned Tauri differential acceptance.
+full pinned TAURI® differential acceptance.
 
 ## Pinned-source audit
 
@@ -101,3 +101,10 @@ the same pinned `window-vibrancy` 0.6.0 implementation as Tauri. macOS uses its
 vibrancy material/state/radius path and Tao shadow setter. AppKit requires the
 process main thread; protocol responses are queued there to avoid a managed/native
 lock deadlock. Build and smoke instructions are in the [macOS guide](../../docs/macos.md).
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY and TAO are trademarks of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

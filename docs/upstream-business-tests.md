@@ -64,3 +64,9 @@ pinned `test_utils` module. C# has no corresponding compiler traits. This does
 not exclude runtime concurrency, UI affinity, callback lifetime or error-delivery
 tests. Those observable behaviors remain part of desktop acceptance.
 The coverage-parity gate remains open.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

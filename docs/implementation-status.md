@@ -2,7 +2,7 @@
 
 NetWiv is a .NET 10 NativeAOT desktop framework under active development.
 The source includes a working application SDK, native runtime and build tooling;
-this does not establish complete Tauri compatibility or release acceptance.
+this does not establish complete TAURI® compatibility or release acceptance.
 Package installation is described in the [quickstart](integration-quickstart.md).
 
 ## Desktop baseline
@@ -14,10 +14,10 @@ Package installation is described in the [quickstart](integration-quickstart.md)
 | macOS 12+ arm64 / x64 | System WKWebView and AppKit | Native runtime, CLI and app/DMG support. Apple Silicon smoke verified; Intel execution remains unverified. See [macOS](macos.md). |
 | Android, iOS | — | Outside the current desktop baseline. |
 
-Applications use the native libraries delivered in `NetWiv.Platform.Wry`.
+Applications use the native libraries delivered in `NetWiv.Platform.Desktop`.
 Ordinary JS/TS and Blazor app development does not require Cargo. Native library
 builds are a framework-maintainer task; Rust/WASM frontends need their own Rust
-toolchain. See [native architecture](wry-migration.md).
+toolchain. See [native architecture](native-architecture.md).
 
 ## Application development
 
@@ -34,6 +34,34 @@ Use the [C# contract](csharp-api.md), [binding contract](frontend-generator.md),
 [API status table](api-status.md) and [plugin guide](official-plugins.md)
 for feature-specific details. API implementation and comparison coverage are
 separate measurements; declaration counts are not completion percentages.
+
+## Runtime identity differences
+
+NetWiv contains ports and adaptations of TAURI source code, but does not embed
+or identify itself as the TAURI core runtime. On all desktop platforms:
+
+- Omitted window titles default to `NetWiv App` for configured startup windows
+  and dynamically created native windows. Explicit titles, including empty
+  strings, remain unchanged. Dynamic window options still reject malformed
+  title values.
+- `app.getTauriVersion()` rejects with
+  `NetWiv does not embed the TAURI framework; its version is unavailable.`
+  The `plugin:app|tauri_version` command and its permission identifiers remain
+  recognized. Returning the pinned comparison version or the NetWiv package
+  version would misstate the official API's meaning. Callers must handle the
+  rejection; `app.getVersion()` still returns the application's own version.
+- `netwiv signer sign` labels its minisign comment as a NetWiv signature.
+  The key/signature encoding and existing signing environment variables remain
+  compatible; tests verify signatures and reject tampered payloads.
+
+These are deliberate identity differences, not upstream compatibility passes.
+The unchanged shared conformance cases `app.metadata`, `window.current` and
+`window.configured-startup` expose these differences against the pinned runtime;
+full comparison results must continue to report them. Dedicated Core, native
+and desktop smoke tests verify the NetWiv behavior separately. Frontend imports,
+IPC names, event names, configuration aliases and `isTauri()` bridge detection
+remain available for existing guest code; bridge detection does not identify the
+underlying framework as an official TAURI distribution.
 
 ## Packaging and distribution
 
@@ -86,7 +114,7 @@ Skipped cases, unsupported operations and matching failures are not passes.
 Start with [framework development](development.md). The repository provides:
 
 - Managed Core, API, generator and CLI suites under `tests/`.
-- A NativeAOT desktop host at `tests/NetWiv.Wry.Smoke`.
+- A NativeAOT desktop host at `tests/NetWiv.Desktop.Smoke`.
 - A [differential conformance runner](../tests/conformance/README.md) and a separate
   [isolation suite](isolation.md#automatic-differential-suite).
 - A [package consumer harness](frontend-generator.md#verification) for generated
@@ -95,3 +123,10 @@ Start with [framework development](development.md). The repository provides:
 Run on each target OS/display backend and record source revision, package and
 binary hashes, toolchain versions, results and skips. Tests against an earlier
 package or native library do not validate a later build. Validation instructions refer to repository sources and reproducible commands.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

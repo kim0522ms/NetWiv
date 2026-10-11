@@ -2372,8 +2372,12 @@ fn parse_webview_options(options: &Value, command: &str) -> Result<WebviewConfig
 }
 
 fn parse_tauri_window_config(options: &Value, command: &str) -> Result<TauriWindowConfig, String> {
-    serde_json::from_value(options.clone())
-        .map_err(|error| format!("invalid args `options` for command `{command}`: {error}"))
+    let mut config: TauriWindowConfig = serde_json::from_value(options.clone())
+        .map_err(|error| format!("invalid args `options` for command `{command}`: {error}"))?;
+    if options.get("title").is_none() {
+        config.title = "NetWiv App".into();
+    }
+    Ok(config)
 }
 
 fn parse_child_webview_options(options: &Value, is_backend: bool) -> Result<WebviewConfig, String> {
@@ -3451,8 +3455,9 @@ mod tests {
     }
 
     #[test]
-    fn window_config_default_same_as_deserialize() {
-        let default = tauri_utils::config::WindowConfig::default();
+    fn window_config_defaults_use_netwiv_title() {
+        let mut default = tauri_utils::config::WindowConfig::default();
+        default.title = "NetWiv App".into();
         let deserialized = parse_window_options(&json!({}), "create").unwrap();
         let explicit = parse_window_options(&serde_json::to_value(&default).unwrap(), "create").unwrap();
         assert_eq!(deserialized.label, default.label);
@@ -3463,6 +3468,18 @@ mod tests {
         assert_eq!(deserialized.extra_config, explicit.extra_config);
         assert!(deserialized.extra_config["focus"].as_bool().unwrap());
         assert!(deserialized.extra_config.get("windowEffects").is_none());
+    }
+
+    #[test]
+    fn window_titles_preserve_explicit_values_and_reject_invalid_types() {
+        for title in ["Custom", "", "Tauri App"] {
+            let config = parse_window_options(&json!({"title":title}), "create").unwrap();
+            assert_eq!(config.title, title);
+            assert_eq!(config.extra_config["title"], title);
+        }
+        for title in [json!(null), json!(42), json!(false)] {
+            assert!(parse_window_options(&json!({"title":title}), "create").is_err());
+        }
     }
 
     #[test]

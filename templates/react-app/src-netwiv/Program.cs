@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 using NetWiv;
-using NetWiv.Platform.Wry;
+using NetWiv.Platform.Desktop;
 
 [assembly: CommandJsonContext(typeof(AppJsonContext))]
 [assembly: GenerateFrontendBindings]
@@ -20,7 +20,7 @@ internal static class Program
         var url = dev ? "http://127.0.0.1:5173/" : "index.html";
         if (smoke) url += "?smoke=1";
         var builder = new Builder()
-            .UseRuntime(new WryDesktopRuntime())
+            .UseRuntime(new DesktopRuntime())
             .Metadata(new AppMetadata("NetWiv React example", "0.1.0", "dev.netwiv.reactexample"))
             .UseEmbeddedAssets()
             .Manage(new GreetingCounter())

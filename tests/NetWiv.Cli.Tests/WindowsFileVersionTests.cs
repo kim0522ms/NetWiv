@@ -27,7 +27,12 @@ internal static class WindowsFileVersionTests
             {
                 File.WriteAllText(package, text);
                 try { ConfigLoader.Load(root, "windows"); }
-                catch (NetWivConfigException) { continue; }
+                catch (NetWivConfigException error)
+                {
+                    if (error.Message.Contains("tauri.conf.json", StringComparison.Ordinal))
+                        throw new Exception("NetWiv configuration was reported as a Tauri file.", error);
+                    continue;
+                }
                 throw new Exception("Invalid package version was accepted: " + text);
             }
             return Task.CompletedTask;

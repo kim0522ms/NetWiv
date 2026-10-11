@@ -19,10 +19,17 @@ contains macOS executables. It can also run a supplied `native/netwiv.dll`
 through `dotnet`, or find `netwiv` on PATH.
 
 For macOS application development, use the `NetWiv.Cli` .NET tool and matching
-Wry NuGet assets described in the [macOS guide](../../docs/macos.md) and
+desktop NuGet assets described in the [macOS guide](../../docs/macos.md) and
 [package quickstart](../../docs/integration-quickstart.md). The npm sidecar lock
 `native-tools.json` records Windows/Linux minisign binaries and the verified
 0.12 source archive used for macOS tests. `scripts/prepare-test-tools.mjs` builds
 that source on macOS arm64/x64; export its printed `NETWIV_MINISIGN_PATH` when
 running local signer tests. This does not populate npm release sidecars. Updater minisign signatures are separate from macOS
 `codesign` signatures and do not notarize an app.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

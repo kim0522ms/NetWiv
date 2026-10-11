@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 using NetWiv;
-using NetWiv.Platform.Wry;
+using NetWiv.Platform.Desktop;
 using NetWiv.Runtime;
 
 [assembly: CommandJsonContext(typeof(SampleJsonContext))]
@@ -12,7 +12,7 @@ internal static class Program
     {
         var assetRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
         new Builder()
-            .UseRuntime(new WryDesktopRuntime())
+            .UseRuntime(new DesktopRuntime())
             .Metadata(new AppMetadata("NetWiv sample", "1.0.0", "com.netwiv.sample"))
             .Manage(new GreetingCounter())
             .InvokeHandler("greet")

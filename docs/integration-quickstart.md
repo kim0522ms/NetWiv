@@ -4,7 +4,7 @@ Use the NetWiv CLI to create a desktop application with a React frontend and
 C# backend. You currently need a separately supplied NuGet feed or one built
 from source. Cloning the repository does not provide a prebuilt package feed.
 To create packages yourself, see [framework development](development.md#create-a-local-package-feed).
-Full Tauri compatibility and release validation remain incomplete.
+Full TAURI® compatibility and release validation remain incomplete.
 
 ## Prerequisites
 
@@ -128,3 +128,9 @@ and signing coverage.
 - Choose another frontend from the [template matrix](template-coverage.md).
 - Read [plugin configuration](plugin-configuration.md) and
   [feature limits](official-plugins.md), then register only the plugins you need.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

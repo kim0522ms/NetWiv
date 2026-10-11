@@ -92,6 +92,12 @@ internal static class NewProjectTests
                 var config = JsonNode.Parse(File.ReadAllText(Path.Combine(destination, "src-netwiv/netwiv.conf.json")))!;
                 Check(config["build"]!["dotnetProject"]!.GetValue<string>() == "Example.csproj", "Backend project mismatch: " + template);
                 Check(File.Exists(Path.Combine(destination, "Example.slnx")), "Solution missing: " + template);
+                var backend = XDocument.Load(Path.Combine(destination, "src-netwiv/Example.csproj"));
+                Check(backend.Descendants("PackageReference").Any(item => item.Attribute("Include")?.Value == "NetWiv.Platform.Desktop"), "Desktop package missing: " + template);
+                Check(!backend.ToString().Contains("NetWiv.Platform.Wry", StringComparison.Ordinal), "Former package name leaked into " + template);
+                var readme = File.ReadAllText(Path.Combine(destination, "README.md"));
+                Check(readme.Contains("TAURI®", StringComparison.Ordinal) && readme.Contains("The Tauri Programme within the Commons Conservancy", StringComparison.Ordinal), "Trademark notice missing: " + template);
+                Check(readme.Contains("not affiliated with, endorsed by, or officially approved by", StringComparison.Ordinal), "Independent template notice missing: " + template);
                 if (template is "yew" or "leptos" or "sycamore" or "dioxus")
                 {
                     Check(File.Exists(Path.Combine(destination, "vendor/@tauri-apps/api/core.js")), "Official JS API module missing: " + template);

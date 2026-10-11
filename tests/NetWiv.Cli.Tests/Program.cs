@@ -359,7 +359,7 @@ static Task InitLayout() => Temp(async root =>
 {
     var repo = Directory.GetCurrentDirectory(); var stdout = new StringWriter(); var stderr = new StringWriter();
     var exit = await CliApp.RunAsync(["init", "--ci", "--directory", root, "--app-name", "Sample", "--netwiv-source", repo], stdout, stderr, repo);
-    Equal(0, exit, stderr.ToString()); var dir = Path.Combine(root, "src-netwiv"); True(File.Exists(Path.Combine(dir, "netwiv.conf.json"))); var project = File.ReadAllText(Path.Combine(dir, "NetWiv.App.csproj")); True(project.Contains("NetWiv.Core.csproj", StringComparison.Ordinal)); True(project.Contains("NetWiv.Platform.Wry.csproj", StringComparison.Ordinal)); True(project.Contains("NetWiv.Generators.csproj", StringComparison.Ordinal)); True(File.ReadAllText(Path.Combine(dir, "Program.cs")).Contains("UseEmbeddedAssets", StringComparison.Ordinal));
+    Equal(0, exit, stderr.ToString()); var dir = Path.Combine(root, "src-netwiv"); True(File.Exists(Path.Combine(dir, "netwiv.conf.json"))); var project = File.ReadAllText(Path.Combine(dir, "NetWiv.App.csproj")); True(project.Contains("NetWiv.Core.csproj", StringComparison.Ordinal)); True(project.Contains("NetWiv.Platform.Desktop.csproj", StringComparison.Ordinal)); True(project.Contains("NetWiv.Generators.csproj", StringComparison.Ordinal)); True(File.ReadAllText(Path.Combine(dir, "Program.cs")).Contains("UseEmbeddedAssets", StringComparison.Ordinal));
 });
 
 static Task InitPackages() => Temp(async root =>
@@ -370,12 +370,13 @@ static Task InitPackages() => Temp(async root =>
     var dir = Path.Combine(root, "src-netwiv");
     var project = File.ReadAllText(Path.Combine(dir, "NetWiv.App.csproj"));
     True(project.Contains($"<NetWivVersion>{CliApp.Version}</NetWivVersion>", StringComparison.Ordinal));
-    True(project.Contains("NetWiv.Platform.Wry", StringComparison.Ordinal) && project.Contains("NetWiv.Generators", StringComparison.Ordinal));
+    True(project.Contains("NetWiv.Platform.Desktop", StringComparison.Ordinal) && project.Contains("NetWiv.Generators", StringComparison.Ordinal));
     True(!project.Contains("ProjectReference", StringComparison.Ordinal) && !project.Contains("__", StringComparison.Ordinal));
     var config = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "netwiv.conf.json")))!;
     Equal(title, config["app"]!["windows"]![0]!["title"]!.GetValue<string>());
     var source = File.ReadAllText(Path.Combine(dir, "Program.cs"));
-    True(source.Contains("new WryDesktopRuntime()", StringComparison.Ordinal) && source.Contains("GenerateFrontendBindings", StringComparison.Ordinal));
+    True(source.Contains("new DesktopRuntime()", StringComparison.Ordinal) && source.Contains("GenerateFrontendBindings", StringComparison.Ordinal));
+    True(File.ReadAllText(Path.Combine(dir, "README.md")).Contains("not affiliated with, endorsed by, or officially approved by", StringComparison.Ordinal));
     True(source.Contains("#if NETWIV_DEV", StringComparison.Ordinal));
 });
 
@@ -393,6 +394,7 @@ static Task PluginScaffold() => Temp(async root =>
     True(project.Contains("OutputItemType=\"Analyzer\"", StringComparison.Ordinal));
     True(!project.Contains("PackageReference", StringComparison.Ordinal));
     True(!project.Contains("__", StringComparison.Ordinal));
+    True(File.ReadAllText(Path.Combine(root, "README.md")).Contains("TAURI®", StringComparison.Ordinal));
 });
 
 static Task PluginNuGetScaffold() => Temp(async root =>
@@ -721,7 +723,10 @@ static Task SignerCompatibility() => Temp(async root =>
         Equal(0, exit, error.ToString());
         var tauriSignaturePath = payload + ".sig"; True(File.Exists(tauriSignaturePath));
         var rawPublicPath = Path.Combine(root, "raw.pub"); var rawSignaturePath = Path.Combine(root, "raw.minisig");
-        File.WriteAllText(rawPublicPath, rawPublic); File.WriteAllText(rawSignaturePath, DecodeTauriBox(File.ReadAllText(tauriSignaturePath)));
+        var signature = DecodeTauriBox(File.ReadAllText(tauriSignaturePath));
+        True(signature.StartsWith("untrusted comment: signature from NetWiv secret key", StringComparison.Ordinal));
+        True(!signature.Contains("signature from tauri", StringComparison.OrdinalIgnoreCase));
+        File.WriteAllText(rawPublicPath, rawPublic); File.WriteAllText(rawSignaturePath, signature);
         Equal(0, await RunProcess(minisign, ["-V", "-p", rawPublicPath, "-m", payload, "-x", rawSignaturePath]));
 
         // From tauri-cli 2.11.4 updater_signature.rs at the commit pinned in upstream-lock.json.

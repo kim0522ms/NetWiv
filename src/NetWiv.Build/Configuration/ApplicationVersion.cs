@@ -15,7 +15,7 @@ public static class ApplicationVersion
             inputFile = path;
             using var document = JsonDocument.Parse(File.ReadAllBytes(path));
             if (document.RootElement.ValueKind != JsonValueKind.Object)
-                throw new ArgumentException("`tauri.conf.json > version` value is not a path to a JSON object");
+                throw new ArgumentException("`configuration > version` value is not a path to a JSON object");
             if (!document.RootElement.TryGetProperty("version", out var version))
                 throw new ArgumentException("JSON must contain a `version` field");
             if (version.ValueKind != JsonValueKind.String)
@@ -23,7 +23,7 @@ public static class ApplicationVersion
             value = version.GetString()!;
         }
         try { _ = WindowsFileVersion.Encode(value); }
-        catch (ArgumentException) { throw new ArgumentException("`tauri.conf.json > version` must be a semver string"); }
+        catch (ArgumentException) { throw new ArgumentException("`configuration > version` must be a semver string"); }
         return value;
     }
 }

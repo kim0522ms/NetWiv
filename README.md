@@ -22,8 +22,9 @@ bindings. NetWiv uses **wry, tao, muda and tray-icon** behind a native adapter
 for OS WebViews, windows, menus and tray integration.
 
 NetWiv is meant for teams whose backend is already .NET, and for developers who
-want to write their desktop backend in C#. It is not a replacement for Tauri or
-Rust; it offers another backend language on top of the Tauri frontend ecosystem.
+want to write their desktop backend in C#. It is not a replacement for the
+TAURI® framework or the Rust language; it offers another backend language on
+top of the TAURI frontend ecosystem.
 
 NetWiv is developed and maintained using AI coding agents, including **Codex**
 and **Claude Code**. The project began with the maintainer's personal interest
@@ -35,7 +36,7 @@ review and revision.
 > NetWiv is still immature and under active development. If you would like to
 > try it, we recommend starting with a toy project. Packages are currently
 > provided through private integration feeds. Full desktop API, security and release acceptance
-> are still in progress; full Tauri compatibility is not claimed.
+> are still in progress; full TAURI framework compatibility is not claimed.
 
 ## At a glance
 
@@ -45,21 +46,21 @@ review and revision.
 | **Frontend choice** | 18 template choices, including React, Vue, Svelte and Blazor. |
 | **Generated bindings** | JavaScript calls and TypeScript declarations generated from C# commands. |
 | **NativeAOT releases** | Native application builds with RID-specific runtime libraries delivered through NuGet. |
-| **Tauri frontend support** | Compatibility work targets unchanged `@tauri-apps/api@2.11.1` and Tauri 2.11.5 behavior. |
+| **TAURI frontend support** | Compatibility work targets unchanged `@tauri-apps/api@2.11.1` and TAURI framework 2.11.5 behavior. |
 
 Ordinary JS/TS and Blazor application development does not require Cargo.
 Framework maintainers build the native adapter separately; Rust/WASM frontend
 templates require their own Rust toolchain.
 
-NetWiv prioritizes idiomatic .NET usability and stability. Tauri compatibility
+NetWiv prioritizes idiomatic .NET usability and stability. TAURI frontend compatibility
 remains an important support goal, with deliberate differences documented and
 breaking changes accompanied by impact and migration notes. Read the
 [design principles](docs/design-principles.md).
 
-## Relationship to Tauri
+## Relationship to the TAURI framework
 
-**Inspired by [Tauri](https://github.com/tauri-apps/tauri), built on its ecosystem.** NetWiv borrows heavily from
-Tauri's approach to desktop apps and reuses many of the components that power
+**Inspired by the [TAURI framework](https://github.com/tauri-apps/tauri), built on its ecosystem.** NetWiv borrows heavily from
+the TAURI approach to desktop apps and reuses many of the components that power
 it: **[wry](https://github.com/tauri-apps/wry)** for WebViews,
 **[tao](https://github.com/tauri-apps/tao)** for windows and the event loop,
 **[muda](https://github.com/tauri-apps/muda)** for menus,
@@ -68,18 +69,22 @@ and **[tauri-utils](https://github.com/tauri-apps/tauri/tree/dev/crates/tauri-ut
 for shared configuration types. It also targets the unchanged official
 **[@tauri-apps/api](https://github.com/tauri-apps/tauri/tree/dev/packages/api)**
 frontend package. NetWiv builds on this upstream work while implementing its
-application SDK, IPC policy and development tooling in .NET. Credit belongs to
-the Tauri contributors and the maintainers of these libraries; their original
+application SDK, IPC policy and development tooling in .NET. Some source is
+ported or adapted from the TAURI framework; NetWiv is an independent modified
+implementation, not an official TAURI core runtime. See the
+[runtime identity differences](docs/implementation-status.md#runtime-identity-differences).
+Credit belongs to
+the TAURI framework contributors and the maintainers of these libraries; their original
 licenses and notices are retained. See the [pinned upstream sources](compatibility/README.md)
 and [native dependencies](native/netwiv-native/Cargo.toml).
 
 ### Reporting issues
 
-**Report NetWiv issues to [NetWiv](https://github.com/kim0522ms/NetWiv/issues), not to Tauri.**
-NetWiv deliberately reproduces Tauri's frontend API and many of its error
+**Report NetWiv issues to [NetWiv](https://github.com/kim0522ms/NetWiv/issues), not to the TAURI project.**
+NetWiv deliberately reproduces the TAURI frontend API and many of its error
 messages so that existing frontend code keeps working. A matching error message
-therefore does not mean the problem is in Tauri. If you suspect an upstream
-issue, reproduce it in an official Tauri app before reporting it there.
+therefore does not mean the problem is in the TAURI framework. If you suspect an upstream
+issue, reproduce it in an app built with the official TAURI framework before reporting it there.
 
 ## Architecture
 
@@ -97,7 +102,7 @@ flowchart TB
     subgraph managed[".NET 10 · NativeAOT release"]
         Core["NetWiv.Core<br/>IPC · permissions · events · resources"]
         App["Your C# commands · state · plugins"]
-        Adapter["NetWiv.Platform.Wry"]
+        Adapter["NetWiv.Platform.Desktop"]
         Core <--> App
         Core <--> Adapter
     end
@@ -199,7 +204,7 @@ API references, and framework development documentation.
 | **Add plugins** | [Plugin configuration](docs/plugin-configuration.md) · [Plugin status](docs/official-plugins.md) |
 | **Understand support** | [API status](docs/api-status.md) · [Support and validation](docs/implementation-status.md) |
 | **Understand the design** | [Design principles](docs/design-principles.md) |
-| **Work on the framework** | [Native ABI](docs/native-abi.md) · [Native architecture](docs/wry-migration.md) · [Version pins](compatibility/README.md) · [Conformance](tests/conformance/README.md) |
+| **Work on the framework** | [Native ABI](docs/native-abi.md) · [Native architecture](docs/native-architecture.md) · [Version pins](compatibility/README.md) · [Conformance](tests/conformance/README.md) |
 
 ## Development
 
@@ -223,10 +228,10 @@ Framework maintainers build the Rust adapter explicitly using
 Rust 1.95.0, the platform C/C++ linker and the OS WebView development dependencies
 are required for that source build. Linux uses GTK3 and WebKitGTK 4.1.
 
-The integrated native sample is `tests/NetWiv.Wry.Smoke`. Publish it with:
+The integrated native sample is `tests/NetWiv.Desktop.Smoke`. Publish it with:
 
 ```sh
-dotnet publish tests/NetWiv.Wry.Smoke -c Release -r win-x64
+dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r win-x64
 # On Linux, use -r linux-x64; on macOS, use -r osx-arm64 or osx-x64.
 ```
 
@@ -256,6 +261,13 @@ Packing the framework requires native artifacts for all four supported RIDs to e
 NetWiv is licensed under [Apache-2.0](LICENSE-APACHE).
 Copyright © 2026 kim0522ms and NetWiv contributors.
 
-Tauri and other third-party components retain their original licenses and
+The TAURI framework and other third-party components retain their original licenses and
 copyright notices. See [NOTICE](NOTICE), [third-party notices](THIRD-PARTY-NOTICES.md)
-and the preserved [Tauri MIT license](licenses/Tauri-MIT.txt).
+and the preserved [TAURI MIT license](licenses/Tauri-MIT.txt).
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY and TAO are trademarks of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

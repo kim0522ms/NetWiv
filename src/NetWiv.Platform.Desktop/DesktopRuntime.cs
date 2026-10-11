@@ -6,10 +6,10 @@ using System.Text;
 using System.Text.Json;
 using NetWiv.Runtime;
 
-namespace NetWiv.Platform.Wry;
+namespace NetWiv.Platform.Desktop;
 
 /// <summary>NativeAOT desktop runtime backed by the pinned wry, tao, muda and tray-icon libraries.</summary>
-public sealed class WryDesktopRuntime : IDesktopRuntime
+public sealed class DesktopRuntime : IDesktopRuntime
 {
     private readonly object _gate = new();
     private readonly ConcurrentDictionary<ulong, TaskCompletionSource<RuntimeInvokeResponse>> _requests = new();
@@ -36,7 +36,7 @@ public sealed class WryDesktopRuntime : IDesktopRuntime
         GCHandle handle = default;
         lock (_gate)
         {
-            if (_started) throw new InvalidOperationException("A WryDesktopRuntime instance can run only once.");
+            if (_started) throw new InvalidOperationException("A DesktopRuntime instance can run only once.");
             try
             {
                 var abi = NativeMethods.AbiVersion();
@@ -48,12 +48,12 @@ public sealed class WryDesktopRuntime : IDesktopRuntime
             catch (DllNotFoundException exception)
             {
                 if (handle.IsAllocated) handle.Free();
-                throw new InvalidOperationException("The NetWiv native library or an OS dependency is missing. Restore NetWiv.Platform.Wry for the application's RID and install its documented WebView dependencies.", exception);
+                throw new InvalidOperationException("The NetWiv native library or an OS dependency is missing. Restore NetWiv.Platform.Desktop for the application's RID and install its documented WebView dependencies.", exception);
             }
             catch (Exception exception) when (exception is EntryPointNotFoundException or BadImageFormatException)
             {
                 if (handle.IsAllocated) handle.Free();
-                throw new InvalidOperationException("The NetWiv native library has an incompatible ABI or architecture. Restore the matching architecture NetWiv.Platform.Wry native assets; managed and native components must come from the same package version.", exception);
+                throw new InvalidOperationException("The NetWiv native library has an incompatible ABI or architecture. Restore the matching architecture NetWiv.Platform.Desktop native assets; managed and native components must come from the same package version.", exception);
             }
             catch
             {
@@ -185,10 +185,10 @@ public sealed class WryDesktopRuntime : IDesktopRuntime
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static unsafe int OnCallback(nint user, uint kind, ulong id, byte* json, nuint jsonLength, byte* binary, nuint binaryLength)
     {
-        WryDesktopRuntime? runtime = null;
+        DesktopRuntime? runtime = null;
         try
         {
-            runtime = (WryDesktopRuntime)GCHandle.FromIntPtr(user).Target!;
+            runtime = (DesktopRuntime)GCHandle.FromIntPtr(user).Target!;
             if (kind == 4)
             {
                 if (runtime._actions.TryRemove(id, out var action)) action();

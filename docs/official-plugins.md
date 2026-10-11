@@ -1,4 +1,8 @@
-# Using Tauri plugins with NetWiv
+# Using TAURI® plugins with NetWiv
+
+The official JavaScript packages referenced here are maintained by the upstream
+`tauri-apps` organization. The .NET implementations and templates described in
+this guide belong to NetWiv and are not officially approved by that organization.
 
 ## Reliability and permission contracts
 
@@ -58,7 +62,7 @@ dotnet add src-netwiv/MyApp.csproj package NetWiv.Plugin.Dialog --version $versi
 
 Install the corresponding `@tauri-apps/plugin-fs` and `@tauri-apps/plugin-dialog`
 packages in the frontend as well. JS and .NET packages have separate version
-schemes. Reference `NetWiv.Platform.Wry` and keep SDK and native package versions
+schemes. Reference `NetWiv.Platform.Desktop` and keep SDK and native package versions
 aligned. Ordinary application restore and build operations do not require Cargo.
 
 ## Plugin-specific limitations
@@ -134,3 +138,10 @@ Shell execution requires a scope containing `name`, `cmd`, and `args` on `shell:
 Support for official guest call formats does not establish full behavioral parity.
 See the [API status table](api-status.md) for platform-specific features that remain
 unimplemented or unverified.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

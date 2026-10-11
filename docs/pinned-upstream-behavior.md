@@ -17,7 +17,7 @@ that the current Windows version/theme can display that visual effect.
 The `security.frame-origins` fixture uses unchanged public guest functions in
 local, trusted remote, untrusted remote and opaque sandbox documents. WebView2
 injects the bridge into child frames; each request is authorized using its
-browser-provided Origin. WebKitGTK exposes the pinned Tauri bridge only in the
+browser-provided Origin. WebKitGTK exposes the pinned TAURI® bridge only in the
 main frame, on both X11 and Wayland. NetWiv follows this platform distinction.
 Tauri's manager marks its initialization scripts main-frame-only; wry 0.55.1
 documents that WebView2 ignores that flag and always injects into subframes.
@@ -240,3 +240,10 @@ multi-monitor and mixed-DPI acceptance remain open. The AppKit menu tests run in
 the real main-thread smoke host; the ignored Windows/Linux Rust desktop-menu
 test is not a macOS verification command. See [macOS](macos.md) for the complete
 implemented/unsupported/unverified split.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY and TAO are trademarks of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

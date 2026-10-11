@@ -3,7 +3,7 @@
 `netwiv new --list` provides 18 frontend choices corresponding to the official
 `create-tauri-app` **4.7.3** selector. The reference is
 [`create-tauri-app-v4.7.3`](https://github.com/tauri-apps/create-tauri-app/tree/create-tauri-app-v4.7.3)
-(`e19fd21a802b995cae8d15e54b89772308af7efa`). Tauri's `tauri init` and the frontend
+(`e19fd21a802b995cae8d15e54b89772308af7efa`). TAURI®'s `tauri init` and the frontend
 selector `create-tauri-app` are separate tools. NetWiv provides these workflows
 through `netwiv init` and `netwiv new`.
 
@@ -56,3 +56,10 @@ validation stages. Actual GUI validation is not complete for every frontend and
 package-manager combination. Read [support and validation](implementation-status.md).
 The separate `NetWiv.Templates` package for direct `dotnet new` use provides only
 React; all 18 choices are included in `NetWiv.Cli` through `netwiv new`.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

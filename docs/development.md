@@ -47,7 +47,7 @@ the helper writes it to `GITHUB_ENV` automatically in CI.
 Publish the desktop smoke host after preparing the native binaries:
 
 ```sh
-dotnet publish tests/NetWiv.Wry.Smoke -c Release -r win-x64
+dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r win-x64
 # On Linux, use -r linux-x64; on macOS, use -r osx-arm64 or osx-x64.
 ```
 
@@ -90,7 +90,7 @@ Core and CLI are executable test harnesses and must be
 run with `dotnet run`; `dotnet test` alone does not execute them.
 
 Each job publishes and executes the Core suite with NativeAOT, publishes the
-NativeAOT Wry smoke host, checks incompatible native-library startup diagnostics
+NativeAOT desktop smoke host, checks incompatible native-library startup diagnostics
 and runs the automated WebView smoke scenario. Linux uses Xvfb with a nested
 X11/Xfce desktop and tray host. Both macOS jobs additionally run windowless
 startup and NativeAOT isolation IPC checks. A separate five-minute packaging
@@ -112,7 +112,7 @@ as workflow artifacts for seven days.
 
 The existing desktop-only ignored Rust test and optional external MIME corpus
 remain explicitly skipped in their suite output. Passing CI does not establish
-Wayland, manual input, multi-monitor, signed installer or complete Tauri
+Wayland, manual input, multi-monitor, signed installer or complete TAURI®
 conformance acceptance. The macOS 15 jobs do not establish the macOS 12 minimum
 OS baseline, Developer ID signing or notarization. Adding jobs is not evidence
 of a successful hosted run; inspect the workflow results for the exact revision.
@@ -144,3 +144,10 @@ including NativeAOT execution, frontend IPC and installer lifecycle on each
 supported platform. Retain source revisions, toolchain versions and artifact
 hashes with the results. Report skips and missing dependencies explicitly.
 See [support and validation](implementation-status.md) for outstanding coverage.
+
+---
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY is a trademark of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

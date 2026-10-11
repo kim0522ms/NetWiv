@@ -86,8 +86,16 @@ internal static class ShellLifetimeTests
     private static async Task<Process> WaitForProcess(string path)
     {
         using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        while (!File.Exists(path) || !int.TryParse(await File.ReadAllTextAsync(path, stop.Token), out _)) await Task.Delay(20, stop.Token);
-        return Process.GetProcessById(int.Parse(await File.ReadAllTextAsync(path, stop.Token)));
+        while (true)
+        {
+            try
+            {
+                if (File.Exists(path) && int.TryParse(await File.ReadAllTextAsync(path, stop.Token), out var id)) return Process.GetProcessById(id);
+            }
+            // The probe may still be writing the file; Windows rejects a concurrent read with a sharing violation.
+            catch (IOException) { }
+            await Task.Delay(20, stop.Token);
+        }
     }
 
     private static bool IsRunning(Process process)

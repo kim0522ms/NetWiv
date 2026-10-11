@@ -44,14 +44,15 @@ internal static class ProcessOwnershipTests
     {
         if (phase == "child")
         {
-            await File.WriteAllTextAsync(report, Environment.ProcessId.ToString());
+            ConcurrentFile.Publish(report, Environment.ProcessId.ToString());
             await Task.Delay(Timeout.Infinite);
         }
         var start = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
         foreach (var argument in new[] { "--owned-process-probe", "child", report }) start.ArgumentList.Add(argument);
         using var child = Process.Start(start)!;
         using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        while (!File.Exists(report) || new FileInfo(report).Length == 0) await Task.Delay(10, stop.Token);
+        // The child publishes atomically, so once the report exists it is complete and closed.
+        while (!File.Exists(report)) await Task.Delay(10, stop.Token);
         return 0;
     }
 }

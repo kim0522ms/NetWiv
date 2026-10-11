@@ -303,7 +303,12 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: validation-${{ matrix.rid }}
-          path: artifacts/ci/
+          # WebView2 keeps its user data folder beside the smoke executable, and its
+          # browser processes can still be deleting files there while this step zips.
+          # The folder is a browser profile, not validation evidence.
+          path: |
+            artifacts/ci/
+            !artifacts/ci/**/*.WebView2/**
           retention-days: 7
           if-no-files-found: warn
 

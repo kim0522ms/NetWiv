@@ -110,7 +110,12 @@ public sealed class SqlPlugin : IPlugin
                 try
                 {
                     var status = SqliteNative.Prepare(handle, pointer, out statement);
-                    if (status != SqliteNative.Ok) throw new InvokeException(Error(handle));
+                    if (status != SqliteNative.Ok)
+                    {
+                        // Cancellation interrupts the connection, which can also abort preparation.
+                        token.ThrowIfCancellationRequested();
+                        throw new InvokeException(Error(handle));
+                    }
                     if (statement == 0) throw new InvokeException("SQL query is empty.");
                     for (var index = 0; index < values.Length; index++) Bind(handle, statement, index + 1, values[index]);
                     token.ThrowIfCancellationRequested();

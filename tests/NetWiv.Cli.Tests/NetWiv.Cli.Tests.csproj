@@ -10,5 +10,6 @@
     <EmbeddedResource Include="fixtures/upstream-categories.json" LogicalName="upstream-categories.json" />
     <ProjectReference Include="..\..\src\NetWiv.Build\NetWiv.Build.csproj" />
     <ProjectReference Include="..\..\src\NetWiv.Cli\NetWiv.Cli.csproj" />
+    <Compile Include="../Shared/ConcurrentFile.cs" Link="ConcurrentFile.cs" />
   </ItemGroup>
 </Project>

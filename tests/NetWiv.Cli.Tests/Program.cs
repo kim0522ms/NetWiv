@@ -22,8 +22,9 @@ if (Environment.GetEnvironmentVariable("NETWIV_RUNNER_PROBE_OUTPUT") is { } runn
 {
     var record = new System.Text.Json.Nodes.JsonObject { ["cwd"] = Environment.CurrentDirectory,
         ["pid"] = Environment.ProcessId, ["patch"] = Environment.GetEnvironmentVariable("TAURI_CONFIG"),
+        ["environment"] = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT"),
         ["args"] = new System.Text.Json.Nodes.JsonArray(args.Select(arg => (System.Text.Json.Nodes.JsonNode?)System.Text.Json.Nodes.JsonValue.Create(arg)).ToArray()) };
-    File.WriteAllText(runnerProbe, record.ToJsonString());
+    ConcurrentFile.Publish(runnerProbe, record.ToJsonString());
     if (Environment.GetEnvironmentVariable("NETWIV_RUNNER_PROBE_WAIT") is { } runnerWait)
     {
         if (runnerWait == "1") await Task.Delay(Timeout.Infinite);
@@ -64,6 +65,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("plugin configuration merges without losing scalar values and rejects non-object roots", PluginConfiguration),
     ("cancelled runner does not start a process", ProcessOwnershipTests.CancelledBeforeStart),
     ("development watcher discards transient build files but preserves source changes", DevReloadTests.TransientFiles),
+    ("development reload retries configuration files that are still being saved", DevReloadTests.SavingRetry),
     ("direct-root config keeps project root", DirectRoot),
     ("nested new config is discovered", NestedConfig),
     ("new and legacy bases are ambiguous", AmbiguousConfig),

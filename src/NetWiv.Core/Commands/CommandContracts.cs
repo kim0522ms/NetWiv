@@ -29,9 +29,10 @@ public sealed record ResponseCommandDescriptor(string Name, ResponseCommandHandl
 
 public sealed class InvokeContext
 {
-    internal InvokeContext(AppHandle app, string windowLabel, string webviewLabel, Uri source, bool trusted, Runtime.RuntimeCommandScope scope, ulong documentId = 0, Request? request = null)
+    internal InvokeContext(AppHandle app, string windowLabel, string webviewLabel, Uri source, bool trusted, Runtime.RuntimeCommandScope scope, ulong documentId = 0, Request? request = null, IServiceProvider? services = null)
     {
         App = app;
+        Services = services ?? EmptyServiceProvider.Instance;
         WindowLabel = windowLabel;
         WebviewLabel = webviewLabel;
         Source = source;
@@ -49,12 +50,23 @@ public sealed class InvokeContext
     public Runtime.RuntimeCommandScope Scope { get; }
     public ulong DocumentId { get; }
     public Request Request { get; }
+    /// <summary>
+    /// The service scope created for this invocation, or an empty provider when the app has no service provider.
+    /// Scoped services are disposed when the command completes.
+    /// </summary>
+    public IServiceProvider Services { get; }
     public State<T> State<T>() where T : notnull => App.State<T>();
     /// <summary>Registers a resource owned by the invoking document, or by the app for trusted backend calls.</summary>
     public uint AddResource<T>(T resource) where T : notnull => App.AddInvocationResource(this, resource);
     /// <summary>Runs a platform operation after the plugin command passed the ACL check.</summary>
     public ValueTask<Runtime.RuntimeInvokeResponse> InvokePlatformAsync(string command, JsonElement args, CancellationToken cancellationToken = default) =>
         App.InvokePlatformAsync(command, args, this, cancellationToken);
+}
+
+internal sealed class EmptyServiceProvider : IServiceProvider
+{
+    public static EmptyServiceProvider Instance { get; } = new();
+    public object? GetService(Type serviceType) => null;
 }
 
 public sealed class CommandRegistry

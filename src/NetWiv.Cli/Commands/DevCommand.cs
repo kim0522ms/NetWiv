@@ -34,6 +34,9 @@ internal static class DevCommand
         var features = CommandConfig.Features(config, featuresArg);
         var watchFolders = ResolveWatchFolders(config, additionalWatch);
         var environment = HookEnvironment.Create(target, !release, config);
+        // Generic Host apps read IHostEnvironment from DOTNET_ENVIRONMENT, as `dotnet run` launch profiles set it.
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")))
+            environment = With(environment, "DOTNET_ENVIRONMENT", "Development");
         Process? hook = null;
         Task? hookMonitor = null;
         int? hookExitCode = null;
@@ -65,15 +68,19 @@ internal static class DevCommand
                 string effectiveConfig;
                 try
                 {
-                    config = ConfigLoader.Load(config.ConfigDirectory, target.Platform, config.Overlays);
-                    effectiveConfig = CommandConfig.WriteEffectiveConfig(config, target, !release, devUrl);
+                    var current = config;
+                    (config, effectiveConfig) = await RetryWhileSavingAsync(() =>
+                    {
+                        var loaded = ConfigLoader.Load(current.ConfigDirectory, target.Platform, current.Overlays);
+                        return (loaded, CommandConfig.WriteEffectiveConfig(loaded, target, !release, devUrl));
+                    }, cancellationToken);
                     environment = new Dictionary<string, string?>(environment, StringComparer.OrdinalIgnoreCase)
                     { ["TAURI_CONFIG"] = config.CliPatch?.ToJsonString() };
                 }
-                catch (NetWivConfigException error) when (!noWatch)
+                catch (Exception error) when (!noWatch && error is NetWivConfigException or IOException)
                 {
                     await output.WriteLineAsync($"Configuration error: {error.Message}");
-                    await WaitForChangesAsync(configurationChanges!, cancellationToken);
+                    await WaitForChangesOrRetryAsync(configurationChanges!, error, cancellationToken);
                     continue;
                 }
                 project = CommandConfig.Project(config);
@@ -147,15 +154,19 @@ internal static class DevCommand
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                config = ConfigLoader.Load(config.ConfigDirectory, target.Platform, config.Overlays);
-                effectiveConfig = CommandConfig.WriteEffectiveConfig(config, target, !release, developmentUrl);
+                var current = config;
+                (config, effectiveConfig) = await RetryWhileSavingAsync(() =>
+                {
+                    var loaded = ConfigLoader.Load(current.ConfigDirectory, target.Platform, current.Overlays);
+                    return (loaded, CommandConfig.WriteEffectiveConfig(loaded, target, !release, developmentUrl));
+                }, cancellationToken);
                 environment = new Dictionary<string, string?>(environment, StringComparer.OrdinalIgnoreCase)
                 { ["TAURI_CONFIG"] = config.CliPatch?.ToJsonString() };
             }
-            catch (NetWivConfigException error) when (watch)
+            catch (Exception error) when (watch && error is NetWivConfigException or IOException)
             {
                 await output.WriteLineAsync($"Configuration error: {error.Message}");
-                await WaitForChangesAsync(changes!, cancellationToken);
+                await WaitForChangesOrRetryAsync(changes!, error, cancellationToken);
                 continue;
             }
             project = CommandConfig.Project(config);
@@ -220,6 +231,17 @@ internal static class DevCommand
         await changes.WaitAsync(token);
         await Task.Delay(150, token);
         changes.Drain();
+    }
+
+    // Releasing a file that was held open raises no change event, so a reload that failed with
+    // an IOException is retried periodically as well as on the next change.
+    private static async Task WaitForChangesOrRetryAsync(ChangeWatcher changes, Exception error, CancellationToken token)
+    {
+        if (error is not IOException) { await WaitForChangesAsync(changes, token); return; }
+        using var retry = CancellationTokenSource.CreateLinkedTokenSource(token);
+        retry.CancelAfter(TimeSpan.FromSeconds(1));
+        try { await WaitForChangesAsync(changes, retry.Token); }
+        catch (OperationCanceledException) when (!token.IsCancellationRequested) { }
     }
 
     internal static ChangeWatcher WatchConfiguration(ConfigDocument config)
@@ -378,6 +400,18 @@ internal static class DevCommand
             catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested) { await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken); }
         }
         throw new TimeoutException($"Timed out waiting for development server {url}.");
+    }
+
+    // A watcher reload can race an editor that still holds the file open (a Windows sharing violation)
+    // or is replacing it (briefly missing). Both settle within moments, and the change event that
+    // triggered the reload may be the last one, so retry instead of waiting for another change.
+    internal static async Task<T> RetryWhileSavingAsync<T>(Func<T> load, CancellationToken cancellationToken, int attempts = 20)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try { return load(); }
+            catch (IOException) when (attempt < attempts) { await Task.Delay(50, cancellationToken); }
+        }
     }
 
     private static IReadOnlyDictionary<string, string?> With(IReadOnlyDictionary<string, string?> source, params string[] pairs)

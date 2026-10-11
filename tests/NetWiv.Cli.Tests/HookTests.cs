@@ -10,7 +10,7 @@ internal static class HookTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         while (prerequisite != "-" && !File.Exists(prerequisite)) await Task.Delay(20, timeout.Token);
         await Task.Delay(150, timeout.Token);
-        File.WriteAllText(report, new JsonObject { ["cwd"] = Environment.CurrentDirectory,
+        ConcurrentFile.Publish(report, new JsonObject { ["cwd"] = Environment.CurrentDirectory,
             ["patch"] = Environment.GetEnvironmentVariable("TAURI_CONFIG") }.ToJsonString());
         return int.Parse(code, System.Globalization.CultureInfo.InvariantCulture);
     }

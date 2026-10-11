@@ -6,12 +6,15 @@ public sealed partial class AppHandle
 {
     private readonly object _invocationGate = new();
     private readonly Dictionary<CancellationTokenSource, (string? Webview, ulong Document)> _invocations = [];
+    private TaskCompletionSource? _invocationsDrained;
+    private bool _invocationsClosed;
 
     private CancellationTokenSource BeginInvocation(string webview, ulong document, bool trusted, CancellationToken caller)
     {
         lock (_invocationGate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_invocationsClosed) throw new InvokeException("The application is shutting down and no longer accepts commands.");
             if (!trusted && !IsCurrentDocument(webview, document)) throw new InvokeException("The originating document has been replaced.");
             var lifetime = CancellationTokenSource.CreateLinkedTokenSource(caller);
             _invocations.Add(lifetime, (trusted ? null : webview, document));
@@ -21,8 +24,52 @@ public sealed partial class AppHandle
 
     private void EndInvocation(CancellationTokenSource lifetime)
     {
-        lock (_invocationGate) _invocations.Remove(lifetime);
+        TaskCompletionSource? drained = null;
+        lock (_invocationGate)
+        {
+            _invocations.Remove(lifetime);
+            if (_invocations.Count == 0) (drained, _invocationsDrained) = (_invocationsDrained, null);
+        }
         lifetime.Dispose();
+        drained?.TrySetResult();
+    }
+
+    /// <summary>
+    /// Requests cooperative cancellation of every command invocation in flight. With <paramref name="closeAdmission"/>,
+    /// new invocations are rejected from the same atomic point, so a following wait observes every admitted command.
+    /// </summary>
+    internal void CancelInvocations(bool closeAdmission = false)
+    {
+        CancellationTokenSource[] pending;
+        lock (_invocationGate)
+        {
+            _invocationsClosed |= closeAdmission;
+            pending = _invocations.Keys.ToArray();
+        }
+        foreach (var lifetime in pending) _ = CancelInvocation(lifetime);
+    }
+
+    /// <summary>
+    /// Waits until no command invocation, including its service scope disposal, is in flight.
+    /// Returns false when <paramref name="cancellationToken"/> ends the wait first.
+    /// </summary>
+    internal async Task<bool> WaitForInvocationsAsync(CancellationToken cancellationToken)
+    {
+        Task drained;
+        lock (_invocationGate)
+        {
+            if (_invocations.Count == 0) return true;
+            drained = (_invocationsDrained ??= new(TaskCreationOptions.RunContinuationsAsynchronously)).Task;
+        }
+        try
+        {
+            await drained.WaitAsync(cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
     }
 
     private void ChangeDocument(RuntimeDocumentChange change)

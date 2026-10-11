@@ -1,6 +1,9 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NetWiv.Runtime;
 
 namespace NetWiv;
@@ -24,6 +27,10 @@ public sealed partial class AppHandle : IDisposable
     private readonly ConcurrentDictionary<string, RuntimeDocumentChange> _documents = new(StringComparer.Ordinal);
     private long _nextJsEventId;
     private bool _disposed;
+    private IServiceProvider? _services;
+    private IServiceScopeFactory? _scopeFactory;
+    private ILogger _ipcLogger = NullLogger.Instance;
+    private ILogger _commandLogger = NullLogger.Instance;
     internal bool DebugAssertions { get; set; }
 
     internal AppHandle(
@@ -80,6 +87,19 @@ public sealed partial class AppHandle : IDisposable
     }
     public ResourceTable Resources { get; }
     public EventBus Events { get; }
+    /// <summary>The application's root service provider, or an empty provider when none is configured.</summary>
+    public IServiceProvider Services => _services ?? EmptyServiceProvider.Instance;
+    /// <summary>The logger factory used by NetWiv and its plugins; a no-op factory when none is configured.</summary>
+    public ILoggerFactory LoggerFactory { get; private set; } = NullLoggerFactory.Instance;
+
+    internal void ConfigureServices(IServiceProvider? services, ILoggerFactory? loggerFactory)
+    {
+        _services = services;
+        _scopeFactory = services?.GetService<IServiceScopeFactory>();
+        LoggerFactory = loggerFactory ?? services?.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance;
+        _ipcLogger = LoggerFactory.CreateLogger(CoreLog.IpcCategory);
+        _commandLogger = LoggerFactory.CreateLogger(CoreLog.CommandCategory);
+    }
     public IReadOnlyCollection<Window> Windows { get { lock (_registryGate) return _windows.Values.Select(window => window is WebviewWindow ? new Window(this, window.Label) : window).ToArray(); } }
     public IReadOnlyCollection<WebviewWindow> WebviewWindows { get { lock (_registryGate) return _webviews.Keys.Select(GetWebviewWindow).OfType<WebviewWindow>().ToArray(); } }
     public IReadOnlyCollection<Webview> Webviews { get { lock (_registryGate) return _webviews.Values.ToArray(); } }
@@ -363,6 +383,7 @@ public sealed partial class AppHandle : IDisposable
             var error = root.GetProperty("error").GetUInt32();
             if (!root.TryGetProperty("__NETWIV_INVOKE_KEY__", out var key) || key.GetString() != _invokeKey)
             {
+                CoreLog.RejectedRequest(_ipcLogger, message.WebviewLabel, "invalid invoke key");
                 RunCallback(message.WebviewLabel, error, JsonValue.From("invalid invoke key"), message.DocumentId);
                 return;
             }
@@ -403,9 +424,10 @@ public sealed partial class AppHandle : IDisposable
                 RunCallback(message.WebviewLabel, error, JsonValue.From(exception.Message), message.DocumentId);
             }
         }
-        catch (Exception)
+        catch (Exception exception)
         {
             // Malformed messages without readable callback identifiers cannot be answered safely.
+            CoreLog.MalformedMessage(_ipcLogger, message.WebviewLabel, exception);
         }
     }
 
@@ -425,21 +447,39 @@ public sealed partial class AppHandle : IDisposable
             ? AuthorizationResult.AllowedWithoutScope
             : _authorizer.Authorize(new(command, windowLabel, webviewLabel, source));
         if (!authorization.Allowed)
+        {
+            CoreLog.CommandDenied(_commandLogger, command, windowLabel, webviewLabel, source.GetLeftPart(UriPartial.Authority));
             throw new InvokeException(DebugAssertions
                 ? _authorizer.DebugMessage(new(command, windowLabel, webviewLabel, source))
                 : $"Command {command} not allowed by ACL");
+        }
 
         var lifetime = BeginInvocation(webviewLabel, documentId, trusted, cancellationToken);
         try
         {
-            var context = new InvokeContext(this, windowLabel, webviewLabel, source, trusted, authorization.Scope, documentId, request ?? new Request(InvokeBody.FromJson(args)));
             lifetime.Token.ThrowIfCancellationRequested();
             if (_commands.TryGet(command, out var handler))
             {
-                // A guest invocation enters from the native UI callback. Even an async
-                // C# handler can do substantial synchronous work before its first await.
-                if (!trusted) return await Task.Run(async () => await handler!(context, args, lifetime.Token), lifetime.Token);
-                return await handler!(context, args, lifetime.Token);
+                // Like an HTTP request, each command invocation owns one service scope.
+                var scope = _scopeFactory?.CreateAsyncScope();
+                try
+                {
+                    var context = new InvokeContext(this, windowLabel, webviewLabel, source, trusted, authorization.Scope, documentId,
+                        request ?? new Request(InvokeBody.FromJson(args)), scope?.ServiceProvider ?? _services);
+                    // A guest invocation enters from the native UI callback. Even an async
+                    // C# handler can do substantial synchronous work before its first await.
+                    if (!trusted) return await Task.Run(async () => await handler!(context, args, lifetime.Token), lifetime.Token);
+                    return await handler!(context, args, lifetime.Token);
+                }
+                catch (Exception exception) when (exception is not InvokeException and not OperationCanceledException)
+                {
+                    CoreLog.CommandFailed(_commandLogger, command, exception);
+                    throw;
+                }
+                finally
+                {
+                    if (scope is { } active) await active.DisposeAsync();
+                }
             }
             if (!command.StartsWith("plugin:", StringComparison.Ordinal) || !command.Contains('|'))
                 throw new InvokeException($"Command {command} not found");

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Reflection;
+using Microsoft.Extensions.Logging;
 using NetWiv.Runtime;
 
 namespace NetWiv;
@@ -31,9 +32,19 @@ public sealed class Builder
     private JsonElement _assetProtocolConfig;
     private IReadOnlyDictionary<string, JsonElement> _pluginConfigurations = new Dictionary<string, JsonElement>();
     private Assembly? _isolationAssembly;
+    private IServiceProvider? _services;
+    private ILoggerFactory? _loggerFactory;
     private readonly Dictionary<string, Func<UriSchemeContext, AssetRequest, Task<AssetResponse>>> _uriSchemeProtocols = new(StringComparer.Ordinal);
 
     public Builder UseRuntime(IDesktopRuntime runtime) { _runtime = runtime; return this; }
+    /// <summary>
+    /// Supplies the root service provider for <c>[FromServices]</c> command parameters.
+    /// Each command invocation runs in its own scope when the provider supports scopes.
+    /// The caller keeps ownership of the provider and disposes it after the app.
+    /// </summary>
+    public Builder UseServiceProvider(IServiceProvider services) { ArgumentNullException.ThrowIfNull(services); _services = services; return this; }
+    /// <summary>Supplies the logger factory for NetWiv diagnostics. Defaults to the provider's factory, then to a no-op factory.</summary>
+    public Builder UseLoggerFactory(ILoggerFactory loggerFactory) { ArgumentNullException.ThrowIfNull(loggerFactory); _loggerFactory = loggerFactory; return this; }
     public Builder Metadata(AppMetadata metadata) { _metadata = metadata; return this; }
     public Builder DefaultWindowIcon(ImageData icon) { ArgumentNullException.ThrowIfNull(icon); _defaultWindowIcon = icon; return this; }
     public Builder Window(WindowOptions options) { _windows.Add(options); return this; }
@@ -165,6 +176,7 @@ public sealed class Builder
                 _hasAppCommandManifest, CreateAssetResolver(fileAssets, isolation), plugins, _freezePrototype, _setup.ToArray(),
                 new Dictionary<string, Func<UriSchemeContext, AssetRequest, Task<AssetResponse>>>(_uriSchemeProtocols, StringComparer.Ordinal));
             app.Handle.DefaultWindowIcon = _defaultWindowIcon;
+            app.Handle.ConfigureServices(_services, _loggerFactory);
             var entryAssembly = Assembly.GetEntryAssembly();
             var debugMetadata = entryAssembly?.GetCustomAttributes<AssemblyMetadataAttribute>()
                 .FirstOrDefault(attribute => attribute.Key == "NetWiv.DebugAssertions")?.Value;

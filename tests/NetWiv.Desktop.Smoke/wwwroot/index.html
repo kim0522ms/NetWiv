@@ -11,6 +11,14 @@ document.querySelector('#invoke').onclick = async () => {
 };
 document.querySelector('#finish').onclick = () => invoke('finish_gui');
 try {
+ const external = await invoke('plugin:generated-external|get_status', {value: {label, source: 'external'}});
+ if (external.label !== label || external.source !== 'external') throw Error('External generated plugin dispatch mismatch');
+ if (await invoke('plugin:generated-local|get_status') !== 'local') throw Error('Plugin-local command names collided');
+ for (const command of ['plugin:generated-external|hidden', 'plugin:generated-local|blocked', 'get_status']) {
+   let rejected = false;
+   try { await invoke(command); } catch { rejected = true; }
+   if (!rejected) throw Error('Unselected or denied command was exposed: ' + command);
+ }
  let versionError;
  try { await invoke('plugin:app|tauri_version'); } catch (error) { versionError = String(error); }
  if (!versionError?.includes('NetWiv does not embed the TAURI framework')) throw Error('Runtime identity was misreported: ' + versionError);

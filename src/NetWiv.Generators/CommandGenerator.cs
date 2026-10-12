@@ -47,7 +47,7 @@ public sealed class CommandGenerator : IIncrementalGenerator
 
     private static readonly DiagnosticDescriptor InvalidName = new(
         "DTOXGEN006", "Invalid command name",
-        "Command method '{0}' has an empty external name",
+        "Command method '{0}' has an empty external name or a plugin-local name containing ':' or '|'",
         "NetWiv.Generators", DiagnosticSeverity.Error, true);
 
     private static readonly DiagnosticDescriptor DuplicateInjection = new(
@@ -63,6 +63,16 @@ public sealed class CommandGenerator : IIncrementalGenerator
     private static readonly DiagnosticDescriptor InvalidPlugin = new(
         "DTOXGEN008", "Invalid plugin type",
         "Plugin type '{0}' must be a non-abstract, non-generic implementation of NetWiv.IPlugin with an accessible parameterless constructor",
+        "NetWiv.Generators", DiagnosticSeverity.Error, true);
+
+    private static readonly DiagnosticDescriptor PluginFrontendName = new(
+        "DTOXGEN011", "Plugin frontend name cannot be inferred",
+        "Plugin '{0}' requires a non-virtual, constant expression-bodied Name getter to export frontend bindings; runtime naming remains supported without GenerateFrontendBindings",
+        "NetWiv.Generators", DiagnosticSeverity.Error, true);
+
+    private static readonly DiagnosticDescriptor InvalidPluginCommandOwner = new(
+        "DTOXGEN012", "Invalid plugin command owner",
+        "Command method '{0}' must be declared on a concrete plugin type; '{1}' is abstract or an interface",
         "NetWiv.Generators", DiagnosticSeverity.Error, true);
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -233,7 +243,8 @@ public sealed class CommandGenerator : IIncrementalGenerator
             }
         }
 
-        var duplicates = valid.GroupBy(static command => command.ExternalName, StringComparer.Ordinal)
+        var duplicates = valid.GroupBy(static command => (command.IsPluginCommand
+                ? command.Method.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) + "\0" : "") + command.ExternalName, StringComparer.Ordinal)
             .Where(static group => group.Count() > 1)
             .ToArray();
         if (duplicates.Length != 0)
@@ -247,7 +258,7 @@ public sealed class CommandGenerator : IIncrementalGenerator
                     context.ReportDiagnostic(Diagnostic.Create(
                         DuplicateName,
                         command.Method.Locations.FirstOrDefault(),
-                        duplicate.Key));
+                        command.ExternalName));
                 }
             }
 
@@ -268,11 +279,39 @@ public sealed class CommandGenerator : IIncrementalGenerator
         context.AddSource("NetWiv.Commands.g.cs", SourceText.From(source, Encoding.UTF8));
         if (exportFrontend)
         {
-            FrontendBindingEmitter.Emit(context, jsonContext, valid.Select(static command =>
-                new FrontendCommand(command.ExternalName,
+            var frontend = new List<FrontendCommand>();
+            foreach (var command in valid)
+            {
+                var name = command.ExternalName;
+                if (command.IsPluginCommand)
+                {
+                    var type = command.Method.ContainingType;
+                    var contract = type.AllInterfaces.First(static item => item.ToDisplayString() == "NetWiv.IPlugin");
+                    var property = type.FindImplementationForInterfaceMember(contract.GetMembers("Name").Single()) as IPropertySymbol;
+                    var syntax = property?.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as PropertyDeclarationSyntax;
+                    var expression = syntax?.ExpressionBody?.Expression;
+                    var constant = expression is null ? default : compilation.GetSemanticModel(expression.SyntaxTree).GetConstantValue(expression);
+                    if (property is null || property.IsVirtual || property.IsOverride || constant.Value is not string pluginName || string.IsNullOrWhiteSpace(pluginName))
+                    {
+                        context.ReportDiagnostic(Diagnostic.Create(PluginFrontendName, type.Locations.FirstOrDefault(), type.Name));
+                        return;
+                    }
+                    name = "plugin:" + pluginName + "|" + name;
+                }
+                frontend.Add(new FrontendCommand(name,
                     command.Parameters.Where(static parameter => parameter.Injection is null)
                         .Select(static parameter => parameter.Symbol).ToArray(),
-                    command.Return.ValueType, command.Method)));
+                    command.Return.ValueType, command.Method));
+            }
+            var collisions = frontend.GroupBy(static command => command.Name, StringComparer.Ordinal).Where(static group => group.Count() > 1).ToArray();
+            if (collisions.Length > 0)
+            {
+                foreach (var group in collisions)
+                    foreach (var command in group)
+                        context.ReportDiagnostic(Diagnostic.Create(DuplicateName, command.Method.Locations.FirstOrDefault(), group.Key));
+                return;
+            }
+            FrontendBindingEmitter.Emit(context, jsonContext, frontend);
         }
     }
 
@@ -328,7 +367,17 @@ public sealed class CommandGenerator : IIncrementalGenerator
             return false;
         }
 
-        if (string.IsNullOrWhiteSpace(candidate.ExternalName))
+        var isPluginCommand = method.ContainingType.AllInterfaces.Any(static type => type.ToDisplayString() == "NetWiv.IPlugin");
+        if (isPluginCommand && (method.ContainingType.TypeKind == TypeKind.Interface || method.ContainingType.IsAbstract))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                InvalidPluginCommandOwner, method.Locations.FirstOrDefault(), method.Name, method.ContainingType.Name));
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(candidate.ExternalName) ||
+            isPluginCommand &&
+            (candidate.ExternalName.IndexOf(':') >= 0 || candidate.ExternalName.IndexOf('|') >= 0))
         {
             context.ReportDiagnostic(Diagnostic.Create(
                 InvalidName, method.Locations.FirstOrDefault(), method.Name));
@@ -586,11 +635,21 @@ public sealed class CommandGenerator : IIncrementalGenerator
         builder.AppendLine("        {");
         for (var index = 0; index < commands.Count; index++)
         {
-            builder.Append("            global::NetWiv.GeneratedCommandRegistry.Register(")
-                .Append(Literal(commands[index].ExternalName))
-                .Append(", static registry => registry.Register(new global::NetWiv.CommandDescriptor(")
-                .Append(Literal(commands[index].ExternalName)).Append(", Handle_")
-                .Append(index.ToString(CultureInfo.InvariantCulture)).AppendLine(")));");
+            if (commands[index].IsPluginCommand)
+            {
+                builder.Append("            global::NetWiv.GeneratedPluginCommandRegistry.Register<")
+                    .Append(commands[index].Method.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                    .Append(">(").Append(Literal(commands[index].ExternalName)).Append(", Handle_")
+                    .Append(index.ToString(CultureInfo.InvariantCulture)).AppendLine(");");
+            }
+            else
+            {
+                builder.Append("            global::NetWiv.GeneratedCommandRegistry.Register(")
+                    .Append(Literal(commands[index].ExternalName))
+                    .Append(", static registry => registry.Register(new global::NetWiv.CommandDescriptor(")
+                    .Append(Literal(commands[index].ExternalName)).Append(", Handle_")
+                    .Append(index.ToString(CultureInfo.InvariantCulture)).AppendLine(")));");
+            }
         }
         builder.AppendLine("        }");
 
@@ -905,6 +964,7 @@ public sealed class CommandGenerator : IIncrementalGenerator
         public string ExternalName { get; }
         public ImmutableArray<ParameterModel> Parameters { get; }
         public ReturnModel Return { get; }
+        public bool IsPluginCommand => Method.ContainingType.AllInterfaces.Any(static type => type.ToDisplayString() == "NetWiv.IPlugin");
         public bool NeedsNullResult => !Return.HasValue;
         public bool NeedsByteArrayHelper =>
             Parameters.Any(static parameter => IsByteArray(parameter.Symbol.Type)) ||

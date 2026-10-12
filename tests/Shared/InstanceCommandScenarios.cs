@@ -114,6 +114,27 @@ internal static class InstanceCommandScenarios
         Check(log.Created == 1, "Unselected command activated a receiver.");
     }
 
+    public static async Task PluginInstanceCommandsKeepTheirScopeAndPermissions()
+    {
+        var log = new CommandLog();
+        await using var provider = Services(log).AddScoped<InstancePlugin>().BuildServiceProvider(true);
+        var runtime = new ProbeRuntime();
+        using var app = new Builder().UseRuntime(runtime).UseServiceProvider(provider)
+            .Plugin(new InstancePlugin(log))
+            .Capability(new("plugin-instance", ["instance-probe:allow-identity"], Windows: ["main"]))
+            .Build();
+        app.Run();
+        runtime.Send("plugin:instance-probe|identity", "{}", "https://untrusted.example");
+        Check((await runtime.Next()).Contains("not allowed", StringComparison.Ordinal), "Plugin instance bypassed ACL.");
+        Check(log.Created == 1 && log.Disposed == 0, "Denied plugin call activated a DI receiver.");
+        runtime.Send("plugin:instance-probe|identity", "{}", "tauri://localhost");
+        Check((await runtime.Next()).Contains("runCallback(1,\"2\")", StringComparison.Ordinal), "Plugin handler did not resolve its DI receiver.");
+        Check(log.Disposed == 1, "Plugin receiver was not disposed with invocation scope.");
+        runtime.Send("identity", "{}", "tauri://localhost");
+        Check((await runtime.Next()).Contains("not found", StringComparison.Ordinal), "Plugin instance leaked to app registry.");
+        Check(log.Created == 2, "App command activated plugin receiver.");
+    }
+
     private static IServiceCollection Services(CommandLog log)
     {
         var services = new ServiceCollection();
@@ -211,4 +232,17 @@ internal sealed class ProbeRuntime : IDesktopRuntime
         if (!await _ready.WaitAsync(TimeSpan.FromSeconds(10))) throw new TimeoutException("Missing IPC callback");
         return _scripts.TryDequeue(out var result) ? result : throw new InvalidOperationException("Missing script");
     }
+}
+
+internal sealed class InstancePlugin(CommandLog log) : IPlugin, IAsyncDisposable
+{
+    private readonly int _id = Interlocked.Increment(ref log.Created);
+    public string Name => "instance-probe";
+    public void Initialize(PluginContext context)
+    {
+        context.RegisterGeneratedCommands<InstancePlugin>("identity");
+        context.Permission(new PermissionDefinition("allow-identity", "identity"));
+    }
+    [Command("identity")] public JsonElement Identity() => JsonValue.From(_id.ToString());
+    public async ValueTask DisposeAsync() { await Task.Yield(); Interlocked.Increment(ref log.Disposed); }
 }

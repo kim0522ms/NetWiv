@@ -22,6 +22,9 @@ GeneratedCommandRegistry.Register("generated_selected", static registry =>
 
 var tests = new List<(string Name, Func<Task> Run)>
 {
+    ("generated plugin commands dispatch through IPC with isolated names and explicit selection", GeneratedPluginCommandTests.DispatchAndIsolation),
+    ("generated plugin commands require capability and respect deny precedence", GeneratedPluginCommandTests.Permissions),
+    ("generated plugin commands reject invalid owners selections and registrations", GeneratedPluginCommandTests.InvalidSelection),
     ("runtime identity rejects a Tauri version through guest IPC", RuntimeIdentity),
     ("Document-owned resource close rejects other windows and preserves backend sharing", ResourceOwnershipTests.CloseRequiresOwner),
     ("SQLite integer parameters preserve signed 64-bit values and reject overflow", SqlPluginTests.IntegerBinding),
@@ -46,6 +49,7 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("local app IPC succeeds through facade", LocalAppIpcSucceeds),
     ("IPC and command diagnostics use the configured logger factory", LoggingTests.CommandPipeline),
     ("log plugin forwards webview records to the configured logger factory", LoggingTests.WebviewRecordsUseLoggerFactory),
+    ("instance commands plugin scope and permissions", NetWiv.Tests.InstanceCommandScenarios.PluginInstanceCommandsKeepTheirScopeAndPermissions),
     ("instance commands Lifetimes", NetWiv.Tests.InstanceCommandScenarios.Lifetimes),
     ("instance commands ConstructorAndParameterShareScope", NetWiv.Tests.InstanceCommandScenarios.ConstructorAndParameterShareScope),
     ("instance commands ConcurrentAwaitAndDisposal", NetWiv.Tests.InstanceCommandScenarios.ConcurrentAwaitAndDisposal),

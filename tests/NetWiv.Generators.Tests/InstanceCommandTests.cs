@@ -5,6 +5,9 @@ namespace NetWiv.Generators.Tests;
 public sealed class InstanceCommandTests
 {
     [Fact]
+    public Task PluginInstanceCommandsKeepTheirScopeAndPermissions() => NetWiv.Tests.InstanceCommandScenarios.PluginInstanceCommandsKeepTheirScopeAndPermissions();
+
+    [Fact]
     public Task Lifetimes() => NetWiv.Tests.InstanceCommandScenarios.Lifetimes();
 
     [Fact]

@@ -8,6 +8,65 @@ namespace NetWiv.Generators.Tests;
 
 public sealed class FrontendBindingsTests
 {
+    [Fact]
+    public void PluginBindingsUseQualifiedNamesWithoutCollidingWithAppCommands()
+    {
+        var result = Generate(Preamble + """
+            public sealed class First : IPlugin {
+                public string Name => "first";
+                public void Initialize(PluginContext context) { }
+                [Command] public static void GetStatus() { }
+            }
+            public sealed class Second : IPlugin {
+                string IPlugin.Name => "second";
+                public void Initialize(PluginContext context) { }
+                [Command] public static void GetStatus() { }
+            }
+            public static class Commands { [Command] public static void GetStatus() { } }
+            """);
+        Assert.Empty(result.Errors);
+        var bindings = Read(result.Compilation);
+        foreach (var name in new[] { "plugin:first|get_status", "plugin:second|get_status", "get_status" })
+        {
+            Assert.Contains($"invoke(\"{name}\", args, options)", bindings.JavaScript);
+            Assert.Contains($"\"{name}\": (args?: Record<string, never>", bindings.TypeScript);
+        }
+    }
+
+    [Theory]
+    [InlineData("public string Name => Environment.GetEnvironmentVariable(\"PLUGIN\")!;")]
+    [InlineData("public virtual string Name => \"example\";")]
+    [InlineData("public string Name { get; } = \"example\";")]
+    public void PluginBindingsRejectNamesThatCannotBeProvenWithoutExecutingCode(string property)
+    {
+        var result = Generate(Preamble + $$"""
+            public class Example : IPlugin {
+                {{property}}
+                public void Initialize(PluginContext context) { }
+                [Command] public static void Ping() { }
+            }
+            """);
+        Assert.Contains(result.Errors, diagnostic => diagnostic.Id == "DTOXGEN011");
+    }
+
+    [Fact]
+    public void PluginBindingsRejectDuplicateFinalWireNames()
+    {
+        var result = Generate(Preamble + """
+            public sealed class First : IPlugin {
+                public string Name => "shared";
+                public void Initialize(PluginContext context) { }
+                [Command] public static void Ping() { }
+            }
+            public sealed class Second : IPlugin {
+                public string Name => "shared";
+                public void Initialize(PluginContext context) { }
+                [Command] public static void Ping() { }
+            }
+            """);
+        Assert.Equal(2, result.Errors.Count(diagnostic => diagnostic.Id == "DTOXGEN003"));
+    }
+
     private const string Preamble = """
         using System;
         using System.Text.Json.Serialization;

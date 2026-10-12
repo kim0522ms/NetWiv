@@ -51,8 +51,13 @@ through. Command names and argument keys are preserved exactly. No-argument
 commands accept an omitted argument object. The command registry still controls
 exposure: generation does not call InvokeHandler, grant permissions, or expose
 unregistered commands. The current export includes local generated declarations;
-it does not infer runtime registration decisions. Plugin/reference-assembly
-binding aggregation is not yet implemented.
+it does not infer runtime registration decisions. Local `[Command]` methods on
+`IPlugin` types export `plugin:<Name>|<command>` names. Their `Name` must be a
+non-virtual, non-overridden constant expression-bodied getter so export can
+determine the wire name without executing code (`DTOXGEN011` otherwise).
+Runtime plugin registration has no such constant-name requirement.
+Reference-assembly binding aggregation is not yet implemented; export a separate
+plugin project's bindings from that project. See [plugin commands](plugin-commands.md).
 
 ## Readable DTO names
 

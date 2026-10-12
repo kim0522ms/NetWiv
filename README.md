@@ -207,7 +207,7 @@ API references, and framework development documentation.
 | :--- | :--- |
 | **Build your first app** | [Package quickstart](docs/integration-quickstart.md) · [Templates](docs/template-coverage.md) |
 | **Connect C# and the frontend** | [C# API](docs/csharp-api.md) · [Generated bindings](docs/frontend-generator.md) |
-| **Add plugins** | [Plugin configuration](docs/plugin-configuration.md) · [Plugin status](docs/official-plugins.md) |
+| **Add plugins** | [Plugin commands](docs/plugin-commands.md) · [Plugin configuration](docs/plugin-configuration.md) · [Plugin status](docs/official-plugins.md) |
 | **Understand support** | [API status](docs/api-status.md) · [Support and validation](docs/implementation-status.md) |
 | **Understand the design** | [Design principles](docs/design-principles.md) |
 | **Work on the framework** | [Native ABI](docs/native-abi.md) · [Native architecture](docs/native-architecture.md) · [Version pins](compatibility/README.md) · [Conformance](tests/conformance/README.md) |

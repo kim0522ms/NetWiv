@@ -1,8 +1,96 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using NetWiv.Cli;
 
 internal static class DevReloadTests
 {
+    private sealed record ChildRun(int Pid, long StartTimeTicks)
+    {
+        public static ChildRun Parse(string line)
+        {
+            var fields = line.Split('|');
+            return new(int.Parse(fields[0]), long.Parse(fields[1]));
+        }
+    }
+
+    internal static async Task ProcessIdentity()
+    {
+        using var current = Process.GetCurrentProcess();
+        var child = new ChildRun(current.Id, current.StartTime.ToUniversalTime().Ticks);
+        var wait = TimeSpan.FromMilliseconds(100);
+        // Deterministically model a recycled PID: the OS now exposes another
+        // process at the recorded PID, with a different creation time.
+        await RequireStopped(child with { StartTimeTicks = child.StartTimeTicks - 1 }, wait);
+        try
+        {
+            await RequireStopped(child, wait);
+            throw new Exception("A matching live child was incorrectly reported as stopped.");
+        }
+        catch (TimeoutException) { }
+        var denied = new Win32Exception(5, "Access denied");
+        try
+        {
+            await RequireStopped(current, child, getStartTime: _ => throw denied);
+            throw new Exception("A live process inspection failure was swallowed.");
+        }
+        catch (Win32Exception error) when (ReferenceEquals(error, denied)) { }
+        if (!OperatingSystem.IsWindows())
+        {
+            try
+            {
+                await RequireStopped(current, child, wait,
+                    getStartTime: _ => throw new Win32Exception(3, "Process metadata is gone"));
+                throw new Exception("Missing metadata was incorrectly treated as process exit.");
+            }
+            catch (TimeoutException) { }
+        }
+    }
+
+    internal static async Task ProcessExitRace()
+    {
+        var report = Path.Combine(Path.GetTempPath(), "netwiv-exit-race-" + Guid.NewGuid().ToString("N"));
+        var start = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
+        foreach (var argument in new[] { "--owned-process-probe", "child", report }) start.ArgumentList.Add(argument);
+        using var child = Process.Start(start)!;
+        try
+        {
+            using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            while (!File.Exists(report)) await Task.Delay(10, stop.Token);
+            var identity = new ChildRun(child.Id, child.StartTime.ToUniversalTime().Ticks);
+            using var observed = Process.GetProcessById(child.Id);
+            _ = observed.SafeHandle;
+            // Exit after lookup/handle acquisition but before the observer reads
+            // StartTime. On macOS the handle does not retain process metadata.
+            Task? pendingInspection = null;
+            if (!OperatingSystem.IsWindows())
+            {
+                pendingInspection = RequireStopped(observed, identity,
+                    getStartTime: _ => throw new Win32Exception(3, "Process metadata is gone"));
+                await Task.Delay(50, stop.Token);
+                if (pendingInspection.IsCompleted)
+                {
+                    await pendingInspection;
+                    throw new Exception("Inspection completed before the child exited.");
+                }
+            }
+            child.Kill();
+            await child.WaitForExitAsync(stop.Token);
+            if (pendingInspection is not null) await pendingInspection;
+            await RequireStopped(observed, identity);
+            // Model the narrower race inside Process.StartTime: its liveness
+            // check succeeds, then the OS metadata lookup reports ESRCH (3).
+            await RequireStopped(observed, identity,
+                getStartTime: _ => throw new Win32Exception(3, "Process metadata is gone"));
+            await RequireStopped(identity);
+        }
+        finally
+        {
+            if (!child.HasExited) child.Kill();
+            await child.WaitForExitAsync();
+            File.Delete(report);
+        }
+    }
+
     internal static async Task TransientFiles()
     {
         var root = Path.GetTempPath();
@@ -119,6 +207,7 @@ internal static class DevReloadTests
         File.WriteAllText(Path.Combine(app, "Program.cs"), """
             using System.Reflection;
             using System.Text.Json;
+            using System.Diagnostics;
             using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("config")!;
             using var document = JsonDocument.Parse(stream);
             var config = document.RootElement;
@@ -129,7 +218,8 @@ internal static class DevReloadTests
             if (patch.RootElement.GetProperty("productName").GetString() != config.GetProperty("productName").GetString())
                 throw new Exception("Reloaded configuration and TAURI_CONFIG environment disagree");
             var command = config.GetProperty("$netwivAcl").GetProperty("files")[0].GetProperty("permission")[0].GetProperty("commands").GetProperty("allow")[0].GetString();
-            File.AppendAllText(args[0], $"{Environment.ProcessId}|{config.GetProperty("productName").GetString()}|{command}\n");
+            using var self = Process.GetCurrentProcess();
+            File.AppendAllText(args[0], $"{Environment.ProcessId}|{self.StartTime.ToUniversalTime().Ticks}|{config.GetProperty("productName").GetString()}|{command}\n");
             await Task.Delay(Timeout.Infinite);
             """);
         File.WriteAllText(Path.Combine(app, "netwiv.conf.json"), """
@@ -157,22 +247,22 @@ internal static class DevReloadTests
         using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(210));
         var output = new StringWriter();
         var session = DevCommand.RunAsync(arguments.ToArray(), TextWriter.Synchronized(output), app, stop.Token);
-        var pids = new List<int>();
+        var children = new List<ChildRun>();
         var completed = false;
         try
         {
-            pids.Add(await WaitForRun("first|one"));
+            children.Add(await WaitForRun("first|one"));
             await WritePermissionHeldOpen("two");
-            pids.Add(await WaitForRun("first|two"));
-            await RequireStopped(pids[0]);
+            children.Add(await WaitForRun("first|two"));
+            await RequireStopped(children[0]);
             File.WriteAllText(overlay, "{\"productName\":\"second\",\"build\":{\"features\":[\"alpha\",\"beta\"]}}");
-            pids.Add(await WaitForRun("second|two"));
-            await RequireStopped(pids[1]);
+            children.Add(await WaitForRun("second|two"));
+            await RequireStopped(children[1]);
             File.WriteAllText(permission, "[[permission]]\nidentifier = ");
             await Until(() => output.ToString().Contains("Configuration error:", StringComparison.Ordinal));
-            await RequireStopped(pids[2]);
+            await RequireStopped(children[2]);
             WritePermission("three");
-            pids.Add(await WaitForRun("second|three"));
+            children.Add(await WaitForRun("second|three"));
             var runCount = ConcurrentFile.ReadCompleteLines(outputFile).Length;
             await Task.Delay(1000, stop.Token);
             if (ConcurrentFile.ReadCompleteLines(outputFile).Length != runCount)
@@ -182,20 +272,20 @@ internal static class DevReloadTests
             File.WriteAllText(Path.Combine(externalResources, "initial.txt"), "initial");
             File.WriteAllText(overlay, """{"productName":"second","build":{"features":["alpha","beta"]},"bundle":{"resources":{"../external-resources/*.txt":"data"}}}""");
             await Until(() => ConcurrentFile.ReadCompleteLines(outputFile).Length > runCount);
-            pids.Add(int.Parse(ConcurrentFile.ReadCompleteLines(outputFile)[^1].Split('|')[0]));
-            await RequireStopped(pids[^2]);
+            children.Add(ChildRun.Parse(ConcurrentFile.ReadCompleteLines(outputFile)[^1]));
+            await RequireStopped(children[^2]);
             runCount = ConcurrentFile.ReadCompleteLines(outputFile).Length;
             File.WriteAllText(Path.Combine(externalResources, "added.txt"), "new glob match");
             await Until(() => ConcurrentFile.ReadCompleteLines(outputFile).Length > runCount);
-            pids.Add(int.Parse(ConcurrentFile.ReadCompleteLines(outputFile)[^1].Split('|')[0]));
-            await RequireStopped(pids[^2]);
+            children.Add(ChildRun.Parse(ConcurrentFile.ReadCompleteLines(outputFile)[^1]));
+            await RequireStopped(children[^2]);
             completed = true;
         }
         finally
         {
             stop.Cancel();
             try { await session; } catch (OperationCanceledException) { }
-            foreach (var pid in pids) await RequireStopped(pid);
+            foreach (var child in children) await RequireStopped(child);
             if (completed)
             {
                 // All app PIDs have already exited. Windows can briefly retain an
@@ -214,7 +304,7 @@ internal static class DevReloadTests
             }
         }
 
-        async Task<int> WaitForRun(string expected)
+        async Task<ChildRun> WaitForRun(string expected)
         {
             string? match = null;
             await Until(() =>
@@ -223,7 +313,7 @@ internal static class DevReloadTests
                 return match is not null;
             });
             var matched = match ?? throw new Exception("No matching development run.");
-            return int.Parse(matched[..matched.IndexOf('|')]);
+            return ChildRun.Parse(matched);
         }
         async Task Until(Func<bool> predicate)
         {
@@ -235,15 +325,36 @@ internal static class DevReloadTests
         }
     }
 
-    private static async Task RequireStopped(int pid)
+    private static async Task RequireStopped(ChildRun child, TimeSpan? wait = null)
     {
         try
         {
-            using var process = Process.GetProcessById(pid);
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            try { await process.WaitForExitAsync(timeout.Token); }
-            catch (OperationCanceledException) { throw new Exception($"Development child {pid} survived restart/cancellation."); }
+            using var process = Process.GetProcessById(child.Pid);
+            await RequireStopped(process, child, wait);
         }
         catch (ArgumentException) { }
+    }
+
+    private static async Task RequireStopped(Process process, ChildRun child, TimeSpan? wait = null,
+        Func<Process, DateTime>? getStartTime = null)
+    {
+        try
+        {
+            // Pin the Windows process instance before inspecting its creation
+            // time. Unix metadata can still disappear while StartTime is read.
+            _ = process.SafeHandle;
+            var startTime = getStartTime is null ? process.StartTime : getStartTime(process);
+            if (startTime.ToUniversalTime().Ticks != child.StartTimeTicks) return;
+        }
+        catch (InvalidOperationException) when (process.HasExited) { return; }
+        catch (Win32Exception error) when (!OperatingSystem.IsWindows() && error.NativeErrorCode == 3)
+        {
+            // Unix ESRCH: metadata can disappear before exit observation catches
+            // up. Still require exit below; missing metadata alone is not success.
+        }
+        catch (Win32Exception) when (process.HasExited) { return; }
+        using var timeout = new CancellationTokenSource(wait ?? TimeSpan.FromSeconds(5));
+        try { await process.WaitForExitAsync(timeout.Token); }
+        catch (OperationCanceledException) { throw new TimeoutException($"Development child {child.Pid} survived restart/cancellation."); }
     }
 }

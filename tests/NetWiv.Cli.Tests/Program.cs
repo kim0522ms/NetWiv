@@ -69,6 +69,8 @@ var tests = new (string Name, Func<Task> Run)[]
     ("application package versions resolve validate and join watched configuration inputs", WindowsFileVersionTests.ConfigResolution),
     ("plugin configuration merges without losing scalar values and rejects non-object roots", PluginConfiguration),
     ("cancelled runner does not start a process", ProcessOwnershipTests.CancelledBeforeStart),
+    ("development child exit checks distinguish reused PIDs from live children", DevReloadTests.ProcessIdentity),
+    ("development child exit checks tolerate exit during process inspection", DevReloadTests.ProcessExitRace),
     ("development watcher discards transient build files but preserves source changes", DevReloadTests.TransientFiles),
     ("development reload retries configuration files that are still being saved", DevReloadTests.SavingRetry),
     ("direct-root config keeps project root", DirectRoot),

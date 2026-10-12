@@ -2,8 +2,38 @@
 
 Recorded on 2026-10-12 for implementation commit
 `0cafe0fbfe99864de39f0cb6f016de7b616e32ae`, based on
-`212809a9e78c28d4081c467dc4de1fff988ba73c`. Subsequent commits in this PR
-update evidence/documentation only; they do not change executable code.
+`212809a9e78c28d4081c467dc4de1fff988ba73c`. The original device results below
+apply to that implementation. A later Linux compile fix is recorded separately.
+
+## Linux compile follow-up
+
+PR #15 CI run [38208125844](https://github.com/kim0522ms/NetWiv/actions/runs/38208125844)
+failed because the extracted Linux `monitor_work_area` function lacked imports
+for `LogicalPosition` and `LogicalSize`. The fix imports both types inside that
+Linux-only function; conversion behavior and the other platforms are unchanged.
+
+On Ubuntu 22.04 x64 in WSL2 (kernel 6.6.87.2, Rust 1.95.0), commit `7654ade`
+reproduced both `E0433` errors. With only the import line added, the native
+library/test build passed, all 48 headless tests passed, and the initially ignored
+GTK menu test passed separately under Xvfb/D-Bus. macOS arm64 native tests were
+rerun: 49 passed. [Before/after Linux output](linux-import-fix.log) records the
+compiler regression and test results. WSL/Xvfb is virtual/headless evidence,
+not Linux physical-desktop or full WebView/NativeAOT validation.
+
+Reproduce with Rust 1.95.0 and the Linux prerequisites in the CI workflow:
+
+```sh
+node scripts/prepare-native-dependencies.mjs linux-x64 artifacts/native-source/ci
+export SODIUM_DIST_DIR="$PWD/artifacts/native-source/ci"
+cargo +1.95.0 test --locked --manifest-path native/netwiv-native/Cargo.toml
+xvfb-run -a dbus-run-session -- cargo +1.95.0 test --locked \
+  --manifest-path native/netwiv-native/Cargo.toml \
+  native_menu_replacement_and_accelerator_dispatch -- --ignored --test-threads=1
+```
+
+No behavioral test was added for this import-only fix: compiling the actual
+Linux library and test target reproduces the failure directly. Existing Linux
+CI remains the release-build and NativeAOT gate.
 
 ## Results and limits
 

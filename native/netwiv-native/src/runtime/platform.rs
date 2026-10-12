@@ -105,6 +105,7 @@ fn monitor_work_area(
     monitor: &MonitorHandle,
 ) -> (tao::dpi::PhysicalPosition<i32>, tao::dpi::PhysicalSize<u32>) {
     use gtk::prelude::MonitorExt;
+    use tao::dpi::{LogicalPosition, LogicalSize};
     use tao::platform::unix::MonitorHandleExtUnix;
     let rect = monitor.gdk_monitor().workarea();
     let scale = monitor.scale_factor();

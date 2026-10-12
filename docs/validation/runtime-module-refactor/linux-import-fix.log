@@ -1,0 +1,101 @@
+Before: 7654ade, Ubuntu 22.04 x64 / WSL2, Rust 1.95.0
+error[E0433]: cannot find type `LogicalPosition` in this scope
+   --> netwiv-native/src/runtime/platform.rs:112:9
+    |
+112 |         LogicalPosition::new(rect.x(), rect.y()).to_physical(scale),
+    |         ^^^^^^^^^^^^^^^ use of undeclared type `LogicalPosition`
+
+error[E0433]: cannot find type `LogicalSize` in this scope
+   --> netwiv-native/src/runtime/platform.rs:113:9
+    |
+113 |         LogicalSize::new(rect.width() as u32, rect.height() as u32).to_physical(scale),
+    |         ^^^^^^^^^^^ use of undeclared type `LogicalSize`
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `netwiv-native` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `netwiv-native` (lib test) due to 2 previous errors
+
+
+After: same source plus Linux-local DPI imports
+   Compiling netwiv-native v0.1.0 (/root/netwiv-pr15/repo/native/netwiv-native)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.88s
+     Running unittests src/lib.rs (/root/netwiv-pr15/target/debug/deps/netwiv_native-3f75968bbf369cc1)
+
+running 49 tests
+test abi::tests::abi_version_and_handle_lifetime ... ok
+test abi::tests::calls_before_run_are_rejected ... ok
+test abi::tests::invalid_spans_return_owned_error ... ok
+test global_shortcut::tests::rejects_bad_arguments_before_creating_manager ... ok
+test notification::tests::invalid_payloads_fail_without_dispatch ... ok
+test model::tests::windowless_config_still_validates_protocols ... ok
+test menu_payload::tests::new_options_rejects_entire_nested_tree_before_native_construction ... ok
+test menu_payload::tests::nested_payload_precedence_and_fallback_match_pinned_serde ... ok
+test paths::tests::app_logs_use_local_data_and_preserve_relative_components ... ok
+test paths::tests::resource_parent_and_root_components_are_encoded ... ok
+test relative_bounds::tests::child_retains_ratios_when_growing_and_shrinking ... ok
+test relative_bounds::tests::enabling_again_captures_current_native_bounds ... ok
+test relative_bounds::tests::root_fills_parent_across_resize_and_dpi_changes ... ok
+test relative_bounds::tests::setters_update_only_their_own_axes ... ok
+test resources::tests::about_metadata_matches_serde_absent_null_and_wrong_type_behavior ... ok
+test resources::tests::exhausted_resource_ids_never_overwrite_live_resources ... ok
+test resources::tests::guest_tray_argument_names_are_enforced_before_resource_lookup ... ok
+test resources::tests::about_metadata_maps_camel_case_fields_and_resolves_image_resources ... ok
+test resources::tests::invalid_resource_errors_match_tauri ... ok
+test resources::tests::image_bytes_round_trip_and_close_invalidates_the_resource ... ok
+test resources::tests::image_decode_errors_match_tauri_and_do_not_allocate_resources ... ok
+test resources::tests::menu_and_tray_new_require_the_channels_sent_by_the_guest_api ... ok
+test resources::tests::nsapp_only_menu_commands_are_noops_on_desktop_targets ... ok
+test resources::tests::encoded_image_fixtures_preserve_pixels_and_dimensions ... ok
+test resources::tests::malformed_nested_menu_payload_is_rejected_before_native_creation ... ok
+test resources::tests::resource_handles_survive_wrong_kind_access_and_are_not_reused_after_close ... ok
+test runtime::tests::data_directory_matches_pinned_from_config_resolution ... ok
+test runtime::tests::asset_protocol_config_is_additive_and_empty_content_type_is_omitted ... ok
+test runtime::tests::document_bound_eval_is_discarded_after_close_or_reload ... ok
+test runtime::tests::native_menu_replacement_and_accelerator_dispatch ... ignored, requires a native desktop; run explicitly with the desktop test wrapper
+test runtime::tests::backend_child_builder_options_do_not_leak_into_the_guest_contract ... ok
+test runtime::tests::late_protocol_completion_after_shutdown_does_not_reenter_callbacks ... ok
+test runtime::tests::initial_webview_origin_matches_pinned_tauri_rules ... ok
+test runtime::tests::parse_hex_color ... ok
+test runtime::tests::dynamic_labels_and_numeric_options_are_validated_before_native_creation ... ok
+test runtime::tests::physical_size_and_position_reject_fractional_and_out_of_range_values ... ok
+test runtime::tests::prevent_overflow_reduces_inner_size_by_outer_excess ... ok
+test runtime::tests::proxy_parser_preserves_explicit_host_and_port ... ok
+test runtime::tests::reparent_updates_ipc_and_protocol_parent_without_replacing_document ... ok
+test runtime::tests::public_color_shapes_match_tauri_config_deserialization ... ok
+test runtime::tests::window_config_defaults_use_netwiv_title ... ok
+test runtime::tests::window_and_webview_creation_preserve_aliases_after_validation ... ok
+test runtime::tests::window_effects_accept_clear_and_preserve_order_and_typed_fields ... ok
+test stronghold::tests::missing_snapshot_is_rejected ... ok
+test runtime::tests::window_titles_preserve_explicit_values_and_reject_invalid_types ... ok
+test runtime::tests::window_effects_validate_ignored_platform_fields_and_unknown_keys ... ok
+test tray_payload::tests::tray_event_json_serialization ... ok
+test tray_payload::tests::all_events_preserve_pointer_fractions_and_round_rect_positions ... ok
+test stronghold::tests::encrypted_store_roundtrips_and_rejects_wrong_password ... ok
+
+test result: ok. 48 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 1.24s
+
+   Doc-tests netwiv_native
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+
+Explicit GTK test (Xvfb/D-Bus)
+dbus[1180]: Unable to set up transient service directory: XDG_RUNTIME_DIR "/run/user/0" not available: No such file or directory
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.25s
+     Running unittests src/lib.rs (/root/netwiv-pr15/target/debug/deps/netwiv_native-3f75968bbf369cc1)
+
+running 1 test
+test runtime::tests::native_menu_replacement_and_accelerator_dispatch ... dbus-daemon[1180]: [session uid=0 pid=1180] Activating service name='org.a11y.Bus' requested by ':1.0' (uid=0 pid=1193 comm="/root/netwiv-pr15/target/debug/deps/netwiv_native-")
+dbus-daemon[1180]: [session uid=0 pid=1180] Successfully activated service 'org.a11y.Bus'
+
+(netwiv_native-3f75968bbf369cc1:1193): Gtk-WARNING **: 14:51:51.265: ../../../../gtk/gtkwidget.c:6780: no accelerator (65493,0) installed in accel group (0x7fed642d3260) for GtkMenuItem (0x7fed644a44d0)
+
+(netwiv_native-3f75968bbf369cc1:1193): Gtk-WARNING **: 14:51:51.265: ../../../../gtk/gtkwidget.c:6780: no accelerator (65493,0) installed in accel group (0x7fed642d3260) for GtkMenuItem (0x7fed644a4320)
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 48 filtered out; finished in 0.22s
+

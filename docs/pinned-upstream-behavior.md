@@ -96,8 +96,9 @@ supported upstream versions.
 
 ## Linux minimize/maximize button flags
 
-The pinned `tao 0.35.3` GTK implementation leaves `set_minimizable` and
-`set_maximizable` empty and returns `true` from both corresponding getters.
+The reference runtime's `tao 0.35.3` and NetWiv's `tao 0.36.0` GTK
+implementations leave `set_minimizable` and `set_maximizable` empty and return
+`true` from both corresponding getters.
 NetWiv preserves those Linux results. This is separate from the `maximize`,
 `unmaximize` and fullscreen operations, which do request actual window states.
 Windows button setters and getters do change their native window flags.
@@ -105,7 +106,7 @@ Windows button setters and getters do change their native window flags.
 The `window.native-flags` fixture checks the unsupported Linux setters' actual
 unchanged values, alongside closable/decorated/enabled/topmost and visibility
 roundtrips. It does not count the Linux behavior as working button suppression.
-Sources: pinned `tao-0.35.3/src/platform_impl/{linux,windows}/window.rs` and
+Sources: `tao-0.35.3` and `tao-0.36.0`'s `src/platform_impl/{linux,windows}/window.rs` and
 Tauri's `packages/api/src/window.ts` platform-specific API notes.
 
 ## GTK topmost hint and cached getter

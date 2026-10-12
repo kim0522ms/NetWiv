@@ -72,8 +72,8 @@
       "features": ["protocol", "os-webview", "linux-body@linux", "x11@linux"]
     },
     "tao": {
-      "version": "0.35.3",
-      "checksum": "d1c93047acf68669466a34690ac58cca7010bd1b201e1ec86f1fd0a75d3dd4a9",
+      "version": "0.36.0",
+      "checksum": "e9fa4618f999c4249db1681cba0a19b890718f274de7fa93c445d46bd3a8a999",
       "features": ["rwh_06", "x11@linux", "dbus@linux"]
     },
     "muda": {

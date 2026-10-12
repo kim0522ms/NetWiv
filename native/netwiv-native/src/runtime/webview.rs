@@ -258,9 +258,16 @@ impl LocalRuntime {
         if let Some(value) = incognito {
             builder = builder.with_incognito(value);
         }
+        #[cfg(not(target_os = "windows"))]
         if let Some(value) = focus {
             builder = builder.with_focused(value);
         }
+        // WRY 0.55.1 propagates initial MoveFocus failures as creation failures.
+        // A minimized parent can reject focus even though its controller is valid.
+        // Match upstream wry#1799: creation focus is best effort; explicit focus
+        // commands below still report errors to the caller.
+        #[cfg(target_os = "windows")]
+        { builder = builder.with_focused(false); }
         if let Some(value) = accept_first_mouse {
             builder = builder.with_accept_first_mouse(value);
         }
@@ -376,6 +383,10 @@ impl LocalRuntime {
             self.web_contexts.remove(&context_key);
         }
         let native = native?;
+        #[cfg(target_os = "windows")]
+        if focus.unwrap_or(true) {
+            let _ = native.focus();
+        }
         window.webviews.push(config.label.clone());
         self.webviews.insert(
             config.label.clone(),

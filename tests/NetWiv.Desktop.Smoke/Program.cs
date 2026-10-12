@@ -118,7 +118,8 @@ internal static class Program
         using var watchdog = new Timer(_ =>
         {
             Fail("Native integration timed out");
-            try { app.Handle.Exit(124); } catch (Exception error) { Console.Error.WriteLine(error.Message); }
+            // Posting Exit cannot terminate a deadlocked native UI thread.
+            Environment.Exit(124);
         }, null, TimeSpan.FromMilliseconds(180000 + GuiHoldMs), Timeout.InfiniteTimeSpan);
         try { app.Run(); }
         catch (Exception error) { Fail(error.ToString()); }
@@ -158,8 +159,29 @@ internal static class Program
             var views = await app.InvokeAsync("plugin:webview|get_all_webviews", JsonValue.EmptyObject);
             Require(views.GetArrayLength() == 3, "three native webviews");
             Console.WriteLine("PASS native windows, menu mutation, icon/About SDK, image and tray");
+            if (OperatingSystem.IsWindows()) await WindowsLifecycleProbe.VerifyTaskbarRecreationAsync();
             await VerifyStrongholdAndShortcutBridge(app);
             await VerifyDesktopApi(app, image);
+            if (OperatingSystem.IsWindows())
+            {
+                var minimized = await new WindowBuilder(app, "minimized-parent").BuildAsync();
+                await minimized.MinimizeAsync();
+                Require(await minimized.IsMinimizedAsync(), "focus regression requires a minimized parent");
+                foreach (bool focused in new[] { false, true })
+                {
+                    var child = await new WebviewBuilder(app, minimized, "minimized-child")
+                        .Url("quiet.html").Focused(focused).BuildAsync();
+                    Require(await minimized.IsMinimizedAsync(), "child creation restored a minimized parent");
+                    await child.CloseAsync();
+                    Require(await app.GetWebviewAsync(child.Label) is null, "closed minimized child retained its native WebView");
+                }
+                var restored = await new WebviewBuilder(app, minimized, "minimized-child").Url("quiet.html").BuildAsync();
+                await minimized.UnminimizeAsync();
+                await restored.SetFocusAsync();
+                await minimized.DestroyAsync();
+                Require(await app.GetWebviewAsync(restored.Label) is null, "destroyed minimized parent retained its native WebView");
+                Console.WriteLine("PASS minimized parent child creation with default/explicit focus, restore and cleanup");
+            }
             for (int iteration = 0; iteration < 10; iteration++)
             {
                 var temporary = await new WindowBuilder(app, "temporary").Visible(false).BuildAsync();
@@ -321,7 +343,8 @@ internal static class Program
         using var watchdog = new Timer(_ =>
         {
             Fail("windowless startup timed out");
-            try { app.Handle.Exit(124); } catch (Exception error) { Console.Error.WriteLine(error.Message); }
+            // Posting Exit cannot terminate a deadlocked native UI thread.
+            Environment.Exit(124);
         }, null, TimeSpan.FromSeconds(15), Timeout.InfiniteTimeSpan);
         try { app.Run(); }
         catch (Exception error) { Fail(error.ToString()); }

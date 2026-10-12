@@ -7,7 +7,7 @@ Verbatim license and NOTICE candidates are stored by SHA-256 under
 `native/third-party-licenses/texts`; `manifest.json` maps each package and original filename
 to those bytes and explicitly marks packages for which no candidate was found.
 
-Cargo.lock SHA-256: `23941231fb5f3f2a00a5b8d27fea7167d4dffb0d2fbb9bc06260c7dbc4ae240e`
+Cargo.lock SHA-256: `a445a0f9bb23a0af8407fcb49badc02a8e679dccc0631a7807d15630d5cb791e`
 
 Regenerate this file with `node native/generate-third-party-notices.mjs` after changing
 the native dependency graph.
@@ -274,6 +274,7 @@ the native dependency graph.
 | moxcms | 0.8.1 | BSD-3-Clause OR Apache-2.0 | https://github.com/awxkee/moxcms.git | 2 |
 | muda | 0.19.3 | Apache-2.0 OR MIT | https://github.com/tauri-apps/muda | 3 |
 | ndk | 0.9.0 | MIT OR Apache-2.0 | https://github.com/rust-mobile/ndk | 2 |
+| ndk-context | 0.1.1 | MIT OR Apache-2.0 | https://github.com/rust-windowing/android-ndk-rs | 2 |
 | ndk-sys | 0.6.0+11769913 | MIT OR Apache-2.0 | https://github.com/rust-mobile/ndk | 2 |
 | new_debug_unreachable | 1.0.6 | MIT | https://github.com/mbrubeck/rust-debug-unreachable | 1 |
 | nix | 0.24.3 | MIT | https://github.com/nix-rust/nix | 1 |
@@ -423,7 +424,7 @@ the native dependency graph.
 | syn | 3.0.5 | MIT OR Apache-2.0 | https://github.com/dtolnay/syn | 2 |
 | synstructure | 0.13.2 | MIT | https://github.com/mystor/synstructure | 1 |
 | system-deps | 6.2.2 | MIT OR Apache-2.0 | https://github.com/gdesmott/system-deps | 2 |
-| tao | 0.35.3 | Apache-2.0 | https://github.com/tauri-apps/tao | 2 |
+| tao | 0.36.0 | Apache-2.0 | https://github.com/tauri-apps/tao | 2 |
 | tao-macros | 0.1.4 | MIT OR Apache-2.0 | https://github.com/tauri-apps/tao | 3 |
 | tar | 0.4.46 | MIT OR Apache-2.0 | https://github.com/composefs/tar-rs | 2 |
 | target-lexicon | 0.12.16 | Apache-2.0 WITH LLVM-exception | https://github.com/bytecodealliance/target-lexicon | 1 |

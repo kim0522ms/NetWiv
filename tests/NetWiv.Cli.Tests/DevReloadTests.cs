@@ -34,6 +34,16 @@ internal static class DevReloadTests
             throw new Exception("A live process inspection failure was swallowed.");
         }
         catch (Win32Exception error) when (ReferenceEquals(error, denied)) { }
+        if (!OperatingSystem.IsWindows())
+        {
+            try
+            {
+                await RequireStopped(current, child, wait,
+                    getStartTime: _ => throw new Win32Exception(3, "Process metadata is gone"));
+                throw new Exception("Missing metadata was incorrectly treated as process exit.");
+            }
+            catch (TimeoutException) { }
+        }
     }
 
     internal static async Task ProcessExitRace()
@@ -51,8 +61,21 @@ internal static class DevReloadTests
             _ = observed.SafeHandle;
             // Exit after lookup/handle acquisition but before the observer reads
             // StartTime. On macOS the handle does not retain process metadata.
+            Task? pendingInspection = null;
+            if (!OperatingSystem.IsWindows())
+            {
+                pendingInspection = RequireStopped(observed, identity,
+                    getStartTime: _ => throw new Win32Exception(3, "Process metadata is gone"));
+                await Task.Delay(50, stop.Token);
+                if (pendingInspection.IsCompleted)
+                {
+                    await pendingInspection;
+                    throw new Exception("Inspection completed before the child exited.");
+                }
+            }
             child.Kill();
             await child.WaitForExitAsync(stop.Token);
+            if (pendingInspection is not null) await pendingInspection;
             await RequireStopped(observed, identity);
             // Model the narrower race inside Process.StartTime: its liveness
             // check succeeds, then the OS metadata lookup reports ESRCH (3).
@@ -324,6 +347,11 @@ internal static class DevReloadTests
             if (startTime.ToUniversalTime().Ticks != child.StartTimeTicks) return;
         }
         catch (InvalidOperationException) when (process.HasExited) { return; }
+        catch (Win32Exception error) when (!OperatingSystem.IsWindows() && error.NativeErrorCode == 3)
+        {
+            // Unix ESRCH: metadata can disappear before exit observation catches
+            // up. Still require exit below; missing metadata alone is not success.
+        }
         catch (Win32Exception) when (process.HasExited) { return; }
         using var timeout = new CancellationTokenSource(wait ?? TimeSpan.FromSeconds(5));
         try { await process.WaitForExitAsync(timeout.Token); }

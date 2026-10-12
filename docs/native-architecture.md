@@ -24,6 +24,45 @@ does not automatically supply Tauri's IPC or security policy.
 See the [native ABI](native-abi.md) for threading, memory ownership, callbacks
 and shutdown, and [isolation](isolation.md) for the supported IPC transport.
 
+## Internal module boundaries
+
+The native adapter's modules divide implementation responsibilities without
+introducing additional runtimes or resource stores:
+
+| Location | Responsibility |
+| --- | --- |
+| `runtime.rs` | Own `LocalRuntime`, window/WebView/context maps, the event loop, callbacks and ordered shutdown. |
+| `runtime/commands.rs` | Validate submission document identity and route commands to the existing handlers. |
+| `runtime/window.rs`, `runtime/webview.rs` | Create native objects and implement window/WebView commands, resize, evaluation and reparenting. |
+| `runtime/protocol.rs` | Track document origins and generations, construct the guest bridge and deliver asset responses through `Shared`. |
+| `runtime/options.rs`, `runtime/platform.rs` | Decode existing wire values and apply OS-specific window operations. |
+| `runtime/menus.rs` | Attach application/window menus, synchronize accelerators and show context menus. |
+| `resources.rs` | Own the single native RID allocator/table, route resource commands and close resources/channels. |
+| `resources/menus.rs`, `resources/trays.rs`, `resources/images.rs` | Implement each resource kind against that same table. |
+
+Child modules are private. Their handlers operate on the existing owner rather
+than acquiring another copy of its state. `LocalRuntime` and native desktop
+objects remain on the event-loop thread; only the existing `Shared` callback,
+protocol and event-proxy state crosses threads. Keep document invalidation,
+WebView-before-WebContext destruction, resource alias ownership and asset
+responder draining in their current order when extending these modules.
+
+The C# `CommandGenerator` similarly uses private partial declarations:
+`CommandGenerator.cs` wires the incremental pipeline and coordinates output;
+`Analysis`, `Diagnostics`, `Models`, `Plugins` and `Emission` contain semantic
+validation, diagnostic definitions, internal models, plugin discovery and C#
+output respectively. These are parts of one compile-time generator, not runtime
+services. Frontend binding emission remains in `FrontendBindingEmitter`.
+Generated registrations, serializers, DI invocation scopes and disposal behavior
+must remain NativeAOT-safe.
+
+For a structural change, run the native unit tests, generator tests, managed and
+NativeAOT core tests, and desktop smoke scenarios. Include stale-document replies,
+reparenting, menu aliases, resource closure and invalid payloads; unchanged ABI
+declarations alone do not establish unchanged behavior across C#, Rust and JS.
+See [contributing](../CONTRIBUTING.md#validation-and-real-device-evidence) for
+real-device evidence requirements.
+
 ## Builds and delivery
 
 Framework maintainers build native binaries explicitly for each RID and package

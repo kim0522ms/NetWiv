@@ -1,5 +1,5 @@
 === final-macos-native-tests.log ===
-   Compiling netwiv-native v0.1.0 (/Users/protec/repo/NetWiv-runtime-refactor/native/netwiv-native)
+   Compiling netwiv-native v0.1.0 (<repo>/native/netwiv-native)
    Compiling tao v0.36.0
     Finished `test` profile [unoptimized + debuginfo] target(s) in 6.37s
      Running unittests src/lib.rs (artifacts/native-target/osx-arm64/debug/deps/netwiv_native-83448ea275439bac)
@@ -145,7 +145,7 @@ tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.proven
 tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
 tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.89s
-     Running unittests src/lib.rs (/root/netwiv-pr15/target/debug/deps/netwiv_native-5299496320c8e382)
+     Running unittests src/lib.rs (<repo>/target/debug/deps/netwiv_native-5299496320c8e382)
 
 running 49 tests
 test notification::tests::invalid_payloads_fail_without_dispatch ... ok
@@ -207,10 +207,10 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.24s
-     Running unittests src/lib.rs (/root/netwiv-pr15/target/debug/deps/netwiv_native-5299496320c8e382)
+     Running unittests src/lib.rs (<repo>/target/debug/deps/netwiv_native-5299496320c8e382)
 
 running 1 test
-test runtime::tests::native_menu_replacement_and_accelerator_dispatch ... dbus-daemon[464]: [session uid=0 pid=464] Activating service name='org.a11y.Bus' requested by ':1.0' (uid=0 pid=475 comm="/root/netwiv-pr15/target/debug/deps/netwiv_native-")
+test runtime::tests::native_menu_replacement_and_accelerator_dispatch ... dbus-daemon[464]: [session uid=0 pid=464] Activating service name='org.a11y.Bus' requested by ':1.0' (uid=0 pid=475 comm="<repo>/target/debug/deps/netwiv_native-")
 dbus-daemon[464]: [session uid=0 pid=464] Successfully activated service 'org.a11y.Bus'
 
 (netwiv_native-5299496320c8e382:475): Gtk-WARNING **: 15:53:01.077: ../../../../gtk/gtkwidget.c:6780: no accelerator (65493,0) installed in accel group (0x7f31602d3260) for GtkMenuItem (0x7f31604a44d0)

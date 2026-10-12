@@ -50,7 +50,10 @@ posting an exit request alone cannot terminate a deadlocked UI thread.
 
 ## Device and results
 
-- Physical Lenovo 20S60006KR, Intel i7-10510U, Windows 10 Pro x64 build 19045;
+Personal device/account identifiers are omitted. Published log paths use
+`<repo>` for the checkout root; diagnostic results and source locations are retained.
+
+- Physical Windows x64 device, Windows 10 Pro build 19045;
   WebView2 154.0.4258.62; .NET SDK 8.0.415; Rust 1.95.0.
 - Windows GUI runs used the logged-in console session through interactive
   scheduled tasks. SSH was used for builds and log transfer.

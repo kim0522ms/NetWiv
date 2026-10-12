@@ -1,16 +1,16 @@
 === Original main failure ===
 FAIL NetWiv.InvokeException: failed to create webview 'temporary': WebView2 error: WindowsError(Error { code: HRESULT(0x80070057), message: "�Ű� ������ Ʋ���ϴ�." })
-   at NetWiv.AppHandle.InvokeCoreAsync(String command, JsonElement args, String windowLabel, String webviewLabel, Uri source, Boolean trusted, CancellationToken cancellationToken, UInt64 documentId, Request request) in C:\Users\pc\NetWiv-runtime-refactor\repo\src\NetWiv.Core\AppHandle.cs:line 486
-   at NetWiv.AppHandle.InvokeJsonAsync(String command, JsonElement args, String windowLabel, String webviewLabel, Uri source, Boolean trusted, CancellationToken cancellationToken) in C:\Users\pc\NetWiv-runtime-refactor\repo\src\NetWiv.Core\AppHandle.cs:line 437
-   at NetWiv.WebviewBuilder.BuildAsync(CancellationToken cancellationToken) in C:\Users\pc\NetWiv-runtime-refactor\repo\src\NetWiv.Core\Api\WindowBuilders.cs:line 354
-   at Program.RunScenario(AppHandle app, OriginProbe probe) in C:\Users\pc\NetWiv-runtime-refactor\repo\tests\NetWiv.Desktop.Smoke\Program.cs:line 168
+   at NetWiv.AppHandle.InvokeCoreAsync(String command, JsonElement args, String windowLabel, String webviewLabel, Uri source, Boolean trusted, CancellationToken cancellationToken, UInt64 documentId, Request request) in <repo>/src/NetWiv.Core/AppHandle.cs:line 486
+   at NetWiv.AppHandle.InvokeJsonAsync(String command, JsonElement args, String windowLabel, String webviewLabel, Uri source, Boolean trusted, CancellationToken cancellationToken) in <repo>/src/NetWiv.Core/AppHandle.cs:line 437
+   at NetWiv.WebviewBuilder.BuildAsync(CancellationToken cancellationToken) in <repo>/src/NetWiv.Core/Api/WindowBuilders.cs:line 354
+   at Program.RunScenario(AppHandle app, OriginProbe probe) in <repo>/tests/NetWiv.Desktop.Smoke/Program.cs:line 168
 
 === Focus regression before fix ===
 FAIL NetWiv.InvokeException: failed to create webview 'minimized-child': WebView2 error: WindowsError(Error { code: HRESULT(0x80070057), message: "�Ű� ������ Ʋ���ϴ�." })
-   at NetWiv.AppHandle.InvokeCoreAsync(String command, JsonElement args, String windowLabel, String webviewLabel, Uri source, Boolean trusted, CancellationToken cancellationToken, UInt64 documentId, Request request) in C:\Users\pc\NetWiv-runtime-refactor\repo\src\NetWiv.Core\AppHandle.cs:line 486
-   at NetWiv.AppHandle.InvokeJsonAsync(String command, JsonElement args, String windowLabel, String webviewLabel, Uri source, Boolean trusted, CancellationToken cancellationToken) in C:\Users\pc\NetWiv-runtime-refactor\repo\src\NetWiv.Core\AppHandle.cs:line 437
-   at NetWiv.WebviewBuilder.BuildAsync(CancellationToken cancellationToken) in C:\Users\pc\NetWiv-runtime-refactor\repo\src\NetWiv.Core\Api\WindowBuilders.cs:line 354
-   at Program.RunScenario(AppHandle app, OriginProbe probe) in C:\Users\pc\NetWiv-runtime-refactor\repo\tests\NetWiv.Desktop.Smoke\Program.cs:line 170
+   at NetWiv.AppHandle.InvokeCoreAsync(String command, JsonElement args, String windowLabel, String webviewLabel, Uri source, Boolean trusted, CancellationToken cancellationToken, UInt64 documentId, Request request) in <repo>/src/NetWiv.Core/AppHandle.cs:line 486
+   at NetWiv.AppHandle.InvokeJsonAsync(String command, JsonElement args, String windowLabel, String webviewLabel, Uri source, Boolean trusted, CancellationToken cancellationToken) in <repo>/src/NetWiv.Core/AppHandle.cs:line 437
+   at NetWiv.WebviewBuilder.BuildAsync(CancellationToken cancellationToken) in <repo>/src/NetWiv.Core/Api/WindowBuilders.cs:line 354
+   at Program.RunScenario(AppHandle app, OriginProbe probe) in <repo>/tests/NetWiv.Desktop.Smoke/Program.cs:line 170
 
 === Isolated focus API failure ===
 NETWIV_DIAGNOSTIC controller.MoveFocus: 매개 변수가 틀립니다. (0x80070057)
@@ -23,14 +23,14 @@ PASS controller created
 
 === Taskbar regression before fix ===
 FAIL System.InvalidOperationException: Native window stopped responding during TaskbarCreated.
-   at WindowsLifecycleProbe.<>c__DisplayClass0_0.<VerifyTaskbarRecreationAsync>g__Deliver|0() in C:\Users\pc\NetWiv-runtime-refactor\repo\tests\NetWiv.Desktop.Smoke\WindowsLifecycleProbe.cs:line 22
+   at WindowsLifecycleProbe.<>c__DisplayClass0_0.<VerifyTaskbarRecreationAsync>g__Deliver|0() in <repo>/tests/NetWiv.Desktop.Smoke/WindowsLifecycleProbe.cs:line 22
    at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
 --- End of stack trace from previous location ---
    at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)
    at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)
 --- End of stack trace from previous location ---
-   at WindowsLifecycleProbe.VerifyTaskbarRecreationAsync() in C:\Users\pc\NetWiv-runtime-refactor\repo\tests\NetWiv.Desktop.Smoke\WindowsLifecycleProbe.cs:line 24
-   at Program.RunScenario(AppHandle app, OriginProbe probe) in C:\Users\pc\NetWiv-runtime-refactor\repo\tests\NetWiv.Desktop.Smoke\Program.cs:line 162
+   at WindowsLifecycleProbe.VerifyTaskbarRecreationAsync() in <repo>/tests/NetWiv.Desktop.Smoke/WindowsLifecycleProbe.cs:line 24
+   at Program.RunScenario(AppHandle app, OriginProbe probe) in <repo>/tests/NetWiv.Desktop.Smoke/Program.cs:line 162
 
 === Taskbar regression stall capture ===
 START taskbar-before-1-taskbar-before PID=8004 2026-10-12T15:46:25.8468650+09:00
@@ -111,7 +111,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 50 filtered out; fin
 
 
 === final-windows-native-tests.log ===
-   Compiling netwiv-native v0.1.0 (C:\Users\pc\NetWiv-runtime-refactor\repo\native\netwiv-native)
+   Compiling netwiv-native v0.1.0 (<repo>/native/netwiv-native)
     Finished `release` profile [optimized] target(s) in 19.25s
      Running unittests src\lib.rs (artifacts/native-target/windows\x86_64-pc-windows-msvc\release\deps\netwiv_native-76ccd30739a93ae5.exe)
 

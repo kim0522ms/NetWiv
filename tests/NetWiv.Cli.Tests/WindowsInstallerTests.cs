@@ -104,6 +104,19 @@ internal static class WindowsInstallerTests
             Check((string?)msi.Descendants(w + "Package").Single().Attribute("InstallScope") == "perUser", "MSI scope default");
             Check(msi.Descendants(w + "Shortcut").Count() == 1 && !msi.Descendants(w + "UIRef").Any(), "MSI default shortcuts/UI");
             Check((string?)msi.Descendants(w + "Product").Single().Attribute("Codepage") == "65001" && (string?)msi.Descendants(w + "Package").Single().Attribute("SummaryCodepage") == "1252", "WiX summary requires ANSI while the database preserves Unicode");
+            var longPayload = Path.Combine(root, "data", new string('x', 150));
+            File.WriteAllText(longPayload, "payload");
+            Check(NativeBundler.RenderNsis(defaults, root, "Probe.exe", "out.exe").Contains("IntOp $0 $0 + 156"), "NSIS guard includes the longest payload suffix");
+            Check(NativeBundler.RenderNsis(defaults, root, new string('x', 200), "out.exe").Contains("IntOp $0 $0 + 201"), "NSIS guard includes the binary suffix");
+            File.Delete(longPayload);
+            foreach (var scope in new[] { "currentUser", "perMachine" })
+            {
+                var identity = Config(root, new JsonObject { ["scope"] = scope }.ToJsonString());
+                identity.Root["bundle"]!["windows"]!["wix"] = new JsonObject { ["upgradeCode"] = "13ad4b8c-2335-4778-9859-e970f183b9a0" };
+                var original = NativeBundler.RenderMsi(identity, root, "Probe.exe");
+                identity.Root["bundle"]!["windows"]!["wix"]!["upgradeCode"] = "{13AD4B8C-2335-4778-9859-E970F183B9A0}";
+                Check(NativeBundler.RenderMsi(identity, root, "Probe.exe") == original, "Equivalent GUID spellings preserve all MSI identities and registry keys");
+            }
             var userUpgradeCode = (string?)msi.Descendants(w + "Product").Single().Attribute("UpgradeCode");
             foreach (var machine in new[] { false, true })
             foreach (var enabled in new[] { false, true })

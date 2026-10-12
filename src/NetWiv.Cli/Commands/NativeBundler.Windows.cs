@@ -52,9 +52,14 @@ internal static partial class NativeBundler
             shortcuts.AppendLine($"  CreateShortcut \"$SMPROGRAMS\\{product}\\{name}.lnk\" \"$INSTDIR\\{EscapeNsis(binary)}\" \"{EscapeNsis(options.CommandLine)}\"");
         }
         // Only remove package-owned files; a selected directory can contain unrelated user data.
+        var longestSuffix = Math.Max(binary.Length, "uninstall.exe".Length);
+        longestSuffix = Math.Max(longestSuffix, options.WorkingDirectory == "." ? 0 : options.WorkingDirectory.Length);
         var removal = new StringBuilder();
         foreach (var file in Directory.EnumerateFiles(payload, "*", SearchOption.AllDirectories).OrderBy(path => path, StringComparer.Ordinal))
+        {
+            longestSuffix = Math.Max(longestSuffix, Path.GetRelativePath(payload, file).Length);
             removal.AppendLine($"  Delete \"$INSTDIR\\{EscapeNsis(Path.GetRelativePath(payload, file).Replace(Path.DirectorySeparatorChar, '\\'))}\"");
+        }
         var directories = Directory.EnumerateDirectories(payload, "*", SearchOption.AllDirectories)
             .Select(path => Path.GetRelativePath(payload, path).Replace(Path.DirectorySeparatorChar, '\\')).ToHashSet(StringComparer.Ordinal);
         for (var directory = options.WorkingDirectory; directory != "." && directory.Length > 0;)
@@ -64,7 +69,10 @@ internal static partial class NativeBundler
             directory = separator < 0 ? "" : directory[..separator];
         }
         foreach (var directory in directories.OrderByDescending(path => path.Length))
+        {
+            longestSuffix = Math.Max(longestSuffix, directory.Length);
             removal.AppendLine($"  RMDir \"$INSTDIR\\{EscapeNsis(directory)}\"");
+        }
         return $"""
 Unicode true
 !include "FileFunc.nsh"
@@ -111,10 +119,10 @@ FunctionEnd
 Section
   ; Check numeric lengths before expansion into an NSIS string can truncate the path.
   StrLen $0 $INSTDIR
-  IntOp $0 $0 + {(options.WorkingDirectory == "." ? 0 : options.WorkingDirectory.Length + 1)}
+  IntOp $0 $0 + {longestSuffix + 1}
   IntCmp $0 1000 path_length_ok path_length_ok
   SetErrorLevel 2
-  Abort "Installation and working directory paths exceed 1000 characters."
+  Abort "Installation paths exceed 1000 characters."
 path_length_ok:
   SetShellVarContext {context}
   SetRegView 64
@@ -187,7 +195,8 @@ SectionEnd
         var options = WindowsInstallerOptions.FromJson(config.Root);
         ValidateWorkingDirectory(payload, options.WorkingDirectory);
         var product = Product(config);
-        var upgradeCode = options.PerMachine ? Uuid5(UpgradeCode(config) + ":perMachine") : UpgradeCode(config);
+        var configuredUpgradeCode = Guid.Parse(UpgradeCode(config)).ToString("D").ToUpperInvariant();
+        var upgradeCode = options.PerMachine ? Uuid5(configuredUpgradeCode + ":perMachine") : configuredUpgradeCode;
         var registryKey = @"Software\NetWiv\" + upgradeCode;
         var refs = new StringBuilder();
         var tree = new WixDirectoryNode(string.Empty);

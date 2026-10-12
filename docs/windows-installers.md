@@ -59,7 +59,9 @@ Windows Shell expands `%NAME%` in shortcut arguments. To preserve the literal
 argument contract, configurations containing more than one percent sign across
 all arguments are rejected; a single percent sign (for example `50%`) is allowed.
 
-NSIS also rejects installation when the expanded installation-root plus working-directory path exceeds 1000 UTF-16 code units, before copying files.
+NSIS rejects installation before copying files when the root plus the longest
+generated path (payload, executable, uninstaller or working directory) exceeds
+1000 UTF-16 code units.
 
 Unknown keys, nulls, wrong types, unknown scopes, and launch settings with all
 shortcuts disabled fail before build hooks, publishing or packaging tools run.
@@ -97,6 +99,7 @@ those versions may require manual cleanup. Relocating a legacy NSIS installation
 is rejected until it is uninstalled explicitly. New packages support relocation
 and remove the old uninstaller along with the old payload. Keep the
 identifier, product name and MSI `wix.upgradeCode` stable across upgrades.
+Equivalent GUID spellings (case or braces) retain the same upgrade identity.
 Machine MSI packages have a separate upgrade identity, so changing scope is not
 a migration of an existing user installation. Uninstall the old installation
 before changing scope or switching between MSI and NSIS. Both formats are
@@ -129,6 +132,19 @@ and working directory, custom-path upgrade, and uninstall preserving unrelated a
 application data. It uses a small NativeAOT probe; WebView GUI smoke is a separate
 CI gate. Interactive directory browsing and a standard user's UAC consent flow
 still require manual acceptance; silent elevated CI does not prove those flows.
+
+For local acceptance on a dedicated Windows validation machine, install NSIS 3.11,
+WiX 3.14.1, .NET 8 SDK and the Visual C++ build tools, then run from an elevated
+PowerShell 7 terminal with the packaging tools on `PATH`:
+
+```powershell
+dotnet build src/NetWiv.Cli -c Release
+./scripts/test-windows-installers.ps1 -AllowLocalMachine
+```
+
+The explicit local flag is required outside CI. The test temporarily changes the
+WebView2 `pv` values, then restores their original value/type and removes registry
+keys created by the test, including on failure. Use a dedicated test machine.
 
 ---
 

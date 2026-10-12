@@ -286,7 +286,9 @@ jobs:
           )
           function Get-RuntimeVersion {
             foreach ($key in $keys) {
-              $version = Get-ItemPropertyValue -Path $key -Name pv -ErrorAction SilentlyContinue
+              $registration = Get-Item -LiteralPath $key -ErrorAction SilentlyContinue
+              if ($null -eq $registration) { continue }
+              try { $version = $registration.GetValue('pv') } finally { $registration.Dispose() }
               if ($version -and $version -ne '0.0.0.0') { return $version }
             }
           }

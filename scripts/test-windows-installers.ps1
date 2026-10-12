@@ -80,12 +80,14 @@ $machineRuntime = $machineBase.CreateSubKey($runtimeSubkey)
 $oldUser = $userRuntime.GetValue('pv')
 $oldMachine = $machineRuntime.GetValue('pv')
 $failures = [Collections.Generic.List[string]]::new()
+$windowsInstaller = New-Object -ComObject WindowsInstaller.Installer
 try {
     foreach ($scope in @('currentUser', 'perMachine')) {
         foreach ($format in @('nsis', 'msi')) {
             $product = "NetWiv-CI-$scope-$format"
             $identifier = "dev.netwiv.ci.$scope.$format"
             $install = Join-Path $root "custom path $scope $format"
+            $initialInstall = $install
             $report = Join-Path $root "$scope-$format-launch.json"
             $sentinel = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) "$product-user-data.txt"
             Set-Content $sentinel 'keep application data'
@@ -112,10 +114,12 @@ try {
             $package = $null
             $installed = $false
             $installedPackage = $null
+            $installedDirectory = $null
             try {
-                foreach ($version in @('1.0.0', '1.0.1')) {
+                foreach ($version in @('1.0.0', '1.0.1', '1.0.2')) {
+                    if ($version -eq '1.0.2') { $install = Join-Path $root "relocated $scope $format" }
                     $obsolete = Join-Path $payload 'obsolete.txt'
-                    if ($version -eq '1.0.0') { Set-Content $obsolete 'removed in the next version' } else { Remove-Item $obsolete }
+                    if ($version -eq '1.0.0') { Set-Content $obsolete 'removed in the next version' } elseif (Test-Path $obsolete) { Remove-Item $obsolete }
                     $config.version = $version
                     $config | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $fixture 'netwiv.conf.json')
                     Push-Location $fixture
@@ -137,11 +141,25 @@ try {
                             $machineRuntime.SetValue('pv', '123.0.0.0')
                         }
                     }
-                    Install $package $format $(if ($version -eq '1.0.0') { $install } else { '' }) (Join-Path $root "$product-$version-install.log")
+                    if ($version -eq '1.0.2' -and $format -eq 'nsis') {
+                        $hive = if ($scope -eq 'perMachine') { 'HKLM' } else { 'HKCU' }
+                        $key = "$hive`:\Software\Microsoft\Windows\CurrentVersion\Uninstall\$identifier"
+                        Set-ItemProperty $key FileScopedUninstall 0
+                        try {
+                            Install $package $format $install '' $true
+                            Assert (Test-Path (Join-Path $initialInstall 'InstallerProbe.exe')) 'Rejected legacy relocation changed the previous installation.'
+                        } finally { Set-ItemProperty $key FileScopedUninstall 1 }
+                    }
+                    Install $package $format $(if ($version -ne '1.0.1') { $install } else { '' }) (Join-Path $root "$product-$version-install.log")
                     $installed = $true
                     $installedPackage = $package
+                    $installedDirectory = $install
                     Assert (Test-Path (Join-Path $install 'InstallerProbe.exe')) 'Upgrade lost custom installation directory.'
                     Assert ((Test-Path (Join-Path $install 'obsolete.txt')) -eq ($version -eq '1.0.0')) 'Upgrade left an obsolete package file.'
+                    if ($version -eq '1.0.2') {
+                        Assert (-not (Test-Path (Join-Path $initialInstall 'InstallerProbe.exe'))) 'Relocation left the old executable.'
+                        Assert (-not (Test-Path (Join-Path $initialInstall 'uninstall.exe'))) 'Relocation left the old uninstaller.'
+                    }
                     foreach ($link in @($desktopLink, $menuLink)) {
                         Assert (Test-Path $link) "Missing shortcut: $link"
                         $kind = if ($link -eq $desktopLink) { 'desktop' } else { 'menu' }
@@ -170,11 +188,14 @@ try {
                         Assert ($registration.InstallLocation.TrimEnd('\') -eq $install) 'Wrong uninstall registration location.'
                         Assert ($registration.DisplayVersion -eq $version) 'Wrong uninstall registration version.'
                     } else {
-                        $entries = @(Get-ChildItem "$hive`:\Software\Microsoft\Windows\CurrentVersion\Uninstall" |
-                            Get-ItemProperty | Where-Object { $_.PSObject.Properties['DisplayName'] -and $_.DisplayName -eq $product })
-                        Assert ($entries.Count -eq 1) 'MSI upgrade left missing or duplicate registrations.'
-                        Assert ($entries[0].DisplayVersion -eq $version) 'MSI registration version did not upgrade.'
-                        Assert ($entries[0].InstallLocation.TrimEnd('\') -eq $install) 'MSI registration lost the install path.'
+                        # Windows Installer owns its registration layout; query its installation context API.
+                        $entries = @($windowsInstaller.ProductsEx('', '', 7) |
+                            Where-Object { $_.InstallProperty('InstalledProductName') -eq $product })
+                        Assert ($entries.Count -eq 1) "MSI left $($entries.Count) product registrations."
+                        Assert ($entries[0].InstallProperty('VersionString') -eq $version) 'MSI registration version did not upgrade.'
+                        Assert ($entries[0].InstallProperty('InstallLocation').TrimEnd('\') -eq $install) 'MSI registration lost the install path.'
+                        $expectedContext = if ($scope -eq 'perMachine') { 4 } else { 2 }
+                        Assert ($entries[0].Context -eq $expectedContext) "Wrong MSI installation context: $($entries[0].Context)"
                     }
                 }
                 # Runtime removal must not prevent uninstall; no user data outside INSTDIR may be removed.
@@ -190,9 +211,10 @@ try {
                 $failures.Add("$scope/${format}: $_")
                 Write-Output "FAIL $scope/${format}: $_"
             } finally {
-                if ($installed -and $installedPackage) { Remove-Installation $installedPackage $format $install (Join-Path $root "$product-cleanup.log") }
+                if ($installed -and $installedPackage) { Remove-Installation $installedPackage $format $installedDirectory (Join-Path $root "$product-cleanup.log") }
                 Remove-Item $sentinel -ErrorAction SilentlyContinue
                 Remove-Item -LiteralPath $install -Recurse -Force -ErrorAction SilentlyContinue
+                Remove-Item -LiteralPath $initialInstall -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
     }

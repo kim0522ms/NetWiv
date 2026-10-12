@@ -90,6 +90,7 @@ internal static class WindowsInstallerTests
             Check(nsis.Contains("InstallDir \"$LOCALAPPDATA\\Probe\"") && nsis.Contains("RequestExecutionLevel user"), "NSIS defaults");
             Check(!nsis.Contains("Page directory") && nsis.Contains("GetCommandLineW") && nsis.Contains("${GetOptions} $1 \"/D=\" $2"), "NSIS restore without changing UI default");
             Check(!nsis.Contains("RMDir /r") && nsis.Contains("Delete \"$INSTDIR\\data\\sample.txt\"") && nsis.Contains("RMDir \"$INSTDIR\\data\""), "Uninstall removes only owned files and empty directories");
+            Check(nsis.Contains("Delete \"$0\\uninstall.exe\"") && nsis.Contains("RMDir \"$0\""), "Relocation removes the old in-place uninstaller after it exits");
             Check(nsis.Contains("FileScopedUninstall") && nsis.Contains("ExecWait") && nsis.Contains("_?=$0"), "Upgrade removes the previous owned payload without executing legacy recursive uninstallers");
             Check(nsis.Contains("IntCmp $0 1000 path_length_ok path_length_ok"), "Reject runtime path overflow before expansion");
             Check(nsis.Split("CreateShortcut").Length == 3, "NSIS both shortcuts by default");
@@ -137,6 +138,7 @@ internal static class WindowsInstallerTests
                     Check(arguments.Contains("[INSTALLDIR]") && arguments.Contains("$$(var.foo)") && arguments.Contains("!!(wix.foo)"), "MSI/WiX expression escaping");
                     Check(arguments.Contains("!$$(loc.literal)") && arguments.Contains("!(literal)"), "Literal WiX expressions");
                     Check(arguments.Contains("$$(loc.x)") && !arguments.Contains("!$$(loc.x)") && !arguments.Contains("!!(loc.)"), "Non-expressions keep their literal prefix");
+                    Check(((string?)shortcut.Attribute("Advertise") == "yes") == machine, "Machine shortcuts use advertised file key paths");
                     Check((string?)shortcut.Attribute("WorkingDirectory") == "NETWIVWORKDIR", "MSI working directory property");
                     Check(msi.Descendants(w + "SetProperty").Any(p => (string?)p.Attribute("Id") == "NETWIVWORKDIR" && ((string?)p.Attribute("Value"))!.Contains(@"[\[]work[\]]")), "Literal directory brackets");
                     Check(msi.Descendants(w + "Directory").Any(d => (string?)d.Attribute("Name") == "[work] $$folder" && d.Descendants(w + "CreateFolder").Any()), "Create empty working directory");

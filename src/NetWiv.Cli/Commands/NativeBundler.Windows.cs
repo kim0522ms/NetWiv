@@ -126,7 +126,13 @@ path_length_ok:
   ClearErrors
   ExecWait '$\"$0\uninstall.exe$\" /S _?=$0' $1
   IfErrors upgrade_failed
-  StrCmp $1 0 links_clean
+  StrCmp $1 0 0 upgrade_failed
+  ; The in-place uninstaller cannot delete itself; remove it after the process exits.
+  ClearErrors
+  Delete "$0\uninstall.exe"
+  IfErrors upgrade_failed
+  RMDir "$0"
+  Goto links_clean
 upgrade_failed:
   SetErrorLevel 2
   Abort "Could not remove the previous version's package files."
@@ -134,12 +140,17 @@ legacy_links:
   ; Remove legacy links before applying changed shortcut options.
   ReadRegStr $0 {hive} "{key}" "InstallLocation"
   StrCmp $0 "" links_clean
+  StrCmp $0 $INSTDIR 0 legacy_relocation
   ReadRegStr $0 {hive} "{key}" "ShortcutName"
   StrCmp $0 "" 0 +2
   StrCpy $0 "{product}"
   Delete "$DESKTOP\$0.lnk"
   Delete "$SMPROGRAMS\{product}\$0.lnk"
   RMDir "$SMPROGRAMS\{product}"
+  Goto links_clean
+legacy_relocation:
+  SetErrorLevel 2
+  Abort "Uninstall the legacy version before choosing a different installation directory."
 links_clean:
   SetOutPath "$INSTDIR"
   File /r "{EscapeNsisFilePath(payload)}\*"
@@ -178,20 +189,29 @@ SectionEnd
         var registryKey = @"Software\NetWiv\" + upgradeCode;
         var refs = new StringBuilder();
         var tree = new WixDirectoryNode(string.Empty);
+        var machineExecutable = "";
         foreach (var file in Directory.EnumerateFiles(payload, "*", SearchOption.AllDirectories).OrderBy(path => path, StringComparer.Ordinal))
         {
             var relative = Path.GetRelativePath(payload, file);
             var id = "F" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(relative)))[..16];
-            tree.Add(relative, file, id, Uuid5($"{product}:{relative}" + (options.PerMachine ? ":perMachine" : "")));
+            var guid = Uuid5($"{product}:{relative}" + (options.PerMachine ? ":perMachine" : ""));
+            if (options.PerMachine && relative == binary)
+                machineExecutable = $"""
+<Component Id="C{id}" Guid="{guid}" Win64="yes"><File Id="{id}" Source="{WixXml(file)}" KeyPath="yes">
+  {(options.StartMenu ? AdvertisedShortcut("AppShortcut", "ApplicationProgramsFolder") : "")}
+  {(options.Desktop == true ? AdvertisedShortcut("DesktopAppShortcut", "DesktopFolder") : "")}
+</File>{(options.StartMenu ? "<RemoveFolder Id=\"RemoveProgramsFolder\" Directory=\"ApplicationProgramsFolder\" On=\"uninstall\" />" : "")}</Component>
+""";
+            else tree.Add(relative, file, id, guid);
             refs.AppendLine($"<ComponentRef Id=\"C{id}\" />");
         }
         if (options.WorkingDirectory != ".") tree.AddDirectory(options.WorkingDirectory.Replace('\\', Path.DirectorySeparatorChar));
         var components = tree.Render(refs, registryKey, "INSTALLDIR", options.RegistryHive, options.PerMachine);
         var shortcuts = new StringBuilder();
         if (options.StartMenu)
-            shortcuts.Append($"<Directory Id=\"ProgramMenuFolder\"><Directory Id=\"ApplicationProgramsFolder\" Name=\"{WixXml(SafeName(product))}\">{Shortcut("StartMenuShortcut", "AppShortcut", true)}</Directory></Directory>");
+            shortcuts.Append($"<Directory Id=\"ProgramMenuFolder\"><Directory Id=\"ApplicationProgramsFolder\" Name=\"{WixXml(SafeName(product))}\">{(options.PerMachine ? "" : Shortcut("StartMenuShortcut", "AppShortcut", true))}</Directory></Directory>");
         if (options.Desktop ?? false)
-            shortcuts.Append($"<Directory Id=\"DesktopFolder\">{Shortcut("DesktopShortcut", "DesktopAppShortcut", false)}</Directory>");
+            shortcuts.Append($"<Directory Id=\"DesktopFolder\">{(options.PerMachine ? "" : Shortcut("DesktopShortcut", "DesktopAppShortcut", false))}</Directory>");
         var workDir = options.WorkingDirectory == "." ? "" : MsiLiteral(options.WorkingDirectory);
         return $"""
 <?xml version="1.0" encoding="UTF-8"?>
@@ -213,7 +233,7 @@ SectionEnd
     <SetProperty Id="NETWIVWORKDIR" Value="[INSTALLDIR]{WixXml(workDir)}" After="CostFinalize" Sequence="both" />
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="{(options.PerMachine ? "ProgramFiles64Folder" : "LocalAppDataFolder")}"><Directory Id="INSTALLDIR" Name="{WixXml(SafeName(product))}">
-        {components}
+        {components}{machineExecutable}
         <Component Id="InstallLocation" Guid="{Uuid5(upgradeCode + ":location")}" Win64="{(options.PerMachine ? "yes" : "no")}"><RegistryValue Root="{options.RegistryHive}" Key="{WixXml(registryKey)}" Name="InstallLocation" Type="string" Value="[INSTALLDIR]" KeyPath="yes" /></Component>
       </Directory></Directory>
       {shortcuts}
@@ -231,6 +251,12 @@ SectionEnd
   </Product>
 </Wix>
 """;
+        // Advertised machine shortcuts use the executable as their key path, avoiding
+        // per-user repair keys and ICE38/43/57 violations in an all-users installation.
+        string AdvertisedShortcut(string id, string directory) => $"""
+<Shortcut Id="{id}" Directory="{directory}" Name="{WixXml(options.ShortcutName ?? product)}" Advertise="yes" WorkingDirectory="NETWIVWORKDIR" {(options.Arguments.Count == 0 ? "" : "Arguments=\"[NetWivShortcutArguments]\"")} />
+""";
+
         string Shortcut(string component, string id, bool startMenu)
         {
             refs.AppendLine($"<ComponentRef Id=\"{component}\" />");

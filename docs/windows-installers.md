@@ -93,7 +93,9 @@ NSIS can recover the previous version's uninstall registration. New NSIS package
 remove the previous package-owned files before installing an upgrade, including
 files omitted by the new version. Legacy packages have no ownership metadata:
 their recursive uninstallers are never run automatically, so obsolete files from
-those versions may require manual cleanup. Keep the
+those versions may require manual cleanup. Relocating a legacy NSIS installation
+is rejected until it is uninstalled explicitly. New packages support relocation
+and remove the old uninstaller along with the old payload. Keep the
 identifier, product name and MSI `wix.upgradeCode` stable across upgrades.
 Machine MSI packages have a separate upgrade identity, so changing scope is not
 a migration of an existing user installation. Uninstall the old installation

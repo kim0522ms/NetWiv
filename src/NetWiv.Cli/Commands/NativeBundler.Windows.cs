@@ -19,7 +19,7 @@ internal static partial class NativeBundler
         if (formats.Contains("msi"))
         {
             // WiX adds an 8.3 alias and separator to MSI's 128-character Shortcut.Name column.
-            if ((options.ShortcutName ?? Product(config)).Length > 115)
+            if (options.ShortcutName is { Length: > 115 })
                 throw new NetWivConfigException("MSI shortcut names must not exceed 115 characters.");
             _ = MsiVersion.Resolve(Version(config), config.String("bundle", "windows", "wix", "version"));
             if (!Guid.TryParse(UpgradeCode(config), out _)) throw new NetWivConfigException("bundle.windows.wix.upgradeCode must be a GUID.");
@@ -37,7 +37,9 @@ internal static partial class NativeBundler
         var options = WindowsInstallerOptions.FromJson(config.Root);
         ValidateWorkingDirectory(payload, options.WorkingDirectory);
         var product = EscapeNsis(Product(config));
-        var name = EscapeNsis(options.ShortcutName ?? Product(config));
+        var defaultName = InstallerDestinationName(Product(config), config.String("identifier")! + ":" + options.RegistryHive, 200);
+        var destination = EscapeNsis(defaultName);
+        var name = EscapeNsis(options.ShortcutName ?? defaultName);
         var hive = options.RegistryHive;
         var key = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\" + EscapeNsis(config.String("identifier")!);
         var context = options.PerMachine ? "all" : "current";
@@ -48,8 +50,8 @@ internal static partial class NativeBundler
             shortcuts.AppendLine($"  CreateShortcut \"$DESKTOP\\{name}.lnk\" \"$INSTDIR\\{EscapeNsis(binary)}\" \"{EscapeNsis(options.CommandLine)}\"");
         if (options.StartMenu)
         {
-            shortcuts.AppendLine($"  CreateDirectory \"$SMPROGRAMS\\{product}\"");
-            shortcuts.AppendLine($"  CreateShortcut \"$SMPROGRAMS\\{product}\\{name}.lnk\" \"$INSTDIR\\{EscapeNsis(binary)}\" \"{EscapeNsis(options.CommandLine)}\"");
+            shortcuts.AppendLine($"  CreateDirectory \"$SMPROGRAMS\\{destination}\"");
+            shortcuts.AppendLine($"  CreateShortcut \"$SMPROGRAMS\\{destination}\\{name}.lnk\" \"$INSTDIR\\{EscapeNsis(binary)}\" \"{EscapeNsis(options.CommandLine)}\"");
         }
         // Only remove package-owned files; a selected directory can contain unrelated user data.
         var longestSuffix = Math.Max(binary.Length, "uninstall.exe".Length);
@@ -80,7 +82,7 @@ Unicode true
 !include "FileFunc.nsh"
 Name "{product}"
 OutFile "{EscapeNsisFilePath(output)}"
-InstallDir "{(options.PerMachine ? "$PROGRAMFILES64" : "$LOCALAPPDATA")}\{product}"
+InstallDir "{(options.PerMachine ? "$PROGRAMFILES64" : "$LOCALAPPDATA")}\{destination}"
 RequestExecutionLevel {(options.PerMachine ? "admin" : "user")}
 {(options.AllowDirectorySelection ? "Page directory" : "")}
 Page instfiles
@@ -184,8 +186,8 @@ Section "Uninstall"
   ; Keep registration, links and the ownership list if a payload file is locked.
 {removal}
   {(options.Desktop ?? true ? $"Delete \"$DESKTOP\\{name}.lnk\"" : "")}
-  {(options.StartMenu ? $"Delete \"$SMPROGRAMS\\{product}\\{name}.lnk\"" : "")}
-  RMDir "$SMPROGRAMS\{product}"
+  {(options.StartMenu ? $"Delete \"$SMPROGRAMS\\{destination}\\{name}.lnk\"" : "")}
+  RMDir "$SMPROGRAMS\{destination}"
   DeleteRegKey {hive} "{key}"
   Delete "$INSTDIR\uninstall.exe"
   RMDir "$INSTDIR"
@@ -207,6 +209,8 @@ SectionEnd
         var configuredUpgradeCode = Guid.Parse(UpgradeCode(config)).ToString("D").ToUpperInvariant();
         var upgradeCode = options.PerMachine ? Uuid5(configuredUpgradeCode + ":perMachine") : configuredUpgradeCode;
         var registryKey = @"Software\NetWiv\" + upgradeCode;
+        var destination = InstallerDestinationName(product, upgradeCode, 115);
+        var shortcutName = options.ShortcutName ?? destination;
         var refs = new StringBuilder();
         var tree = new WixDirectoryNode(string.Empty);
         var machineExecutable = "";
@@ -229,7 +233,7 @@ SectionEnd
         var components = tree.Render(refs, registryKey, "INSTALLDIR", options.RegistryHive, options.PerMachine);
         var shortcuts = new StringBuilder();
         if (options.StartMenu)
-            shortcuts.Append($"<Directory Id=\"ProgramMenuFolder\"><Directory Id=\"ApplicationProgramsFolder\" Name=\"{WixXml(SafeName(product))}\">{(options.PerMachine ? "" : Shortcut("StartMenuShortcut", "AppShortcut", true))}</Directory></Directory>");
+            shortcuts.Append($"<Directory Id=\"ProgramMenuFolder\"><Directory Id=\"ApplicationProgramsFolder\" Name=\"{WixXml(destination)}\">{(options.PerMachine ? "" : Shortcut("StartMenuShortcut", "AppShortcut", true))}</Directory></Directory>");
         if (options.Desktop ?? false)
             shortcuts.Append($"<Directory Id=\"DesktopFolder\">{(options.PerMachine ? "" : Shortcut("DesktopShortcut", "DesktopAppShortcut", false))}</Directory>");
         var workDir = options.WorkingDirectory == "." ? "" : MsiLiteral(options.WorkingDirectory);
@@ -252,7 +256,7 @@ SectionEnd
     <SetProperty Id="NETWIVTARGET" Value="[INSTALLDIR]{WixXml(MsiLiteral(binary))}" After="CostFinalize" Sequence="both" />
     <SetProperty Id="NETWIVWORKDIR" Value="[INSTALLDIR]{WixXml(workDir)}" After="CostFinalize" Sequence="both" />
     <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="{(options.PerMachine ? "ProgramFiles64Folder" : "LocalAppDataFolder")}"><Directory Id="INSTALLDIR" Name="{WixXml(SafeName(product))}">
+      <Directory Id="{(options.PerMachine ? "ProgramFiles64Folder" : "LocalAppDataFolder")}"><Directory Id="INSTALLDIR" Name="{WixXml(destination)}">
         {components}{machineExecutable}
         <Component Id="InstallLocation" Guid="{Uuid5(upgradeCode + ":location")}" Win64="{(options.PerMachine ? "yes" : "no")}"><RegistryValue Root="{options.RegistryHive}" Key="{WixXml(registryKey)}" Name="InstallLocation" Type="string" Value="[INSTALLDIR]" KeyPath="yes" /></Component>
       </Directory></Directory>
@@ -274,7 +278,7 @@ SectionEnd
         // Advertised machine shortcuts use the executable as their key path, avoiding
         // per-user repair keys and ICE38/43/57 violations in an all-users installation.
         string AdvertisedShortcut(string id, string directory) => $"""
-<Shortcut Id="{id}" Directory="{directory}" Name="{WixXml(options.ShortcutName ?? product)}" Advertise="yes" WorkingDirectory="NETWIVWORKDIR" {(options.Arguments.Count == 0 ? "" : "Arguments=\"[NetWivShortcutArguments]\"")} />
+<Shortcut Id="{id}" Directory="{directory}" Name="{WixXml(shortcutName)}" Advertise="yes" WorkingDirectory="NETWIVWORKDIR" {(options.Arguments.Count == 0 ? "" : "Arguments=\"[NetWivShortcutArguments]\"")} />
 """;
 
         string Shortcut(string component, string id, bool startMenu)
@@ -282,12 +286,21 @@ SectionEnd
             refs.AppendLine($"<ComponentRef Id=\"{component}\" />");
             return $"""
 <Component Id="{component}" Guid="{Uuid5(upgradeCode + (startMenu ? ":shortcut" : ":desktop-shortcut"))}" Win64="{(options.PerMachine ? "yes" : "no")}">
-  <Shortcut Id="{id}" Name="{WixXml(options.ShortcutName ?? product)}" Target="[NETWIVTARGET]" WorkingDirectory="NETWIVWORKDIR" {(options.Arguments.Count == 0 ? "" : "Arguments=\"[NetWivShortcutArguments]\"")} />
+  <Shortcut Id="{id}" Name="{WixXml(shortcutName)}" Target="[NETWIVTARGET]" WorkingDirectory="NETWIVWORKDIR" {(options.Arguments.Count == 0 ? "" : "Arguments=\"[NetWivShortcutArguments]\"")} />
   {(startMenu ? "<RemoveFolder Id=\"RemoveProgramsFolder\" Directory=\"ApplicationProgramsFolder\" On=\"uninstall\" />" : "")}
   <RegistryValue Root="{options.RegistryHive}" Key="{WixXml(registryKey)}" Name="{component}" Type="integer" Value="1" KeyPath="yes" />
 </Component>
 """;
         }
+    }
+
+    // Display names are not identities: isolate default files and folders across packages.
+    private static string InstallerDestinationName(string product, string identity, int limit)
+    {
+        var suffix = " (" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity)))[..16] + ")";
+        var length = Math.Min(product.Length, limit - suffix.Length);
+        if (char.IsHighSurrogate(product[length - 1])) length--;
+        return product[..length] + suffix;
     }
 
     private static void ValidateWorkingDirectory(string payload, string relative)

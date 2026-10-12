@@ -38,11 +38,11 @@ editors. Do not add these keys to the generated upstream compatibility schema.
 | --- | --- | --- |
 | `scope` | `"currentUser"` | `"currentUser"` or `"perMachine"`; fixed when the package is built. |
 | `allowDirectorySelection` | `false` | Show the NSIS directory page / MSI install-directory wizard. |
-| `shortcuts.name` | `productName` | Display name for both shortcuts, without `.lnk`. |
+| `shortcuts.name` | Product name + stable identity suffix | Display name for both shortcuts, without `.lnk`. Explicit names are used as supplied. |
 | `shortcuts.arguments` | `[]` | Literal argument array; supports spaces, Unicode, quotes, empty strings and trailing backslashes. No shell expansion. |
 | `shortcuts.workingDirectory` | `"."` | Directory relative to the installation root, at most 1000 UTF-16 code units. Created during installation if absent. |
 | `shortcuts.desktop` | NSIS: `true`; MSI: `false` | Create a desktop shortcut. Omit to retain the format's previous default. |
-| `shortcuts.startMenu` | `true` | Create a shortcut in the product's Start menu folder. |
+| `shortcuts.startMenu` | `true` | Create a shortcut in the product's identity-qualified Start menu folder. |
 
 The working directory must stay inside the install root: absolute paths, drive
 prefixes, `..`, empty segments and invalid Windows names are rejected. Shortcut
@@ -74,7 +74,7 @@ before build/bundle hooks run.
 
 | Behavior | `currentUser` | `perMachine` |
 | --- | --- | --- |
-| Default directory | Local application data + product folder | 64-bit Program Files + product folder |
+| Default directory | Local application data + identity-qualified product folder | 64-bit Program Files + identity-qualified product folder |
 | Installer elevation | No elevation requested | Administrator required |
 | Registration | HKCU | HKLM |
 | Shortcuts | Current user's desktop / Start menu | Common desktop / Start menu |
@@ -87,6 +87,20 @@ manifest through .NET/MSBuild when the app itself needs elevation.
 Use a dedicated app directory to avoid file-name collisions. Both installers
 remove package-owned files and empty folders on uninstall; unrelated files
 inside the selected directory and application data outside it are preserved.
+
+Default installation folders, Start menu folders and shortcut names include a
+stable 16-hex-character identity suffix, such as `My App (0123456789ABCDEF)`.
+NSIS derives it from the application identifier and scope; MSI derives it from
+the canonical, scope-specific UpgradeCode. Generated names shorten the product
+name if necessary to fit each format's filename limit, retaining the suffix and
+complete Unicode characters. The display name in installed-program registration
+is unchanged. This intentionally replaces the old product-name-only defaults:
+independent apps with the same display name must not overwrite each other's
+payloads or shortcuts. Existing registered installation paths are still recovered
+on upgrade; the previous installer removes its old shortcuts before replacement.
+An explicit `shortcuts.name` is unchanged, so authors choosing one must avoid
+other applications' desktop shortcut names. Likewise, a custom installation path
+must not point into another application's directory.
 
 Subsequent installations of the same format, scope and identity recover the
 stored installation directory. MSI versions predating this feature did not
@@ -144,6 +158,9 @@ still require manual acceptance; silent elevated CI does not prove those flows.
 The tests also hold an obsolete file open during NSIS removal/upgrade, verify
 failure and retry after releasing the lock, and install two independent MSI
 products with the same display name to verify uninstall and shortcut isolation.
+Coexistence tests omit both shortcut names and installation-directory overrides,
+cover MSI and NSIS in both scopes, launch both default shortcuts, and remove
+the products in both orders while checking that the survivor still launches.
 
 For local acceptance on a dedicated Windows validation machine, install NSIS 3.11,
 WiX 3.14.1, .NET 8 SDK and the Visual C++ build tools, then run from an elevated

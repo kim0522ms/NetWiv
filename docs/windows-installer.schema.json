@@ -11,7 +11,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 200, "description": "Defaults to the product name plus a stable package identity suffix. Explicit names are used as supplied; avoid desktop name collisions with other applications." },
         "arguments": { "type": "array", "items": { "type": "string", "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$" }, "default": [] },
         "workingDirectory": { "type": "string", "minLength": 1, "maxLength": 1000, "default": "." },
         "desktop": { "type": "boolean", "description": "Defaults to true for NSIS and false for MSI." },

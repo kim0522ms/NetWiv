@@ -94,7 +94,7 @@ internal static class WindowsInstallerTests
             var nsis = NativeBundler.RenderNsis(defaults, root, "Probe.exe", "out.exe");
             var msi = XDocument.Parse(NativeBundler.RenderMsi(defaults, root, "Probe.exe"));
             XNamespace w = "http://schemas.microsoft.com/wix/2006/wi";
-            Check(nsis.Contains("InstallDir \"$LOCALAPPDATA\\Probe\"") && nsis.Contains("RequestExecutionLevel user"), "NSIS defaults");
+            Check(nsis.Contains("InstallDir \"$LOCALAPPDATA\\Probe (") && nsis.Contains("RequestExecutionLevel user"), "NSIS isolated default directory and scope");
             Check(!nsis.Contains("Page directory") && nsis.Contains("GetCommandLineW") && nsis.Contains("${GetOptions} $1 \"/D=\" $2"), "NSIS restore without changing UI default");
             Check(!nsis.Contains("RMDir /r") && nsis.Contains("Delete \"$INSTDIR\\data\\sample.txt\"") && nsis.Contains("RMDir \"$INSTDIR\\data\""), "Uninstall removes only owned files and empty directories");
             Check(nsis.Contains("Delete \"$0\\uninstall.exe\"") && nsis.Contains("RMDir \"$0\""), "Relocation removes the old in-place uninstaller after it exits");
@@ -111,9 +111,10 @@ internal static class WindowsInstallerTests
             File.Delete(longPayload);
             foreach (var scope in new[] { "currentUser", "perMachine" })
             {
-                var identity = Config(root, new JsonObject { ["scope"] = scope }.ToJsonString());
+                var identity = Config(root, new JsonObject { ["scope"] = scope, ["shortcuts"] = new JsonObject { ["desktop"] = true } }.ToJsonString());
                 identity.Root["bundle"]!["windows"]!["wix"] = new JsonObject { ["upgradeCode"] = "13ad4b8c-2335-4778-9859-e970f183b9a0" };
                 var original = NativeBundler.RenderMsi(identity, root, "Probe.exe");
+                var originalNsis = NativeBundler.RenderNsis(identity, root, "Probe.exe", "out.exe");
                 identity.Root["bundle"]!["windows"]!["wix"]!["upgradeCode"] = "{13AD4B8C-2335-4778-9859-E970F183B9A0}";
                 Check(NativeBundler.RenderMsi(identity, root, "Probe.exe") == original, "Equivalent GUID spellings preserve all MSI identities and registry keys");
                 identity.Root["identifier"] = "dev.netwiv.independent";
@@ -121,8 +122,27 @@ internal static class WindowsInstallerTests
                 var other = XDocument.Parse(NativeBundler.RenderMsi(identity, root, "Probe.exe"));
                 var originalGuids = XDocument.Parse(original).Descendants(w + "Component").Select(c => (string)c.Attribute("Guid")!);
                 Check(!other.Descendants(w + "Component").Select(c => (string)c.Attribute("Guid")!).Intersect(originalGuids).Any(), "Independent packages with the same display name must not share component GUIDs");
+                var first = XDocument.Parse(original);
+                foreach (var directoryId in new[] { "INSTALLDIR", "ApplicationProgramsFolder" })
+                    Check((string?)first.Descendants(w + "Directory").Single(d => (string?)d.Attribute("Id") == directoryId).Attribute("Name") !=
+                        (string?)other.Descendants(w + "Directory").Single(d => (string?)d.Attribute("Id") == directoryId).Attribute("Name"), "Independent MSI default directories must differ");
+                Check(!first.Descendants(w + "Shortcut").Select(s => (string)s.Attribute("Name")!).Intersect(other.Descendants(w + "Shortcut").Select(s => (string)s.Attribute("Name")!)).Any(), "Default desktop and Start menu names must differ across MSI identities");
+                var otherNsis = NativeBundler.RenderNsis(identity, root, "Probe.exe", "out.exe");
+                foreach (var prefix in new[] { "InstallDir ", "  CreateShortcut ", "  CreateDirectory " })
+                    Check(!originalNsis.Split('\n').Where(l => l.StartsWith(prefix, StringComparison.Ordinal)).Intersect(otherNsis.Split('\n').Where(l => l.StartsWith(prefix, StringComparison.Ordinal))).Any(), "NSIS default paths must differ across identities");
             }
             var userUpgradeCode = (string?)msi.Descendants(w + "Product").Single().Attribute("UpgradeCode");
+            foreach (var productName in new[] { new string('x', 200), new string('x', 95) + "😀" + new string('x', 100), new string('x', 180) + "😀" + "tail" })
+            {
+                var longProduct = Config(root, "{}");
+                longProduct.Root["productName"] = productName;
+                NativeBundler.ValidateConfiguration(longProduct, BuildTarget.Resolve("win-x64"), "msi");
+                var generated = XDocument.Parse(NativeBundler.RenderMsi(longProduct, root, "Probe.exe"));
+                var shortcutName = (string)generated.Descendants(w + "Shortcut").First().Attribute("Name")!;
+                Check(shortcutName.Length <= 115 && !shortcutName.Contains('\uFFFD'), "Generated names fit MSI limits without splitting Unicode characters");
+                var script = NativeBundler.RenderNsis(longProduct, root, "Probe.exe", "out.exe");
+                Check(!script.Contains('\uFFFD'), "NSIS default names preserve Unicode");
+            }
             foreach (var machine in new[] { false, true })
             foreach (var enabled in new[] { false, true })
             {

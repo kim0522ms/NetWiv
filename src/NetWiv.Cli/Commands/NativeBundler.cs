@@ -13,6 +13,7 @@ internal static partial class NativeBundler
     private const string WebView2Client = "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}";
     public static async Task<int> BundleAsync(ConfigDocument config, BuildTarget target, string publishDirectory, string? requested, bool noSign, TextWriter output, CancellationToken cancellationToken)
     {
+        ValidateConfiguration(config, target, requested);
         var formats = ParseFormats(config, target, requested);
         var project = CommandConfig.Project(config);
         var binary = BuildCommand.EnsureBinary(config, project, publishDirectory);
@@ -77,59 +78,7 @@ internal static partial class NativeBundler
         CopyTree(publishDirectory, payload);
         PatchBundleType(Path.Combine(payload, Path.GetRelativePath(publishDirectory, binary)), "NSS");
         if (!noSign) await SignWindowsAsync(config, Path.Combine(payload, Path.GetRelativePath(publishDirectory, binary)), cancellationToken);
-        File.WriteAllText(script, $"""
-Unicode true
-Name "{EscapeNsis(product)}"
-OutFile "{EscapeNsis(output)}"
-InstallDir "$LOCALAPPDATA\{EscapeNsis(product)}"
-RequestExecutionLevel user
-Function .onInit
-  SetRegView 32
-  ReadRegStr $0 HKCU "Software\Microsoft\EdgeUpdate\Clients\{WebView2Client}" "pv"
-  StrCmp $0 "" check_machine
-  StrCmp $0 "0.0.0.0" check_machine runtime_found
-check_machine:
-  ReadRegStr $0 HKLM "Software\Microsoft\EdgeUpdate\Clients\{WebView2Client}" "pv"
-  StrCmp $0 "" missing_runtime
-  StrCmp $0 "0.0.0.0" missing_runtime runtime_found
-missing_runtime:
-  IfSilent runtime_abort
-  MessageBox MB_YESNO|MB_ICONEXCLAMATION "Microsoft Edge WebView2 Runtime is required. Install it, then run this installer again. Open the Microsoft download page?" IDNO runtime_abort
-  ExecShell "open" "https://developer.microsoft.com/microsoft-edge/webview2/"
-runtime_abort:
-  SetErrorLevel 2
-  Abort
-runtime_found:
-  SetRegView 64
-FunctionEnd
-Section
-  SetShellVarContext current
-  SetRegView 64
-  SetOutPath "$INSTDIR"
-  File /r "{EscapeNsis(payload)}\*"
-  WriteUninstaller "$INSTDIR\uninstall.exe"
-  CreateShortcut "$DESKTOP\{EscapeNsis(product)}.lnk" "$INSTDIR\{EscapeNsis(Path.GetFileName(binary))}"
-  CreateDirectory "$SMPROGRAMS\{EscapeNsis(product)}"
-  CreateShortcut "$SMPROGRAMS\{EscapeNsis(product)}\{EscapeNsis(product)}.lnk" "$INSTDIR\{EscapeNsis(Path.GetFileName(binary))}"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{EscapeNsis(config.String("identifier")!)}" "DisplayName" "{EscapeNsis(product)}"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{EscapeNsis(config.String("identifier")!)}" "DisplayVersion" "{EscapeNsis(version)}"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{EscapeNsis(config.String("identifier")!)}" "Publisher" "{EscapeNsis(Publisher(config))}"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{EscapeNsis(config.String("identifier")!)}" "InstallLocation" "$INSTDIR"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{EscapeNsis(config.String("identifier")!)}" "UninstallString" '$\"$INSTDIR\uninstall.exe$\"'
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{EscapeNsis(config.String("identifier")!)}" "QuietUninstallString" '$\"$INSTDIR\uninstall.exe$\" /S'
-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{EscapeNsis(config.String("identifier")!)}" "NoModify" 1
-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{EscapeNsis(config.String("identifier")!)}" "NoRepair" 1
-SectionEnd
-Section "Uninstall"
-  SetShellVarContext current
-  SetRegView 64
-  Delete "$DESKTOP\{EscapeNsis(product)}.lnk"
-  Delete "$SMPROGRAMS\{EscapeNsis(product)}\{EscapeNsis(product)}.lnk"
-  RMDir "$SMPROGRAMS\{EscapeNsis(product)}"
-  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{EscapeNsis(config.String("identifier")!)}"
-  RMDir /r "$INSTDIR"
-SectionEnd
-""");
+        File.WriteAllText(script, RenderNsis(config, payload, Path.GetFileName(binary), output), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
         await RequireSuccess(tool, ["/V2", script], directory, cancellationToken);
         return RequireArtifact(output);
     }
@@ -149,45 +98,14 @@ SectionEnd
         CopyTree(publishDirectory, payload);
         PatchBundleType(Path.Combine(payload, Path.GetRelativePath(publishDirectory, binary)), "MSI");
         if (!noSign) await SignWindowsAsync(config, Path.Combine(payload, Path.GetRelativePath(publishDirectory, binary)), cancellationToken);
-        var files = Directory.EnumerateFiles(payload, "*", SearchOption.AllDirectories)
-            .OrderBy(path => path, StringComparer.Ordinal).ToArray();
-        var refs = new StringBuilder();
-        var tree = new WixDirectoryNode(string.Empty);
-        foreach (var file in files)
-        {
-            var relative = Path.GetRelativePath(payload, file);
-            var id = "F" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(relative)))[..16];
-            tree.Add(relative, file, id, Uuid5($"{Product(config)}:{relative}"));
-            refs.AppendLine($"<ComponentRef Id=\"C{id}\" />");
-        }
-        var components = tree.Render(refs, $"Software\\NetWiv\\{UpgradeCode(config)}", "INSTALLDIR");
-        File.WriteAllText(wxs, $"""
-<?xml version="1.0" encoding="UTF-8"?>
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-  <Product Id="*" Name="{Xml(product)}" Language="1033" Version="{Xml(version)}" Manufacturer="{Xml(Publisher(config))}" UpgradeCode="{UpgradeCode(config)}">
-    <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" />
-    <MajorUpgrade AllowDowngrades="yes" />
-    <MediaTemplate EmbedCab="yes" />
-    <Property Id="WEBVIEW2_USER"><RegistrySearch Id="WebView2User" Root="HKCU" Key="Software\Microsoft\EdgeUpdate\Clients\{WebView2Client}" Name="pv" Type="raw" Win64="no" /></Property>
-    <Property Id="WEBVIEW2_MACHINE"><RegistrySearch Id="WebView2Machine" Root="HKLM" Key="Software\Microsoft\EdgeUpdate\Clients\{WebView2Client}" Name="pv" Type="raw" Win64="no" /></Property>
-    <Condition Message="Microsoft Edge WebView2 Runtime is required. Install it from https://developer.microsoft.com/microsoft-edge/webview2/ and run this installer again.">Installed OR (WEBVIEW2_USER AND WEBVIEW2_USER &lt;&gt; "0.0.0.0") OR (WEBVIEW2_MACHINE AND WEBVIEW2_MACHINE &lt;&gt; "0.0.0.0")</Condition>
-    <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="LocalAppDataFolder"><Directory Id="INSTALLDIR" Name="{Xml(SafeName(product))}">{components}</Directory></Directory>
-      <Directory Id="ProgramMenuFolder"><Directory Id="ApplicationProgramsFolder" Name="{Xml(SafeName(product))}">
-        <Component Id="StartMenuShortcut" Guid="{Uuid5(UpgradeCode(config) + ":shortcut")}">
-          <Shortcut Id="AppShortcut" Name="{Xml(product)}" Target="[INSTALLDIR]{Xml(Path.GetFileName(binary))}" WorkingDirectory="INSTALLDIR" />
-          <RemoveFolder Id="RemoveProgramsFolder" Directory="ApplicationProgramsFolder" On="uninstall" />
-          <RegistryValue Root="HKCU" Key="Software\NetWiv\{UpgradeCode(config)}" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
-        </Component>
-      </Directory></Directory>
-    </Directory>
-    <Feature Id="MainFeature" Title="{Xml(product)}" Level="1">{refs}<ComponentRef Id="StartMenuShortcut" /></Feature>
-  </Product>
-</Wix>
-""");
-        await RequireSuccess(candle, ["-nologo", "-out", wixobj, wxs], directory, cancellationToken);
-        var lightArguments = new List<string> { "-nologo" };
+        File.WriteAllText(wxs, RenderMsi(config, payload, Path.GetFileName(binary)));
+        await RequireSuccess(candle, ["-nologo", "-arch", "x64", "-out", wixobj, wxs], directory, cancellationToken);
+        // WixUI's built-in en-US localization otherwise overrides Product.Codepage with 1252.
+        var localization = Path.Combine(directory, "strings.wxl");
+        File.WriteAllText(localization, "<WixLocalization Culture=\"en-us\" Codepage=\"65001\" xmlns=\"http://schemas.microsoft.com/wix/2006/localization\" />");
+        var lightArguments = new List<string> { "-nologo", "-cultures:en-us", "-loc", localization };
         if (Environment.GetEnvironmentVariable("NETWIV_WIX_SUPPRESS_VALIDATION") == "1") lightArguments.Add("-sval");
+        if (WindowsInstallerOptions.FromJson(config.Root).AllowDirectorySelection) lightArguments.AddRange(["-ext", "WixUIExtension"]);
         lightArguments.AddRange(["-out", output, wixobj]);
         await RequireSuccess(light, lightArguments, directory, cancellationToken);
         return RequireArtifact(output);
@@ -370,7 +288,8 @@ cp "{source}/{product}.desktop" $RPM_BUILD_ROOT/usr/share/applications/{product}
     private static string Description(ConfigDocument config) => config.String("bundle", "shortDescription") ?? Product(config);
     private static string Publisher(ConfigDocument config) => config.String("bundle", "publisher") ?? "NetWiv application publisher";
     private static string SafeName(string value) => string.Concat(value.Select(character => char.IsLetterOrDigit(character) || character is '-' or '_' ? character : '-'));
-    internal static string EscapeNsis(string value) => value.Replace("$", "$$", StringComparison.Ordinal).Replace("\"", "$\\\"", StringComparison.Ordinal);
+    // Emit dollars through Unicode defines so NSIS cannot expand user-supplied ${...}, $%...% or $\n at compile time.
+    internal static string EscapeNsis(string value) => value.Replace("$", "${U+24}${U+24}", StringComparison.Ordinal).Replace("\"", "$\\\"", StringComparison.Ordinal);
     private static string Xml(string value) => SecurityElement.Escape(value) ?? string.Empty;
     private static string UpgradeCode(ConfigDocument config) => config.String("bundle", "windows", "wix", "upgradeCode") ?? Uuid5(Product(config) + ".exe.app.x64");
     internal static string Uuid5(string value)
@@ -472,30 +391,36 @@ cp "{source}/{product}.desktop" $RPM_BUILD_ROOT/usr/share/applications/{product}
 
         public void Add(string relative, string source, string id, string guid)
         {
-            var parts = relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries);
+            var directory = Path.GetDirectoryName(relative);
+            var owner = string.IsNullOrEmpty(directory) ? this : AddDirectory(directory);
+            owner._files.Add((source, id, guid));
+        }
+
+        public WixDirectoryNode AddDirectory(string relative)
+        {
             var owner = this;
-            foreach (var part in parts[..^1])
+            foreach (var part in relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries))
             {
                 if (!owner._children.TryGetValue(part, out var child)) owner._children[part] = child = new WixDirectoryNode(Path.Combine(owner.RelativePath, part));
                 owner = child;
             }
-            owner._files.Add((source, id, guid));
+            return owner;
         }
 
-        public string Render(StringBuilder refs, string registryKey, string directoryId)
+        public string Render(StringBuilder refs, string registryKey, string directoryId, string hive, bool perMachine)
         {
             var result = new StringBuilder();
             foreach (var file in _files.OrderBy(file => file.Source, StringComparer.Ordinal))
             {
-                result.Append($"<Component Id=\"C{file.Id}\" Guid=\"{file.Guid}\"><File Id=\"{file.Id}\" Source=\"{Xml(file.Source)}\" /><RegistryValue Root=\"HKCU\" Key=\"{Xml(registryKey)}\" Name=\"{file.Id}\" Type=\"integer\" Value=\"1\" KeyPath=\"yes\" /></Component>");
+                result.Append($"<Component Id=\"C{file.Id}\" Guid=\"{file.Guid}\" Win64=\"{(perMachine ? "yes" : "no")}\"><File Id=\"{file.Id}\" Source=\"{WixXml(file.Source)}\" /><RegistryValue Root=\"{hive}\" Key=\"{Xml(registryKey)}\" Name=\"{file.Id}\" Type=\"integer\" Value=\"1\" KeyPath=\"yes\" /></Component>");
             }
             var cleanupId = "X" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(RelativePath)))[..16];
             refs.AppendLine($"<ComponentRef Id=\"C{cleanupId}\" />");
-            result.Append($"<Component Id=\"C{cleanupId}\" Guid=\"{Uuid5(registryKey + ":cleanup:" + RelativePath)}\"><RemoveFolder Id=\"R{cleanupId}\" Directory=\"{directoryId}\" On=\"uninstall\" /><RegistryValue Root=\"HKCU\" Key=\"{Xml(registryKey)}\" Name=\"{cleanupId}\" Type=\"integer\" Value=\"1\" KeyPath=\"yes\" /></Component>");
+            result.Append($"<Component Id=\"C{cleanupId}\" Guid=\"{Uuid5(registryKey + ":cleanup:" + RelativePath)}\" Win64=\"{(perMachine ? "yes" : "no")}\"><CreateFolder /><RemoveFolder Id=\"R{cleanupId}\" Directory=\"{directoryId}\" On=\"uninstall\" /><RegistryValue Root=\"{hive}\" Key=\"{Xml(registryKey)}\" Name=\"{cleanupId}\" Type=\"integer\" Value=\"1\" KeyPath=\"yes\" /></Component>");
             foreach (var child in _children)
             {
                 var id = "D" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(child.Value.RelativePath)))[..16];
-                result.Append($"<Directory Id=\"{id}\" Name=\"{Xml(child.Key)}\">{child.Value.Render(refs, registryKey, id)}</Directory>");
+                result.Append($"<Directory Id=\"{id}\" Name=\"{WixXml(child.Key)}\">{child.Value.Render(refs, registryKey, id, hive, perMachine)}</Directory>");
             }
             return result.ToString();
         }

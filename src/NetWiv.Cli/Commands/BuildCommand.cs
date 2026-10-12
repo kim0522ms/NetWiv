@@ -25,6 +25,9 @@ internal static class BuildCommand
         if (ignoreVersions) throw new NotSupportedException("--ignore-version-mismatches cannot be honored until NetWiv package version compatibility validation is implemented.");
         target.EnsureHostOperatingSystem();
 
+        var active = config.Boolean("bundle", "active") ?? false;
+        if (!noBundle && (active || bundles is not null)) NativeBundler.ValidateConfiguration(config, target, bundles);
+
         var project = CommandConfig.Project(config);
         var features = CommandConfig.Features(config, featuresArg);
         var environment = HookEnvironment.Create(target, debug, config);
@@ -64,7 +67,6 @@ internal static class BuildCommand
         ValidateFrontend(config);
         EnsureBinary(config, project, publishDirectory);
 
-        var active = config.Boolean("bundle", "active") ?? false;
         if (!noBundle && (active || bundles is not null))
         {
             await HookRunner.RunAsync(config, "beforeBundleCommand", environment, cancellationToken);

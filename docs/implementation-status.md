@@ -66,6 +66,9 @@ underlying framework as an official TAURI distribution.
 ## Packaging and distribution
 
 The CLI has Windows NSIS/MSI, Linux deb/rpm/AppImage and macOS app/DMG generation paths.
+NSIS and MSI share [installation scope, directory and shortcut settings](windows-installers.md),
+with actual Windows lifecycle acceptance in CI; interactive directory browsing
+and standard-user UAC consent remain manual acceptance items.
 Packaging requires the corresponding platform tools. Distribute the complete
 publish output, including native DLL/SO/dylib files and required license notices.
 Installed applications do not need Node.js, Vite or the .NET SDK.

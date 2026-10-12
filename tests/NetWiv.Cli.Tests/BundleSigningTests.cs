@@ -32,6 +32,12 @@ internal static class BundleSigningTests
         string output;
         if (args.Contains("/V2")) output = Regex.Match(File.ReadAllText(args[^1]), "OutFile \"([^\"]+)\"").Groups[1].Value;
         else output = args[Array.IndexOf(args, "-out") + 1];
+        if (Path.GetExtension(output) == ".msi")
+        {
+            var index = Array.IndexOf(args, "-loc");
+            if (index < 0 || !File.ReadAllText(args[index + 1]).Contains("Codepage=\"65001\""))
+                throw new Exception("MSI localization must preserve Unicode even with WixUIExtension.");
+        }
         File.WriteAllText(output, "package");
         return 0;
     }
@@ -84,7 +90,7 @@ internal static class BundleSigningTests
                         throw new Exception("MSI did not search both runtime installation scopes.");
                     if (!xml.Descendants(wix + "Condition").Any(item => item.Value.Contains("Installed OR") && item.Value.Contains("0.0.0.0")))
                         throw new Exception("MSI must reject an absent runtime while allowing uninstall.");
-                    if (!xml.Descendants(wix + "Shortcut").Any(item => ((string?)item.Attribute("Target"))?.EndsWith("Probe.exe") == true) || !xml.Descendants(wix + "RemoveFolder").Any(item => (string?)item.Attribute("Directory") == "ApplicationProgramsFolder"))
+                    if (!xml.Descendants(wix + "Shortcut").Any(item => (string?)item.Attribute("Target") == "[NETWIVTARGET]") || !xml.Descendants(wix + "RemoveFolder").Any(item => (string?)item.Attribute("Directory") == "ApplicationProgramsFolder"))
                         throw new Exception("MSI start-menu shortcut lifecycle is incomplete.");
                 }
             }

@@ -29,13 +29,15 @@ public sealed class PluginContext
     private readonly string _prefix;
     private readonly CommandRegistry _commands;
     private readonly string _name;
+    private readonly Type? _pluginType;
     private readonly ICollection<PermissionDefinition> _permissions;
 
-    internal PluginContext(string name, CommandRegistry commands, ICollection<PermissionDefinition> permissions, JsonElement config)
+    internal PluginContext(string name, CommandRegistry commands, ICollection<PermissionDefinition> permissions, JsonElement config, Type? pluginType = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         _prefix = $"plugin:{name}|";
         _name = name;
+        _pluginType = pluginType;
         _commands = commands;
         _permissions = permissions;
         Config = config;
@@ -57,6 +59,15 @@ public sealed class PluginContext
 
     public void RegisterCommand(string name, CommandHandler handler) =>
         _commands.Register(_prefix + name, handler);
+
+    /// <summary>Registers selected generated commands using this plugin's name and ACL namespace.</summary>
+    /// <param name="names">Local external names, after [Command] naming, without a plugin prefix.</param>
+    public void RegisterGeneratedCommands<TPlugin>(params string[] names) where TPlugin : IPlugin
+    {
+        if (_pluginType != typeof(TPlugin))
+            throw new InvalidOperationException("Generated commands must belong to the plugin type being initialized.");
+        GeneratedPluginCommandRegistry.ApplyTo<TPlugin>(this, names);
+    }
 
     public void RegisterResponseCommand(string name, ResponseCommandHandler handler) =>
         _commands.RegisterResponse(_prefix + name, handler);

@@ -8,6 +8,38 @@ namespace NetWiv.Generators.Tests;
 
 public sealed class CommandGeneratorTests
 {
+    [Theory]
+    [InlineData("plugin:other|ping")]
+    [InlineData("other:ping")]
+    [InlineData("other|ping")]
+    public void PluginCommandsRejectQualifiedLocalNames(string name)
+    {
+        var result = Run($$"""
+            using NetWiv;
+            public sealed class Example : IPlugin {
+                public string Name => "example";
+                public void Initialize(PluginContext context) { }
+                [Command("{{name}}")] public static void Ping() { }
+            }
+            """);
+        Assert.Contains(result.GeneratorDiagnostics, diagnostic => diagnostic.Id == "DTOXGEN006");
+    }
+
+    [Fact]
+    public void RuntimePluginNamesDoNotNeedToBeCompileTimeConstants()
+    {
+        var result = Run("""
+            using NetWiv;
+            public sealed class Example(string name) : IPlugin {
+                public string Name => name;
+                public void Initialize(PluginContext context) => context.RegisterGeneratedCommands<Example>("ping");
+                [Command] public static void Ping() { }
+            }
+            """);
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.DoesNotContain(result.CompilationDiagnostics, diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
     [Fact]
     public void InjectsRequestWithoutGeneratingAFrontendArgumentOrSerializer()
     {
@@ -160,6 +192,46 @@ public sealed class CommandGeneratorTests
 
         Assert.Equal(2, result.GeneratorDiagnostics.Count(static diagnostic => diagnostic.Id == "DTOXGEN003"));
         Assert.DoesNotContain("registry.Register", result.GeneratedSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PluginCommandsHaveTypeScopedNamesAndDoNotRegisterAsAppCommands()
+    {
+        var result = Run("""
+            using NetWiv;
+            public sealed class First : IPlugin {
+                public string Name => "first";
+                public void Initialize(PluginContext context) => context.RegisterGeneratedCommands<First>("get_status");
+                [Command] public static void GetStatus() { }
+            }
+            public sealed class Second : IPlugin {
+                public string Name => "second";
+                public void Initialize(PluginContext context) { }
+                [Command] public static void GetStatus() { }
+            }
+            public static class AppCommands { [Command] public static void GetStatus() { } }
+            """);
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.DoesNotContain(result.CompilationDiagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Contains("GeneratedPluginCommandRegistry.Register<global::First>(\"get_status\"", result.GeneratedSource);
+        Assert.Contains("GeneratedPluginCommandRegistry.Register<global::Second>(\"get_status\"", result.GeneratedSource);
+        Assert.Contains("GeneratedCommandRegistry.Register(\"get_status\"", result.GeneratedSource);
+    }
+
+    [Fact]
+    public void DuplicateNamesWithinOnePluginRemainErrors()
+    {
+        var result = Run("""
+            using NetWiv;
+            public sealed class Plugin : IPlugin {
+                public string Name => "example";
+                public void Initialize(PluginContext context) { }
+                [Command("same")] public static void One() { }
+                [Command("same")] public static void Two() { }
+            }
+            """);
+        Assert.Equal(2, result.GeneratorDiagnostics.Count(d => d.Id == "DTOXGEN003"));
+        Assert.DoesNotContain("GeneratedPluginCommandRegistry.Register", result.GeneratedSource);
     }
 
     [Fact]

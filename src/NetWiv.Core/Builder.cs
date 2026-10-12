@@ -161,7 +161,7 @@ public sealed class Builder
             {
                 initializedPlugins.Add(plugin);
                 var context = new PluginContext(plugin.Name, commands, permissions,
-                    _pluginConfigurations.TryGetValue(plugin.Name, out var pluginConfig) ? pluginConfig : JsonValue.Null);
+                    _pluginConfigurations.TryGetValue(plugin.Name, out var pluginConfig) ? pluginConfig : JsonValue.Null, plugin.GetType());
                 plugin.Initialize(context);
                 context.Complete();
             }

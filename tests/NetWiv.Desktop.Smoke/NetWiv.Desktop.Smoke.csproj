@@ -4,6 +4,8 @@
     <PublishAot>true</PublishAot>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../NetWiv.Plugin.CommandFixture/NetWiv.Plugin.CommandFixture.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Generators/NetWiv.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../src/NetWiv.Plugin.WindowState/NetWiv.Plugin.WindowState.csproj" />
     <ProjectReference Include="../../src/NetWiv.Platform.Desktop/NetWiv.Platform.Desktop.csproj" />
     <ProjectReference Include="../../src/NetWiv.Plugin.Stronghold/NetWiv.Plugin.Stronghold.csproj" />

@@ -48,11 +48,19 @@ new Builder()
     .Run();
 ```
 
-`RegisterGeneratedCommands()` is the explicit convenience opt-in for every
-generated command in the process. Top-level `byte[]` command parameters and
+`Builder.RegisterGeneratedCommands()` is the explicit convenience opt-in for every
+generated application command in the process. Top-level `byte[]` command parameters and
 results use Tauri's JSON array-of-integers representation instead of the
 default `System.Text.Json` base64 string representation. Byte arrays nested in
 DTOs require an application JSON converter that uses that same wire shape.
+
+Static `[Command]` methods declared on an `IPlugin` type are scoped to that
+plugin instead of the application registry. Select them with
+`context.RegisterGeneratedCommands<MyPlugin>("local_name")` in `Initialize`.
+Different plugin types can reuse a local name; the host prefixes each selected
+command with `plugin:<Name>|`. Permissions remain explicit. See
+[generated plugin commands](../../docs/plugin-commands.md) for complete examples,
+ownership rules, existing-code impact and optional frontend exports.
 
 Classes marked `[Plugin]` must implement `IPlugin` and have an accessible
 parameterless constructor. The generator registers a static factory with

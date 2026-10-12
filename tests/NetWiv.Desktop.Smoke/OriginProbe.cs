@@ -7,6 +7,7 @@ internal sealed class OriginProbe : IDisposable
     private readonly TcpListener _listener = new(IPAddress.Loopback, 0);
     private readonly CancellationTokenSource _stop = new();
     private readonly Task _server;
+    private readonly List<Task> _clients = [];
     internal readonly TaskCompletionSource<bool> RemoteDenied = new(TaskCreationOptions.RunContinuationsAsynchronously);
     internal string Url { get; }
 
@@ -17,16 +18,54 @@ internal sealed class OriginProbe : IDisposable
         _server = Serve();
     }
 
+    internal static async Task CheckIdleConnectionAsync()
+    {
+        var server = new OriginProbe();
+        using var idle = new TcpClient();
+        try
+        {
+            using (var abandoned = new TcpClient())
+                await abandoned.ConnectAsync(IPAddress.Loopback, new Uri(server.Url).Port);
+            // Browsers may preconnect without sending an HTTP request.
+            await idle.ConnectAsync(IPAddress.Loopback, new Uri(server.Url).Port);
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+            string page = await http.GetStringAsync(server.Url);
+            if (!page.Contains("netwiv-origin-probe", StringComparison.Ordinal))
+                throw new InvalidOperationException("Origin probe did not serve a request alongside an idle connection.");
+            await http.GetStringAsync(server.Url + "/result?denied=false");
+            if (await server.RemoteDenied.Task.WaitAsync(TimeSpan.FromSeconds(5)))
+                throw new InvalidOperationException("Origin probe reported a failed denial as success.");
+        }
+        finally { server.Dispose(); } // Must also stop while the idle socket is still open.
+        Console.WriteLine("PASS origin probe serves concurrent requests and cancels idle connections");
+    }
+
     private async Task Serve()
     {
         try
         {
             while (!_stop.IsCancellationRequested)
             {
-                using var client = await _listener.AcceptTcpClientAsync(_stop.Token);
+                var client = await _listener.AcceptTcpClientAsync(_stop.Token);
+                _clients.Add(ServeClient(client));
+            }
+        }
+        catch (OperationCanceledException) when (_stop.IsCancellationRequested) { }
+        catch (SocketException) when (_stop.IsCancellationRequested) { }
+        catch (Exception error) { RemoteDenied.TrySetException(error); }
+        finally { await Task.WhenAll(_clients); }
+    }
+
+    private async Task ServeClient(TcpClient client)
+    {
+        using (client)
+        {
+            try
+            {
                 await using var stream = client.GetStream();
                 using var reader = new StreamReader(stream, Encoding.ASCII, leaveOpen: true);
-                string request = await reader.ReadLineAsync(_stop.Token) ?? "";
+                string? request = await reader.ReadLineAsync(_stop.Token);
+                if (string.IsNullOrEmpty(request)) return;
                 string? line;
                 do { line = await reader.ReadLineAsync(_stop.Token); } while (!string.IsNullOrEmpty(line));
                 string route = request.Split(' ').ElementAtOrDefault(1) ?? "/";
@@ -38,10 +77,10 @@ internal sealed class OriginProbe : IDisposable
                 await stream.WriteAsync(headers, _stop.Token);
                 await stream.WriteAsync(body, _stop.Token);
             }
+            catch (OperationCanceledException) when (_stop.IsCancellationRequested) { }
+            catch (IOException) { } // A speculative browser connection may close without a request.
+            catch (Exception error) { RemoteDenied.TrySetException(error); }
         }
-        catch (OperationCanceledException) when (_stop.IsCancellationRequested) { }
-        catch (SocketException) when (_stop.IsCancellationRequested) { }
-        catch (Exception error) { RemoteDenied.TrySetException(error); }
     }
 
     private const string FramePage = """

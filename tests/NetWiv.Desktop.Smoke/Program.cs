@@ -29,6 +29,7 @@ internal static class Program
     {
         if (args is ["--window-state-smoke", var stateRoot, var phase]) return WindowStateSmoke.Run(stateRoot, phase == "restore");
         if (args is ["--expect-startup-error", var expected]) return CheckStartupError(expected);
+        if (args is ["--origin-probe-smoke"]) { OriginProbe.CheckIdleConnectionAsync().GetAwaiter().GetResult(); return 0; }
         if (args is ["--no-window-smoke"]) return CheckNoWindows();
         if (args.Length != 0) throw new ArgumentException("Unknown smoke-test arguments.");
         using var probe = new OriginProbe();
@@ -128,6 +129,7 @@ internal static class Program
     {
         try
         {
+            await OriginProbe.CheckIdleConnectionAsync();
             var title = await app.GetWindow("main")!.TitleAsync();
             Require(title == "NetWiv desktop — main + child", "native window title");
             await app.InvokeAsync("plugin:window|create", JsonValue.Parse("{\"options\":{\"label\":\"identity-title\",\"visible\":false}}"));

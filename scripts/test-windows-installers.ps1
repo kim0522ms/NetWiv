@@ -176,6 +176,21 @@ try {
                             Assert (Test-Path (Join-Path $initialInstall 'InstallerProbe.exe')) 'Rejected legacy relocation changed the previous installation.'
                         } finally { Set-ItemProperty $key FileScopedUninstall 1 }
                     }
+                    if ($version -eq '1.0.1' -and $format -eq 'nsis') {
+                        $lockedPath = Join-Path $install 'obsolete.txt'
+                        $locked = [IO.File]::Open($lockedPath, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+                        try {
+                            # A failed removal must retain its registration and ownership information for retry.
+                            Execute (Join-Path $install 'uninstall.exe') "/S _?=$install" @(2)
+                            Install $package $format '' '' $true
+                            $hive = if ($scope -eq 'perMachine') { 'HKLM' } else { 'HKCU' }
+                            $registration = Get-ItemProperty "$hive`:\Software\Microsoft\Windows\CurrentVersion\Uninstall\$identifier"
+                            Assert ($registration.DisplayVersion -eq '1.0.0') 'Locked-file upgrade replaced the previous registration.'
+                            Assert (Test-Path $lockedPath) 'Locked obsolete file disappeared.'
+                            Assert (Test-Path (Join-Path $install 'uninstall.exe')) 'Failed removal lost its uninstaller.'
+                            Assert ((Test-Path $desktopLink) -and (Test-Path $menuLink)) 'Failed removal deleted its shortcuts.'
+                        } finally { $locked.Dispose() }
+                    }
                     Install $package $format $(if ($version -ne '1.0.1') { $install } else { '' }) (Join-Path $root "$product-$version-install.log")
                     $installed = $true
                     $installedPackage = $package
@@ -250,6 +265,63 @@ try {
                 Remove-Item $sentinel -ErrorAction SilentlyContinue
                 Remove-Item -LiteralPath $install -Recurse -Force -ErrorAction SilentlyContinue
                 Remove-Item -LiteralPath $initialInstall -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+    # Same display name and payload paths must not give independent products shared MSI components.
+    $independent = [Collections.Generic.List[object]]::new()
+    $machineRuntime.SetValue('pv', '123.0.0.0')
+    try {
+        foreach ($id in @('a', 'b')) {
+            $product = 'NetWiv-CI-independent'
+            $directory = Join-Path $root "independent-$id"
+            $report = Join-Path $root "independent-$id.json"
+            $config = @{
+                productName = $product; identifier = "dev.netwiv.ci.independent.$id"; version = '1.0.0'
+                build = @{ dotnetProject = 'InstallerProbe.csproj' }
+                bundle = @{ windows = @{ wix = @{ upgradeCode = $(if ($id -eq 'a') { '591AD768-B7CF-4773-B3CA-B9216AD0D7E1' } else { 'F46AE542-8182-40D3-AE53-17E96C1F607D' }) }; installer = @{
+                    scope = 'perMachine'
+                    shortcuts = @{ desktop = $false; name = "$product-$id"; arguments = @($report, $id) }
+                } } }
+            }
+            $config | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $fixture 'netwiv.conf.json')
+            Push-Location $fixture
+            try {
+                & dotnet $cli bundle -t win-x64 -b msi --no-sign
+                if ($LASTEXITCODE -ne 0) { throw "Independent MSI bundle failed: $id" }
+            } finally { Pop-Location }
+            $package = Join-Path $root "independent-$id.msi"
+            Copy-Item (Join-Path $payload "bundle/msi/${product}_1.0.0_x64_en-US.msi") $package -Force
+            Install $package 'msi' $directory (Join-Path $root "independent-$id-install.log")
+            $independent.Add(@{ Package = $package; Directory = $directory; Code = (Get-MsiProductCode $package) })
+            Assert (Test-Path (Join-Path $directory 'InstallerProbe.exe')) "Independent MSI $id did not install its executable."
+        }
+        $first = $independent[0]
+        Remove-Installation $first.Package 'msi' $first.Directory (Join-Path $root 'independent-a-uninstall.log')
+        $independent.RemoveAt(0)
+        Assert (@($windowsInstaller.ProductsEx($first.Code, '', 7)).Count -eq 0) 'First independent MSI remained registered.'
+        Assert (-not (Test-Path (Join-Path $first.Directory 'InstallerProbe.exe'))) 'First independent MSI left its executable.'
+        $second = $independent[0]
+        Assert (Test-Path (Join-Path $second.Directory 'InstallerProbe.exe')) 'Removing the first MSI removed the second executable.'
+        Remove-Item $report -ErrorAction SilentlyContinue
+        $link = Join-Path ([Environment]::GetFolderPath('CommonPrograms')) "$product/$product-b.lnk"
+        $launch = [Diagnostics.ProcessStartInfo]::new()
+        $launch.FileName = $link; $launch.UseShellExecute = $true; $launch.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden
+        $process = [Diagnostics.Process]::Start($launch)
+        if ($null -ne $process) { $process.WaitForExit(); Assert ($process.ExitCode -eq 0) 'Independent MSI shortcut failed.'; $process.Dispose() }
+        Wait-Until { Test-Path $report } 'Independent MSI shortcut did not launch.'
+        $actual = Get-Content $report -Raw | ConvertFrom-Json
+        Assert ($actual.cwd.TrimEnd('\') -eq $second.Directory -and $actual.args[0] -eq 'b') 'Independent MSI shortcut resolved to another product.'
+        Remove-Installation $second.Package 'msi' $second.Directory (Join-Path $root 'independent-b-uninstall.log')
+        $independent.Clear()
+        Assert (@($windowsInstaller.ProductsEx($second.Code, '', 7)).Count -eq 0) 'Second independent MSI remained registered.'
+        Assert (-not (Test-Path (Join-Path $second.Directory 'InstallerProbe.exe'))) 'Second independent MSI left its executable.'
+        Assert (-not (Test-Path $link)) 'Second independent MSI left its shortcut.'
+        Write-Output 'PASS independent MSI products: same display name, separate components, uninstall isolation and surviving shortcut execution'
+    } finally {
+        foreach ($entry in $independent) {
+            if (@($windowsInstaller.ProductsEx($entry.Code, '', 7)).Count) {
+                Remove-Installation $entry.Package 'msi' $entry.Directory (Join-Path $root 'independent-cleanup.log')
             }
         }
     }

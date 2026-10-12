@@ -58,7 +58,9 @@ internal static partial class NativeBundler
         foreach (var file in Directory.EnumerateFiles(payload, "*", SearchOption.AllDirectories).OrderBy(path => path, StringComparer.Ordinal))
         {
             longestSuffix = Math.Max(longestSuffix, Path.GetRelativePath(payload, file).Length);
+            removal.AppendLine("  ClearErrors");
             removal.AppendLine($"  Delete \"$INSTDIR\\{EscapeNsis(Path.GetRelativePath(payload, file).Replace(Path.DirectorySeparatorChar, '\\'))}\"");
+            removal.AppendLine("  IfErrors uninstall_failed");
         }
         var directories = Directory.EnumerateDirectories(payload, "*", SearchOption.AllDirectories)
             .Select(path => Path.GetRelativePath(payload, path).Replace(Path.DirectorySeparatorChar, '\\')).ToHashSet(StringComparer.Ordinal);
@@ -179,13 +181,20 @@ SectionEnd
 Section "Uninstall"
   SetShellVarContext {context}
   SetRegView 64
+  ; Keep registration, links and the ownership list if a payload file is locked.
+{removal}
   {(options.Desktop ?? true ? $"Delete \"$DESKTOP\\{name}.lnk\"" : "")}
   {(options.StartMenu ? $"Delete \"$SMPROGRAMS\\{product}\\{name}.lnk\"" : "")}
   RMDir "$SMPROGRAMS\{product}"
   DeleteRegKey {hive} "{key}"
-{removal}
   Delete "$INSTDIR\uninstall.exe"
   RMDir "$INSTDIR"
+  SetErrorLevel 0
+  Goto uninstall_done
+uninstall_failed:
+  SetErrorLevel 2
+  Abort "Could not remove package files. Close the application and retry removal or upgrade."
+uninstall_done:
 SectionEnd
 """;
     }
@@ -205,7 +214,7 @@ SectionEnd
         {
             var relative = Path.GetRelativePath(payload, file);
             var id = "F" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(relative)))[..16];
-            var guid = Uuid5($"{product}:{relative}" + (options.PerMachine ? ":perMachine" : ""));
+            var guid = Uuid5($"{upgradeCode}:file:{relative}");
             if (options.PerMachine && relative == binary)
                 machineExecutable = $"""
 <Component Id="C{id}" Guid="{guid}" Win64="yes"><File Id="{id}" Source="{WixXml(file)}" KeyPath="yes">

@@ -116,6 +116,11 @@ internal static class WindowsInstallerTests
                 var original = NativeBundler.RenderMsi(identity, root, "Probe.exe");
                 identity.Root["bundle"]!["windows"]!["wix"]!["upgradeCode"] = "{13AD4B8C-2335-4778-9859-E970F183B9A0}";
                 Check(NativeBundler.RenderMsi(identity, root, "Probe.exe") == original, "Equivalent GUID spellings preserve all MSI identities and registry keys");
+                identity.Root["identifier"] = "dev.netwiv.independent";
+                identity.Root["bundle"]!["windows"]!["wix"]!["upgradeCode"] = "591AD768-B7CF-4773-B3CA-B9216AD0D7E1";
+                var other = XDocument.Parse(NativeBundler.RenderMsi(identity, root, "Probe.exe"));
+                var originalGuids = XDocument.Parse(original).Descendants(w + "Component").Select(c => (string)c.Attribute("Guid")!);
+                Check(!other.Descendants(w + "Component").Select(c => (string)c.Attribute("Guid")!).Intersect(originalGuids).Any(), "Independent packages with the same display name must not share component GUIDs");
             }
             var userUpgradeCode = (string?)msi.Descendants(w + "Product").Single().Attribute("UpgradeCode");
             foreach (var machine in new[] { false, true })

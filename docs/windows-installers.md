@@ -100,6 +100,9 @@ is rejected until it is uninstalled explicitly. New packages support relocation
 and remove the old uninstaller along with the old payload. Keep the
 identifier, product name and MSI `wix.upgradeCode` stable across upgrades.
 Equivalent GUID spellings (case or braces) retain the same upgrade identity.
+MSI component identities are scoped to that upgrade identity. Independent packages
+with the same display name must configure distinct `wix.upgradeCode` values;
+the backward-compatible default is derived from the display name.
 Machine MSI packages have a separate upgrade identity, so changing scope is not
 a migration of an existing user installation. Uninstall the old installation
 before changing scope or switching between MSI and NSIS. Both formats are
@@ -122,6 +125,12 @@ can open Microsoft's download page with consent. Uninstallation remains possible
 when WebView2 has subsequently been removed. Framework-dependent apps also need
 the corresponding .NET runtime installed separately.
 
+If an owned file is locked or cannot be deleted, NSIS removal returns code 2 and
+an upgrade stops before installing the new payload. Registration, shortcuts and
+the old uninstaller remain available for retry. Close the application and retry
+the removal or upgrade. Removal is not transactional: files deleted before the
+failure are not rolled back; a successful upgrade retry installs the new payload.
+
 ## Verification
 
 Cross-platform CLI tests validate config failures, argument quoting and both
@@ -132,6 +141,9 @@ and working directory, custom-path upgrade, and uninstall preserving unrelated a
 application data. It uses a small NativeAOT probe; WebView GUI smoke is a separate
 CI gate. Interactive directory browsing and a standard user's UAC consent flow
 still require manual acceptance; silent elevated CI does not prove those flows.
+The tests also hold an obsolete file open during NSIS removal/upgrade, verify
+failure and retry after releasing the lock, and install two independent MSI
+products with the same display name to verify uninstall and shortcut isolation.
 
 For local acceptance on a dedicated Windows validation machine, install NSIS 3.11,
 WiX 3.14.1, .NET 8 SDK and the Visual C++ build tools, then run from an elevated

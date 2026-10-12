@@ -94,13 +94,14 @@ try {
             $shortcutName = "$product 작업 & 도구"
             $desktopLink = Join-Path $desktop "$shortcutName.lnk"
             $menuLink = Join-Path $programs "$product/$shortcutName.lnk"
-            $expected = @('space value', '한글', 'a"b', '', 'C:\trailing\', 'a\"b', '$INSTDIR', '[INSTALLDIR]', '$(var.foo)', '!(wix.foo)', '<&>', '!(literal)', '$(loc.literal)', ('long-' + ('x' * 280)))
+            $workingDirectory = 'data\[work] $folder'
+            $expected = @('space value', '한글', 'a"b', '', 'C:\trailing\', 'a\"b', '$INSTDIR', '[INSTALLDIR]', '$(var.foo)', '!(wix.foo)', '<&>', '!(literal)', '$(loc.literal)', '${NSISDIR}', '$%PATH%', '$\n', ('long-' + ('x' * 280)))
             $config = @{
                 productName = $product; identifier = $identifier; version = '1.0.0'
                 build = @{ dotnetProject = 'InstallerProbe.csproj' }
                 bundle = @{ windows = @{ installer = @{
                     scope = $scope; allowDirectorySelection = $true
-                    shortcuts = @{ desktop = $true; startMenu = $true; name = $shortcutName; workingDirectory = 'data'; arguments = @($report) + $expected }
+                    shortcuts = @{ desktop = $true; startMenu = $true; name = $shortcutName; workingDirectory = $workingDirectory; arguments = @($report) + $expected }
                 } } }
             }
             # Omitted scope exercises the backward-compatible default.
@@ -136,14 +137,14 @@ try {
                     foreach ($link in @($desktopLink, $menuLink)) {
                         Assert (Test-Path $link) "Missing shortcut: $link"
                         $shortcut = $shell.CreateShortcut($link)
-                        Assert ([IO.Path]::GetFullPath($shortcut.WorkingDirectory).TrimEnd('\') -eq (Join-Path $install 'data')) 'Wrong shortcut working directory.'
+                        Assert ([IO.Path]::GetFullPath($shortcut.WorkingDirectory).TrimEnd('\') -eq (Join-Path $install $workingDirectory)) 'Wrong shortcut working directory.'
                         Remove-Item $report -ErrorAction SilentlyContinue
                         # Execute the actual .lnk, not a reconstructed executable command line.
                         $exitCode = $shell.Run(('"' + $link + '"'), 0, $true)
                         Assert ($exitCode -eq 0) "Shortcut failed: $exitCode"
                         Wait-Until { Test-Path $report } 'Shortcut did not launch the probe.'
                         $actual = Get-Content $report -Raw | ConvertFrom-Json
-                        Assert ($actual.cwd -eq (Join-Path $install 'data')) 'Launched process has wrong working directory.'
+                        Assert ($actual.cwd -eq (Join-Path $install $workingDirectory)) 'Launched process has wrong working directory.'
                         Assert ($actual.args.Count -eq $expected.Count) 'Argument count changed.'
                         for ($i = 0; $i -lt $expected.Count; $i++) { Assert ($actual.args[$i] -ceq $expected[$i]) "Argument $i changed: $($actual.args[$i])" }
                     }

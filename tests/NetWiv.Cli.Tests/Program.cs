@@ -348,7 +348,7 @@ static Task BundleMarkerPatch() => Temp(root =>
     NativeBundler.PatchBundleType(binary, "MAC");
     Equal("__NETWIV_BUNDLE_TYPE_VAR_MAC", File.ReadAllText(core));
     Equal(marker + marker, File.ReadAllText(binary));
-    Equal(@"C:\price$$\payload", NativeBundler.EscapeNsis(@"C:\price$\payload"));
+    Equal(@"C:\price${U+24}${U+24}\payload", NativeBundler.EscapeNsis(@"C:\price$\payload"));
     return Task.CompletedTask;
 });
 

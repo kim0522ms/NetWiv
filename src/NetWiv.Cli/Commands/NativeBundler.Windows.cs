@@ -53,7 +53,7 @@ internal static partial class NativeBundler
 Unicode true
 !include "FileFunc.nsh"
 Name "{product}"
-OutFile "{EscapeNsis(output)}"
+OutFile "{EscapeNsisFilePath(output)}"
 InstallDir "{(options.PerMachine ? "$PROGRAMFILES64" : "$LOCALAPPDATA")}\{product}"
 RequestExecutionLevel {(options.PerMachine ? "admin" : "user")}
 {(options.AllowDirectorySelection ? "Page directory" : "")}
@@ -106,7 +106,7 @@ Section
   RMDir "$SMPROGRAMS\{product}"
 links_clean:
   SetOutPath "$INSTDIR"
-  File /r "{EscapeNsis(payload)}\*"
+  File /r "{EscapeNsisFilePath(payload)}\*"
   WriteUninstaller "$INSTDIR\uninstall.exe"
 {shortcuts}
   WriteRegStr {hive} "{key}" "ShortcutName" "{name}"
@@ -204,6 +204,8 @@ SectionEnd
 """;
         }
     }
+
+    private static string EscapeNsisFilePath(string value) => value.Replace("$", "${U+24}", StringComparison.Ordinal).Replace("\"", "$\\\"", StringComparison.Ordinal);
 
     // MSI formatted fields interpret brackets; WiX has a separate preprocessing/linking language.
     private static string MsiLiteral(string value) => string.Concat(value.Select(c => c switch { '[' => @"[\[]", ']' => @"[\]]", _ => c.ToString() }));

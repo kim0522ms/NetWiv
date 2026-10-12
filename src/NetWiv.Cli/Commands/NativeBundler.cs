@@ -285,7 +285,8 @@ cp "{source}/{product}.desktop" $RPM_BUILD_ROOT/usr/share/applications/{product}
     private static string Description(ConfigDocument config) => config.String("bundle", "shortDescription") ?? Product(config);
     private static string Publisher(ConfigDocument config) => config.String("bundle", "publisher") ?? "NetWiv application publisher";
     private static string SafeName(string value) => string.Concat(value.Select(character => char.IsLetterOrDigit(character) || character is '-' or '_' ? character : '-'));
-    internal static string EscapeNsis(string value) => value.Replace("$", "$$", StringComparison.Ordinal).Replace("\"", "$\\\"", StringComparison.Ordinal);
+    // Emit dollars through Unicode defines so NSIS cannot expand user-supplied ${...}, $%...% or $\n at compile time.
+    internal static string EscapeNsis(string value) => value.Replace("$", "${U+24}${U+24}", StringComparison.Ordinal).Replace("\"", "$\\\"", StringComparison.Ordinal);
     private static string Xml(string value) => SecurityElement.Escape(value) ?? string.Empty;
     private static string UpgradeCode(ConfigDocument config) => config.String("bundle", "windows", "wix", "upgradeCode") ?? Uuid5(Product(config) + ".exe.app.x64");
     internal static string Uuid5(string value)

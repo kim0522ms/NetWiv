@@ -75,6 +75,9 @@ internal static class WindowsInstallerTests
             Directory.CreateDirectory(Path.Combine(root, "data"));
             File.WriteAllText(Path.Combine(root, "data", "sample.txt"), "payload");
             var defaults = Config(root, "{}");
+            defaults.Root["bundle"]!["windows"]!.AsObject().Remove("installer");
+            var legacyOptions = WindowsInstallerOptions.FromJson(defaults.Root);
+            Check(!legacyOptions.PerMachine && !legacyOptions.AllowDirectorySelection && legacyOptions.Desktop is null && legacyOptions.StartMenu, "Legacy config defaults");
             var nsis = NativeBundler.RenderNsis(defaults, root, "Probe.exe", "out.exe");
             var msi = XDocument.Parse(NativeBundler.RenderMsi(defaults, root, "Probe.exe"));
             XNamespace w = "http://schemas.microsoft.com/wix/2006/wi";
@@ -95,8 +98,8 @@ internal static class WindowsInstallerTests
                 if (enabled)
                 {
                     options["shortcuts"]!["name"] = "작업 & 도구";
-                    options["shortcuts"]!["workingDirectory"] = "data";
-                    options["shortcuts"]!["arguments"] = new JsonArray("space value", "한글", "a\"b", "", "C:\\end\\", "$INSTDIR", "[INSTALLDIR]", "$(var.foo)", "!(wix.foo)", "$(loc.literal)", "!(literal)", new string('x', 280));
+                    options["shortcuts"]!["workingDirectory"] = "data/[work] $folder";
+                    options["shortcuts"]!["arguments"] = new JsonArray("space value", "한글", "a\"b", "", "C:\\end\\", "$INSTDIR", "[INSTALLDIR]", "$(var.foo)", "!(wix.foo)", "$(loc.literal)", "!(literal)", "${NSISDIR}", "$%PATH%", "$\\n", new string('x', 280));
                 }
                 var config = Config(root, options.ToJsonString());
                 nsis = NativeBundler.RenderNsis(config, root, "Probe.exe", "out.exe");
@@ -116,7 +119,7 @@ internal static class WindowsInstallerTests
                 Check(nsis.Split("CreateShortcut").Length == (enabled ? 3 : 1), "NSIS shortcut switches");
                 if (enabled)
                 {
-                    Check(nsis.Contains("$$INSTDIR") && nsis.Contains("$\\\""), "NSIS literal arguments");
+                    Check(nsis.Contains("${U+24}${U+24}INSTDIR") && nsis.Contains("$\\\""), "NSIS literal arguments");
                     var shortcut = msi.Descendants(w + "Shortcut").First();
                     Check((string?)shortcut.Attribute("Name") == "작업 & 도구", "Unicode XML name");
                     Check((string?)shortcut.Attribute("Arguments") == "[NetWivShortcutArguments]", "MSI arguments avoid the 255-character table limit");
@@ -124,6 +127,8 @@ internal static class WindowsInstallerTests
                     Check(arguments.Contains("[INSTALLDIR]") && arguments.Contains("$$(var.foo)") && arguments.Contains("!!(wix.foo)"), "MSI/WiX expression escaping");
                     Check(arguments.Contains("!$$(loc.literal)") && arguments.Contains("!(literal)"), "Literal WiX expressions");
                     Check((string?)shortcut.Attribute("WorkingDirectory") == "NETWIVWORKDIR", "MSI working directory property");
+                    Check(msi.Descendants(w + "SetProperty").Any(p => (string?)p.Attribute("Id") == "NETWIVWORKDIR" && ((string?)p.Attribute("Value"))!.Contains(@"[\[]work[\]]")), "Literal directory brackets");
+                    Check(msi.Descendants(w + "Directory").Any(d => (string?)d.Attribute("Name") == "[work] $$folder" && d.Descendants(w + "CreateFolder").Any()), "Create empty working directory");
                 }
             }
             foreach (var (value, expected) in new[] { ("", "\"\""), ("a b", "\"a b\""), ("a\"b", "\"a\\\"b\""), ("a\\", "\"a\\\\\""), ("a\\\"b", "\"a\\\\\\\"b\"") })

@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+using System.Text.Json;
 using NetWiv;
 
 namespace NetWiv.Plugin.__PLUGIN_PASCAL__;
@@ -11,6 +11,9 @@ public sealed class __PLUGIN_PASCAL__Plugin : IPlugin
     public void Initialize(PluginContext context)
     {
         context.Permission(new PermissionDefinition("default", "ping"));
-        context.RegisterCommand("ping", static (_, _, _) => ValueTask.FromResult(JsonValue.From("pong")));
+        context.RegisterGeneratedCommands<__PLUGIN_PASCAL__Plugin>("ping");
     }
+
+    [Command]
+    public static JsonElement Ping() => JsonValue.From("pong");
 }

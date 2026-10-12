@@ -36,6 +36,8 @@ internal static class Program
         var builder = new Builder().UseRuntime(runtime).DefaultWindowIcon(SmokeIcon)
             .Plugin(new StrongholdPlugin())
             .Plugin(new GlobalShortcutPlugin())
+            .Plugin(new GeneratedCommandPlugin())
+            .Capability(new("generated-commands", ["generated-external:allow-status", "generated-local:allow-status", "generated-local:allow-blocked", "generated-local:deny-blocked"], Windows: ["main", "secondary"]))
             .Capability(new("runtime-identity", ["core:app:allow-tauri-version"], Windows: ["main", "secondary"]))
             .OnMenuEvent((_, value) => Console.WriteLine($"MENU {value.Id}"))
             .OnTrayIconEvent((_, value) => Console.WriteLine($"TRAY {value.Type} {value.Id}"))

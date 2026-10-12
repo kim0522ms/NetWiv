@@ -407,6 +407,8 @@ static Task PluginScaffold() => Temp(async root =>
     Equal(0, exit, error.ToString());
     var source = File.ReadAllText(Path.Combine(root, "Plugin.cs"));
     True(source.Contains("[Plugin]", StringComparison.Ordinal));
+    True(source.Contains("RegisterGeneratedCommands<SampleToolsPlugin>(\"ping\")", StringComparison.Ordinal));
+    True(source.Contains("[Command]", StringComparison.Ordinal));
     True(source.Contains("new PermissionDefinition(\"default\", \"ping\")", StringComparison.Ordinal));
     True(source.Contains("JsonValue.From(\"pong\")", StringComparison.Ordinal));
     var project = File.ReadAllText(Path.Combine(root, "NetWiv.Plugin.csproj"));

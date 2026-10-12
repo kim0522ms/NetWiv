@@ -1,5 +1,8 @@
 # Plugin configuration
 
+For `[Command]` handlers and explicit plugin registration, see
+[generated plugin commands](plugin-commands.md).
+
 Place plugin values under the exact plugin name in `netwiv.conf.json`:
 
 ```json

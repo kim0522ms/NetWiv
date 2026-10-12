@@ -54,11 +54,14 @@ error. Duplicate final registrations still fail at application build time.
 
 ## Registration and ownership
 
-- Only `[Command]` methods declared directly on a type implementing `IPlugin`
+- Only `[Command]` methods declared directly on a concrete type implementing `IPlugin`
   belong to that plugin. Ordinary classes keep the application-command path.
   Namespaces, folders and assemblies do not assign plugin ownership. Use partial
   declarations to split one plugin type across files. Inherited command methods
-  are not collected for derived plugin types.
+  are not collected for derived plugin types. Declaring a command on an abstract
+  plugin base class or plugin interface produces `DTOXGEN012`; put the command
+  on the concrete plugin that registers it. Ordinary abstract classes that do
+  not implement `IPlugin` can still declare static application commands.
 - `RegisterGeneratedCommands<TPlugin>(...)` takes local external names, after
   snake-case conversion or explicit `[Command("name")]` overrides. Do not pass
   a `plugin:` prefix or a C# method name unless it is also the external name.

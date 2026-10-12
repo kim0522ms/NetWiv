@@ -70,6 +70,11 @@ public sealed class CommandGenerator : IIncrementalGenerator
         "Plugin '{0}' requires a non-virtual, constant expression-bodied Name getter to export frontend bindings; runtime naming remains supported without GenerateFrontendBindings",
         "NetWiv.Generators", DiagnosticSeverity.Error, true);
 
+    private static readonly DiagnosticDescriptor InvalidPluginCommandOwner = new(
+        "DTOXGEN012", "Invalid plugin command owner",
+        "Command method '{0}' must be declared on a concrete plugin type; '{1}' is abstract or an interface",
+        "NetWiv.Generators", DiagnosticSeverity.Error, true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var commands = context.SyntaxProvider.ForAttributeWithMetadataName(
@@ -362,8 +367,16 @@ public sealed class CommandGenerator : IIncrementalGenerator
             return false;
         }
 
+        var isPluginCommand = method.ContainingType.AllInterfaces.Any(static type => type.ToDisplayString() == "NetWiv.IPlugin");
+        if (isPluginCommand && (method.ContainingType.TypeKind == TypeKind.Interface || method.ContainingType.IsAbstract))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                InvalidPluginCommandOwner, method.Locations.FirstOrDefault(), method.Name, method.ContainingType.Name));
+            return false;
+        }
+
         if (string.IsNullOrWhiteSpace(candidate.ExternalName) ||
-            method.ContainingType.AllInterfaces.Any(static type => type.ToDisplayString() == "NetWiv.IPlugin") &&
+            isPluginCommand &&
             (candidate.ExternalName.IndexOf(':') >= 0 || candidate.ExternalName.IndexOf('|') >= 0))
         {
             context.ReportDiagnostic(Diagnostic.Create(

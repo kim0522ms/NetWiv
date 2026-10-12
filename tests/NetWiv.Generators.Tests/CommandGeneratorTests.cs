@@ -9,6 +9,48 @@ namespace NetWiv.Generators.Tests;
 public sealed class CommandGeneratorTests
 {
     [Theory]
+    [InlineData("abstract class")]
+    [InlineData("interface")]
+    public void RejectsCommandsDeclaredOnNonConcretePluginOwners(string declaration)
+    {
+        var result = Run($$"""
+            using NetWiv;
+            public {{declaration}} PluginBase : IPlugin {
+                string IPlugin.Name => "example";
+                void IPlugin.Initialize(PluginContext context) { }
+                [Command] public static void Ping() { }
+            }
+            public sealed class ConcretePlugin : PluginBase { }
+            """);
+        var diagnostic = Assert.Single(result.GeneratorDiagnostics);
+        Assert.Equal("DTOXGEN012", diagnostic.Id);
+        Assert.Contains("PluginBase", diagnostic.GetMessage());
+        Assert.DoesNotContain(result.CompilationDiagnostics, diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain("GeneratedPluginCommandRegistry.Register", result.GeneratedSource);
+    }
+
+    [Fact]
+    public void ConcretePluginCommandsAndOrdinaryAbstractClassCommandsRemainValid()
+    {
+        var result = Run("""
+            using NetWiv;
+            public abstract class PluginBase : IPlugin {
+                public string Name => "example";
+                public abstract void Initialize(PluginContext context);
+            }
+            public sealed class ConcretePlugin : PluginBase {
+                public override void Initialize(PluginContext context) => context.RegisterGeneratedCommands<ConcretePlugin>("ping");
+                [Command] public static void Ping() { }
+            }
+            public abstract class AppCommands { [Command] public static void Ping() { } }
+            """);
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.DoesNotContain(result.CompilationDiagnostics, diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.Contains("GeneratedPluginCommandRegistry.Register<global::ConcretePlugin>(\"ping\"", result.GeneratedSource);
+        Assert.Contains("GeneratedCommandRegistry.Register(\"ping\"", result.GeneratedSource);
+    }
+
+    [Theory]
     [InlineData("plugin:other|ping")]
     [InlineData("other:ping")]
     [InlineData("other|ping")]

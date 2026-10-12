@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using NetWiv.Cli;
 
@@ -26,6 +27,45 @@ internal static class DevReloadTests
             throw new Exception("A matching live child was incorrectly reported as stopped.");
         }
         catch (TimeoutException) { }
+        var denied = new Win32Exception(5, "Access denied");
+        try
+        {
+            await RequireStopped(current, child, getStartTime: _ => throw denied);
+            throw new Exception("A live process inspection failure was swallowed.");
+        }
+        catch (Win32Exception error) when (ReferenceEquals(error, denied)) { }
+    }
+
+    internal static async Task ProcessExitRace()
+    {
+        var report = Path.Combine(Path.GetTempPath(), "netwiv-exit-race-" + Guid.NewGuid().ToString("N"));
+        var start = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
+        foreach (var argument in new[] { "--owned-process-probe", "child", report }) start.ArgumentList.Add(argument);
+        using var child = Process.Start(start)!;
+        try
+        {
+            using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            while (!File.Exists(report)) await Task.Delay(10, stop.Token);
+            var identity = new ChildRun(child.Id, child.StartTime.ToUniversalTime().Ticks);
+            using var observed = Process.GetProcessById(child.Id);
+            _ = observed.SafeHandle;
+            // Exit after lookup/handle acquisition but before the observer reads
+            // StartTime. On macOS the handle does not retain process metadata.
+            child.Kill();
+            await child.WaitForExitAsync(stop.Token);
+            await RequireStopped(observed, identity);
+            // Model the narrower race inside Process.StartTime: its liveness
+            // check succeeds, then the OS metadata lookup reports ESRCH (3).
+            await RequireStopped(observed, identity,
+                getStartTime: _ => throw new Win32Exception(3, "Process metadata is gone"));
+            await RequireStopped(identity);
+        }
+        finally
+        {
+            if (!child.HasExited) child.Kill();
+            await child.WaitForExitAsync();
+            File.Delete(report);
+        }
     }
 
     internal static async Task TransientFiles()
@@ -267,18 +307,26 @@ internal static class DevReloadTests
         try
         {
             using var process = Process.GetProcessById(child.Pid);
-            try
-            {
-                // Pin this process instance before inspecting its creation time.
-                // Reopening an old PID alone can select an unrelated Windows process.
-                _ = process.SafeHandle;
-                if (process.StartTime.ToUniversalTime().Ticks != child.StartTimeTicks) return;
-            }
-            catch (InvalidOperationException) when (process.HasExited) { return; }
-            using var timeout = new CancellationTokenSource(wait ?? TimeSpan.FromSeconds(5));
-            try { await process.WaitForExitAsync(timeout.Token); }
-            catch (OperationCanceledException) { throw new TimeoutException($"Development child {child.Pid} survived restart/cancellation."); }
+            await RequireStopped(process, child, wait);
         }
         catch (ArgumentException) { }
+    }
+
+    private static async Task RequireStopped(Process process, ChildRun child, TimeSpan? wait = null,
+        Func<Process, DateTime>? getStartTime = null)
+    {
+        try
+        {
+            // Pin the Windows process instance before inspecting its creation
+            // time. Unix metadata can still disappear while StartTime is read.
+            _ = process.SafeHandle;
+            var startTime = getStartTime is null ? process.StartTime : getStartTime(process);
+            if (startTime.ToUniversalTime().Ticks != child.StartTimeTicks) return;
+        }
+        catch (InvalidOperationException) when (process.HasExited) { return; }
+        catch (Win32Exception) when (process.HasExited) { return; }
+        using var timeout = new CancellationTokenSource(wait ?? TimeSpan.FromSeconds(5));
+        try { await process.WaitForExitAsync(timeout.Token); }
+        catch (OperationCanceledException) { throw new TimeoutException($"Development child {child.Pid} survived restart/cancellation."); }
     }
 }

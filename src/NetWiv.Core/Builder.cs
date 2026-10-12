@@ -38,7 +38,7 @@ public sealed class Builder
 
     public Builder UseRuntime(IDesktopRuntime runtime) { _runtime = runtime; return this; }
     /// <summary>
-    /// Supplies the root service provider for <c>[FromServices]</c> command parameters.
+    /// Supplies the root service provider for instance command receivers and <c>[FromServices]</c> command parameters.
     /// Each command invocation runs in its own scope when the provider supports scopes.
     /// The caller keeps ownership of the provider and disposes it after the app.
     /// </summary>

@@ -14,7 +14,7 @@ operation has passed conformance testing.
 | `AppHandle` | `AppHandle` | Provides application operations to commands and callbacks. Native UI work is dispatched to its owning event loop. |
 | `State<T>` | `State<T>` | Retrieves application-managed state; application code owns synchronization of mutable state. |
 | `Window`, `Webview`, `WebviewWindow` | Same names | Window and WebView labels occupy separate namespaces. A bare window does not imply a WebView. |
-| `#[command]` | `[Command]` and `NetWiv.Generators` | Generates static invocation and serialization roots for NativeAOT. |
+| `#[command]` | `[Command]` and `NetWiv.Generators` | Generates direct static or DI-resolved instance invocation and serialization roots for NativeAOT. |
 | `generate_handler!` | `InvokeHandler` | Selects generated command names explicitly. |
 | Rust future | `Task` / `ValueTask` | An asynchronous C# operation does not move the UI event loop off its owning thread. |
 | `Channel<T>` / resource ID | `Channel`, `Resource` subclasses | Callbacks are bound to a document generation; resource handles have explicit close/dispose lifetimes. |

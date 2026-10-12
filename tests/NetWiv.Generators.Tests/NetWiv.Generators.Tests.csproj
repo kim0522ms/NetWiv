@@ -15,4 +15,7 @@
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="true" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Shared/InstanceCommandScenarios.cs" Link="InstanceCommandScenarios.cs" />
+  </ItemGroup>
 </Project>

@@ -48,4 +48,7 @@
     <EmbeddedResource Include="fixtures/window-defaults.json" LogicalName="window-defaults.json" />
     <EmbeddedResource Include="fixtures/no-windows.json" LogicalName="no-windows.json" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Shared/InstanceCommandScenarios.cs" Link="InstanceCommandScenarios.cs" />
+  </ItemGroup>
 </Project>

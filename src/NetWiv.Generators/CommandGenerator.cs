@@ -22,7 +22,7 @@ public sealed class CommandGenerator : IIncrementalGenerator
 
     private static readonly DiagnosticDescriptor InvalidMethod = new(
         "DTOXGEN001", "Invalid command method",
-        "Command method '{0}' must be static, non-generic, non-async-void, and accessible from generated code",
+        "Command method '{0}' must be non-generic, non-async-void, accessible from generated code, and static or declared on a concrete class",
         "NetWiv.Generators", DiagnosticSeverity.Error, true);
 
     private static readonly DiagnosticDescriptor InvalidParameter = new(
@@ -445,7 +445,8 @@ public sealed class CommandGenerator : IIncrementalGenerator
 
     private static bool IsCallable(IMethodSymbol method)
     {
-        if (!method.IsStatic || method.IsAbstract || method.IsGenericMethod || method.MethodKind != MethodKind.Ordinary ||
+        if (method.IsAbstract || method.IsGenericMethod || method.MethodKind != MethodKind.Ordinary ||
+            (!method.IsStatic && (method.ContainingType.TypeKind != TypeKind.Class || method.ContainingType.IsAbstract)) ||
             method.DeclaredAccessibility is Accessibility.Private or Accessibility.Protected or Accessibility.ProtectedAndInternal)
         {
             return false;
@@ -821,8 +822,17 @@ public sealed class CommandGenerator : IIncrementalGenerator
         {
             builder.Append("await ");
         }
-        builder.Append(command.Method.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
-            .Append('.').Append(command.Method.Name).Append('(');
+        var declaringType = command.Method.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        if (command.Method.IsStatic)
+        {
+            builder.Append(declaringType);
+        }
+        else
+        {
+            builder.Append("global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<")
+                .Append(declaringType).Append(">(context.Services)");
+        }
+        builder.Append('.').Append(command.Method.Name).Append('(');
         for (var parameterIndex = 0; parameterIndex < command.Parameters.Length; parameterIndex++)
         {
             if (parameterIndex != 0)

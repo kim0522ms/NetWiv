@@ -4,9 +4,16 @@ The opt-in frontend JS/TypeScript exporter is described in
 [the frontend generator contract](../../docs/frontend-generator.md). It is under
 implementation and is not part of the earlier beta.1 package snapshot.
 
-`NetWiv.Generators` converts static methods marked with `NetWiv.CommandAttribute`
+`NetWiv.Generators` converts static and DI-resolved instance methods marked with `NetWiv.CommandAttribute`
 into direct `CommandHandler` delegates. It emits no reflection, runtime method
 lookup, or runtime-generated code.
+
+Instance receivers are resolved by their declaring class from `context.Services`.
+Register that class with the desired DI lifetime; no automatic construction or
+receiver caching occurs. Instance owners must be concrete, non-generic classes.
+The existing invocation scope owns scoped/transient disposable receivers and
+awaits cleanup after completion or failure; singleton ownership remains with DI.
+See [instance commands and constructor injection](../../docs/hosting.md#instance-commands-and-constructor-injection).
 
 The default external name is deterministic snake case. For example,
 `GetUser` becomes `get_user` and `GetHTTPServerURL` becomes
@@ -54,7 +61,7 @@ results use Tauri's JSON array-of-integers representation instead of the
 default `System.Text.Json` base64 string representation. Byte arrays nested in
 DTOs require an application JSON converter that uses that same wire shape.
 
-Static `[Command]` methods declared on an `IPlugin` type are scoped to that
+`[Command]` methods declared on an `IPlugin` type are scoped to that
 plugin instead of the application registry. Select them with
 `context.RegisterGeneratedCommands<MyPlugin>("local_name")` in `Initialize`.
 Different plugin types can reuse a local name; the host prefixes each selected

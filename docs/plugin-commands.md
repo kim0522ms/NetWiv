@@ -39,7 +39,14 @@ the corresponding `JsonSerializable` types in that project, just as for
 [application commands](../src/NetWiv.Generators/README.md). `JsonElement` in
 this example needs no application serializer context. Async returns, argument
 validation, state/service injection and cancellation use the same generated
-handlers as application commands. Command methods remain static.
+handlers as application commands. Both static and DI-resolved instance methods
+are supported. For an instance method, register the concrete plugin class in DI;
+the receiver is resolved from the invocation scope using that registration's
+lifetime. This is separate from the lifecycle object passed to `Builder.Plugin`:
+that object is not automatically registered in DI, and `Initialize`/`Setup` are
+not called on each DI receiver. Do not rely on lifecycle-initialized fields in a
+scoped receiver; inject its dependencies through its constructor. See
+[instance command lifetimes](hosting.md#instance-commands-and-constructor-injection).
 
 ```ts
 import { invoke } from '@tauri-apps/api/core';

@@ -98,6 +98,64 @@ extension methods written for that interface work unchanged.
 
 ## Commands and services
 
+### Instance commands and constructor injection
+
+`[Command]` supports both static methods and instance methods on accessible,
+non-abstract, non-generic classes. Register the **declaring class** in DI and
+select the command explicitly, just as for a static command:
+
+```csharp
+var builder = NetWivApplication.CreateBuilder();
+builder.Services.AddScoped<EquipmentService>();
+builder.Services.AddScoped<EquipmentCommands>();
+builder.Desktop.InvokeHandler("equipment_status");
+// Configure the desktop runtime and windows, then Build/Run as usual.
+
+public sealed class EquipmentCommands(EquipmentService equipment)
+{
+    [Command("equipment_status")]
+    public Task<string> GetStatus(CancellationToken cancellationToken)
+        => equipment.GetStatusAsync(cancellationToken);
+}
+```
+
+`EquipmentService` is your application's service. Typed arguments/results still
+need the application's `CommandJsonContext` and JSON serialization metadata.
+The generated handler calls
+`context.Services.GetRequiredService<EquipmentCommands>().GetStatus(...)`.
+It does not construct the receiver, scan for constructors, or cache it. Registering
+only an interface does not register the declaring class; use an explicit factory
+registration if needed. Missing registrations or constructor failures fail that
+invocation. `[FromServices]` and `[FromKeyedServices]` method parameters continue to
+work and resolve from the same scope as the receiver's constructor dependencies.
+
+The service registration controls receiver ownership and lifetime:
+
+| Registration | Behavior |
+| --- | --- |
+| `AddScoped<EquipmentCommands>()` | One receiver per invocation scope; separate invocations, including concurrent ones, use separate receivers. |
+| `AddTransient<EquipmentCommands>()` | One receiver per resolution; disposable receivers resolved by the handler are tracked by that invocation scope. |
+| `AddSingleton<EquipmentCommands>()` | One receiver per root provider; it can receive concurrent calls and must be thread-safe. Container-created singletons are disposed with the provider, not after a command. |
+
+The scope stays alive through awaited `Task`/`ValueTask` completion and result
+serialization. It is asynchronously disposed before the invocation completes,
+including exceptions and cancellation. Cancellation is cooperative: a handler
+that ignores its token keeps running; cancellation does not immediately dispose
+objects it is still using. Follow normal DI rules: do not inject scoped services
+into singletons, and do not retain scoped objects for background work beyond the
+invocation. A preconstructed singleton registered with `AddSingleton(instance)`
+remains caller-owned under Microsoft DI rules.
+
+NativeAOT remains supported: the generator emits a typed service resolution and
+a direct method call, without dynamic code or reflection-based method discovery.
+Use AOT-compatible dependencies and typed registrations such as `AddScoped<T>()`
+or explicit factories; this does not make arbitrary third-party services AOT-safe.
+Static commands and their registration syntax are unchanged. Instance methods on
+structs, interfaces or abstract classes are rejected at compile time. Inherited
+methods bind to their declaring class, not automatically to every derived class.
+
+### Method parameter injection
+
 - `[FromServices]` resolves a required service. A nullable parameter such as
   `[FromServices] IClock? clock` resolves to null when the service is not
   registered.
@@ -223,12 +281,14 @@ then to a no-op factory.
 
 - Plugins are still registered on `builder.Desktop` and are not resolved from
   the container.
-- Commands remain static methods; constructor injection into command classes is
-  not supported.
+- Instance command receivers must be registered in DI by their declaring class.
+  Plugin registration does not automatically register a command receiver in DI.
 - `netwiv new` templates do not use the host yet.
 
 `tests/NetWiv.Generators.Tests` covers generated service resolution, keys,
-optional services, per-invocation scopes and binding exclusion.
+optional services, instance command lifetimes and binding exclusion. The shared
+instance-command scenarios also run in the Core NativeAOT executable, including
+guest IPC, concurrent calls, constructor failure, exceptions and cancellation.
 `tests/NetWiv.Core.Tests` covers logging, host wiring, options binding,
 `StopApplication` and restart ordering with a real relaunched process.
 

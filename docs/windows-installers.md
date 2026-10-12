@@ -40,7 +40,7 @@ editors. Do not add these keys to the generated upstream compatibility schema.
 | `allowDirectorySelection` | `false` | Show the NSIS directory page / MSI install-directory wizard. |
 | `shortcuts.name` | `productName` | Display name for both shortcuts, without `.lnk`. |
 | `shortcuts.arguments` | `[]` | Literal argument array; supports spaces, Unicode, quotes, empty strings and trailing backslashes. No shell expansion. |
-| `shortcuts.workingDirectory` | `"."` | Directory relative to the installation root. Created during installation if absent. |
+| `shortcuts.workingDirectory` | `"."` | Directory relative to the installation root, at most 1000 UTF-16 code units. Created during installation if absent. |
 | `shortcuts.desktop` | NSIS: `true`; MSI: `false` | Create a desktop shortcut. Omit to retain the format's previous default. |
 | `shortcuts.startMenu` | `true` | Create a shortcut in the product's Start menu folder. |
 
@@ -76,9 +76,9 @@ Installer elevation does **not** change the installed application's manifest or
 make the application request administrator rights. Supply an application
 manifest through .NET/MSBuild when the app itself needs elevation.
 
-Use a dedicated app directory, never a shared data directory. NSIS removes its
-installation tree on uninstall; MSI removes its installed files and empty
-folders. Neither removes application data outside that directory.
+Use a dedicated app directory to avoid file-name collisions. Both installers
+remove package-owned files and empty folders on uninstall; unrelated files
+inside the selected directory and application data outside it are preserved.
 
 Subsequent installations of the same format, scope and identity recover the
 stored installation directory. MSI versions predating this feature did not
@@ -113,7 +113,7 @@ Cross-platform CLI tests validate config failures, argument quoting and both
 installer renderers. `scripts/test-windows-installers.ps1` runs on a disposable,
 elevated Windows CI runner: real NSIS/WiX compilation, both scopes, rejection of
 missing/user-only prerequisites, actual shortcut launches recording arguments
-and working directory, custom-path upgrade, and uninstall preserving external
+and working directory, custom-path upgrade, and uninstall preserving unrelated and external
 application data. It uses a small NativeAOT probe; WebView GUI smoke is a separate
 CI gate. Interactive directory browsing and a standard user's UAC consent flow
 still require manual acceptance; silent elevated CI does not prove those flows.
@@ -122,3 +122,9 @@ still require manual acceptance; silent elevated CI does not prove those flows.
 
 TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
 NetWiv is an independent project and is not affiliated with or endorsed by it.
+
+Windows Shell expands `%NAME%` in shortcut arguments. To preserve the literal
+argument contract, configurations containing more than one percent sign across
+all arguments are rejected; a single percent sign (for example `50%`) is allowed.
+
+NSIS also rejects installation when the expanded installation-root plus working-directory path exceeds 1000 UTF-16 code units, before copying files.

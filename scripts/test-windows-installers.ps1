@@ -67,7 +67,7 @@ function Remove-Installation([string]$package, [string]$format, [string]$directo
         # _?= runs in place so waiting observes the actual uninstaller, not its temp copy launcher.
         Execute (Join-Path $directory 'uninstall.exe') "/S _?=$directory"
         Remove-Item (Join-Path $directory 'uninstall.exe') -Force -ErrorAction SilentlyContinue
-        if (Test-Path $directory) { Remove-Item $directory -ErrorAction SilentlyContinue }
+        if ((Test-Path $directory) -and -not (Get-ChildItem -LiteralPath $directory -Force)) { Remove-Item -LiteralPath $directory }
     } else {
         Execute 'msiexec.exe' "/x `"$package`" /qn /norestart /l*v `"$log`"" @(0, 3010)
     }
@@ -88,13 +88,16 @@ try {
             $report = Join-Path $root "$scope-$format-launch.json"
             $sentinel = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) "$product-user-data.txt"
             Set-Content $sentinel 'keep application data'
+            New-Item -ItemType Directory -Path $install -Force | Out-Null
+            $insideSentinel = Join-Path $install 'unrelated-user-file.txt'
+            Set-Content $insideSentinel 'keep unrelated files'
             $desktop = [Environment]::GetFolderPath($(if ($scope -eq 'perMachine') { 'CommonDesktopDirectory' } else { 'DesktopDirectory' }))
             $programs = [Environment]::GetFolderPath($(if ($scope -eq 'perMachine') { 'CommonPrograms' } else { 'Programs' }))
             $shortcutName = "$product 작업 & 도구"
             $desktopLink = Join-Path $desktop "$shortcutName.lnk"
             $menuLink = Join-Path $programs "$product/$shortcutName.lnk"
             $workingDirectory = 'data\[work] $folder'
-            $expected = @('space value', '한글', 'a"b', '', 'C:\trailing\', 'a\"b', '$INSTDIR', '[INSTALLDIR]', '$(var.foo)', '!(wix.foo)', '<&>', '!(literal)', '$(loc.literal)', '$(loc.x)', '!(loc.)', '${NSISDIR}', '$%PATH%', '$\n', ('long-' + ('x' * 280)))
+            $expected = @('space value', '한글', 'a"b', '', 'C:\trailing\', 'a\"b', '$INSTDIR', '[INSTALLDIR]', '$(var.foo)', '!(wix.foo)', '<&>', '!(literal)', '$(loc.literal)', '$(loc.x)', '!(loc.)', '${NSISDIR}', '50%', '$\n', ('long-' + ('x' * 280)))
             $config = @{
                 productName = $product; identifier = $identifier; version = '1.0.0'
                 build = @{ dotnetProject = 'InstallerProbe.csproj' }
@@ -177,10 +180,12 @@ try {
                 Wait-Until { -not (Test-Path (Join-Path $install 'InstallerProbe.exe')) } 'Uninstall left the application.'
                 Assert (-not (Test-Path $desktopLink) -and -not (Test-Path $menuLink)) 'Uninstall left shortcuts.'
                 Assert ((Get-Content $sentinel) -eq 'keep application data') 'Uninstall removed external application data.'
+                Assert ((Get-Content -LiteralPath $insideSentinel) -eq 'keep unrelated files') 'Uninstall removed unrelated files in the chosen directory.'
                 Write-Output "PASS $scope ${format}: prerequisite rejection, install, shortcut execution, upgrade path, uninstall"
             } finally {
                 if ($installed -and $installedPackage) { Remove-Installation $installedPackage $format $install (Join-Path $root "$product-cleanup.log") }
                 Remove-Item $sentinel -ErrorAction SilentlyContinue
+                Remove-Item -LiteralPath $install -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
     }

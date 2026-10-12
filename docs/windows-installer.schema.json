@@ -13,7 +13,7 @@
       "properties": {
         "name": { "type": "string", "minLength": 1, "maxLength": 200 },
         "arguments": { "type": "array", "items": { "type": "string", "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$" }, "default": [] },
-        "workingDirectory": { "type": "string", "minLength": 1, "default": "." },
+        "workingDirectory": { "type": "string", "minLength": 1, "maxLength": 1000, "default": "." },
         "desktop": { "type": "boolean", "description": "Defaults to true for NSIS and false for MSI." },
         "startMenu": { "type": "boolean", "default": true }
       }

@@ -24,6 +24,7 @@ public sealed record WindowsInstallerOptions(
         var name = Text(shortcuts, "name");
         if (name is not null) ValidateFileName(name, "shortcuts.name");
         var workingDirectory = Text(shortcuts, "workingDirectory") ?? ".";
+        if (workingDirectory.Length > 1000) throw Error("shortcuts.workingDirectory exceeds 1000 characters");
         if (workingDirectory != ".")
             foreach (var segment in workingDirectory.Replace('/', '\\').Split('\\'))
                 ValidateFileName(segment, "shortcuts.workingDirectory (a relative directory inside the payload)");
@@ -42,6 +43,10 @@ public sealed record WindowsInstallerOptions(
             name, arguments, workingDirectory.Replace('/', '\\'), Flag(shortcuts, "desktop"), Flag(shortcuts, "startMenu") ?? true);
         // NSIS standard builds have 1024-character strings. Fail rather than silently truncate a launch command.
         if (result.CommandLine.Length > 1000) throw Error("shortcuts.arguments exceeds the supported 1000-character Windows command line");
+        // Windows Shell expands paired percent signs when executing .lnk arguments.
+        // Reject them instead of promising literal argv that the Shell cannot preserve.
+        if (result.CommandLine.Count(c => c == '%') > 1)
+            throw Error("shortcuts.arguments cannot contain paired percent signs because Windows Shell expands environment variables");
         return result;
     }
 

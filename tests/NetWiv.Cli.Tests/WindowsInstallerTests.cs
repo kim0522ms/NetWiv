@@ -13,6 +13,8 @@ internal static class WindowsInstallerTests
         {
             foreach (var invalid in new[]
             {
+                new JsonObject { ["shortcuts"] = new JsonObject { ["workingDirectory"] = string.Join("/", Enumerable.Repeat(new string('x', 100), 11)) } }.ToJsonString(),
+                "{\"shortcuts\":{\"arguments\":[\"%PATH%\"]}}", "{\"shortcuts\":{\"arguments\":[\"50%\",\"25%\"]}}",
                 "null", "[]", "true", "{\"scope\":null}", "{\"scope\":7}", "{\"scope\":\"both\"}",
                 "{\"allowDirectorySelection\":\"yes\"}", "{\"unknown\":true}", "{\"shortcuts\":null}",
                 "{\"shortcuts\":{\"other\":1}}", "{\"shortcuts\":{\"desktop\":1}}", "{\"shortcuts\":{\"startMenu\":null}}",
@@ -87,6 +89,8 @@ internal static class WindowsInstallerTests
             XNamespace w = "http://schemas.microsoft.com/wix/2006/wi";
             Check(nsis.Contains("InstallDir \"$LOCALAPPDATA\\Probe\"") && nsis.Contains("RequestExecutionLevel user"), "NSIS defaults");
             Check(!nsis.Contains("Page directory") && nsis.Contains("GetCommandLineW") && nsis.Contains("${GetOptions} $1 \"/D=\" $2"), "NSIS restore without changing UI default");
+            Check(!nsis.Contains("RMDir /r") && nsis.Contains("Delete \"$INSTDIR\\data\\sample.txt\"") && nsis.Contains("RMDir \"$INSTDIR\\data\""), "Uninstall removes only owned files and empty directories");
+            Check(nsis.Contains("IntCmp $0 1000 path_length_ok path_length_ok"), "Reject runtime path overflow before expansion");
             Check(nsis.Split("CreateShortcut").Length == 3, "NSIS both shortcuts by default");
             Check((string?)msi.Descendants(w + "Package").Single().Attribute("InstallScope") == "perUser", "MSI scope default");
             Check(msi.Descendants(w + "Shortcut").Count() == 1 && !msi.Descendants(w + "UIRef").Any(), "MSI default shortcuts/UI");
@@ -103,7 +107,7 @@ internal static class WindowsInstallerTests
                 {
                     options["shortcuts"]!["name"] = "작업 & 도구";
                     options["shortcuts"]!["workingDirectory"] = "data/[work] $folder";
-                    options["shortcuts"]!["arguments"] = new JsonArray("space value", "한글", "a\"b", "", "C:\\end\\", "$INSTDIR", "[INSTALLDIR]", "$(var.foo)", "!(wix.foo)", "$(loc.literal)", "!(literal)", "$(loc.x)", "!(loc.)", "${NSISDIR}", "$%PATH%", "$\\n", new string('x', 280));
+                    options["shortcuts"]!["arguments"] = new JsonArray("space value", "한글", "a\"b", "", "C:\\end\\", "$INSTDIR", "[INSTALLDIR]", "$(var.foo)", "!(wix.foo)", "$(loc.literal)", "!(literal)", "$(loc.x)", "!(loc.)", "${NSISDIR}", "50%", "$\\n", new string('x', 280));
                 }
                 var config = Config(root, options.ToJsonString());
                 nsis = NativeBundler.RenderNsis(config, root, "Probe.exe", "out.exe");

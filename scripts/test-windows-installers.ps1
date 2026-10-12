@@ -79,7 +79,6 @@ $userRuntime = $userBase.CreateSubKey($runtimeSubkey)
 $machineRuntime = $machineBase.CreateSubKey($runtimeSubkey)
 $oldUser = $userRuntime.GetValue('pv')
 $oldMachine = $machineRuntime.GetValue('pv')
-$shell = New-Object -ComObject WScript.Shell
 try {
     foreach ($scope in @('currentUser', 'perMachine')) {
         foreach ($format in @('nsis', 'msi')) {
@@ -138,12 +137,20 @@ try {
                     Assert (Test-Path (Join-Path $install 'InstallerProbe.exe')) 'Upgrade lost custom installation directory.'
                     foreach ($link in @($desktopLink, $menuLink)) {
                         Assert (Test-Path $link) "Missing shortcut: $link"
-                        $shortcut = $shell.CreateShortcut($link)
-                        Assert ([IO.Path]::GetFullPath($shortcut.WorkingDirectory).TrimEnd('\') -eq (Join-Path $install $workingDirectory)) 'Wrong shortcut working directory.'
+                        $kind = if ($link -eq $desktopLink) { 'desktop' } else { 'menu' }
+                        Copy-Item -LiteralPath $link -Destination (Join-Path $root "$product-$version-$kind.lnk")
                         Remove-Item $report -ErrorAction SilentlyContinue
                         # Execute the actual .lnk, not a reconstructed executable command line.
-                        $exitCode = $shell.Run(('"' + $link + '"'), 0, $true)
-                        Assert ($exitCode -eq 0) "Shortcut failed: $exitCode"
+                        $launch = [Diagnostics.ProcessStartInfo]::new()
+                        $launch.FileName = $link
+                        $launch.UseShellExecute = $true
+                        $launch.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden
+                        $launched = [Diagnostics.Process]::Start($launch)
+                        if ($null -ne $launched) {
+                            $launched.WaitForExit()
+                            Assert ($launched.ExitCode -eq 0) "Shortcut failed: $($launched.ExitCode)"
+                            $launched.Dispose()
+                        }
                         Wait-Until { Test-Path $report } 'Shortcut did not launch the probe.'
                         $actual = Get-Content $report -Raw | ConvertFrom-Json
                         Assert ($actual.cwd -eq (Join-Path $install $workingDirectory)) 'Launched process has wrong working directory.'

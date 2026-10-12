@@ -103,7 +103,7 @@ internal static class WindowsInstallerTests
                 {
                     options["shortcuts"]!["name"] = "작업 & 도구";
                     options["shortcuts"]!["workingDirectory"] = "data/[work] $folder";
-                    options["shortcuts"]!["arguments"] = new JsonArray("space value", "한글", "a\"b", "", "C:\\end\\", "$INSTDIR", "[INSTALLDIR]", "$(var.foo)", "!(wix.foo)", "$(loc.literal)", "!(literal)", "${NSISDIR}", "$%PATH%", "$\\n", new string('x', 280));
+                    options["shortcuts"]!["arguments"] = new JsonArray("space value", "한글", "a\"b", "", "C:\\end\\", "$INSTDIR", "[INSTALLDIR]", "$(var.foo)", "!(wix.foo)", "$(loc.literal)", "!(literal)", "$(loc.x)", "!(loc.)", "${NSISDIR}", "$%PATH%", "$\\n", new string('x', 280));
                 }
                 var config = Config(root, options.ToJsonString());
                 nsis = NativeBundler.RenderNsis(config, root, "Probe.exe", "out.exe");
@@ -130,6 +130,7 @@ internal static class WindowsInstallerTests
                     var arguments = (string)msi.Descendants(w + "Property").Single(p => (string?)p.Attribute("Id") == "NetWivShortcutArguments").Attribute("Value")!;
                     Check(arguments.Contains("[INSTALLDIR]") && arguments.Contains("$$(var.foo)") && arguments.Contains("!!(wix.foo)"), "MSI/WiX expression escaping");
                     Check(arguments.Contains("!$$(loc.literal)") && arguments.Contains("!(literal)"), "Literal WiX expressions");
+                    Check(arguments.Contains("$$(loc.x)") && !arguments.Contains("!$$(loc.x)") && !arguments.Contains("!!(loc.)"), "Non-expressions keep their literal prefix");
                     Check((string?)shortcut.Attribute("WorkingDirectory") == "NETWIVWORKDIR", "MSI working directory property");
                     Check(msi.Descendants(w + "SetProperty").Any(p => (string?)p.Attribute("Id") == "NETWIVWORKDIR" && ((string?)p.Attribute("Value"))!.Contains(@"[\[]work[\]]")), "Literal directory brackets");
                     Check(msi.Descendants(w + "Directory").Any(d => (string?)d.Attribute("Name") == "[work] $$folder" && d.Descendants(w + "CreateFolder").Any()), "Create empty working directory");

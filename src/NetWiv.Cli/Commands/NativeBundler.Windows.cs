@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using NetWiv.Build.Configuration;
 using NetWiv.Build.Execution;
 using NetWiv.Build.Packaging;
@@ -209,12 +210,11 @@ SectionEnd
 
     // MSI formatted fields interpret brackets; WiX has a separate preprocessing/linking language.
     private static string MsiLiteral(string value) => string.Concat(value.Select(c => c switch { '[' => @"[\[]", ']' => @"[\]]", _ => c.ToString() }));
-    private static string WixXml(string value)
-    {
-        value = value.Replace("$", "$$", StringComparison.Ordinal);
-        foreach (var prefix in new[] { "loc", "wix", "bind", "bindpath" })
-            value = value.Replace("!(" + prefix + ".", "!!(" + prefix + ".", StringComparison.Ordinal)
-                .Replace("$$(" + prefix + ".", "!$$(" + prefix + ".", StringComparison.Ordinal);
-        return Xml(value);
-    }
+    // Only escape expressions recognized by WiX v3's linker. Prefix-only matching would
+    // add a visible bang to ordinary text such as !(loc.) or $(loc.x).
+    [GeneratedRegex(@"[!$]\((?:loc|wix|bind|bindpath)\.[_A-Za-z][0-9A-Za-z_]+(?:\.[_A-Za-z][0-9A-Za-z_.]*)?(?:=.+?)?\)", RegexOptions.Singleline)]
+    private static partial Regex WixLinkerExpression();
+
+    private static string WixXml(string value) => Xml(WixLinkerExpression().Replace(value, match => "!" + match.Value)
+        .Replace("$", "$$", StringComparison.Ordinal));
 }

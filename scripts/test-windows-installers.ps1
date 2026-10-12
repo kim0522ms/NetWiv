@@ -95,7 +95,7 @@ try {
             $desktopLink = Join-Path $desktop "$shortcutName.lnk"
             $menuLink = Join-Path $programs "$product/$shortcutName.lnk"
             $workingDirectory = 'data\[work] $folder'
-            $expected = @('space value', '한글', 'a"b', '', 'C:\trailing\', 'a\"b', '$INSTDIR', '[INSTALLDIR]', '$(var.foo)', '!(wix.foo)', '<&>', '!(literal)', '$(loc.literal)', '${NSISDIR}', '$%PATH%', '$\n', ('long-' + ('x' * 280)))
+            $expected = @('space value', '한글', 'a"b', '', 'C:\trailing\', 'a\"b', '$INSTDIR', '[INSTALLDIR]', '$(var.foo)', '!(wix.foo)', '<&>', '!(literal)', '$(loc.literal)', '$(loc.x)', '!(loc.)', '${NSISDIR}', '$%PATH%', '$\n', ('long-' + ('x' * 280)))
             $config = @{
                 productName = $product; identifier = $identifier; version = '1.0.0'
                 build = @{ dotnetProject = 'InstallerProbe.csproj' }
@@ -108,6 +108,7 @@ try {
             if ($scope -eq 'currentUser') { $config.bundle.windows.installer.Remove('scope') }
             $package = $null
             $installed = $false
+            $installedPackage = $null
             try {
                 foreach ($version in @('1.0.0', '1.0.1')) {
                     $config.version = $version
@@ -117,7 +118,7 @@ try {
                         & dotnet $cli bundle -t win-x64 -b $format --no-sign
                         if ($LASTEXITCODE -ne 0) { throw "Bundle failed: $scope/$format/$version" }
                     } finally { Pop-Location }
-                    $pattern = if ($format -eq 'nsis') { "*_${version}_x64-setup.exe" } else { "*_${version}_x64_en-US.msi" }
+                    $pattern = if ($format -eq 'nsis') { "${product}_${version}_x64-setup.exe" } else { "${product}_${version}_x64_en-US.msi" }
                     $package = (Get-ChildItem (Join-Path $payload "bundle/$format") -Filter $pattern).FullName
                     if ($version -eq '1.0.0') {
                         # No runtime must fail. A user-only runtime must still fail for a machine install.
@@ -133,6 +134,7 @@ try {
                     }
                     Install $package $format $(if ($version -eq '1.0.0') { $install } else { '' }) (Join-Path $root "$product-$version-install.log")
                     $installed = $true
+                    $installedPackage = $package
                     Assert (Test-Path (Join-Path $install 'InstallerProbe.exe')) 'Upgrade lost custom installation directory.'
                     foreach ($link in @($desktopLink, $menuLink)) {
                         Assert (Test-Path $link) "Missing shortcut: $link"
@@ -168,9 +170,9 @@ try {
                 Wait-Until { -not (Test-Path (Join-Path $install 'InstallerProbe.exe')) } 'Uninstall left the application.'
                 Assert (-not (Test-Path $desktopLink) -and -not (Test-Path $menuLink)) 'Uninstall left shortcuts.'
                 Assert ((Get-Content $sentinel) -eq 'keep application data') 'Uninstall removed external application data.'
-                Write-Output "PASS $scope $format: prerequisite rejection, install, shortcut execution, upgrade path, uninstall"
+                Write-Output "PASS $scope ${format}: prerequisite rejection, install, shortcut execution, upgrade path, uninstall"
             } finally {
-                if ($installed -and $package) { Remove-Installation $package $format $install (Join-Path $root "$product-cleanup.log") }
+                if ($installed -and $installedPackage) { Remove-Installation $installedPackage $format $install (Join-Path $root "$product-cleanup.log") }
                 Remove-Item $sentinel -ErrorAction SilentlyContinue
             }
         }

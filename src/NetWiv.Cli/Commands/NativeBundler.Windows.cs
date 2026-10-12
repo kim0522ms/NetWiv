@@ -182,7 +182,7 @@ SectionEnd
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product Id="*" Name="{WixXml(product)}" Language="1033" Codepage="65001" Version="{MsiVersion.Resolve(Version(config), config.String("bundle", "windows", "wix", "version"))}" Manufacturer="{WixXml(Publisher(config))}" UpgradeCode="{upgradeCode}">
-    <Package InstallerVersion="500" Compressed="yes" SummaryCodepage="65001" InstallScope="{(options.PerMachine ? "perMachine" : "perUser")}" />
+    <Package InstallerVersion="500" Compressed="yes" SummaryCodepage="1252" InstallScope="{(options.PerMachine ? "perMachine" : "perUser")}" />
     <MajorUpgrade AllowDowngrades="yes" />
     <MediaTemplate EmbedCab="yes" />
     <Condition Message="This package has a fixed {(options.PerMachine ? "per-machine" : "current-user")} installation scope.">Installed OR {(options.PerMachine ? "ALLUSERS = 1" : "NOT ALLUSERS")}</Condition>

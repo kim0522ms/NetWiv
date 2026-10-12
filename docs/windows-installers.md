@@ -55,6 +55,12 @@ independently of Windows argument quoting. Do not put shell syntax or installer
 variables in the array expecting expansion: `$INSTDIR` and `[INSTALLDIR]`, for
 example, are passed literally to the app.
 
+Windows Shell expands `%NAME%` in shortcut arguments. To preserve the literal
+argument contract, configurations containing more than one percent sign across
+all arguments are rejected; a single percent sign (for example `50%`) is allowed.
+
+NSIS also rejects installation when the expanded installation-root plus working-directory path exceeds 1000 UTF-16 code units, before copying files.
+
 Unknown keys, nulls, wrong types, unknown scopes, and launch settings with all
 shortcuts disabled fail before build hooks, publishing or packaging tools run.
 For MSI, omitting `desktop` while setting `startMenu: false` also disables all
@@ -122,9 +128,3 @@ still require manual acceptance; silent elevated CI does not prove those flows.
 
 TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
 NetWiv is an independent project and is not affiliated with or endorsed by it.
-
-Windows Shell expands `%NAME%` in shortcut arguments. To preserve the literal
-argument contract, configurations containing more than one percent sign across
-all arguments are rejected; a single percent sign (for example `50%`) is allowed.
-
-NSIS also rejects installation when the expanded installation-root plus working-directory path exceeds 1000 UTF-16 code units, before copying files.

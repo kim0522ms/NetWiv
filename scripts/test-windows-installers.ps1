@@ -79,6 +79,7 @@ $userRuntime = $userBase.CreateSubKey($runtimeSubkey)
 $machineRuntime = $machineBase.CreateSubKey($runtimeSubkey)
 $oldUser = $userRuntime.GetValue('pv')
 $oldMachine = $machineRuntime.GetValue('pv')
+$failures = [Collections.Generic.List[string]]::new()
 try {
     foreach ($scope in @('currentUser', 'perMachine')) {
         foreach ($format in @('nsis', 'msi')) {
@@ -182,6 +183,9 @@ try {
                 Assert ((Get-Content $sentinel) -eq 'keep application data') 'Uninstall removed external application data.'
                 Assert ((Get-Content -LiteralPath $insideSentinel) -eq 'keep unrelated files') 'Uninstall removed unrelated files in the chosen directory.'
                 Write-Output "PASS $scope ${format}: prerequisite rejection, install, shortcut execution, upgrade path, uninstall"
+            } catch {
+                $failures.Add("$scope/${format}: $_")
+                Write-Output "FAIL $scope/${format}: $_"
             } finally {
                 if ($installed -and $installedPackage) { Remove-Installation $installedPackage $format $install (Join-Path $root "$product-cleanup.log") }
                 Remove-Item $sentinel -ErrorAction SilentlyContinue
@@ -189,6 +193,7 @@ try {
             }
         }
     }
+    if ($failures.Count) { throw ($failures -join [Environment]::NewLine) }
 } finally {
     if ($null -eq $oldUser) { $userRuntime.DeleteValue('pv', $false) } else { $userRuntime.SetValue('pv', $oldUser) }
     if ($null -eq $oldMachine) { $machineRuntime.DeleteValue('pv', $false) } else { $machineRuntime.SetValue('pv', $oldMachine) }

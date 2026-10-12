@@ -94,6 +94,7 @@ internal static class WindowsInstallerTests
             Check(nsis.Split("CreateShortcut").Length == 3, "NSIS both shortcuts by default");
             Check((string?)msi.Descendants(w + "Package").Single().Attribute("InstallScope") == "perUser", "MSI scope default");
             Check(msi.Descendants(w + "Shortcut").Count() == 1 && !msi.Descendants(w + "UIRef").Any(), "MSI default shortcuts/UI");
+            Check((string?)msi.Descendants(w + "Product").Single().Attribute("Codepage") == "65001" && (string?)msi.Descendants(w + "Package").Single().Attribute("SummaryCodepage") == "1252", "WiX summary requires ANSI while the database preserves Unicode");
             var userUpgradeCode = (string?)msi.Descendants(w + "Product").Single().Attribute("UpgradeCode");
             foreach (var machine in new[] { false, true })
             foreach (var enabled in new[] { false, true })

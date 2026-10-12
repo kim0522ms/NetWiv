@@ -35,6 +35,7 @@ internal static partial class NativeBundler
     internal static string RenderNsis(ConfigDocument config, string payload, string binary, string output)
     {
         var options = WindowsInstallerOptions.FromJson(config.Root);
+        ValidateWorkingDirectory(payload, options.WorkingDirectory);
         var product = EscapeNsis(Product(config));
         var name = EscapeNsis(options.ShortcutName ?? Product(config));
         var hive = options.RegistryHive;
@@ -184,6 +185,7 @@ SectionEnd
     internal static string RenderMsi(ConfigDocument config, string payload, string binary)
     {
         var options = WindowsInstallerOptions.FromJson(config.Root);
+        ValidateWorkingDirectory(payload, options.WorkingDirectory);
         var product = Product(config);
         var upgradeCode = options.PerMachine ? Uuid5(UpgradeCode(config) + ":perMachine") : UpgradeCode(config);
         var registryKey = @"Software\NetWiv\" + upgradeCode;
@@ -267,6 +269,17 @@ SectionEnd
   <RegistryValue Root="{options.RegistryHive}" Key="{WixXml(registryKey)}" Name="{component}" Type="integer" Value="1" KeyPath="yes" />
 </Component>
 """;
+        }
+    }
+
+    private static void ValidateWorkingDirectory(string payload, string relative)
+    {
+        var path = payload;
+        foreach (var segment in relative.Split('\\'))
+        {
+            path = Path.Combine(path, segment);
+            if (File.Exists(path))
+                throw new NetWivConfigException("shortcuts.workingDirectory conflicts with a payload file: " + relative);
         }
     }
 

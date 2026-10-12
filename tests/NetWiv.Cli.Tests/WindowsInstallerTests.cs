@@ -80,6 +80,13 @@ internal static class WindowsInstallerTests
             File.WriteAllText(Path.Combine(root, "Probe.exe"), "payload");
             Directory.CreateDirectory(Path.Combine(root, "data"));
             File.WriteAllText(Path.Combine(root, "data", "sample.txt"), "payload");
+            File.WriteAllText(Path.Combine(root, "blocked"), "payload file");
+            foreach (var directory in new[] { "blocked", "blocked/child" })
+            {
+                var conflict = Config(root, new JsonObject { ["shortcuts"] = new JsonObject { ["workingDirectory"] = directory } }.ToJsonString());
+                Throws<NetWivConfigException>(() => NativeBundler.RenderNsis(conflict, root, "Probe.exe", "out.exe"));
+                Throws<NetWivConfigException>(() => NativeBundler.RenderMsi(conflict, root, "Probe.exe"));
+            }
             var defaults = Config(root, "{}");
             defaults.Root["bundle"]!["windows"]!.AsObject().Remove("installer");
             var legacyOptions = WindowsInstallerOptions.FromJson(defaults.Root);

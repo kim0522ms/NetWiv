@@ -195,7 +195,9 @@ try {
                         Assert ($entries[0].InstallProperty('VersionString') -eq $version) 'MSI registration version did not upgrade.'
                         Assert ($entries[0].InstallProperty('InstallLocation').TrimEnd('\') -eq $install) 'MSI registration lost the install path.'
                         $expectedContext = if ($scope -eq 'perMachine') { 4 } else { 2 }
-                        Assert ($entries[0].Context -eq $expectedContext) "Wrong MSI installation context: $($entries[0].Context)"
+                        $scopedEntries = @($windowsInstaller.ProductsEx('', '', $expectedContext) |
+                            Where-Object { $_.InstallProperty('InstalledProductName') -eq $product })
+                        Assert ($scopedEntries.Count -eq 1) 'MSI is not registered in the requested installation context.'
                     }
                 }
                 # Runtime removal must not prevent uninstall; no user data outside INSTDIR may be removed.

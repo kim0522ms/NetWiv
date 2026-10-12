@@ -163,6 +163,40 @@ public sealed class CommandGeneratorTests
     }
 
     [Fact]
+    public void ResolvesInstanceReceiverFromInvocationServicesAndKeepsStaticCalls()
+    {
+        var result = Run("""
+            using NetWiv;
+            public class Dependency { }
+            public class Commands(Dependency dependency)
+            {
+                [Command] public void Instance() { }
+                [Command] public static void Static() { }
+            }
+            """);
+        Assert.Empty(result.GeneratorDiagnostics);
+        Assert.DoesNotContain(result.CompilationDiagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Contains("GetRequiredService<global::Commands>(context.Services).Instance()", result.GeneratedSource);
+        Assert.Contains("global::Commands.Static()", result.GeneratedSource);
+    }
+
+    [Theory]
+    [InlineData("public struct Commands { [Command] public void Run() {} }")]
+    [InlineData("public ref struct Commands { [Command] public void Run() {} }")]
+    [InlineData("public interface Commands { [Command] void Run() {} }")]
+    [InlineData("public abstract class Commands { [Command] public void Run() {} }")]
+    [InlineData("public class Commands<T> { [Command] public void Run() {} }")]
+    [InlineData("public class Commands { [Command] private void Run() {} }")]
+    [InlineData("public class Commands { [Command] public void Run<T>() {} }")]
+    [InlineData("public class Commands { [Command] public async void Run() { await System.Threading.Tasks.Task.Yield(); } }")]
+    public void RejectsUnsupportedInstanceCommands(string declaration)
+    {
+        var result = Run("using NetWiv; " + declaration);
+        Assert.Contains(result.GeneratorDiagnostics, d => d.Id == "DTOXGEN001");
+        Assert.DoesNotContain("GetRequiredService<", result.GeneratedSource);
+    }
+
+    [Fact]
     public void ReportsInvalidMethodAndMissingJsonContext()
     {
         const string source = """
@@ -171,7 +205,7 @@ public sealed class CommandGeneratorTests
             public sealed record Input(int Value);
             public class Commands
             {
-                [Command] public Input Instance(Input input) => input;
+                [Command] private static Input Hidden(Input input) => input;
                 [Command] public static Input Typed(Input input) => input;
             }
             """;
@@ -202,8 +236,10 @@ public sealed class CommandGeneratorTests
         Assert.Contains(result.GeneratorDiagnostics, static diagnostic => diagnostic.Id == "DTOXGEN001");
     }
 
-    [Fact]
-    public void CompilesAllSupportedTaskAndValueTaskReturnShapes()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void CompilesAllSupportedTaskAndValueTaskReturnShapes(bool isStatic)
     {
         const string source = """
             using System.Text.Json.Serialization;
@@ -226,7 +262,7 @@ public sealed class CommandGeneratorTests
             }
             """;
 
-        var result = Run(source);
+        var result = Run(isStatic ? source : source.Replace("public static class Commands", "public class Commands").Replace("[Command] public static", "[Command] public"));
 
         Assert.Empty(result.GeneratorDiagnostics);
         Assert.DoesNotContain(result.CompilationDiagnostics, static diagnostic =>

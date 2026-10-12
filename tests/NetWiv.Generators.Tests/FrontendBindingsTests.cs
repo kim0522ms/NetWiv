@@ -55,6 +55,22 @@ public sealed class FrontendBindingsTests
     }
 
     [Fact]
+    public void InstanceCommandsExportOnlyWireParameters()
+    {
+        var result = Generate(Preamble + """
+            public sealed class Clock { }
+            public sealed class Commands(Clock constructorDependency) {
+                [Command("counter.tick")] public int Tick(int step, [FromServices] Clock clock) => step;
+            }
+            """);
+        Assert.Empty(result.Errors);
+        var bindings = Read(result.Compilation);
+        Assert.Contains("\"counter.tick\": (args: { \"step\": number }, options?: InvokeOptions) => Promise<number>", bindings.TypeScript);
+        Assert.DoesNotContain("clock", bindings.TypeScript, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("constructorDependency", bindings.TypeScript);
+    }
+
+    [Fact]
     public void ServiceParametersAreNotFrontendArguments()
     {
         var result = Generate(Preamble + """

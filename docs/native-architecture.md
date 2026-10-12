@@ -63,6 +63,22 @@ declarations alone do not establish unchanged behavior across C#, Rust and JS.
 See [contributing](../CONTRIBUTING.md#validation-and-real-device-evidence) for
 real-device evidence requirements.
 
+## Windows lifecycle behavior
+
+Initial WebView focus is best effort. Windows can reject `MoveFocus` with
+`0x80070057` when the parent is minimized; this must not discard an otherwise
+valid WebView controller. NetWiv creates the controller without initial focus,
+then attempts focus unless `focus: false` was requested. This follows the
+[upstream WRY fix](https://github.com/tauri-apps/wry/pull/1799) while retaining
+the pinned dependency version. Explicit `SetFocusAsync()` calls continue to
+report native focus errors. Creating a child does not restore a minimized parent.
+
+TAO is pinned to 0.36.0 to include the upstream
+[TaskbarCreated deadlock fix](https://github.com/tauri-apps/tao/pull/1264).
+The window-state lock must be released before taskbar COM calls, which can
+re-enter the window procedure. Desktop smoke exercises concurrent taskbar
+recreation messages on its own window, without restarting Explorer.
+
 ## Builds and delivery
 
 Framework maintainers build native binaries explicitly for each RID and package

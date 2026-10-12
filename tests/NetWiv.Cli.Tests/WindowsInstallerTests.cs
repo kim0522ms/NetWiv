@@ -79,7 +79,7 @@ internal static class WindowsInstallerTests
             var msi = XDocument.Parse(NativeBundler.RenderMsi(defaults, root, "Probe.exe"));
             XNamespace w = "http://schemas.microsoft.com/wix/2006/wi";
             Check(nsis.Contains("InstallDir \"$LOCALAPPDATA\\Probe\"") && nsis.Contains("RequestExecutionLevel user"), "NSIS defaults");
-            Check(!nsis.Contains("Page directory") && nsis.Contains("InstallDirRegKey HKCU64"), "NSIS restore without changing UI default");
+            Check(!nsis.Contains("Page directory") && nsis.Contains("GetCommandLineW") && nsis.Contains("${GetOptions} $1 \"/D=\" $2"), "NSIS restore without changing UI default");
             Check(nsis.Split("CreateShortcut").Length == 3, "NSIS both shortcuts by default");
             Check((string?)msi.Descendants(w + "Package").Single().Attribute("InstallScope") == "perUser", "MSI scope default");
             Check(msi.Descendants(w + "Shortcut").Count() == 1 && !msi.Descendants(w + "UIRef").Any(), "MSI default shortcuts/UI");
@@ -103,7 +103,7 @@ internal static class WindowsInstallerTests
                 msi = XDocument.Parse(NativeBundler.RenderMsi(config, root, "Probe.exe"));
                 var hive = machine ? "HKLM" : "HKCU";
                 Check(nsis.Contains("RequestExecutionLevel " + (machine ? "admin" : "user")), "elevation");
-                Check(nsis.Contains("InstallDirRegKey " + hive + "64") && nsis.Contains("DeleteRegKey " + hive), "NSIS scoped install/uninstall");
+                Check(nsis.Contains("ReadRegStr $0 " + hive + " \"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall") && nsis.Contains("DeleteRegKey " + hive), "NSIS scoped install/uninstall");
                 Check(nsis.Split("SetShellVarContext " + (machine ? "all" : "current")).Length == 4, "NSIS context across phases");
                 Check(nsis.Contains("Page directory"), "NSIS directory page");
                 Check(nsis.Contains("ReadRegStr $0 HKCU \"Software\\Microsoft\\EdgeUpdate") != machine, "runtime prerequisite scope");

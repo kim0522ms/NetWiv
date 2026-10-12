@@ -51,16 +51,27 @@ internal static partial class NativeBundler
         }
         return $"""
 Unicode true
+!include "FileFunc.nsh"
 Name "{product}"
 OutFile "{EscapeNsis(output)}"
 InstallDir "{(options.PerMachine ? "$PROGRAMFILES64" : "$LOCALAPPDATA")}\{product}"
-InstallDirRegKey {hive}64 "{key}" "InstallLocation"
 RequestExecutionLevel {(options.PerMachine ? "admin" : "user")}
 {(options.AllowDirectorySelection ? "Page directory" : "")}
 Page instfiles
 UninstPage instfiles
 Function .onInit
   SetShellVarContext {context}
+  ; NSIS hides /D from $CMDLINE and InstallDirRegKey cannot read a 64-bit registry view.
+  ; Inspect the original command line only to detect the override; NSIS already parsed its path.
+  System::Call 'kernel32::GetCommandLineW() w .r1'
+  ClearErrors
+  {"${GetOptions}"} $1 "/D=" $2
+  IfErrors 0 install_path_ready
+  SetRegView 64
+  ReadRegStr $0 {hive} "{key}" "InstallLocation"
+  StrCmp $0 "" install_path_ready
+  StrCpy $INSTDIR $0
+install_path_ready:
   SetRegView 32
 {(options.PerMachine ? "" : $"""
   ReadRegStr $0 HKCU "Software\Microsoft\EdgeUpdate\Clients\{WebView2Client}" "pv"

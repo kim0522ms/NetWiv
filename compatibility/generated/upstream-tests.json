@@ -2027,7 +2027,7 @@
       "name": "test::parse_hex_color",
       "netwivEvidence": [
         {
-          "file": "native/netwiv-native/src/runtime.rs",
+          "file": "native/netwiv-native/src/runtime/tests.rs",
           "symbol": "parse_hex_color",
           "testCase": "parse_hex_color"
         }
@@ -2397,9 +2397,9 @@
       "name": "test::window_config_default_same_as_deserialize",
       "netwivEvidence": [
         {
-          "file": "native/netwiv-native/src/runtime.rs",
-          "symbol": "window_config_default_same_as_deserialize",
-          "testCase": "runtime::tests::window_config_default_same_as_deserialize"
+          "file": "native/netwiv-native/src/runtime/tests.rs",
+          "symbol": "window_config_defaults_use_netwiv_title",
+          "testCase": "runtime::tests::window_config_defaults_use_netwiv_title"
         }
       ],
       "id": "runtime:crates/tauri-utils/src/config.rs:test::window_config_default_same_as_deserialize",
@@ -2408,7 +2408,7 @@
       "sourceSha256": "dc7bb8f3e47bf771b5ee865da0ef451bb5ab138664ceb1f6b6370413cffe988d",
       "status": "ported",
       "upstreamSourceSha256": "dc7bb8f3e47bf771b5ee865da0ef451bb5ab138664ceb1f6b6370413cffe988d",
-      "note": "The native creation parser receives both an empty object and a serialized pinned WindowConfig::default. Its effective native options and all top-level window fields must match; optional null settings are absent rather than triggering creation setters."
+      "note": "The native creation parser receives both an empty object and a serialized pinned WindowConfig::default with the existing NetWiv title override. Its effective native options and all top-level window fields must match; optional null settings are absent rather than triggering creation setters."
     },
     {
       "attributes": [

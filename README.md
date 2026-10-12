@@ -214,6 +214,10 @@ API references, and framework development documentation.
 
 ## Development
 
+Want to contribute? Read the [contribution guide](CONTRIBUTING.md) for the
+workflow, AI-assisted contribution responsibilities and required validation
+evidence before opening a PR.
+
 See the [framework development guide](docs/development.md) for prerequisites
 and package creation. Build and run managed checks with .NET 8 or later:
 

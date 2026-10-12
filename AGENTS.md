@@ -1,5 +1,9 @@
 # Repository working agreement
 
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for branch naming, contributor
+responsibility, real-device evidence and PR requirements. These apply to
+agent-assisted work as well as manually written contributions.
+
 NetWiv is a .NET 8 or later WebView desktop framework with optional NativeAOT publishing with TAURI® v2 compatibility as an important support goal.
 
 The product spelling is `NetWiv`. Public C# namespaces and NuGet IDs use

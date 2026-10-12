@@ -1,0 +1,809 @@
+Tested implementation: 15f2539f7c527832f6025f5c99326ad8ade2ea65
+Local checkout prefixes redacted; results and error text retained.
+
+===== native-tests.log =====
+Compiling netwiv-native v0.1.0 (<checkout>/native/netwiv-native)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.59s
+     Running unittests src/lib.rs (<main-checkout>/artifacts/native-target/refactor/debug/deps/netwiv_native-4afb9daf38181c89)
+
+running 49 tests
+test notification::tests::invalid_payloads_fail_without_dispatch ... ok
+test abi::tests::calls_before_run_are_rejected ... ok
+test abi::tests::abi_version_and_handle_lifetime ... ok
+test abi::tests::invalid_spans_return_owned_error ... ok
+test model::tests::windowless_config_still_validates_protocols ... ok
+test macos::tests::macos_options_validate_before_creating_a_window ... ok
+test global_shortcut::tests::rejects_bad_arguments_before_creating_manager ... ok
+test macos::tests::event_loop_rejects_worker_threads_without_entering_appkit ... ok
+test paths::tests::app_logs_use_local_data_and_preserve_relative_components ... ok
+test paths::tests::resource_parent_and_root_components_are_encoded ... ok
+test menu_payload::tests::nested_payload_precedence_and_fallback_match_pinned_serde ... ok
+test relative_bounds::tests::enabling_again_captures_current_native_bounds ... ok
+test relative_bounds::tests::child_retains_ratios_when_growing_and_shrinking ... ok
+test menu_payload::tests::new_options_rejects_entire_nested_tree_before_native_construction ... ok
+test relative_bounds::tests::root_fills_parent_across_resize_and_dpi_changes ... ok
+test relative_bounds::tests::setters_update_only_their_own_axes ... ok
+test resources::tests::about_metadata_matches_serde_absent_null_and_wrong_type_behavior ... ok
+test resources::tests::guest_tray_argument_names_are_enforced_before_resource_lookup ... ok
+test resources::tests::exhausted_resource_ids_never_overwrite_live_resources ... ok
+test resources::tests::invalid_resource_errors_match_tauri ... ok
+test resources::tests::menu_and_tray_new_require_the_channels_sent_by_the_guest_api ... ok
+test resources::tests::malformed_nested_menu_payload_is_rejected_before_native_creation ... ok
+test resources::tests::resource_handles_survive_wrong_kind_access_and_are_not_reused_after_close ... ok
+test runtime::tests::data_directory_matches_pinned_from_config_resolution ... ok
+test runtime::tests::document_bound_eval_is_discarded_after_close_or_reload ... ok
+test runtime::tests::asset_protocol_config_is_additive_and_empty_content_type_is_omitted ... ok
+test runtime::tests::late_protocol_completion_after_shutdown_does_not_reenter_callbacks ... ok
+test resources::tests::image_decode_errors_match_tauri_and_do_not_allocate_resources ... ok
+test runtime::tests::parse_hex_color ... ok
+test runtime::tests::backend_child_builder_options_do_not_leak_into_the_guest_contract ... ok
+test resources::tests::about_metadata_maps_camel_case_fields_and_resolves_image_resources ... ok
+test runtime::tests::dynamic_labels_and_numeric_options_are_validated_before_native_creation ... ok
+test runtime::tests::prevent_overflow_reduces_inner_size_by_outer_excess ... ok
+test runtime::tests::physical_size_and_position_reject_fractional_and_out_of_range_values ... ok
+test resources::tests::image_bytes_round_trip_and_close_invalidates_the_resource ... ok
+test runtime::tests::proxy_parser_preserves_explicit_host_and_port ... ok
+test runtime::tests::initial_webview_origin_matches_pinned_tauri_rules ... ok
+test resources::tests::encoded_image_fixtures_preserve_pixels_and_dimensions ... ok
+test runtime::tests::public_color_shapes_match_tauri_config_deserialization ... ok
+test runtime::tests::reparent_updates_ipc_and_protocol_parent_without_replacing_document ... ok
+test runtime::tests::window_effects_accept_clear_and_preserve_order_and_typed_fields ... ok
+test stronghold::tests::missing_snapshot_is_rejected ... ok
+test runtime::tests::window_config_defaults_use_netwiv_title ... ok
+test runtime::tests::window_and_webview_creation_preserve_aliases_after_validation ... ok
+test runtime::tests::window_titles_preserve_explicit_values_and_reject_invalid_types ... ok
+test runtime::tests::window_effects_validate_ignored_platform_fields_and_unknown_keys ... ok
+test tray_payload::tests::tray_event_json_serialization ... ok
+test tray_payload::tests::all_events_preserve_pointer_fractions_and_round_rect_positions ... ok
+test stronghold::tests::encrypted_store_roundtrips_and_rejects_wrong_password ... ok
+
+test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.08s
+
+   Doc-tests netwiv_native
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+===== generator-tests.log =====
+복원할 프로젝트를 확인하는 중...
+  복원할 모든 프로젝트가 최신 상태입니다.
+  NetWiv.Core -> <checkout>/src/NetWiv.Core/bin/Release/net8.0/NetWiv.Core.dll
+  NetWiv.Build.Tasks -> <checkout>/src/NetWiv.Build.Tasks/bin/Release/net8.0/NetWiv.Build.Tasks.dll
+  NetWiv.Build -> <checkout>/src/NetWiv.Build/bin/Release/net8.0/NetWiv.Build.dll
+  NetWiv.Generators -> <checkout>/src/NetWiv.Generators/bin/Release/netstandard2.0/NetWiv.Generators.dll
+  NetWiv.Generators.Tests -> <checkout>/tests/NetWiv.Generators.Tests/bin/Release/net8.0/NetWiv.Generators.Tests.dll
+<checkout>/tests/NetWiv.Generators.Tests/bin/Release/net8.0/NetWiv.Generators.Tests.dll(.NETCoreApp,Version=v8.0)에 대한 테스트 실행
+지정된 패턴과 일치한 총 테스트 파일 수는 1개입니다.
+
+통과!  - 실패:     0, 통과:   150, 건너뜀:     0, 전체:   150, 기간: 12 s - NetWiv.Generators.Tests.dll (net8.0)
+
+===== core-managed.log =====
+SKIP upstream scope::windows_root_paths: Windows-specific scenarios
+SKIP pinned infer corpus: NETWIV_INFER_TESTDATA is not configured
+PASS generated plugin commands dispatch through IPC with isolated names and explicit selection
+PASS generated plugin commands require capability and respect deny precedence
+PASS generated plugin commands reject invalid owners selections and registrations
+PASS runtime identity rejects a Tauri version through guest IPC
+PASS Document-owned resource close rejects other windows and preserves backend sharing
+PASS SQLite integer parameters preserve signed 64-bit values and reject overflow
+PASS Shell execution cancellation stops parent and descendant processes
+PASS HTTP redirects retain credentials only within the same origin
+PASS P2 guest command execution leaves the native UI callback responsive
+2026-10-12T04:39:04.577Z[webview][INFO] rotation marker
+PASS P2 default logging rotates a full file
+2026-10-12T04:39:04.584Z[webview][INFO] 5한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:04.584Z[webview][INFO] 1한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:04.584Z[webview][INFO] 4한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:04.585Z[webview][INFO] 11한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:04.585Z[webview][INFO] 8한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:04.585Z[webview][INFO] 9한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:04.585Z[webview][INFO] 3한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:04.585Z[webview][INFO] 2한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:04.585Z[webview][INFO] 0한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:04.585Z[webview][INFO] 7한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:04.585Z[webview][INFO] 6한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:04.586Z[webview][INFO] 10한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+PASS P2 concurrent oversized Unicode logs respect byte and retention limits
+PASS P2 window state saves after native destruction and restores at startup
+Window state restore failed for 'main': 'b' is an invalid start of a value. LineNumber: 0 | BytePositionInLine: 0.
+Window state shutdown save failed: 'b' is an invalid start of a value. LineNumber: 0 | BytePositionInLine: 0.
+PASS P2 automatic window state respects flags opt-out and corrupt files
+PASS P1 store failed reload preserves values
+PASS P1 store save atomically replaces the previous snapshot
+PASS P1 interrupted download preserves destination
+PASS P1 upload enforces file URL and redirect scopes through guest IPC
+PASS P1 upload permits scoped transfers and deny overrides allow
+PASS P1 SQL select permission cannot mutate or attach databases
+PASS P1 SQL cancellation interrupts an executing query and preserves connection
+PASS P1 guest invocations cancel on document replacement and app disposal
+PASS P1 HTTP resources close on document replacement
+PASS P1 document close cancels streaming HTTP and releases both handles
+PASS P1 restart waits for cleanup and releases single-instance ownership
+PASS local app IPC succeeds through facade
+PASS IPC and command diagnostics use the configured logger factory
+PASS log plugin forwards webview records to the configured logger factory
+PASS instance commands plugin scope and permissions
+PASS instance commands Lifetimes
+PASS instance commands ConstructorAndParameterShareScope
+PASS instance commands ConcurrentAwaitAndDisposal
+PASS instance commands FailureAndCancellation
+PASS instance commands MissingRegistrationAndConstructorFailure
+PASS instance commands GuestIpcAndAuthorization
+PASS hosting wires services, options and AppHandle around the event loop lifecycle
+PASS hosting StopApplication exits a running event loop and skips one not yet started
+PASS hosting generated commands resolve scoped, keyed and AppHandle services
+PASS hosting shutdown waits for commands in flight before stopping services
+PASS hosting dispose waits for commands in flight before disposing services
+PASS hosting shutdown timeout bounds commands that ignore cancellation
+PASS hosting dispose atomically stops admitting commands before draining
+PASS hosting hosted services can invoke commands while stopping
+PASS hosting restart relaunches only after hosted services stop
+PASS upstream ipc::deserialize_invoke_response_body
+PASS invoke response deserialization preserves binary and JSON boundaries
+PASS command input ignores JSON-ignored and non-deserializable members
+PASS command input validates setter-only and populated members
+PASS command input preserves directional JSON ignore conditions
+PASS JSON context directional defaults preserve property overrides
+PASS nullable enum converters preserve names, null and numeric values
+PASS JSON included fields preserve names, constructors and required input
+PASS extension data flattens keys without bypassing known property validation
+PASS extension data preserves directional ignores and field ownership
+PASS Rust debug strings match every Unicode scalar and command error escaping
+PASS upstream event::test_illegal_event_name
+PASS DPI conversion matches pinned Rust rounding and saturation oracle
+PASS DPI scales match pinned Rust normal-number validation
+PASS numeric command arguments match pinned serde JSON values
+PASS numeric error formatting matches 100000 pinned float bit patterns
+PASS configured startup windows preserve defaults and defer create:false
+PASS empty configured windows suppress implicit UI and allow explicit later windows
+PASS manager lookups return nullable snapshots across document and window lifecycles
+PASS manager reparent updates retained handles and combined-window membership without guest events
+PASS upstream format_callback::test_serialize_js
+PASS upstream format_callback::test_serialize_js_raw
+PASS callback parsing threshold uses UTF-8 bytes and preserves primitives
+PASS large events retain the upstream literal path separately from IPC callbacks
+PASS upstream format_callback::qc_formatting
+PASS upstream format_callback::qc_format_res
+PASS upstream format_callback::qc_formatting_raw
+PASS upstream format_callback::qc_format_raw_res
+PASS generated commands require explicit builder selection
+PASS remote IPC is denied
+PASS invalid invoke key is rejected before dispatch
+PASS plugin command requires capability
+PASS official fs plugin reads writes and rejects traversal
+PASS official fs binary guest write and read traverse IPC with scoped permission
+PASS official fs scope permission joins command grants without broadening access
+PASS official dialog forwards native selection and grants selected file scope
+PASS official dialog legacy permission aliases authorize message only
+PASS official OS guest receives synchronous platform values and guarded hostname
+PASS official process guest exit forwards status and restart stays permission guarded
+PASS official store guest shares handles and persists JSON on explicit save
+PASS external opening reports launcher failures and respects deny permissions
+PASS external opening preserves opener URL/path arguments and rejects forbidden targets
+PASS external opening reveals files and directories with the platform launcher
+PASS external opening preserves shell URL arguments and rejects forbidden targets
+PASS official opener default scope rejects local URLs and custom executables
+2026-10-12T04:39:12.272Z[webview][INFO] NetWiv log test e2f7313bcb38410eb8abc04a774a095a
+PASS official log guest writes records and validates levels
+PASS official HTTP guest enforces URL scope and streams a response
+PASS official clipboard guest requires explicit grants and forwards to native
+PASS official shell guest executes only scoped aliases
+PASS official window-state guest saves and restores selected window flags
+PASS official websocket guest connects and relays a local text frame
+PASS official upload guest streams files and reports HTTP failures
+PASS official autostart guest reads an absent Windows registry entry
+PASS official positioner guest moves windows to screen and constrained tray anchors
+PASS official CLI guest resolves configured arguments and subcommands
+PASS persisted scope restores dialog selected asset access after reopening
+PASS official SQL guest runs a SQLite query lifecycle with bound values
+PASS single instance forwards a second launch's arguments to the first app
+PASS single instance forwards arguments between separate desktop processes
+PASS deep link accepts configured launch URL and emits second launch event
+PASS deep link registration uses per-user desktop protocol storage
+PASS deep link consumes the single-instance forwarded URL
+PASS localhost serves embedded assets and stops accepting requests on disposal
+PASS notification desktop guest forwards title and permission state
+PASS global shortcut guest registers native shortcuts and routes channel events
+PASS stronghold guest forwards encrypted storage and procedure commands
+PASS app manifest opts command into ACL
+PASS app manifest gates every custom command
+PASS core default expands built-in permissions
+PASS path commands match pinned lexical fixtures
+PASS upstream path::basename
+PASS upstream path::join
+PASS upstream mime_type::should_parse_mimetype_from_uri
+PASS upstream acl::url_pattern_domain_wildcard
+PASS upstream acl::url_pattern_path_wildcard
+PASS upstream acl::url_pattern_scheme_wildcard
+PASS unknown permission names never synthesize grants
+PASS capabilities without targets grant nothing
+PASS deny permissions precede allow permissions
+PASS upstream authority::window_glob_pattern_matches
+PASS upstream authority::webview_glob_pattern_matches
+PASS upstream authority::remote_domain_matches
+PASS upstream authority::remote_domain_glob_pattern_matches
+PASS upstream authority::remote_context_denied
+PASS upstream authority::denied_command_takes_precendence
+PASS upstream authority::resolve_access_message
+PASS ACL diagnostics preserve associated permissions and deny provenance
+PASS release IPC preserves the upstream ACL rejection string
+PASS permission command names are exact ordinal keys
+PASS initialization script uses pinned IPC serialization
+PASS authorized native forwarding preserves origin
+PASS remote capability admits an explicit app command
+PASS remote URL patterns match pinned parser and permission decisions
+PASS binary responses resolve as ArrayBuffer
+PASS structured errors reject with JSON
+PASS image core stores RGBA resources
+PASS resource disposal closes each resource
+PASS unknown resource close reaches native runtime
+PASS channel messages retain order and terminate
+PASS event targets preserve window and webview kinds
+PASS upstream manager::emit
+PASS upstream manager::emit_to
+PASS manager once-any and unlisten preserve target and reentrant cleanup
+PASS native close events distinguish broadcast and preventing listeners
+PASS event names follow pinned Unicode validation and unlisten matches name
+PASS asset resolver is exposed to runtime
+PASS URI scheme requests preserve context binary data async completion and ownership
+PASS upstream webview::tauri_protocol_is_local
+PASS registered URI scheme origins enforce platform boundaries and app manifests
+PASS file asset protocol preserves scoped HTTP response semantics
+PASS file scopes enforce glob and canonical filesystem boundaries
+PASS file MIME signatures follow pinned infer matcher order
+PASS embedded frontend assets resolve from the entry assembly
+PASS embedded asset routing matches pinned fallback and HTTP behavior
+PASS embedded CSP follows the resolved asset rather than the requested MIME type
+PASS embedded config applies windows ACL and security headers
+PASS embedded config mode explicitly selects development settings
+PASS embedded config rejects unresolved capability files
+PASS embedded permission files gate commands and retain per-command scope
+PASS empty embedded ACL preserves local defaults and rejects cycles
+PASS plugin lifecycle receives events and disposal
+PASS plugin config preserves values defaults typed reads and document lifetime
+PASS invalid plugin config fails initialization and disposes owned plugins
+PASS upstream resolved::resolves_permissions_from_other_plugins
+PASS plugin permission sets preserve nested precedence and reject cycles and missing references
+PASS cross-plugin permission sets authorize guest commands through the application host
+PASS reload discards pending invocation replies
+PASS reload invalidates captured channels and listeners
+PASS window and webview labels use separate namespaces
+PASS destroying a window preserves unrelated same-label webview
+PASS native menu and tray hooks reject guest event spoofing
+PASS native tray events decode tagged rectangles and optional button fields
+PASS capability labels implement upstream glob selectors
+PASS upstream state::get_panics
+PASS upstream state::simple_set_get
+PASS upstream state::simple_set_get_unmanage
+PASS upstream state::dst_set_get
+PASS upstream state::set_get_remote
+PASS upstream state::two_put_get
+PASS upstream state::many_puts_only_one_succeeds
+PASS upstream state::test_no_drop_on_set
+PASS upstream state::drop_inners_on_drop
+PASS state removal and aliased or failing disposal preserve ownership
+PASS failed application construction releases owned state and plugins
+PASS upstream event::listeners_check_key (10000 cases)
+PASS upstream event::listeners_check_fn (10000 cases)
+PASS upstream event::check_on_event (10000 cases)
+PASS upstream event::event_no_deadlocks
+PASS upstream scope::path_is_escaped
+PASS upstream scope::push_pattern_generated_paths
+PASS upstream scope::event_no_deadlocks
+PASS scope changes are concurrent and preserve deny precedence
+PASS asset protocol reads the live application scope
+PASS upstream html::csp
+PASS upstream html::normalize_script_for_csp_test
+PASS upstream html::parse_and_serialize_roundtrips
+PASS upstream html::inject_nonce_to_scripts
+PASS upstream html::inject_nonce_to_styles
+PASS upstream html::inject_nonce_skips_existing
+PASS upstream html::inject_nonce_respects_disabled_modification
+PASS upstream html::inline_isolation_replaces_src_with_content
+PASS upstream html2::append_script_to_head_test
+PASS CSP parses HTML and authorizes independent nonce sources
+PASS upstream isolation::create_keys
+PASS upstream ipc::parse_invoke_request_isolation
+PASS upstream ipc::parse_invoke_request
+PASS upstream webview::remote_origin_blocked_for_custom_commands_without_app_manifest
+PASS IPC HTTP parsing authorization response and document boundaries
+PASS upstream acl::identifier::format
+PASS upstream acl::identifier::base
+PASS upstream acl::identifier::prefix
+PASS upstream acl::capability::permission_entry_de
+PASS capability parsing rejects malformed permissions and scopes
+PASS isolation ciphertext authentication and secure asset boundaries
+PASS external opening rejects missing macOS reveal items before any launch
+PASS external opening canonicalizes macOS reveal links and rejects broken targets
+
+===== core-aot.log =====
+SKIP upstream scope::windows_root_paths: Windows-specific scenarios
+SKIP pinned infer corpus: NETWIV_INFER_TESTDATA is not configured
+PASS generated plugin commands dispatch through IPC with isolated names and explicit selection
+PASS generated plugin commands require capability and respect deny precedence
+PASS generated plugin commands reject invalid owners selections and registrations
+PASS runtime identity rejects a Tauri version through guest IPC
+PASS Document-owned resource close rejects other windows and preserves backend sharing
+PASS SQLite integer parameters preserve signed 64-bit values and reject overflow
+PASS Shell execution cancellation stops parent and descendant processes
+PASS HTTP redirects retain credentials only within the same origin
+PASS P2 guest command execution leaves the native UI callback responsive
+2026-10-12T04:39:40.388Z[webview][INFO] rotation marker
+PASS P2 default logging rotates a full file
+2026-10-12T04:39:40.389Z[webview][INFO] 0한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:40.389Z[webview][INFO] 1한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:40.389Z[webview][INFO] 2한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:40.389Z[webview][INFO] 11한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:40.389Z[webview][INFO] 3한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:40.389Z[webview][INFO] 4한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:40.389Z[webview][INFO] 5한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:40.389Z[webview][INFO] 6한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:40.389Z[webview][INFO] 7한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:40.389Z[webview][INFO] 9한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:40.389Z[webview][INFO] 8한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+2026-10-12T04:39:40.389Z[webview][INFO] 10한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀한글😀 [truncated]
+PASS P2 concurrent oversized Unicode logs respect byte and retention limits
+PASS P2 window state saves after native destruction and restores at startup
+Window state restore failed for 'main': 'b' is an invalid start of a value. LineNumber: 0 | BytePositionInLine: 0.
+Window state shutdown save failed: 'b' is an invalid start of a value. LineNumber: 0 | BytePositionInLine: 0.
+PASS P2 automatic window state respects flags opt-out and corrupt files
+PASS P1 store failed reload preserves values
+PASS P1 store save atomically replaces the previous snapshot
+PASS P1 interrupted download preserves destination
+PASS P1 upload enforces file URL and redirect scopes through guest IPC
+PASS P1 upload permits scoped transfers and deny overrides allow
+PASS P1 SQL select permission cannot mutate or attach databases
+PASS P1 SQL cancellation interrupts an executing query and preserves connection
+PASS P1 guest invocations cancel on document replacement and app disposal
+PASS P1 HTTP resources close on document replacement
+PASS P1 document close cancels streaming HTTP and releases both handles
+PASS P1 restart waits for cleanup and releases single-instance ownership
+PASS local app IPC succeeds through facade
+PASS IPC and command diagnostics use the configured logger factory
+PASS log plugin forwards webview records to the configured logger factory
+PASS instance commands plugin scope and permissions
+PASS instance commands Lifetimes
+PASS instance commands ConstructorAndParameterShareScope
+PASS instance commands ConcurrentAwaitAndDisposal
+PASS instance commands FailureAndCancellation
+PASS instance commands MissingRegistrationAndConstructorFailure
+PASS instance commands GuestIpcAndAuthorization
+PASS hosting wires services, options and AppHandle around the event loop lifecycle
+PASS hosting StopApplication exits a running event loop and skips one not yet started
+PASS hosting generated commands resolve scoped, keyed and AppHandle services
+PASS hosting shutdown waits for commands in flight before stopping services
+PASS hosting dispose waits for commands in flight before disposing services
+PASS hosting shutdown timeout bounds commands that ignore cancellation
+PASS hosting dispose atomically stops admitting commands before draining
+PASS hosting hosted services can invoke commands while stopping
+PASS hosting restart relaunches only after hosted services stop
+PASS upstream ipc::deserialize_invoke_response_body
+PASS invoke response deserialization preserves binary and JSON boundaries
+PASS command input ignores JSON-ignored and non-deserializable members
+PASS command input validates setter-only and populated members
+PASS command input preserves directional JSON ignore conditions
+PASS JSON context directional defaults preserve property overrides
+PASS nullable enum converters preserve names, null and numeric values
+PASS JSON included fields preserve names, constructors and required input
+PASS extension data flattens keys without bypassing known property validation
+PASS extension data preserves directional ignores and field ownership
+PASS Rust debug strings match every Unicode scalar and command error escaping
+PASS upstream event::test_illegal_event_name
+PASS DPI conversion matches pinned Rust rounding and saturation oracle
+PASS DPI scales match pinned Rust normal-number validation
+PASS numeric command arguments match pinned serde JSON values
+PASS numeric error formatting matches 100000 pinned float bit patterns
+PASS configured startup windows preserve defaults and defer create:false
+PASS empty configured windows suppress implicit UI and allow explicit later windows
+PASS manager lookups return nullable snapshots across document and window lifecycles
+PASS manager reparent updates retained handles and combined-window membership without guest events
+PASS upstream format_callback::test_serialize_js
+PASS upstream format_callback::test_serialize_js_raw
+PASS callback parsing threshold uses UTF-8 bytes and preserves primitives
+PASS large events retain the upstream literal path separately from IPC callbacks
+PASS upstream format_callback::qc_formatting
+PASS upstream format_callback::qc_format_res
+PASS upstream format_callback::qc_formatting_raw
+PASS upstream format_callback::qc_format_raw_res
+PASS generated commands require explicit builder selection
+PASS remote IPC is denied
+PASS invalid invoke key is rejected before dispatch
+PASS plugin command requires capability
+PASS official fs plugin reads writes and rejects traversal
+PASS official fs binary guest write and read traverse IPC with scoped permission
+PASS official fs scope permission joins command grants without broadening access
+PASS official dialog forwards native selection and grants selected file scope
+PASS official dialog legacy permission aliases authorize message only
+PASS official OS guest receives synchronous platform values and guarded hostname
+PASS official process guest exit forwards status and restart stays permission guarded
+PASS official store guest shares handles and persists JSON on explicit save
+PASS external opening reports launcher failures and respects deny permissions
+PASS external opening preserves opener URL/path arguments and rejects forbidden targets
+PASS external opening reveals files and directories with the platform launcher
+PASS external opening preserves shell URL arguments and rejects forbidden targets
+PASS official opener default scope rejects local URLs and custom executables
+2026-10-12T04:39:46.474Z[webview][INFO] NetWiv log test 0790dd39a4df41418971438e372cb2db
+PASS official log guest writes records and validates levels
+PASS official HTTP guest enforces URL scope and streams a response
+PASS official clipboard guest requires explicit grants and forwards to native
+PASS official shell guest executes only scoped aliases
+PASS official window-state guest saves and restores selected window flags
+PASS official websocket guest connects and relays a local text frame
+PASS official upload guest streams files and reports HTTP failures
+PASS official autostart guest reads an absent Windows registry entry
+PASS official positioner guest moves windows to screen and constrained tray anchors
+PASS official CLI guest resolves configured arguments and subcommands
+PASS persisted scope restores dialog selected asset access after reopening
+PASS official SQL guest runs a SQLite query lifecycle with bound values
+PASS single instance forwards a second launch's arguments to the first app
+PASS single instance forwards arguments between separate desktop processes
+PASS deep link accepts configured launch URL and emits second launch event
+PASS deep link registration uses per-user desktop protocol storage
+PASS deep link consumes the single-instance forwarded URL
+PASS localhost serves embedded assets and stops accepting requests on disposal
+PASS notification desktop guest forwards title and permission state
+PASS global shortcut guest registers native shortcuts and routes channel events
+PASS stronghold guest forwards encrypted storage and procedure commands
+PASS app manifest opts command into ACL
+PASS app manifest gates every custom command
+PASS core default expands built-in permissions
+PASS path commands match pinned lexical fixtures
+PASS upstream path::basename
+PASS upstream path::join
+PASS upstream mime_type::should_parse_mimetype_from_uri
+PASS upstream acl::url_pattern_domain_wildcard
+PASS upstream acl::url_pattern_path_wildcard
+PASS upstream acl::url_pattern_scheme_wildcard
+PASS unknown permission names never synthesize grants
+PASS capabilities without targets grant nothing
+PASS deny permissions precede allow permissions
+PASS upstream authority::window_glob_pattern_matches
+PASS upstream authority::webview_glob_pattern_matches
+PASS upstream authority::remote_domain_matches
+PASS upstream authority::remote_domain_glob_pattern_matches
+PASS upstream authority::remote_context_denied
+PASS upstream authority::denied_command_takes_precendence
+PASS upstream authority::resolve_access_message
+PASS ACL diagnostics preserve associated permissions and deny provenance
+PASS release IPC preserves the upstream ACL rejection string
+PASS permission command names are exact ordinal keys
+PASS initialization script uses pinned IPC serialization
+PASS authorized native forwarding preserves origin
+PASS remote capability admits an explicit app command
+PASS remote URL patterns match pinned parser and permission decisions
+PASS binary responses resolve as ArrayBuffer
+PASS structured errors reject with JSON
+PASS image core stores RGBA resources
+PASS resource disposal closes each resource
+PASS unknown resource close reaches native runtime
+PASS channel messages retain order and terminate
+PASS event targets preserve window and webview kinds
+PASS upstream manager::emit
+PASS upstream manager::emit_to
+PASS manager once-any and unlisten preserve target and reentrant cleanup
+PASS native close events distinguish broadcast and preventing listeners
+PASS event names follow pinned Unicode validation and unlisten matches name
+PASS asset resolver is exposed to runtime
+PASS URI scheme requests preserve context binary data async completion and ownership
+PASS upstream webview::tauri_protocol_is_local
+PASS registered URI scheme origins enforce platform boundaries and app manifests
+PASS file asset protocol preserves scoped HTTP response semantics
+PASS file scopes enforce glob and canonical filesystem boundaries
+PASS file MIME signatures follow pinned infer matcher order
+PASS embedded frontend assets resolve from the entry assembly
+PASS embedded asset routing matches pinned fallback and HTTP behavior
+PASS embedded CSP follows the resolved asset rather than the requested MIME type
+PASS embedded config applies windows ACL and security headers
+PASS embedded config mode explicitly selects development settings
+PASS embedded config rejects unresolved capability files
+PASS embedded permission files gate commands and retain per-command scope
+PASS empty embedded ACL preserves local defaults and rejects cycles
+PASS plugin lifecycle receives events and disposal
+PASS plugin config preserves values defaults typed reads and document lifetime
+PASS invalid plugin config fails initialization and disposes owned plugins
+PASS upstream resolved::resolves_permissions_from_other_plugins
+PASS plugin permission sets preserve nested precedence and reject cycles and missing references
+PASS cross-plugin permission sets authorize guest commands through the application host
+PASS reload discards pending invocation replies
+PASS reload invalidates captured channels and listeners
+PASS window and webview labels use separate namespaces
+PASS destroying a window preserves unrelated same-label webview
+PASS native menu and tray hooks reject guest event spoofing
+PASS native tray events decode tagged rectangles and optional button fields
+PASS capability labels implement upstream glob selectors
+PASS upstream state::get_panics
+PASS upstream state::simple_set_get
+PASS upstream state::simple_set_get_unmanage
+PASS upstream state::dst_set_get
+PASS upstream state::set_get_remote
+PASS upstream state::two_put_get
+PASS upstream state::many_puts_only_one_succeeds
+PASS upstream state::test_no_drop_on_set
+PASS upstream state::drop_inners_on_drop
+PASS state removal and aliased or failing disposal preserve ownership
+PASS failed application construction releases owned state and plugins
+PASS upstream event::listeners_check_key (10000 cases)
+PASS upstream event::listeners_check_fn (10000 cases)
+PASS upstream event::check_on_event (10000 cases)
+PASS upstream event::event_no_deadlocks
+PASS upstream scope::path_is_escaped
+PASS upstream scope::push_pattern_generated_paths
+PASS upstream scope::event_no_deadlocks
+PASS scope changes are concurrent and preserve deny precedence
+PASS asset protocol reads the live application scope
+PASS upstream html::csp
+PASS upstream html::normalize_script_for_csp_test
+PASS upstream html::parse_and_serialize_roundtrips
+PASS upstream html::inject_nonce_to_scripts
+PASS upstream html::inject_nonce_to_styles
+PASS upstream html::inject_nonce_skips_existing
+PASS upstream html::inject_nonce_respects_disabled_modification
+PASS upstream html::inline_isolation_replaces_src_with_content
+PASS upstream html2::append_script_to_head_test
+PASS CSP parses HTML and authorizes independent nonce sources
+PASS upstream isolation::create_keys
+PASS upstream ipc::parse_invoke_request_isolation
+PASS upstream ipc::parse_invoke_request
+PASS upstream webview::remote_origin_blocked_for_custom_commands_without_app_manifest
+PASS IPC HTTP parsing authorization response and document boundaries
+PASS upstream acl::identifier::format
+PASS upstream acl::identifier::base
+PASS upstream acl::identifier::prefix
+PASS upstream acl::capability::permission_entry_de
+PASS capability parsing rejects malformed permissions and scopes
+PASS isolation ciphertext authentication and secure asset boundaries
+PASS external opening rejects missing macOS reveal items before any launch
+PASS external opening canonicalizes macOS reveal links and rejects broken targets
+
+===== macos-desktop-aot.log =====
+PASS application setup on native UI thread
+BACKEND macos
+PASS guest child including scoped file asset
+PASS guest main including scoped file asset
+PASS guest secondary including scoped file asset
+PASS NetWiv default window title on native runtime
+PASS native windows, menu mutation, icon/About SDK, image and tray
+PASS Stronghold snapshot across C# IPC and native ABI; shortcut query
+PASS macOS title bar, effects, Dock, app visibility, paths and unsupported-operation errors
+PASS native reparent updates retained SDK handles and combined-window membership
+PASS C# native queries, icons, background and async close lifecycle
+PASS repeated bare window and child webview creation and cleanup
+PASS reload invalidates pending command and Channel callbacks
+READY integrated GUI inspection
+GUI menu checked: False
+PASS remote iframe isolation and navigation origin denial
+PASS resource cleanup
+
+===== macos-desktop-managed.log =====
+PASS application setup on native UI thread
+BACKEND macos
+PASS guest child including scoped file asset
+PASS guest main including scoped file asset
+PASS guest secondary including scoped file asset
+PASS NetWiv default window title on native runtime
+PASS native windows, menu mutation, icon/About SDK, image and tray
+PASS Stronghold snapshot across C# IPC and native ABI; shortcut query
+PASS macOS title bar, effects, Dock, app visibility, paths and unsupported-operation errors
+PASS native reparent updates retained SDK handles and combined-window membership
+PASS C# native queries, icons, background and async close lifecycle
+PASS repeated bare window and child webview creation and cleanup
+PASS reload invalidates pending command and Channel callbacks
+PASS remote iframe isolation and navigation origin denial
+PASS resource cleanup
+
+===== macos-windowless-aot.log =====
+PASS windowless native startup, menu/tray resources, task dispatch and shutdown
+
+===== macos-windowless-managed.log =====
+PASS windowless native startup, menu/tray resources, task dispatch and shutdown
+
+===== body-audit.log =====
+runtime functions before 116 after 116
+resources functions before 95 after 97
+CHANGED/NEW resource_handles_survive_wrong_kind_access_and_are_not_reused_after_close
+CHANGED/NEW exhausted_resource_ids_never_overwrite_live_resources
+All Rust function bodies match the baseline (module qualification/visibility only).
+
+===== contract-harness-tests.log =====
+TAP version 13
+# Subtest: requires source-bound executable port evidence
+ok 1 - requires source-bound executable port evidence
+  ---
+  duration_ms: 0.654125
+  type: 'test'
+  ...
+# Subtest: cannot invent a pass or exclude/defer in-scope business behavior
+ok 2 - cannot invent a pass or exclude/defer in-scope business behavior
+  ---
+  duration_ms: 0.161125
+  type: 'test'
+  ...
+# Subtest: reviewed language exclusions and platform deferrals require a rationale
+ok 3 - reviewed language exclusions and platform deferrals require a rationale
+  ---
+  duration_ms: 0.104541
+  type: 'test'
+  ...
+# Subtest: accepts complete matching passing runs
+ok 4 - accepts complete matching passing runs
+  ---
+  duration_ms: 33.220667
+  type: 'test'
+  ...
+# Subtest: focused comparisons cannot report the full suite as passed
+ok 5 - focused comparisons cannot report the full suite as passed
+  ---
+  duration_ms: 111.955
+  type: 'test'
+  ...
+# Subtest: rejects missing or mismatched source provenance
+ok 6 - rejects missing or mismatched source provenance
+  ---
+  duration_ms: 53.380125
+  type: 'test'
+  ...
+# Subtest: rejects matching failures
+ok 7 - rejects matching failures
+  ---
+  duration_ms: 25.731834
+  type: 'test'
+  ...
+# Subtest: rejects matching stale binaries even when their counts and source hashes agree
+ok 8 - rejects matching stale binaries even when their counts and source hashes agree
+  ---
+  duration_ms: 29.396625
+  type: 'test'
+  ...
+# Subtest: rejects zero-case and truncated runs
+ok 9 - rejects zero-case and truncated runs
+  ---
+  duration_ms: 55.846292
+  type: 'test'
+  ...
+# Subtest: rejects duplicate names and malformed JSON
+ok 10 - rejects duplicate names and malformed JSON
+  ---
+  duration_ms: 55.809292
+  type: 'test'
+  ...
+# Subtest: accepts only source-backed platform skips
+ok 11 - accepts only source-backed platform skips
+  ---
+  duration_ms: 83.645958
+  type: 'test'
+  ...
+# Subtest: rejects mixed Linux display backends and missing artifact identity
+ok 12 - rejects mixed Linux display backends and missing artifact identity
+  ---
+  duration_ms: 55.450458
+  type: 'test'
+  ...
+# Subtest: rejects harness errors and unknown records
+ok 13 - rejects harness errors and unknown records
+  ---
+  duration_ms: 56.160209
+  type: 'test'
+  ...
+# Subtest: defaults to all cases and preserves suite order for selected cases
+ok 14 - defaults to all cases and preserves suite order for selected cases
+  ---
+  duration_ms: 0.66975
+  type: 'test'
+  ...
+# Subtest: rejects typos, empty selections, duplicate cases and unrecognized options
+ok 15 - rejects typos, empty selections, duplicate cases and unrecognized options
+  ---
+  duration_ms: 0.138167
+  type: 'test'
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 605.135291
+
+===== inventory-generation.log =====
+Inventoried 196 pinned upstream tests: {"ported":103,"unreviewed":89,"excluded":4}; 0 source parse errors remain visible.
+
+
+FINAL DESKTOP REGRESSIONS — 0cafe0f
+
+origin-probe-red.log
+Unhandled exception. System.Threading.Tasks.TaskCanceledException: The request was canceled due to the configured HttpClient.Timeout of 5 seconds elapsing.
+ ---> System.TimeoutException: The operation was canceled.
+ ---> System.Threading.Tasks.TaskCanceledException: The operation was canceled.
+ ---> System.IO.IOException: Unable to read data from the transport connection: Operation canceled.
+ ---> System.Net.Sockets.SocketException (89): Operation canceled
+   --- End of inner exception stack trace ---
+   at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.ThrowException(SocketError error, CancellationToken cancellationToken)
+   at System.Net.Sockets.Socket.AwaitableSocketAsyncEventArgs.System.Threading.Tasks.Sources.IValueTaskSource<System.Int32>.GetResult(Int16 token)
+   at System.Net.Http.HttpConnection.InitialFillAsync(Boolean async)
+   at System.Net.Http.HttpConnection.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+   --- End of inner exception stack trace ---
+   at System.Net.Http.HttpConnection.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+   at System.Net.Http.HttpConnectionPool.SendWithVersionDetectionAndRetryAsync(HttpRequestMessage request, Boolean async, Boolean doRequestAuth, CancellationToken cancellationToken)
+   at System.Net.Http.RedirectHandler.SendAsync(HttpRequestMessage request, Boolean async, CancellationToken cancellationToken)
+   at System.Net.Http.HttpClient.GetStringAsyncCore(HttpRequestMessage request, CancellationToken cancellationToken)
+   --- End of inner exception stack trace ---
+   --- End of inner exception stack trace ---
+   at System.Net.Http.HttpClient.HandleFailure(Exception e, Boolean telemetryStarted, HttpResponseMessage response, CancellationTokenSource cts, CancellationToken cancellationToken, CancellationTokenSource pendingRequestsCts)
+   at System.Net.Http.HttpClient.GetStringAsyncCore(HttpRequestMessage request, CancellationToken cancellationToken)
+   at OriginProbe.CheckIdleConnectionAsync() in <checkout>/tests/NetWiv.Desktop.Smoke/OriginProbe.cs:line 29
+   at Program.Main(String[] args) in <checkout>/tests/NetWiv.Desktop.Smoke/Program.cs:line 32
+
+origin-probe-green.log
+PASS origin probe serves concurrent requests and cancels idle connections
+
+macos-desktop-aot.log
+PASS application setup on native UI thread
+BACKEND macos
+PASS guest secondary including scoped file asset
+PASS guest main including scoped file asset
+PASS guest child including scoped file asset
+PASS origin probe serves concurrent requests and cancels idle connections
+PASS NetWiv default window title on native runtime
+PASS native windows, menu mutation, icon/About SDK, image and tray
+PASS Stronghold snapshot across C# IPC and native ABI; shortcut query
+PASS macOS title bar, effects, Dock, app visibility, paths and unsupported-operation errors
+PASS native reparent updates retained SDK handles and combined-window membership
+PASS C# native queries, icons, background and async close lifecycle
+PASS repeated bare window and child webview creation and cleanup
+PASS hidden parent/child/root creation, show, focus and cleanup
+PASS reload invalidates pending command and Channel callbacks
+READY integrated GUI inspection
+GUI menu checked: False
+PASS remote iframe isolation and navigation origin denial
+PASS resource cleanup
+
+macos-windowless-aot.log
+PASS windowless native startup, menu/tray resources, task dispatch and shutdown
+
+macos-desktop-managed.log
+PASS application setup on native UI thread
+BACKEND macos
+PASS guest main including scoped file asset
+PASS guest secondary including scoped file asset
+PASS guest child including scoped file asset
+PASS origin probe serves concurrent requests and cancels idle connections
+PASS NetWiv default window title on native runtime
+PASS native windows, menu mutation, icon/About SDK, image and tray
+PASS Stronghold snapshot across C# IPC and native ABI; shortcut query
+PASS macOS title bar, effects, Dock, app visibility, paths and unsupported-operation errors
+PASS native reparent updates retained SDK handles and combined-window membership
+PASS C# native queries, icons, background and async close lifecycle
+PASS repeated bare window and child webview creation and cleanup
+PASS hidden parent/child/root creation, show, focus and cleanup
+PASS reload invalidates pending command and Channel callbacks
+PASS remote iframe isolation and navigation origin denial
+PASS resource cleanup
+
+macos-windowless-managed.log
+PASS windowless native startup, menu/tray resources, task dispatch and shutdown
+
+desktop-coverage.log
+dotnet-coverage v18.5.2.0 [osx-arm64 - .NET 8.0.13]
+
+SessionId: 3bd510d9-85fb-481a-ac6c-33bfc2f0c0ea
+PASS application setup on native UI thread
+BACKEND macos
+PASS guest child including scoped file asset
+PASS guest main including scoped file asset
+PASS guest secondary including scoped file asset
+PASS origin probe serves concurrent requests and cancels idle connections
+PASS NetWiv default window title on native runtime
+PASS native windows, menu mutation, icon/About SDK, image and tray
+PASS Stronghold snapshot across C# IPC and native ABI; shortcut query
+PASS macOS title bar, effects, Dock, app visibility, paths and unsupported-operation errors
+PASS native reparent updates retained SDK handles and combined-window membership
+PASS C# native queries, icons, background and async close lifecycle
+PASS repeated bare window and child webview creation and cleanup
+PASS hidden parent/child/root creation, show, focus and cleanup
+PASS reload invalidates pending command and Channel callbacks
+PASS remote iframe isolation and navigation origin denial
+PASS resource cleanup
+코드 검사 결과: artifacts/ci/refactor/after/desktop-coverage.xml.

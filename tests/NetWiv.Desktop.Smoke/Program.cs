@@ -16,6 +16,7 @@ internal static class Program
     private static int _sensitiveCalls;
     private static ulong _pendingDocument;
     private static readonly TaskCompletionSource<JsonElement> PendingReply = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private static readonly TaskCompletionSource PendingReloadStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private static readonly TaskCompletionSource ReloadComplete = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private static Channel? _pendingChannel;
     private static readonly int GuiHoldMs = int.TryParse(Environment.GetEnvironmentVariable("NETWIV_SMOKE_HOLD_MS"), out var duration)
@@ -28,6 +29,7 @@ internal static class Program
     {
         if (args is ["--window-state-smoke", var stateRoot, var phase]) return WindowStateSmoke.Run(stateRoot, phase == "restore");
         if (args is ["--expect-startup-error", var expected]) return CheckStartupError(expected);
+        if (args is ["--origin-probe-smoke"]) { OriginProbe.CheckIdleConnectionAsync().GetAwaiter().GetResult(); return 0; }
         if (args is ["--no-window-smoke"]) return CheckNoWindows();
         if (args.Length != 0) throw new ArgumentException("Unknown smoke-test arguments.");
         using var probe = new OriginProbe();
@@ -59,12 +61,15 @@ internal static class Program
             {
                 _pendingDocument = context.DocumentId;
                 _pendingChannel = Channel.FromJson(context, args.GetProperty("channel"));
+                PendingReloadStarted.TrySetResult();
                 return new ValueTask<JsonElement>(PendingReply.Task);
             })
-            .RegisterCommand("reload_barrier", (_, _, _) =>
+            .RegisterCommand("reload_barrier", async (_, _, cancellationToken) =>
             {
+                // Separate invokes may dispatch concurrently; observe actual setup, not send order.
+                await PendingReloadStarted.Task.WaitAsync(cancellationToken);
                 Require(_pendingDocument != 0, "native document generation is missing");
-                return Value(JsonValue.Null);
+                return JsonValue.Null;
             })
             .RegisterCommand("release_reload", (context, _, _) =>
             {
@@ -124,6 +129,7 @@ internal static class Program
     {
         try
         {
+            await OriginProbe.CheckIdleConnectionAsync();
             var title = await app.GetWindow("main")!.TitleAsync();
             Require(title == "NetWiv desktop — main + child", "native window title");
             await app.InvokeAsync("plugin:window|create", JsonValue.Parse("{\"options\":{\"label\":\"identity-title\",\"visible\":false}}"));
@@ -166,6 +172,29 @@ internal static class Program
                 Require(app.WebviewWindows.All(window => window.Label != "temporary"), "destroyed window remains in Core registry");
             }
             Console.WriteLine("PASS repeated bare window and child webview creation and cleanup");
+            foreach (bool parentVisible in new[] { false, true })
+            foreach (bool viewVisible in new[] { false, true })
+            {
+                var parent = await new WindowBuilder(app, "visibility-parent").Visible(parentVisible).BuildAsync();
+                var view = await new WebviewBuilder(app, parent, "visibility-child").Url("quiet.html")
+                    .Visible(viewVisible).Focused(true).BuildAsync();
+                Require(await parent.IsVisibleAsync() == parentVisible, "creating a child changed parent visibility");
+                await parent.ShowAsync();
+                await view.ShowAsync();
+                await view.SetFocusAsync();
+                await view.CloseAsync();
+                await parent.DestroyAsync();
+                Require(await app.GetWebviewAsync(view.Label) is null, "closed visibility probe retained its native WebView");
+                Require(await app.GetWindowAsync(parent.Label) is null, "destroyed visibility probe retained its native window");
+            }
+            var hiddenRoot = await new WebviewWindowBuilder(app, "hidden-root").Url("quiet.html")
+                .Visible(false).Focused(true).BuildAsync();
+            Require(!await hiddenRoot.IsVisibleAsync(), "hidden root window became visible during creation");
+            await hiddenRoot.ShowAsync();
+            await hiddenRoot.Webview.SetFocusAsync();
+            await hiddenRoot.DestroyAsync();
+            Require(await app.GetWebviewAsync("hidden-root") is null, "destroyed root retained its native WebView");
+            Console.WriteLine("PASS hidden parent/child/root creation, show, focus and cleanup");
             var reload = await new WebviewBuilder(app, app.GetWindow("main")!, "reload").Url("reload.html").BuildAsync();
             await ReloadComplete.Task.WaitAsync(TimeSpan.FromSeconds(15));
             await reload.CloseAsync();

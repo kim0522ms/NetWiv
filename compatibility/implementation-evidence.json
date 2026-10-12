@@ -4,13 +4,13 @@
   "groups": [
     {
       "fixture": "window.effects-validation",
-      "sources": ["native/netwiv-native/src/runtime.rs"],
+      "sources": ["native/netwiv-native/src/runtime/options.rs", "native/netwiv-native/src/runtime/platform.rs"],
       "apis": ["window.Window.setEffects", "webviewWindow.WebviewWindow.setEffects", "window.WindowOptions.windowEffects"],
       "limits": "Both public setters validate the pinned WindowEffectsConfig, clear null/absent effects, accept supported values and preserve exact malformed-input errors. Invalid constructor options fail without allocating a window. Windows applies supported effects; Linux validates then performs the upstream no-op. Visual appearance and macOS effects are not established by this fixture."
     },
     {
       "fixture": "security.frame-origins",
-      "sources": ["src/NetWiv.Core/Ipc/InitializationScript.cs", "src/NetWiv.Core/Ipc/AppHandle.Protocol.cs", "src/NetWiv.Core/Security/Acl.cs", "native/netwiv-native/src/runtime.rs"],
+      "sources": ["src/NetWiv.Core/Ipc/InitializationScript.cs", "src/NetWiv.Core/Ipc/AppHandle.Protocol.cs", "src/NetWiv.Core/Security/Acl.cs", "native/netwiv-native/src/runtime/webview.rs", "native/netwiv-native/src/runtime/protocol.rs"],
       "apis": ["core.invoke", "core.isTauri"],
       "limits": "Standard protocol IPC compares trusted and untrusted remote windows, local/remote/opaque child frames and spoofed origin fields. Windows authorizes each frame by browser Origin; pinned WebKitGTK exposes the bridge only in the main frame. Local/trusted positive controls must succeed. Isolation child frames and forced fallback transport are outside this fixture."
     },
@@ -97,7 +97,7 @@
     {
       "fixture": "menu.app-assignment",
       "sources": [
-        "native/netwiv-native/src/runtime.rs"
+        "native/netwiv-native/src/runtime/menus.rs"
       ],
       "apis": [
         "menu.Menu.setAsAppMenu",
@@ -108,7 +108,8 @@
     {
       "fixture": "menu.item-state-roundtrip",
       "sources": [
-        "native/netwiv-native/src/resources.rs"
+        "native/netwiv-native/src/resources.rs",
+        "native/netwiv-native/src/resources/menus.rs"
       ],
       "apis": [
         "menu.MenuItem.text",
@@ -141,7 +142,8 @@
       "fixture": "menu.container-and-window-assignment",
       "sources": [
         "native/netwiv-native/src/resources.rs",
-        "native/netwiv-native/src/runtime.rs"
+        "native/netwiv-native/src/resources/menus.rs",
+        "native/netwiv-native/src/runtime/menus.rs"
       ],
       "apis": [
         "menu.Menu.append",
@@ -158,7 +160,8 @@
     {
       "fixture": "image.encoded-inputs",
       "sources": [
-        "native/netwiv-native/src/resources.rs"
+        "native/netwiv-native/src/resources.rs",
+        "native/netwiv-native/src/resources/images.rs"
       ],
       "apis": [
         "image.Image.static.fromBytes",
@@ -173,7 +176,8 @@
     {
       "fixture": "image.decode-errors",
       "sources": [
-        "native/netwiv-native/src/resources.rs"
+        "native/netwiv-native/src/resources.rs",
+        "native/netwiv-native/src/resources/images.rs"
       ],
       "apis": [
         "image.Image.static.fromBytes",
@@ -184,7 +188,7 @@
     {
       "fixture": "webview.creation-user-agent",
       "sources": [
-        "native/netwiv-native/src/runtime.rs"
+        "native/netwiv-native/src/runtime/webview.rs"
       ],
       "apis": [
         "webview.Webview.constructor",
@@ -196,7 +200,7 @@
     {
       "fixture": "webview.hidden-parent-show",
       "sources": [
-        "native/netwiv-native/src/runtime.rs"
+        "native/netwiv-native/src/runtime/webview.rs"
       ],
       "apis": [
         "webviewWindow.WebviewWindow.constructor",
@@ -208,7 +212,7 @@
     {
       "fixture": "webview.root-auto-resize",
       "sources": [
-        "native/netwiv-native/src/runtime.rs",
+        "native/netwiv-native/src/runtime/webview.rs",
         "native/netwiv-native/src/relative_bounds.rs"
       ],
       "apis": [
@@ -222,7 +226,7 @@
     {
       "fixture": "webview.relative-auto-resize",
       "sources": [
-        "native/netwiv-native/src/runtime.rs",
+        "native/netwiv-native/src/runtime/webview.rs",
         "native/netwiv-native/src/relative_bounds.rs"
       ],
       "apis": [
@@ -235,7 +239,8 @@
     {
       "fixture": "window.native-flags",
       "sources": [
-        "native/netwiv-native/src/runtime.rs",
+        "native/netwiv-native/src/runtime/window.rs",
+        "native/netwiv-native/src/runtime/platform.rs",
         "docs/pinned-upstream-behavior.md"
       ],
       "apis": [
@@ -261,6 +266,8 @@
       "fixture": "window.resize-and-dpi",
       "sources": [
         "native/netwiv-native/src/runtime.rs",
+        "native/netwiv-native/src/runtime/window.rs",
+        "native/netwiv-native/src/runtime/options.rs",
         "src/NetWiv.Core/Events/NativeEvents.cs"
       ],
       "apis": [
@@ -275,7 +282,7 @@
     {
       "fixture": "window.maximize-and-fullscreen",
       "sources": [
-        "native/netwiv-native/src/runtime.rs"
+        "native/netwiv-native/src/runtime/window.rs"
       ],
       "apis": [
         "window.Window.maximize",
@@ -290,7 +297,7 @@
     {
       "fixture": "webview.reparent-capability",
       "sources": [
-        "native/netwiv-native/src/runtime.rs",
+        "native/netwiv-native/src/runtime/webview.rs",
         "src/NetWiv.Core/AppHandle.cs"
       ],
       "apis": [
@@ -302,6 +309,7 @@
       "fixture": "menu.items-lifecycle",
       "sources": [
         "native/netwiv-native/src/resources.rs",
+        "native/netwiv-native/src/resources/menus.rs",
         "src/NetWiv.Core/Api/Menu.cs",
         "docs/pinned-upstream-behavior.md"
       ],
@@ -344,7 +352,8 @@
       "fixture": "menu.payload-variants",
       "sources": [
         "native/netwiv-native/src/menu_payload.rs",
-        "native/netwiv-native/src/resources.rs"
+        "native/netwiv-native/src/resources.rs",
+        "native/netwiv-native/src/resources/menus.rs"
       ],
       "apis": [
         "menu.Menu.static.new",
@@ -356,7 +365,8 @@
       "fixture": "menu.argument-errors",
       "sources": [
         "native/netwiv-native/src/menu_payload.rs",
-        "native/netwiv-native/src/resources.rs"
+        "native/netwiv-native/src/resources.rs",
+        "native/netwiv-native/src/resources/menus.rs"
       ],
       "apis": [
         "menu.Menu.static.new",
@@ -371,7 +381,7 @@
         "src/NetWiv.Core/Ipc/InitializationScript.cs",
         "src/NetWiv.Core/Assets/FileAssetProtocol.cs",
         "src/NetWiv.Core/Security/FileScope.cs",
-        "native/netwiv-native/src/runtime.rs"
+        "native/netwiv-native/src/runtime/protocol.rs"
       ],
       "apis": [
         "core.convertFileSrc"
@@ -597,7 +607,7 @@
     {
       "fixture": "window.current",
       "sources": [
-        "native/netwiv-native/src/runtime.rs",
+        "native/netwiv-native/src/runtime/protocol.rs",
         "src/NetWiv.Core/Ipc/InitializationScript.cs"
       ],
       "apis": [
@@ -611,6 +621,8 @@
       "fixture": "webview-window.lifecycle",
       "sources": [
         "native/netwiv-native/src/runtime.rs",
+        "native/netwiv-native/src/runtime/window.rs",
+        "native/netwiv-native/src/runtime/webview.rs",
         "src/NetWiv.Core/AppHandle.cs"
       ],
       "apis": [
@@ -624,7 +636,7 @@
     {
       "fixture": "window.color-union",
       "sources": [
-        "native/netwiv-native/src/runtime.rs",
+        "native/netwiv-native/src/runtime/options.rs",
         "docs/pinned-upstream-behavior.md"
       ],
       "apis": [
@@ -636,7 +648,8 @@
     {
       "fixture": "window.creation-validation",
       "sources": [
-        "native/netwiv-native/src/runtime.rs"
+        "native/netwiv-native/src/runtime/options.rs",
+        "native/netwiv-native/src/runtime/window.rs"
       ],
       "apis": [
         "window.Window.constructor",
@@ -649,7 +662,8 @@
     {
       "fixture": "window.numeric-and-stale-handles",
       "sources": [
-        "native/netwiv-native/src/runtime.rs"
+        "native/netwiv-native/src/runtime/options.rs",
+        "native/netwiv-native/src/runtime/window.rs"
       ],
       "apis": [
         "window.Window.setBadgeCount",
@@ -665,6 +679,7 @@
       "fixture": "webview.child-lifecycle",
       "sources": [
         "native/netwiv-native/src/runtime.rs",
+        "native/netwiv-native/src/runtime/webview.rs",
         "docs/pinned-upstream-behavior.md"
       ],
       "apis": [
@@ -679,7 +694,7 @@
     {
       "fixture": "window.property-roundtrip",
       "sources": [
-        "native/netwiv-native/src/runtime.rs"
+        "native/netwiv-native/src/runtime/window.rs"
       ],
       "apis": [
         "window.Window.title",
@@ -691,7 +706,7 @@
     {
       "fixture": "webview.bounds",
       "sources": [
-        "native/netwiv-native/src/runtime.rs"
+        "native/netwiv-native/src/runtime/webview.rs"
       ],
       "apis": [
         "webview.getCurrentWebview",
@@ -717,7 +732,8 @@
     {
       "fixture": "menu.resource",
       "sources": [
-        "native/netwiv-native/src/resources.rs"
+        "native/netwiv-native/src/resources.rs",
+        "native/netwiv-native/src/resources/menus.rs"
       ],
       "apis": [
         "menu.Menu.static.new",
@@ -729,7 +745,8 @@
     {
       "fixture": "tray.resource",
       "sources": [
-        "native/netwiv-native/src/resources.rs"
+        "native/netwiv-native/src/resources.rs",
+        "native/netwiv-native/src/resources/trays.rs"
       ],
       "apis": [
         "tray.TrayIcon.static.new",

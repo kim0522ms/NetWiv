@@ -46,9 +46,11 @@ editors. Do not add these keys to the generated upstream compatibility schema.
 
 The working directory must stay inside the install root: absolute paths, drive
 prefixes, `..`, empty segments and invalid Windows names are rejected. Shortcut
-names must be valid Windows filenames. Argument strings cannot contain control
+names must be valid Windows filenames (up to 200 characters for NSIS, 115 for
+MSI including its generated short-name allowance). Argument strings cannot contain control
 characters; their quoted command line must fit 1000 UTF-16 code units (the
-standard NSIS string-buffer limit). NSIS and MSI/WiX metacharacters are escaped
+standard NSIS string-buffer limit). MSI carries the command through a property
+so the shortcut table's 255-character argument field does not truncate it. NSIS and MSI/WiX metacharacters are escaped
 independently of Windows argument quoting. Do not put shell syntax or installer
 variables in the array expecting expansion: `$INSTDIR` and `[INSTALLDIR]`, for
 example, are passed literally to the app.

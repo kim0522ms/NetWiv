@@ -51,6 +51,14 @@ internal static class WindowsInstallerTests
             NativeBundler.ValidateConfiguration(msiDisabled, BuildTarget.Resolve("win-x64"), "nsis");
             NativeBundler.ValidateConfiguration(disabled, BuildTarget.Resolve("linux-x64"), "deb");
             Throws<ArgumentException>(() => NativeBundler.ValidateConfiguration(disabled, BuildTarget.Resolve("win-x64"), "deb"));
+            var longName = Config(root, new JsonObject { ["shortcuts"] = new JsonObject { ["name"] = new string('a', 116) } }.ToJsonString());
+            Throws<NetWivConfigException>(() => NativeBundler.ValidateConfiguration(longName, BuildTarget.Resolve("win-x64"), "msi"));
+            NativeBundler.ValidateConfiguration(longName, BuildTarget.Resolve("win-x64"), "nsis");
+            var mainName = Config(root, "{}");
+            mainName.Root["mainBinaryName"] = "Valid";
+            NativeBundler.ValidateConfiguration(mainName, BuildTarget.Resolve("win-x64"), "msi");
+            mainName.Root["mainBinaryName"] = "../invalid";
+            Throws<NetWivConfigException>(() => NativeBundler.ValidateConfiguration(mainName, BuildTarget.Resolve("win-x64"), "msi"));
             var badGuid = Config(root, "{}");
             badGuid.Root["bundle"]!["windows"]!["wix"] = new JsonObject { ["upgradeCode"] = "invalid" };
             Throws<NetWivConfigException>(() => NativeBundler.ValidateConfiguration(badGuid, BuildTarget.Resolve("win-x64"), "msi"));
@@ -88,7 +96,7 @@ internal static class WindowsInstallerTests
                 {
                     options["shortcuts"]!["name"] = "작업 & 도구";
                     options["shortcuts"]!["workingDirectory"] = "data";
-                    options["shortcuts"]!["arguments"] = new JsonArray("space value", "한글", "a\"b", "", "C:\\end\\", "$INSTDIR", "[INSTALLDIR]", "$(var.foo)", "!(wix.foo)");
+                    options["shortcuts"]!["arguments"] = new JsonArray("space value", "한글", "a\"b", "", "C:\\end\\", "$INSTDIR", "[INSTALLDIR]", "$(var.foo)", "!(wix.foo)", "$(loc.literal)", "!(literal)", new string('x', 280));
                 }
                 var config = Config(root, options.ToJsonString());
                 nsis = NativeBundler.RenderNsis(config, root, "Probe.exe", "out.exe");
@@ -111,8 +119,10 @@ internal static class WindowsInstallerTests
                     Check(nsis.Contains("$$INSTDIR") && nsis.Contains("$\\\""), "NSIS literal arguments");
                     var shortcut = msi.Descendants(w + "Shortcut").First();
                     Check((string?)shortcut.Attribute("Name") == "작업 & 도구", "Unicode XML name");
-                    var arguments = (string)shortcut.Attribute("Arguments")!;
-                    Check(arguments.Contains(@"[\[]INSTALLDIR[\]]") && arguments.Contains("$$(var.foo)") && arguments.Contains("!!(wix.foo)"), "MSI/WiX expression escaping");
+                    Check((string?)shortcut.Attribute("Arguments") == "[NetWivShortcutArguments]", "MSI arguments avoid the 255-character table limit");
+                    var arguments = (string)msi.Descendants(w + "Property").Single(p => (string?)p.Attribute("Id") == "NetWivShortcutArguments").Attribute("Value")!;
+                    Check(arguments.Contains("[INSTALLDIR]") && arguments.Contains("$$(var.foo)") && arguments.Contains("!!(wix.foo)"), "MSI/WiX expression escaping");
+                    Check(arguments.Contains("!$$(loc.literal)") && arguments.Contains("!(literal)"), "Literal WiX expressions");
                     Check((string?)shortcut.Attribute("WorkingDirectory") == "NETWIVWORKDIR", "MSI working directory property");
                 }
             }

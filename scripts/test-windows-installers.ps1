@@ -94,7 +94,7 @@ try {
             $shortcutName = "$product 작업 & 도구"
             $desktopLink = Join-Path $desktop "$shortcutName.lnk"
             $menuLink = Join-Path $programs "$product/$shortcutName.lnk"
-            $expected = @('space value', '한글', 'a"b', '', 'C:\trailing\', 'a\"b', '$INSTDIR', '[INSTALLDIR]', '$(var.foo)', '!(wix.foo)', '<&>')
+            $expected = @('space value', '한글', 'a"b', '', 'C:\trailing\', 'a\"b', '$INSTDIR', '[INSTALLDIR]', '$(var.foo)', '!(wix.foo)', '<&>', '!(literal)', '$(loc.literal)', ('long-' + ('x' * 280)))
             $config = @{
                 productName = $product; identifier = $identifier; version = '1.0.0'
                 build = @{ dotnetProject = 'InstallerProbe.csproj' }

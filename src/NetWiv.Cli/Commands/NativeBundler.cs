@@ -78,7 +78,7 @@ internal static partial class NativeBundler
         CopyTree(publishDirectory, payload);
         PatchBundleType(Path.Combine(payload, Path.GetRelativePath(publishDirectory, binary)), "NSS");
         if (!noSign) await SignWindowsAsync(config, Path.Combine(payload, Path.GetRelativePath(publishDirectory, binary)), cancellationToken);
-        File.WriteAllText(script, RenderNsis(config, payload, Path.GetFileName(binary), output));
+        File.WriteAllText(script, RenderNsis(config, payload, Path.GetFileName(binary), output), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
         await RequireSuccess(tool, ["/V2", script], directory, cancellationToken);
         return RequireArtifact(output);
     }

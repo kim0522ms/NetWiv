@@ -17,6 +17,9 @@ internal static partial class NativeBundler
         if (config.String("mainBinaryName") is { } binary) WindowsInstallerOptions.ValidateFileName(binary, "mainBinaryName");
         if (formats.Contains("msi"))
         {
+            // WiX adds an 8.3 alias and separator to MSI's 128-character Shortcut.Name column.
+            if ((options.ShortcutName ?? Product(config)).Length > 115)
+                throw new NetWivConfigException("MSI shortcut names must not exceed 115 characters.");
             _ = MsiVersion.Resolve(Version(config), config.String("bundle", "windows", "wix", "version"));
             if (!Guid.TryParse(UpgradeCode(config), out _)) throw new NetWivConfigException("bundle.windows.wix.upgradeCode must be a GUID.");
         }
@@ -144,17 +147,19 @@ SectionEnd
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product Id="*" Name="{WixXml(product)}" Language="1033" Codepage="65001" Version="{MsiVersion.Resolve(Version(config), config.String("bundle", "windows", "wix", "version"))}" Manufacturer="{WixXml(Publisher(config))}" UpgradeCode="{upgradeCode}">
-    <Package InstallerVersion="500" Compressed="yes" InstallScope="{(options.PerMachine ? "perMachine" : "perUser")}" />
+    <Package InstallerVersion="500" Compressed="yes" SummaryCodepage="65001" InstallScope="{(options.PerMachine ? "perMachine" : "perUser")}" />
     <MajorUpgrade AllowDowngrades="yes" />
     <MediaTemplate EmbedCab="yes" />
     <Condition Message="This package has a fixed {(options.PerMachine ? "per-machine" : "current-user")} installation scope.">Installed OR {(options.PerMachine ? "ALLUSERS = 1" : "NOT ALLUSERS")}</Condition>
     {(options.PerMachine ? "" : $"<Property Id=\"WEBVIEW2_USER\"><RegistrySearch Id=\"WebView2User\" Root=\"HKCU\" Key=\"Software\\Microsoft\\EdgeUpdate\\Clients\\{WebView2Client}\" Name=\"pv\" Type=\"raw\" Win64=\"no\" /></Property>")}
     <Property Id="WEBVIEW2_MACHINE"><RegistrySearch Id="WebView2Machine" Root="HKLM" Key="Software\Microsoft\EdgeUpdate\Clients\{WebView2Client}" Name="pv" Type="raw" Win64="no" /></Property>
     <Condition Message="Microsoft Edge WebView2 Runtime{(options.PerMachine ? " installed for all users" : "")} is required. Install it from https://developer.microsoft.com/microsoft-edge/webview2/ and run this installer again.">Installed OR {(options.PerMachine ? "" : "(WEBVIEW2_USER AND WEBVIEW2_USER &lt;&gt; &quot;0.0.0.0&quot;) OR ")}(WEBVIEW2_MACHINE AND WEBVIEW2_MACHINE &lt;&gt; "0.0.0.0")</Condition>
+    {(options.Arguments.Count == 0 ? "" : $"<Property Id=\"NetWivShortcutArguments\" Value=\"{WixXml(options.CommandLine)}\" />")}
     <Property Id="INSTALLDIR" Secure="yes" />
     <Property Id="EXISTINGINSTALLDIR" Secure="yes"><RegistrySearch Id="PreviousInstallPath" Root="{options.RegistryHive}" Key="{WixXml(registryKey)}" Name="InstallLocation" Type="raw" Win64="{(options.PerMachine ? "yes" : "no")}" /></Property>
     <SetProperty Id="INSTALLDIR" Value="[EXISTINGINSTALLDIR]" Before="CostInitialize" Sequence="both">NOT INSTALLDIR AND EXISTINGINSTALLDIR</SetProperty>
     <SetProperty Id="ARPINSTALLLOCATION" Value="[INSTALLDIR]" After="CostFinalize" Sequence="execute" />
+    <SetProperty Id="NETWIVTARGET" Value="[INSTALLDIR]{WixXml(MsiLiteral(binary))}" After="CostFinalize" Sequence="both" />
     <SetProperty Id="NETWIVWORKDIR" Value="[INSTALLDIR]{WixXml(workDir)}" After="CostFinalize" Sequence="both" />
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="{(options.PerMachine ? "ProgramFiles64Folder" : "LocalAppDataFolder")}"><Directory Id="INSTALLDIR" Name="{WixXml(SafeName(product))}">
@@ -181,7 +186,7 @@ SectionEnd
             refs.AppendLine($"<ComponentRef Id=\"{component}\" />");
             return $"""
 <Component Id="{component}" Guid="{Uuid5(upgradeCode + (startMenu ? ":shortcut" : ":desktop-shortcut"))}" Win64="{(options.PerMachine ? "yes" : "no")}">
-  <Shortcut Id="{id}" Name="{WixXml(options.ShortcutName ?? product)}" Target="[INSTALLDIR]{WixXml(MsiLiteral(binary))}" WorkingDirectory="NETWIVWORKDIR" {(options.Arguments.Count == 0 ? "" : $"Arguments=\"{WixXml(MsiLiteral(options.CommandLine))}\"")} />
+  <Shortcut Id="{id}" Name="{WixXml(options.ShortcutName ?? product)}" Target="[NETWIVTARGET]" WorkingDirectory="NETWIVWORKDIR" {(options.Arguments.Count == 0 ? "" : "Arguments=\"[NetWivShortcutArguments]\"")} />
   {(startMenu ? "<RemoveFolder Id=\"RemoveProgramsFolder\" Directory=\"ApplicationProgramsFolder\" On=\"uninstall\" />" : "")}
   <RegistryValue Root="{options.RegistryHive}" Key="{WixXml(registryKey)}" Name="{component}" Type="integer" Value="1" KeyPath="yes" />
 </Component>

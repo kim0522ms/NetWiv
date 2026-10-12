@@ -117,7 +117,21 @@ Section
 path_length_ok:
   SetShellVarContext {context}
   SetRegView 64
-  ; Remove the previous version's links before applying changed shortcut options.
+  ; A file-scoped uninstaller knows the previous payload, including files removed in this release.
+  ; Never auto-run legacy uninstallers that recursively deleted the selected directory.
+  ReadRegDWORD $1 {hive} "{key}" "FileScopedUninstall"
+  IntCmp $1 1 0 legacy_links legacy_links
+  ReadRegStr $0 {hive} "{key}" "InstallLocation"
+  IfFileExists "$0\uninstall.exe" 0 upgrade_failed
+  ClearErrors
+  ExecWait '$\"$0\uninstall.exe$\" /S _?=$0' $1
+  IfErrors upgrade_failed
+  StrCmp $1 0 links_clean
+upgrade_failed:
+  SetErrorLevel 2
+  Abort "Could not remove the previous version's package files."
+legacy_links:
+  ; Remove legacy links before applying changed shortcut options.
   ReadRegStr $0 {hive} "{key}" "InstallLocation"
   StrCmp $0 "" links_clean
   ReadRegStr $0 {hive} "{key}" "ShortcutName"
@@ -131,6 +145,7 @@ links_clean:
   File /r "{EscapeNsisFilePath(payload)}\*"
   WriteUninstaller "$INSTDIR\uninstall.exe"
 {shortcuts}
+  WriteRegDWORD {hive} "{key}" "FileScopedUninstall" 1
   WriteRegStr {hive} "{key}" "ShortcutName" "{name}"
   WriteRegStr {hive} "{key}" "DisplayName" "{product}"
   WriteRegStr {hive} "{key}" "DisplayVersion" "{EscapeNsis(Version(config))}"

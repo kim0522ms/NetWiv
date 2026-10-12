@@ -90,6 +90,7 @@ internal static class WindowsInstallerTests
             Check(nsis.Contains("InstallDir \"$LOCALAPPDATA\\Probe\"") && nsis.Contains("RequestExecutionLevel user"), "NSIS defaults");
             Check(!nsis.Contains("Page directory") && nsis.Contains("GetCommandLineW") && nsis.Contains("${GetOptions} $1 \"/D=\" $2"), "NSIS restore without changing UI default");
             Check(!nsis.Contains("RMDir /r") && nsis.Contains("Delete \"$INSTDIR\\data\\sample.txt\"") && nsis.Contains("RMDir \"$INSTDIR\\data\""), "Uninstall removes only owned files and empty directories");
+            Check(nsis.Contains("FileScopedUninstall") && nsis.Contains("ExecWait") && nsis.Contains("_?=$0"), "Upgrade removes the previous owned payload without executing legacy recursive uninstallers");
             Check(nsis.Contains("IntCmp $0 1000 path_length_ok path_length_ok"), "Reject runtime path overflow before expansion");
             Check(nsis.Split("CreateShortcut").Length == 3, "NSIS both shortcuts by default");
             Check((string?)msi.Descendants(w + "Package").Single().Attribute("InstallScope") == "perUser", "MSI scope default");

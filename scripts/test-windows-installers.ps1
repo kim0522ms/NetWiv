@@ -114,6 +114,8 @@ try {
             $installedPackage = $null
             try {
                 foreach ($version in @('1.0.0', '1.0.1')) {
+                    $obsolete = Join-Path $payload 'obsolete.txt'
+                    if ($version -eq '1.0.0') { Set-Content $obsolete 'removed in the next version' } else { Remove-Item $obsolete }
                     $config.version = $version
                     $config | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $fixture 'netwiv.conf.json')
                     Push-Location $fixture
@@ -139,6 +141,7 @@ try {
                     $installed = $true
                     $installedPackage = $package
                     Assert (Test-Path (Join-Path $install 'InstallerProbe.exe')) 'Upgrade lost custom installation directory.'
+                    Assert ((Test-Path (Join-Path $install 'obsolete.txt')) -eq ($version -eq '1.0.0')) 'Upgrade left an obsolete package file.'
                     foreach ($link in @($desktopLink, $menuLink)) {
                         Assert (Test-Path $link) "Missing shortcut: $link"
                         $kind = if ($link -eq $desktopLink) { 'desktop' } else { 'menu' }

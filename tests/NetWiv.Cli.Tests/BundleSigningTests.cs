@@ -32,6 +32,12 @@ internal static class BundleSigningTests
         string output;
         if (args.Contains("/V2")) output = Regex.Match(File.ReadAllText(args[^1]), "OutFile \"([^\"]+)\"").Groups[1].Value;
         else output = args[Array.IndexOf(args, "-out") + 1];
+        if (Path.GetExtension(output) == ".msi")
+        {
+            var index = Array.IndexOf(args, "-loc");
+            if (index < 0 || !File.ReadAllText(args[index + 1]).Contains("Codepage=\"65001\""))
+                throw new Exception("MSI localization must preserve Unicode even with WixUIExtension.");
+        }
         File.WriteAllText(output, "package");
         return 0;
     }

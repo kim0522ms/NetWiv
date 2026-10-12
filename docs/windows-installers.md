@@ -89,7 +89,11 @@ inside the selected directory and application data outside it are preserved.
 Subsequent installations of the same format, scope and identity recover the
 stored installation directory. MSI versions predating this feature did not
 store `InstallLocation` and therefore cannot recover an earlier custom path.
-NSIS can recover the previous version's uninstall registration. Keep the
+NSIS can recover the previous version's uninstall registration. New NSIS packages
+remove the previous package-owned files before installing an upgrade, including
+files omitted by the new version. Legacy packages have no ownership metadata:
+their recursive uninstallers are never run automatically, so obsolete files from
+those versions may require manual cleanup. Keep the
 identifier, product name and MSI `wix.upgradeCode` stable across upgrades.
 Machine MSI packages have a separate upgrade identity, so changing scope is not
 a migration of an existing user installation. Uninstall the old installation

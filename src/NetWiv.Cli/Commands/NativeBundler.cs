@@ -100,7 +100,10 @@ internal static partial class NativeBundler
         if (!noSign) await SignWindowsAsync(config, Path.Combine(payload, Path.GetRelativePath(publishDirectory, binary)), cancellationToken);
         File.WriteAllText(wxs, RenderMsi(config, payload, Path.GetFileName(binary)));
         await RequireSuccess(candle, ["-nologo", "-arch", "x64", "-out", wixobj, wxs], directory, cancellationToken);
-        var lightArguments = new List<string> { "-nologo" };
+        // WixUI's built-in en-US localization otherwise overrides Product.Codepage with 1252.
+        var localization = Path.Combine(directory, "strings.wxl");
+        File.WriteAllText(localization, "<WixLocalization Culture=\"en-us\" Codepage=\"65001\" xmlns=\"http://schemas.microsoft.com/wix/2006/localization\" />");
+        var lightArguments = new List<string> { "-nologo", "-cultures:en-us", "-loc", localization };
         if (Environment.GetEnvironmentVariable("NETWIV_WIX_SUPPRESS_VALIDATION") == "1") lightArguments.Add("-sval");
         if (WindowsInstallerOptions.FromJson(config.Root).AllowDirectorySelection) lightArguments.AddRange(["-ext", "WixUIExtension"]);
         lightArguments.AddRange(["-out", output, wixobj]);

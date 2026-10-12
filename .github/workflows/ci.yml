@@ -203,6 +203,18 @@ jobs:
       - name: Build .NET solution
         run: dotnet build NetWiv.sln -c Release -bl:artifacts/ci/build.binlog
 
+      - name: Windows installer lifecycle acceptance
+        if: runner.os == 'Windows'
+        timeout-minutes: 15
+        shell: pwsh
+        run: |
+          choco install nsis --version=3.11 -y --no-progress
+          if ($LASTEXITCODE -ne 0) { throw 'NSIS installation failed.' }
+          $wixBin = Join-Path $env:WIX 'bin'
+          if (-not (Test-Path (Join-Path $wixBin 'candle.exe'))) { throw 'WiX v3 is missing from the runner.' }
+          $env:PATH = "${env:ProgramFiles(x86)}\NSIS;$wixBin;$env:PATH"
+          ./scripts/test-windows-installers.ps1 *>&1 | Tee-Object artifacts/ci/windows-installers.log
+
       - name: Core tests
         run: dotnet run --project tests/NetWiv.Core.Tests -c Release --no-build 2>&1 | tee artifacts/ci/core-tests.log
 
@@ -287,18 +299,6 @@ jobs:
           $version = Get-RuntimeVersion
           if (-not $version) { throw 'WebView2 Runtime is still missing.' }
           Write-Output "WebView2 Runtime: $version"
-
-      - name: Windows installer lifecycle acceptance
-        if: runner.os == 'Windows'
-        timeout-minutes: 15
-        shell: pwsh
-        run: |
-          choco install nsis --version=3.11 -y --no-progress
-          if ($LASTEXITCODE -ne 0) { throw 'NSIS installation failed.' }
-          $wixBin = Join-Path $env:WIX 'bin'
-          if (-not (Test-Path (Join-Path $wixBin 'candle.exe'))) { throw 'WiX v3 is missing from the runner.' }
-          $env:PATH = "${env:ProgramFiles(x86)}\NSIS;$wixBin;$env:PATH"
-          ./scripts/test-windows-installers.ps1 *>&1 | Tee-Object artifacts/ci/windows-installers.log
 
       - name: Windows NativeAOT WebView smoke
         if: runner.os == 'Windows'

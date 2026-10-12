@@ -44,6 +44,10 @@ internal static class WindowsInstallerTests
                 var config = Config(root, settings);
                 NativeBundler.ValidateConfiguration(config, BuildTarget.Resolve("win-x64"), null);
             }
+            var resourceOnly = Config(root, "{}");
+            resourceOnly.Root.Remove("productName");
+            resourceOnly.Root["bundle"]!["targets"] = new JsonArray();
+            NativeBundler.ValidateConfiguration(resourceOnly, BuildTarget.Resolve("win-x64"), null);
             var disabled = Config(root, "{\"shortcuts\":{\"desktop\":false,\"startMenu\":false,\"arguments\":[\"x\"]}}");
             Throws<NetWivConfigException>(() => NativeBundler.ValidateConfiguration(disabled, BuildTarget.Resolve("win-x64"), null));
             var msiDisabled = Config(root, "{\"shortcuts\":{\"startMenu\":false,\"name\":\"unused\"}}");

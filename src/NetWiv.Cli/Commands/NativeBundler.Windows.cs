@@ -12,7 +12,7 @@ internal static partial class NativeBundler
     {
         var formats = ParseFormats(config, target, requested);
         var options = WindowsInstallerOptions.FromJson(config.Root);
-        if (target.Platform != "windows") return; // Windows options may live in a shared cross-platform config.
+        if (target.Platform != "windows" || formats.Count == 0) return; // Windows options may live in a shared cross-platform config.
         WindowsInstallerOptions.ValidateFileName(Product(config), "productName");
         if (config.String("mainBinaryName") is { } binary) WindowsInstallerOptions.ValidateFileName(binary, "mainBinaryName");
         if (formats.Contains("msi"))

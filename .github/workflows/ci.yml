@@ -257,6 +257,10 @@ jobs:
         if: runner.os == 'Linux'
         run: python3 -m unittest discover -s scripts -p 'test_release_packages.py' -v
 
+      - name: Package consumer project tests
+        shell: pwsh
+        run: ./scripts/test-package-smoke.ps1
+
       - name: Publish Core tests with NativeAOT
         run: dotnet publish tests/NetWiv.Core.Tests -c Release -r '${{ matrix.rid }}' -p:PublishAot=true -o artifacts/ci/core-aot -bl:artifacts/ci/core-aot.binlog
 

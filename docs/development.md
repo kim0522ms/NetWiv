@@ -34,8 +34,15 @@ node scripts/prepare-test-tools.mjs
 dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build
 dotnet test tests/NetWiv.Generators.Tests -c Release --no-build
 dotnet test tests/NetWiv.Api.Tests -c Release --no-build
+pwsh -File scripts/test-package-smoke.ps1
 node --test tests/conformance/scripts/compare-results.test.mjs
 ```
+
+The PowerShell 7 package-consumer project check runs without packing or restoring
+packages. It verifies unique package references and keeps the external test plugin
+as a separate consumer assembly for .NET 8, 9 and 10. CI runs this check before
+release packaging; the release workflow additionally publishes and executes the
+consumers against the built package feed.
 
 The test-tool preparation downloads checksum-pinned official minisign 0.12
 binaries for the CLI signer interoperability test on Windows/Linux x64. On macOS

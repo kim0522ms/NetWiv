@@ -94,40 +94,10 @@ internal static class ManagedRuntimeProbe
             }
         }
 
-        # Reuse the real desktop smoke source, replacing every project reference with the packaged dependency.
-        $source = Join-Path $repository 'tests/NetWiv.Desktop.Smoke'
-        $smoke = Join-Path $workspace 'smoke'
-        New-Item -ItemType Directory -Path $smoke | Out-Null
-        Get-ChildItem -LiteralPath $source | Where-Object { $_.Name -notin @('bin', 'obj') } |
-            Copy-Item -Destination $smoke -Recurse
+        # Generate package consumers, retaining the test plugin as a separate assembly.
+        & "$PSScriptRoot/prepare-package-smoke.ps1" -Destination $workspace -Version $Version -TargetFramework $TargetFramework
+        $smoke = Join-Path $workspace 'NetWiv.Desktop.Smoke'
         $projectPath = Join-Path $smoke 'NetWiv.Desktop.Smoke.csproj'
-        $project = [xml](Get-Content -LiteralPath $projectPath -Raw)
-        $properties = $project.Project.PropertyGroup
-        foreach ($setting in @{ TargetFramework=$TargetFramework; ImplicitUsings='enable'; Nullable='enable'; TreatWarningsAsErrors='true' }.GetEnumerator()) {
-            $element = $project.CreateElement($setting.Key)
-            $element.InnerText = $setting.Value
-            [void]$properties.AppendChild($element)
-        }
-        foreach ($reference in @($project.SelectNodes('//ProjectReference'))) {
-            $package = $project.CreateElement('PackageReference')
-            $package.SetAttribute('Include', [IO.Path]::GetFileNameWithoutExtension($reference.Include))
-            $package.SetAttribute('Version', $Version)
-            [void]$reference.ParentNode.ReplaceChild($package, $reference)
-        }
-        $additionalPackages = $project.CreateElement('ItemGroup')
-        foreach ($name in @('NetWiv.Hosting', 'NetWiv.Build', 'NetWiv.Generators')) {
-            $package = $project.CreateElement('PackageReference')
-            $package.SetAttribute('Include', $name)
-            $package.SetAttribute('Version', $Version)
-            [void]$additionalPackages.AppendChild($package)
-        }
-        [void]$project.Project.AppendChild($additionalPackages)
-        foreach ($resource in $project.SelectNodes('//EmbeddedResource')) {
-            if ($resource.Include.StartsWith('../')) {
-                $resource.SetAttribute('Include', [IO.Path]::GetFullPath($resource.Include, $source))
-            }
-        }
-        $project.Save($projectPath)
         @'
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

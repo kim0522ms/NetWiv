@@ -137,8 +137,8 @@ draft, not to mark a test as passed.
 
 | Change | Expected evidence |
 | --- | --- |
-| Windows, WebView, menu, tray or window behavior | Run the affected scenario in a real desktop session; show the interaction, result and relevant logs. |
-| Installers or packaging | Install, launch, upgrade and uninstall the produced artifact as applicable; record paths, scope, preservation/cleanup behavior and failures tested. |
+| Windows, WebView, menu, tray or window behavior | Run the affected scenario in a real desktop session; describe the interaction and result. |
+| Installers or packaging | Install, launch, upgrade and uninstall the produced artifact as applicable; describe scope, preservation/cleanup behavior and failures tested. |
 | SDK, IPC, DI, generators or shared native code | Execute a representative consumer on a real device through the affected path; include automated regressions and managed/AOT runs where relevant. Check affected platform boundaries. |
 | Build or CI automation | Exercise the changed job or script and, when artifact output or behavior changes, run the resulting artifact on the target device. |
 | Documentation or comments only | Explain why runtime evidence is not applicable; check links, examples and accuracy. Instructions claiming a working procedure still need evidence for that claim. |
@@ -151,16 +151,17 @@ For each device run, provide:
    CPU, GPU or monitor model names are not required and must be omitted by default.
 2. **Procedure:** exact commands or reproduction steps, configuration, artifact
    tested, and any relevant managed/AOT, privilege or installation mode.
-3. **Results:** expected versus observed behavior, before/after evidence for a
-   bug where practical, and links to logs, test reports, screenshots or recordings.
-   Use logs for nonvisual behavior and images/video where interaction matters.
+3. **Results:** expected versus observed behavior and the outcome of the
+   regression checks.
 4. **Coverage and limits:** failure and cleanup scenarios checked, affected
    consumers/platforms, and anything not tested or not passing.
 
-Attach evidence to the PR or link an accessible report. Keep logs tied to the
-revision tested; after a meaningful revision, rerun affected checks and update
-the evidence. Reviewers should be able to reproduce the result using sanitized
-commands and paths.
+Summarize verification in the PR. After a meaningful revision, rerun affected
+checks and update that summary. Use reproducible commands with generic paths.
+Validation requirements do not call for a report collection system: do not add
+environment inventories, diagnostic archives or evidence retention/upload to
+product code, test helpers or CI/CD, and do not commit per-run reports or logs.
+Keep functional assertions, normal CI console output and release deliverables.
 
 Personal information includes details that can identify a person or their
 environment indirectly or in combination, not only names and credentials.

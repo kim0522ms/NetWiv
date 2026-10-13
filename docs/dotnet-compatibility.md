@@ -65,14 +65,9 @@ publishes/runs a package-only NativeAOT desktop consumer targeting `net8.0`,
 dependency with warnings as errors. The draft Release job requires all six
 consumer jobs to pass. No package is published to NuGet.org.
 
-Consumer evidence artifacts retain execution logs, `dotnet --info`, the test
-revision, OS/architecture, exact feed package SHA-256 hashes and the bundle's
-`SOURCE.txt` when present. These are hosted validation jobs; they do not replace
-physical-device desktop evidence. Windows/macOS .NET 9/10 package consumers and
+These hosted validation jobs check process exit codes and behavioral assertions.
+Windows/macOS .NET 9/10 package consumers and
 macOS minimum-OS acceptance remain outside this bounded release matrix.
-When running a transferred source archive without Git metadata, keep its feed's
-`SOURCE.txt` containing the full source commit; the evidence helper reads that
-record instead of trying to infer a revision from an absent checkout.
 
 To select a newer test runtime while keeping library/package targets at .NET 8:
 
@@ -98,9 +93,6 @@ Local package-consumer validation (2026-10-13), using the same 30-package
 | Physical macOS arm64, macOS 27.0 beta | 8.0.406 / 8.0.13 | Both modes and both `.app` bundles passed | Passed |
 | Ubuntu 24.04.4, WSL2/Xvfb x64 | 10.0.302 / 10.0.10 | Framework-dependent passed on runtime 10 | Passed |
 
-All three runs verified the exact feed hashes. See the
-[desktop readiness record](validation/desktop-readiness-2026-10-13.md) for
-source identity, environments, procedures, diagnostics and retained evidence.
 This package gate's AOT check is windowless startup; WSL/Xvfb is virtual/headless
 evidence. Intel Mac, minimum macOS, physical Linux and the remaining hosted
 matrix combinations were not established by these local package runs.

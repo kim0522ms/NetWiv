@@ -25,7 +25,6 @@ agreement in approved private local storage, outside the repository. -->
 | SDK/runtime, WebView/native versions and deployment mode | |
 | Reproduction steps / exact commands | |
 | Expected and observed results | |
-| Logs, test reports, screenshots or recording links | |
 | Regression, failure and cleanup checks | |
 | Untested platforms/scenarios or known failures | |
 

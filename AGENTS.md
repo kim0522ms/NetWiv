@@ -6,6 +6,12 @@ agent-assisted work as well as manually written contributions.
 
 ## Privacy before publication
 
+- Do not implement evidence collection, environment inventories, diagnostic
+  archives or validation-report retention/upload in product code, test helpers
+  or CI/CD. Do not commit per-run reports, logs or ad-hoc evidence tools.
+  Run functional checks and summarize their results and limits in the PR.
+  Ordinary CI console output, data consumed by test assertions and distributable
+  release artifacts are separate from evidence collection.
 - Do not submit information that can identify the user or their personal
   environment in PRs, issues, commits, documentation, logs, screenshots or
   uploaded artifacts. Personal information includes indirect identifiers and

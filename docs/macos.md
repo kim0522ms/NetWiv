@@ -233,9 +233,8 @@ separate workflows.
 
 The `tests/frontend-bindings/run.mjs`, `resources.mjs` and `native-version.mjs`
 harnesses still select Windows/Linux RIDs. They must be extended before being
-used as macOS package-consumer evidence. Keep per-run logs, coverage, toolchain
-versions, source/binary hashes and skips in ignored `artifacts/`; do not convert
-a source-linked smoke result into package-only or release acceptance.
+used for macOS package-consumer validation. Do not treat a source-linked smoke
+result as package-only or release acceptance.
 
 ### Website data-store check
 
@@ -274,7 +273,7 @@ toolchain's [Mach-O strip alignment issue](https://github.com/rust-lang/rust/iss
 on macOS 27. The initial ordinary smoke failed its separate monitor-geometry
 check because the connected display was asleep. Both unchanged managed and
 NativeAOT executables subsequently passed the full smoke with a temporary display
-wake; see the [display diagnostic](validation/macos-monitor-sleep/README.md).
+wake.
 Intel and macOS 12/13 execution remain unverified.
 
 ---

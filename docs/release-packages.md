@@ -94,5 +94,5 @@ Source and package-consumer CI cover all four desktop RIDs. These hosted smoke
 checks do not establish physical-device acceptance, Windows/macOS package
 consumers on .NET 9/10, the macOS 12 minimum OS, or full installer lifecycle
 acceptance on every supported platform. Adding a job does not prove it passed;
-inspect the tagged workflow's evidence before making release claims. These
+inspect the tagged workflow's results before making release claims. These
 packages do not provide Developer ID signing or macOS notarization.

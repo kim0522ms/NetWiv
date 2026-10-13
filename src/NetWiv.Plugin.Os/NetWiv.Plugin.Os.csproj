@@ -9,5 +9,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../NetWiv.Core/NetWiv.Core.csproj" />
+    <InternalsVisibleTo Include="NetWiv.Core.Tests" />
   </ItemGroup>
 </Project>

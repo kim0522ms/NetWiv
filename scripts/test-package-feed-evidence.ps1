@@ -73,3 +73,6 @@ finally {
     foreach ($name in $savedEnvironment.Keys) { [Environment]::SetEnvironmentVariable($name, $savedEnvironment[$name]) }
     if (Test-Path -LiteralPath $testRoot) { Remove-Item -LiteralPath $testRoot -Recurse -Force }
 }
+# Clear the mocked failure only after assertions and cleanup succeed. The Actions
+# PowerShell wrapper forwards LASTEXITCODE even when the expected error was caught.
+$global:LASTEXITCODE = 0

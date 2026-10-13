@@ -50,14 +50,58 @@ Wrappers call unchanged `@tauri-apps/api/core` invoke and pass InvokeOptions
 through. Command names and argument keys are preserved exactly. No-argument
 commands accept an omitted argument object. The command registry still controls
 exposure: generation does not call InvokeHandler, grant permissions, or expose
-unregistered commands. The current export includes local generated declarations;
-it does not infer runtime registration decisions. Local `[Command]` methods on
+unregistered commands. The export includes local generated declarations and public
+commands from opted-in compiler references; it does not infer runtime registration
+decisions. Local `[Command]` methods on
 `IPlugin` types export `plugin:<Name>|<command>` names. Their `Name` must be a
 non-virtual, non-overridden constant expression-bodied getter so export can
 determine the wire name without executing code (`DTOXGEN011` otherwise).
 Runtime plugin registration has no such constant-name requirement.
-Reference-assembly binding aggregation is not yet implemented; export a separate
-plugin project's bindings from that project. See [plugin commands](plugin-commands.md).
+See [plugin commands](plugin-commands.md) for explicit runtime registration.
+
+### Referenced command assemblies
+
+Both the consumer and producer opt in with `[assembly: GenerateFrontendBindings]`
+and reference `NetWiv.Generators` as an analyzer. The producer's managed build
+contains a versioned command index; it does not need `NetWiv.Build`, an output
+directory, or a separate frontend export. Project references and NuGet packages
+use the same contract. Rebuild older producers with this generator before
+consuming their bindings; missing or incompatible metadata produces `DTOXGEN013`.
+
+The consumer aggregates commands declared in the assemblies already visible to
+its C# compilation. It does not walk assembly dependencies, load assemblies, run
+plugin getters or re-export another producer's aggregated index. The SDK may
+supply transitive packages as compiler references; such opted-in assemblies also
+participate. Commands in dependencies absent from the compilation need a reference
+or a separate export. Non-opted-in producers keep their runtime behavior but do
+not contribute frontend bindings.
+
+Only public command methods whose complete containing-type chain is public
+contribute to other assemblies. Internal commands remain in their own project's
+frontend export. Imported declarations are checked against their actual public
+symbols, `[Command]` names and plugin shape. Plugin routes retain the constant
+name proven when the producer was compiled; consumers cannot reevaluate source
+expressions from a DLL. The producer's generated metadata is a build contract,
+not a runtime permission or plugin installation mechanism.
+
+Each command retains its producer's `CommandJsonContext`, including directional
+member rules, naming and numeric policies. A consumer context cannot overwrite
+that contract. DTOs shared by distinct JSON contexts receive distinct, deterministic
+interface names when necessary. Duplicate final command routes across local and
+referenced commands fail with `DTOXGEN003`; they are never silently replaced.
+Unsupported JSON metadata remains `DTOXGEN009`, and malformed/version-unknown
+command metadata is `DTOXGEN013`.
+
+The command index uses `AssemblyMetadata` keys `NetWiv.Frontend.Commands.v1`
+(value `1`) and `NetWiv.Frontend.Command.v1:<method declaration ID>` (value
+`<declaring metadata type name>\n<final wire route>`). It contains producer-local
+public commands only. These keys are generated implementation metadata; do not
+author or edit them. The exported JS/TS metadata and PE-only exporter are unchanged.
+
+Generation includes unselected declarations. Application commands still require
+`InvokeHandler(...)`/`RegisterGeneratedCommands()`, plugins still require explicit
+installation and command selection, and capabilities/denials still control IPC.
+Removing a reference and rebuilding removes its declarations from the export.
 
 ## Readable DTO names
 
@@ -150,7 +194,7 @@ change. JavaScript command names, argument keys and JSON wire shapes are unchang
   complex inherited/hidden property combinations need broader validation.
 - MSBuild export, unchanged-file preservation, rename/removal invalidation and
   React template integration are implemented. Complete serializer parity, type
-  mapping extension points and referenced-command aggregation remain in progress.
+  mapping extension points remain in progress.
   The template's automated C# edit/restart evidence is recorded in
   [React development](react-development.md).
 
@@ -186,6 +230,9 @@ The underlying flag semantics follow the
 `tests/NetWiv.Generators.Tests` covers command keys, injected parameters,
 input/output JSON names, recursive nullable DTOs, byte-array shapes, unsupported
 serialization features and metadata extraction without executing app code.
+Referenced-command regressions cover implementation/reference assemblies, public
+visibility, local/reference route collisions, per-producer JSON contexts, stable
+DTO naming and malformed/version-unknown metadata.
 Serializer comparisons use source-generated System.Text.Json metadata as the
 reference. These verify the NetWiv generator contract rather than TAURI®'s Rust
 business-logic implementation.
@@ -194,7 +241,11 @@ Export checks cover unchanged output timestamps, command rename/removal, empty
 contracts and protection against overwriting handwritten files. The package
 consumer harness in `tests/frontend-bindings/run.mjs` additionally checks
 TypeScript accepted/rejected calls, generated React-to-C# IPC in a real WebView,
-NativeAOT publication and consumption without Cargo.
+NativeAOT publication and consumption without Cargo. Its initialized-app scenario
+packs a separate command/plugin project, consumes it through NuGet, checks strict
+TypeScript contracts, and executes generated referenced-command wrappers in both
+managed and NativeAOT WebViews. It also checks unregistered/denied plugin routes
+and removes the package to verify export invalidation.
 
 The consumer harness currently selects Windows/Linux x64 RIDs only. Do not run
 it unchanged as macOS package-consumer proof; the macOS NativeAOT smoke is a

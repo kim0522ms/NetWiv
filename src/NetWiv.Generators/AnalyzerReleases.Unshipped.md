@@ -10,3 +10,4 @@ DTOXGEN009 | NetWiv.Generators | Error | Frontend wire type cannot be inferred
 DTOXGEN010 | NetWiv.Generators | Error | Invalid service parameter
 DTOXGEN011 | NetWiv.Generators | Error | Plugin frontend name cannot be inferred
 DTOXGEN012 | NetWiv.Generators | Error | Invalid plugin command owner
+DTOXGEN013 | NetWiv.Generators | Error | Invalid referenced frontend command metadata

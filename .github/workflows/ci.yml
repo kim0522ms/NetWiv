@@ -138,7 +138,6 @@ jobs:
         shell: pwsh
         run: |
           # Fail packaging acceptance before the expensive native and full-solution builds.
-          New-Item -ItemType Directory -Path artifacts/ci -Force | Out-Null
           dotnet build src/NetWiv.Cli -c Release
           if ($LASTEXITCODE -ne 0) { throw 'CLI build failed.' }
           choco install nsis --version=3.11 -y --no-progress
@@ -146,7 +145,7 @@ jobs:
           $wixBin = Join-Path $env:WIX 'bin'
           if (-not (Test-Path (Join-Path $wixBin 'candle.exe'))) { throw 'WiX v3 is missing from the runner.' }
           $env:PATH = "${env:ProgramFiles(x86)}\NSIS;$wixBin;$env:PATH"
-          ./scripts/test-windows-installers.ps1 *>&1 | Tee-Object artifacts/ci/windows-installers.log
+          ./scripts/test-windows-installers.ps1
 
       - name: Install Linux build and desktop dependencies
         if: runner.os == 'Linux'
@@ -170,9 +169,6 @@ jobs:
           rust_version=$(node -p "require('./native/dependency-lock.json').rust.channel")
           rustup toolchain install "$rust_version" --profile minimal
           echo "RUST_VERSION=$rust_version" >> "$GITHUB_ENV"
-          mkdir -p artifacts/ci
-          dotnet --info | tee artifacts/ci/dotnet-info.txt
-          rustc +"$rust_version" --version --verbose | tee artifacts/ci/rust-info.txt
 
       - name: Cache native dependencies
         id: native-cache
@@ -203,8 +199,7 @@ jobs:
         run: |
           cargo +"$RUST_VERSION" test --locked --release --lib \
             --manifest-path native/netwiv-native/Cargo.toml \
-            --target '${{ matrix.target }}' --target-dir 'artifacts/native-target/${{ matrix.native-directory }}' \
-            2>&1 | tee artifacts/ci/rust-tests.log
+            --target '${{ matrix.target }}' --target-dir 'artifacts/native-target/${{ matrix.native-directory }}'
 
       - name: Save compiled native dependencies
         if: always() && steps.native-cache.outputs.cache-hit != 'true' && (steps.native-windows.outcome == 'success' || steps.native-unix.outcome == 'success')
@@ -217,10 +212,10 @@ jobs:
           key: ${{ steps.native-cache.outputs.cache-primary-key }}
 
       - name: Build .NET solution
-        run: dotnet build NetWiv.sln -c Release -bl:artifacts/ci/build.binlog
+        run: dotnet build NetWiv.sln -c Release
 
       - name: Core tests
-        run: dotnet run --project tests/NetWiv.Core.Tests -c Release --no-build 2>&1 | tee artifacts/ci/core-tests.log
+        run: dotnet run --project tests/NetWiv.Core.Tests -c Release --no-build
 
       - name: Prepare pinned CLI test tools
         run: node scripts/prepare-test-tools.mjs
@@ -228,18 +223,18 @@ jobs:
       - name: macOS app and DMG packaging
         if: runner.os == 'macOS'
         timeout-minutes: 5
-        run: dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build -- --filter 'macOS application' 2>&1 | tee artifacts/ci/macos-packaging.log
+        run: dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build -- --filter 'macOS application'
 
       - name: CLI tests
         # The signer interoperability test executes the upstream minisign binary.
         run: |
-          dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build -- --exclude 'macOS application' 2>&1 | tee artifacts/ci/cli-tests.log
+          dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build -- --exclude 'macOS application'
 
       - name: Generator tests
-        run: dotnet test tests/NetWiv.Generators.Tests -c Release --no-build --logger trx --results-directory artifacts/ci/generator
+        run: dotnet test tests/NetWiv.Generators.Tests -c Release --no-build
 
       - name: API tests
-        run: dotnet test tests/NetWiv.Api.Tests -c Release --no-build --logger trx --results-directory artifacts/ci/api
+        run: dotnet test tests/NetWiv.Api.Tests -c Release --no-build
 
       - name: Shared JavaScript harness and license tests
         if: runner.os == 'Linux'
@@ -247,11 +242,11 @@ jobs:
           node --test tests/conformance/scripts/*.test.mjs \
             tests/NetWiv.Isolation.Smoke/compare.test.mjs \
             compatibility/scripts/upstream-test-inventory.test.mjs \
-            native/license-provenance.test.mjs 2>&1 | tee artifacts/ci/shared-node-tests.log
+            native/license-provenance.test.mjs
 
       - name: Platform build-tool script tests
         run: |
-          node --test scripts/*.test.mjs 2>&1 | tee artifacts/ci/node-tests.log
+          node --test scripts/*.test.mjs
 
       - name: Release bundle tests
         if: runner.os == 'Linux'
@@ -264,21 +259,21 @@ jobs:
           ./scripts/test-package-feed-evidence.ps1
 
       - name: Publish Core tests with NativeAOT
-        run: dotnet publish tests/NetWiv.Core.Tests -c Release -r '${{ matrix.rid }}' -p:PublishAot=true -o artifacts/ci/core-aot -bl:artifacts/ci/core-aot.binlog
+        run: dotnet publish tests/NetWiv.Core.Tests -c Release -r '${{ matrix.rid }}' -p:PublishAot=true -o artifacts/ci/core-aot
 
       - name: Execute NativeAOT Core tests
-        run: ./artifacts/ci/core-aot/NetWiv.Core.Tests${{ matrix.exe }} 2>&1 | tee artifacts/ci/core-aot.log
+        run: ./artifacts/ci/core-aot/NetWiv.Core.Tests${{ matrix.exe }}
 
       - name: Publish native desktop smoke host with NativeAOT
-        run: dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r '${{ matrix.rid }}' -p:PublishAot=true -o artifacts/ci/desktop-aot -bl:artifacts/ci/desktop-aot.binlog
+        run: dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r '${{ matrix.rid }}' -p:PublishAot=true -o artifacts/ci/desktop-aot
 
       - name: Windows native startup diagnostics
         if: runner.os == 'Windows'
-        run: pwsh -NoProfile -File scripts/test-native-startup.ps1 -PublishedDirectory artifacts/ci/desktop-aot 2>&1 | tee artifacts/ci/startup.log
+        run: pwsh -NoProfile -File scripts/test-native-startup.ps1 -PublishedDirectory artifacts/ci/desktop-aot
 
       - name: Unix native startup diagnostics
         if: runner.os != 'Windows'
-        run: bash scripts/test-native-startup.sh artifacts/ci/desktop-aot 2>&1 | tee artifacts/ci/startup.log
+        run: bash scripts/test-native-startup.sh artifacts/ci/desktop-aot
 
       - name: Ensure Windows WebView2 Runtime
         if: runner.os == 'Windows'
@@ -288,33 +283,31 @@ jobs:
       - name: Windows NativeAOT WebView smoke
         if: runner.os == 'Windows'
         timeout-minutes: 5
-        run: ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe 2>&1 | tee artifacts/ci/desktop-smoke.log
+        run: ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe
 
       - name: Linux X11 NativeAOT WebView smoke
         if: runner.os == 'Linux'
         timeout-minutes: 5
         run: |
           xvfb-run -a -s '-screen 0 1280x800x24' \
-            bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke)" x11 \
-            2>&1 | tee artifacts/ci/desktop-smoke.log
+            bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke)" x11
 
       - name: macOS NativeAOT WKWebView smoke
         if: runner.os == 'macOS'
         timeout-minutes: 5
         run: |
-          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --no-window-smoke 2>&1 | tee artifacts/ci/windowless-smoke.log
-          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke 2>&1 | tee artifacts/ci/desktop-smoke.log
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --no-window-smoke
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke
 
       - name: Publish macOS isolation smoke with NativeAOT
         if: runner.os == 'macOS'
-        run: dotnet publish tests/NetWiv.Isolation.Smoke -c Release -r '${{ matrix.rid }}' -p:PublishAot=true -o artifacts/ci/isolation-aot -bl:artifacts/ci/isolation-aot.binlog
+        run: dotnet publish tests/NetWiv.Isolation.Smoke -c Release -r '${{ matrix.rid }}' -p:PublishAot=true -o artifacts/ci/isolation-aot
 
       - name: macOS NativeAOT isolation smoke
         if: runner.os == 'macOS'
         timeout-minutes: 5
         run: |
-          NETWIV_ISOLATION_REPORT="$PWD/artifacts/ci/isolation.json" \
-            ./artifacts/ci/isolation-aot/NetWiv.Isolation.Smoke 2>&1 | tee artifacts/ci/isolation.log
+          ./artifacts/ci/isolation-aot/NetWiv.Isolation.Smoke
 
       - name: Upload validated native libraries for packaging
         if: inputs.release-artifacts
@@ -324,20 +317,6 @@ jobs:
           path: artifacts/native/
           retention-days: 1
           if-no-files-found: error
-
-      - name: Upload test logs and NativeAOT executables
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: validation-${{ matrix.rid }}
-          # WebView2 keeps its user data folder beside the smoke executable, and its
-          # browser processes can still be deleting files there while this step zips.
-          # The folder is a browser profile, not validation evidence.
-          path: |
-            artifacts/ci/
-            !artifacts/ci/**/*.WebView2/**
-          retention-days: 7
-          if-no-files-found: warn
 
   sdk-compatibility:
     needs: changes
@@ -379,7 +358,6 @@ jobs:
           node scripts/prepare-test-tools.mjs
       - name: Build and test managed consumers
         run: |
-          dotnet --info
           dotnet run --project tests/NetWiv.Core.Tests -c Release
           dotnet run --project tests/NetWiv.Cli.Tests -c Release
           dotnet test tests/NetWiv.Generators.Tests -c Release

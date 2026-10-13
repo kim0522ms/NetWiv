@@ -27,8 +27,9 @@ const xml = text => text.replaceAll('&', '&amp;').replaceAll('"', '&quot;').repl
 async function run(command, args, cwd = consumer, timeout = 300000) {
   const child = spawn(command, args, { cwd, env: environment, windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] });
   const out = [];
+  const errors = [];
   child.stdout.on('data', chunk => { out.push(chunk); });
-  child.stderr.resume();
+  child.stderr.on('data', chunk => { errors.push(chunk); });
   const timer = setTimeout(() => {
     if (process.platform === 'win32') spawn('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true });
     else { try { process.kill(-child.pid, 'SIGTERM'); } catch {} }
@@ -37,6 +38,7 @@ async function run(command, args, cwd = consumer, timeout = 300000) {
   try {
     code = await new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
   } finally { clearTimeout(timer); }
+  if (code !== 0) console.error(Buffer.concat([...out, ...errors]).toString('utf8'));
   assert.equal(code, 0, 'Child verification command failed');
   return Buffer.concat(out).toString('utf8');
 }
@@ -171,7 +173,7 @@ try {
   assert.ok(output.includes('PASS: React form'), 'Native WebView did not report the React IPC result');
   await checkInitializedApp({ consumer, dotnet, rid, version, run });
   console.log('Frontend verification passed.');
-} catch {
+} catch (error) {
   process.exitCode = 1;
-  console.error('Frontend verification failed.');
+  console.error(error);
 }

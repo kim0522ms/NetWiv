@@ -53,25 +53,25 @@ function Wait-Until([scriptblock]$test, [string]$message) {
         Start-Sleep -Milliseconds 100
     }
 }
-function Install([string]$package, [string]$format, [string]$directory, [string]$log, [bool]$reject = $false) {
+function Install([string]$package, [string]$format, [string]$directory, [bool]$reject = $false) {
     if ($format -eq 'nsis') {
         $arguments = '/S'
         if ($directory) { $arguments += " /D=$directory" } # NSIS /D must be last and unquoted.
         Execute $package $arguments $(if ($reject) { @(2) } else { @(0) })
     } else {
-        $arguments = "/i `"$package`" /qn /norestart /l*v `"$log`""
+        $arguments = "/i `"$package`" /qn /norestart"
         if ($directory) { $arguments += " INSTALLDIR=`"$directory`"" }
         Execute 'msiexec.exe' $arguments $(if ($reject) { @(1603) } else { @(0, 3010) })
     }
 }
-function Remove-Installation([string]$package, [string]$format, [string]$directory, [string]$log) {
+function Remove-Installation([string]$package, [string]$format, [string]$directory) {
     if ($format -eq 'nsis') {
         # _?= runs in place so waiting observes the actual uninstaller, not its temp copy launcher.
         Execute (Join-Path $directory 'uninstall.exe') "/S _?=$directory"
         Remove-Item (Join-Path $directory 'uninstall.exe') -Force -ErrorAction SilentlyContinue
         if ((Test-Path $directory) -and -not (Get-ChildItem -LiteralPath $directory -Force)) { Remove-Item -LiteralPath $directory }
     } else {
-        Execute 'msiexec.exe' "/x `"$package`" /qn /norestart /l*v `"$log`"" @(0, 3010)
+        Execute 'msiexec.exe' "/x `"$package`" /qn /norestart" @(0, 3010)
     }
 }
 function Get-MsiProductCode([string]$package) {
@@ -159,11 +159,11 @@ try {
                         # No runtime must fail. A user-only runtime must still fail for a machine install.
                         $machineRuntime.SetValue('pv', '0.0.0.0')
                         $userRuntime.SetValue('pv', '0.0.0.0')
-                        Install $package $format $install (Join-Path $root "$product-missing-runtime.log") $true
+                        Install $package $format $install $true
                         Assert (-not (Test-Path (Join-Path $install 'InstallerProbe.exe'))) 'Rejected install wrote payload.'
                         $userRuntime.SetValue('pv', '123.0.0.0')
                         if ($scope -eq 'perMachine') {
-                            Install $package $format $install (Join-Path $root "$product-user-runtime.log") $true
+                            Install $package $format $install $true
                             $machineRuntime.SetValue('pv', '123.0.0.0')
                         }
                     }
@@ -191,7 +191,7 @@ try {
                             Assert ((Test-Path $desktopLink) -and (Test-Path $menuLink)) 'Failed removal deleted its shortcuts.'
                         } finally { $locked.Dispose() }
                     }
-                    Install $package $format $(if ($version -ne '1.0.1') { $install } else { '' }) (Join-Path $root "$product-$version-install.log")
+                    Install $package $format $(if ($version -ne '1.0.1') { $install } else { '' })
                     $installed = $true
                     $installedPackage = $package
                     $installedDirectory = $install
@@ -250,7 +250,7 @@ try {
                 }
                 # Runtime removal must not prevent uninstall; no user data outside INSTDIR may be removed.
                 $machineRuntime.SetValue('pv', '0.0.0.0'); $userRuntime.SetValue('pv', '0.0.0.0')
-                Remove-Installation $package $format $install (Join-Path $root "$product-uninstall.log")
+                Remove-Installation $package $format $install
                 $installed = $false
                 Wait-Until { -not (Test-Path (Join-Path $install 'InstallerProbe.exe')) } 'Uninstall left the application.'
                 Assert (-not (Test-Path $desktopLink) -and -not (Test-Path $menuLink)) 'Uninstall left shortcuts.'
@@ -265,7 +265,7 @@ try {
                 Write-Output "FAIL $scope/${format}: $_"
                 Write-Output $_.ScriptStackTrace
             } finally {
-                if ($installed -and $installedPackage) { Remove-Installation $installedPackage $format $installedDirectory (Join-Path $root "$product-cleanup.log") }
+                if ($installed -and $installedPackage) { Remove-Installation $installedPackage $format $installedDirectory }
                 Remove-Item $sentinel -ErrorAction SilentlyContinue
                 Remove-Item -LiteralPath $install -Recurse -Force -ErrorAction SilentlyContinue
                 Remove-Item -LiteralPath $initialInstall -Recurse -Force -ErrorAction SilentlyContinue
@@ -322,7 +322,7 @@ try {
                     foreach ($entry in $entries) {
                         $before = @(Get-ChildItem -LiteralPath $desktop -Filter "$product*.lnk" | ForEach-Object FullName)
                         $before += @(Get-ChildItem -LiteralPath $programs -Directory -Filter "$product*" | Get-ChildItem -Filter '*.lnk' | ForEach-Object FullName)
-                        Install $entry.Package $format '' (Join-Path $root "$product-$($entry.Id)-install.log")
+                        Install $entry.Package $format ''
                         $entry.Installed = $true
                         if ($format -eq 'msi') {
                             $entry.Code = Get-MsiProductCode $entry.Package
@@ -342,7 +342,7 @@ try {
                     foreach ($entry in $entries) { Check-IndependentShortcuts $entry }
                     foreach ($index in @($firstIndex, (1 - $firstIndex))) {
                         $entry = $entries[$index]
-                        Remove-Installation $entry.Package $format $entry.Directory (Join-Path $root "$product-$($entry.Id)-uninstall.log")
+                        Remove-Installation $entry.Package $format $entry.Directory
                         $entry.Installed = $false
                         Assert (-not (Test-Path (Join-Path $entry.Directory 'InstallerProbe.exe'))) 'Independent uninstall left its executable.'
                         foreach ($link in $entry.Links) { Assert (-not (Test-Path -LiteralPath $link)) 'Independent uninstall left its shortcut.' }
@@ -356,7 +356,7 @@ try {
                     Write-Output "PASS independent $scope ${format}: default paths, desktop and Start menu, removal order $firstIndex"
                 } finally {
                     foreach ($entry in $entries | Where-Object Installed) {
-                        Remove-Installation $entry.Package $format $entry.Directory (Join-Path $root "$product-cleanup.log")
+                        Remove-Installation $entry.Package $format $entry.Directory
                         $entry.Installed = $false
                     }
                 }

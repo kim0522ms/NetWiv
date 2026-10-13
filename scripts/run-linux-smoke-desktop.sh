@@ -29,7 +29,7 @@ stop_panel() {
   # The panel owns plugin processes. Ask its session-local service to quit
   # before sending SIGTERM, so plugins can release their GTK/DBus resources.
   if jobs -pr | grep -qx "$child"; then
-    GDK_BACKEND=x11 timeout 2s xfce4-panel --quit >"$NETWIV_DESKTOP_LOG/panel-quit.log" 2>&1 || true
+    GDK_BACKEND=x11 timeout 2s xfce4-panel --quit >&2 || true
     for ((panel_attempt=0; panel_attempt<20; panel_attempt++)); do
       if ! jobs -pr | grep -qx "$child"; then break; fi
       sleep 0.1
@@ -43,10 +43,9 @@ remove_config() {
   # dbus-run-session can return before its activated xfconfd finishes flushing
   # settings. Retry only deletion of our private directory while it winds down.
   for ((attempt=0; attempt<30; attempt++)); do
-    if rm -rf -- "$directory" 2>"$NETWIV_DESKTOP_LOG/config-cleanup.log"; then return 0; fi
+    if rm -rf -- "$directory"; then return 0; fi
     sleep 0.1
   done
-  cat "$NETWIV_DESKTOP_LOG/config-cleanup.log" >&2
   return 1
 }
 
@@ -57,9 +56,9 @@ if [[ "${1:-}" == "--session" ]]; then
   backend=$1
   executable=$2
   shift 2
-  GDK_BACKEND=x11 xfwm4 --compositor=off >"$NETWIV_DESKTOP_LOG/xfwm4.log" 2>&1 &
+  GDK_BACKEND=x11 xfwm4 --compositor=off >&2 &
   wm=$!
-  GDK_BACKEND=x11 xfce4-panel --disable-wm-check >"$NETWIV_DESKTOP_LOG/panel.log" 2>&1 &
+  GDK_BACKEND=x11 xfce4-panel --disable-wm-check >&2 &
   panel=$!
   # Keep the window manager alive while panel windows and tray widgets close.
   trap 'result=$?; if ! stop_panel "$panel"; then result=125; fi; if ! stop_children "$wm"; then result=125; fi; exit "$result"' EXIT
@@ -91,8 +90,6 @@ for tool in Xephyr xfwm4 xfce4-panel dbus-run-session xdpyinfo xprop gdbus; do
 done
 display=${NETWIV_TEST_DISPLAY:-:91}
 if DISPLAY="$display" timeout 2s xdpyinfo >/dev/null 2>&1; then echo "Test display $display is already in use" >&2; exit 1; fi
-export NETWIV_DESKTOP_LOG=${NETWIV_DESKTOP_LOG:-"$(dirname "$executable")/desktop-$backend"}
-mkdir -p "$NETWIV_DESKTOP_LOG"
 config=$(mktemp -d)
 export NETWIV_DESKTOP_APP_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 export XDG_CONFIG_HOME="$config"
@@ -113,7 +110,7 @@ cat >"$config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml" <<'XML'
  <property name="plugins" type="empty"><property name="plugin-1" type="string" value="systray"/></property>
 </channel>
 XML
-Xephyr "$display" -screen 1280x800 -br -nolisten tcp >"$NETWIV_DESKTOP_LOG/xephyr.log" 2>&1 &
+Xephyr "$display" -screen 1280x800 -br -nolisten tcp >&2 &
 xephyr=$!
 trap 'result=$?; if ! stop_children "$xephyr"; then result=125; fi; if ! remove_config "$config" && [[ $result == 0 ]]; then result=125; fi; exit "$result"' EXIT
 export DISPLAY="$display"

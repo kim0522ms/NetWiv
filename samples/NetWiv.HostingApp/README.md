@@ -104,31 +104,18 @@ node samples/NetWiv.HostingApp/verify.mjs $feed $env:NETWIV_PACKAGE_VERSION win-
 ```
 
 The helper copies the sample to a fresh consumer directory, isolates NuGet cache,
-maps `NetWiv.*` packages to the supplied feed, hashes the packages and puts a
+maps `NetWiv.*` packages to the supplied feed and puts a
 failing Cargo shim first on PATH. It restores the locked npm dependencies, tests
 the smoke assertions, generates the frontend, and publishes both self-contained
 managed and NativeAOT apps. `--build-only` is the default and never launches a GUI.
 `--run` additionally executes both resulting apps in your desktop session with
-`--smoke-test`. Both modes are explicit in `report.json`; publishing alone is
-never recorded as execution. Results are under
+`--smoke-test`. Publishing alone does not establish execution. Build files are under
 `artifacts/hosting-<rid>-<random-id>/`, or `NETWIV_TEST_ARTIFACTS` if set.
-Only `report.json` is intended for sharing: format version 2 contains a relative
-run identifier, fixed package IDs with SHA-256 hashes, validated source revision,
-RID, requested/executed modes, fixed checks, outcome and stage/failure code.
-It omits absolute paths, raw errors, timestamps and the package version, whose
-prerelease labels may contain private identifiers. A failed verification uses
-`verification-failed` with the stage that failed; raw diagnostics are retained
-in `private-error.log` when the output directory is writable. Invalid arguments
-are rejected before creating artifacts.
-
-The entire run directory is private, including numbered logs, copied consumer,
-NuGet configuration/cache, binaries and `private-error.log`. Terminal output is
-also private: subprocesses and uncaught errors may print personal paths,
-account/host identifiers or arbitrary tool output. Do not upload the directory,
-console capture or logs. Review the intended sanitized `report.json` before
-sharing it; gather any additional evidence separately under the repository's
-privacy rules. Existing format version 1 reports may contain absolute paths and
-raw errors; this change does not sanitize older artifacts. Keep them private.
+The helper returns a failing exit code when an assertion or command fails. It
+does not create reports, command logs or environment dumps. Publish and smoke
+output is inspected in memory only for the assertions below, then discarded.
+The copied consumer, NuGet configuration/cache and published binaries are local
+build inputs/outputs; do not upload the run directory.
 
 The embedded frontend calls generated wrappers through the real WebView IPC to
 check configuration/constructor injection, shared constructor/parameter scope,
@@ -137,13 +124,12 @@ async disposal before reply, deny-over-allow, no receiver activation on denial,
 and rejection of a generated but unselected command. It reports completion
 through a smoke-only authorized command; the host closes through
 `IHostApplicationLifetime.StopApplication`, then checks lifecycle disposal.
-A missing frontend report fails the run or times out. Smoke-only audit/finish
+A missing completion callback fails the run or times out. Smoke-only audit/finish
 commands are not registered in an ordinary run.
 
 `npm test` tests that these assertions reject broken observations using synthetic
 fixtures; it does not establish DI, native execution or real IPC. `--run` provides
-those automated execution results on the host that runs it. Record that host's
-physical/VM/headless status and OS/WebView versions separately. These checks do
+those automated execution results on the host that runs it. These checks do
 not establish manual GUI acceptance, hardware I/O or full Tauri compatibility.
 For Linux, an existing desktop launcher can be selected with
 `NETWIV_GUI_LAUNCHER`; `NETWIV_DOTNET` selects an absolute SDK executable.

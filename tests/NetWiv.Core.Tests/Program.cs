@@ -27,6 +27,8 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("generated plugin commands reject invalid owners selections and registrations", GeneratedPluginCommandTests.InvalidSelection),
     ("runtime identity rejects a Tauri version through guest IPC", RuntimeIdentity),
     ("Document-owned resource close rejects other windows and preserves backend sharing", ResourceOwnershipTests.CloseRequiresOwner),
+    ("IPC boundary replacement rejects late resources and waits for async scope disposal", IpcBoundaryLifetimeTests.ReplacementWaitsForScopeAndRejectsLateResources),
+    ("IPC boundary reparent preserves in-flight channels and rechecks destination ACL", IpcBoundaryLifetimeTests.ReparentPreservesInFlightDocumentAndRechecksAcl),
     ("SQLite integer parameters preserve signed 64-bit values and reject overflow", SqlPluginTests.IntegerBinding),
     ("Shell execution cancellation stops parent and descendant processes", ShellLifetimeTests.CancellationStopsProcessTree),
     ("HTTP redirects retain credentials only within the same origin", HttpRedirectTests.CredentialsStayOnOrigin),

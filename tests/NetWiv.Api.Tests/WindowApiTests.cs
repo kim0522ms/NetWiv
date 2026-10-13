@@ -299,6 +299,21 @@ public sealed class WindowApiTests
     }
 
     [Fact]
+    public async Task DataStoreIdentifiersKeepWireByteOrderAndRemovalErrors()
+    {
+        using var app = CreateApp(out var runtime);
+        runtime.Responses["plugin:app|fetch_data_store_identifiers"] = JsonValue.Parse("[[0,1,2,3,4,5,6,7,8,9,10,11,12,13,254,255]]");
+        var identifier = Assert.Single(await AppApi.FetchDataStoreIdentifiersAsync(app.Handle));
+        Assert.Equal(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 254, 255 }, identifier.ToArray());
+        await AppApi.RemoveDataStoreAsync(app.Handle, identifier);
+        AssertCall(runtime, "plugin:app|remove_data_store", "native",
+            "{\"uuid\":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,254,255]}");
+        runtime.Failure = new InvokeException("Data store is still in use");
+        var error = await Assert.ThrowsAsync<InvokeException>(() => AppApi.RemoveDataStoreAsync(app.Handle, identifier));
+        Assert.Equal("Data store is still in use", error.Message);
+    }
+
+    [Fact]
     public async Task ImageApiOwnsAndClosesCoreResource()
     {
         using var app = CreateApp(out _);

@@ -12,7 +12,12 @@ try {
     New-Item -ItemType Directory -Path $feed -Force | Out-Null
     $package = Join-Path $feed 'NetWiv.Core.0.1.0-test.nupkg'
     Set-Content -LiteralPath $package -Value 'synthetic package bytes; never restored'
-    Set-Content -LiteralPath (Join-Path (Split-Path $feed) 'SOURCE.txt') -Value 'synthetic source revision'
+    Set-Content -LiteralPath (Join-Path (Split-Path $feed) 'SOURCE.txt') -Value ('Source commit: ' + ('a' * 40))
+    # Exercise a transferred source archive, which has no Git metadata.
+    $archive = Join-Path $testRoot 'archive'
+    New-Item -ItemType Directory -Path (Join-Path $archive 'scripts') -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'test-package-feed.ps1') -Destination (Join-Path $archive 'scripts')
+    Copy-Item -LiteralPath (Join-Path (Split-Path $PSScriptRoot) 'global.json') -Destination $archive
     $env:DOTNET_ROOT = Join-Path $testRoot 'dotnet'
     $env:NUGET_PACKAGES = Join-Path $testRoot 'original-cache'
     $global:netwivPackageEvidenceInstallAttempts = 0
@@ -40,7 +45,7 @@ try {
     $evidence = Join-Path $testRoot 'evidence'
     $initialLocation = (Get-Location).Path
     try {
-        & "$PSScriptRoot/test-package-feed.ps1" -Feed $feed -Version '0.1.0-test' -EvidenceDirectory $evidence
+        & (Join-Path $archive 'scripts/test-package-feed.ps1') -Feed $feed -Version '0.1.0-test' -EvidenceDirectory $evidence
         throw 'Expected consumer restore failure.'
     }
     catch {
@@ -51,7 +56,7 @@ try {
     if ($env:NUGET_PACKAGES -ne (Join-Path $testRoot 'original-cache')) { throw 'Consumer failure changed the package cache environment.' }
     if (Test-Path -LiteralPath $global:netwivPackageEvidenceWorkspace) { throw 'Failed consumer workspace was not removed.' }
     $provenance = Get-Content -LiteralPath (Join-Path $evidence 'provenance.json') -Raw | ConvertFrom-Json
-    if ($provenance.version -ne '0.1.0-test' -or $provenance.packages.Count -ne 1 -or
+    if ($provenance.version -ne '0.1.0-test' -or $provenance.revision -ne ('a' * 40) -or $provenance.packages.Count -ne 1 -or
         $provenance.packages[0].Hash -ne (Get-FileHash -LiteralPath $package).Hash) {
         throw 'Failure evidence does not identify the exact tested package bytes.'
     }
@@ -61,7 +66,7 @@ try {
     if ((Get-Content -LiteralPath (Join-Path $evidence 'package-consumer.log') -Raw) -notmatch 'CLI package installation failed\.') {
         throw 'The failure reason was not retained in the transcript.'
     }
-    Write-Output 'PASS package consumer failure: retained package provenance and diagnostics, restored environment, removed isolated workspace'
+    Write-Output 'PASS package consumer failure: retained archive revision, package provenance and diagnostics, restored environment, removed isolated workspace'
 }
 finally {
     Remove-Variable -Name netwivPackageEvidenceInstallAttempts, netwivPackageEvidenceWorkspace -Scope Global -ErrorAction SilentlyContinue

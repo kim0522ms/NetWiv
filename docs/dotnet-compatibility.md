@@ -70,6 +70,9 @@ revision, OS/architecture, exact feed package SHA-256 hashes and the bundle's
 `SOURCE.txt` when present. These are hosted validation jobs; they do not replace
 physical-device desktop evidence. Windows/macOS .NET 9/10 package consumers and
 macOS minimum-OS acceptance remain outside this bounded release matrix.
+When running a transferred source archive without Git metadata, keep its feed's
+`SOURCE.txt` containing the full source commit; the evidence helper reads that
+record instead of trying to infer a revision from an absent checkout.
 
 To select a newer test runtime while keeping library/package targets at .NET 8:
 

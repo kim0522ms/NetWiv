@@ -54,8 +54,8 @@ compatibility pass.
 Public documents explain usage, contracts, design rationale and limits without
 requiring earlier conversations or a personal development environment. Examples
 identify required inputs and working directories. Validation instructions refer
-to repository tests and commands. Keep personal paths, temporary feeds, work
-journals and execution logs in Git-ignored `.local-docs/` or `artifacts/`.
+to repository tests and commands. Do not commit personal paths, work journals,
+per-run reports or execution logs, or add evidence collection to code or CI/CD.
 Unimplemented and unverified behavior must remain visible in public documents.
 
 ---

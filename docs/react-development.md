@@ -33,7 +33,7 @@ preprocessor guard using the official template engine's
 ## Automated verification
 
 `tests/frontend-bindings/run.mjs` generates a fresh package-only consumer and
-records package hashes, CLI version, TypeScript checks and NativeAOT React IPC.
+checks the CLI version, TypeScript bindings and NativeAOT React IPC.
 After that succeeds, run the real development integration against its consumer:
 
 ```sh
@@ -44,7 +44,7 @@ This test temporarily adds C#/React probes, starts the CLI development path,
 checks a native WebView response, renames the C# command, checks regenerated
 JS/TS and a response from a new application PID, then cancels the session. It
 requires both application PIDs to stop and Vite's port to become available.
-The original source files are restored; `dev-restart-*.log` retains evidence.
+The original source files are restored and temporary IPC probe results are deleted.
 Generated files are refreshed by the next normal build. The cancellation token
 path is exercised directly; this is not a manual keyboard Ctrl+C test.
 

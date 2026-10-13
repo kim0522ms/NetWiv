@@ -96,7 +96,7 @@ jobs also publish and execute the default self-contained managed consumer.
 Every job publishes and executes a package-only NativeAOT consumer's windowless
 startup and configuration binding; macOS also runs the generated managed `.app`
 in both deployment modes.
-The jobs reuse the same package bundle and retain package hashes, environment
-details and execution logs. Adding these jobs does not establish a successful
-hosted or physical-device run; inspect the evidence for the tested revision.
+The jobs reuse the same package bundle and fail on unsuccessful commands or
+assertions. Adding these jobs does not establish a successful hosted or
+physical-device run; inspect the workflow results for the tested revision.
 These checks do not establish full installer acceptance or vendor-SDK support.

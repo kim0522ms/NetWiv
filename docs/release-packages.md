@@ -75,15 +75,8 @@ windowless startup and configuration binding. The .NET 8 baseline jobs additiona
 publish and execute the default managed self-contained React app, checking its
 bundled runtime policy and GUI/IPC behavior. Both macOS jobs also bundle and
 execute the managed `.app` in both deployment modes through the GUI/IPC smoke flow.
-Only `public-package-consumer.json` is retained in the seven-day
-`package-consumer-RID-netMAJOR` artifacts. It contains numeric package/SDK
-versions (prerelease labels omitted), target framework, RID, source commit,
-exact package SHA-256 hashes and fixed status/stage values. Raw command output,
-exception messages, transcripts, paths, environment descriptions and source
-annotations are excluded. Existing files in a reused evidence directory are
-preserved and excluded by the workflow's explicit upload allowlist. Local
-console diagnostics still require privacy review before sharing. All six must
-pass before the draft Release job runs. See [SDK compatibility](dotnet-compatibility.md).
+All six must pass before the draft Release job runs.
+See [SDK compatibility](dotnet-compatibility.md).
 
 The final job creates a **draft Release**, attaches the ZIP and its SHA-256
 checksum, and sets prerelease status for tags such as `v0.1.0-beta.1`.

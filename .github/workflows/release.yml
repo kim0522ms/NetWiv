@@ -73,13 +73,6 @@ jobs:
           path: artifacts/release/
           retention-days: 1
           if-no-files-found: error
-      - name: Upload packaging diagnostics
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: release-packaging-logs
-          path: artifacts/release-feed/*.log
-          retention-days: 7
 
   package-compatibility:
     needs: [version, bundle]
@@ -143,7 +136,6 @@ jobs:
             }
           @{ sdk = @{ version = $env:SDK_VERSION; rollForward = 'disable'; allowPrerelease = $false } } |
             ConvertTo-Json | Set-Content global.json
-          dotnet --info
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
@@ -172,16 +164,7 @@ jobs:
         run: ./scripts/ensure-webview2.ps1
       - name: Execute packaged CLI, generated managed app and NativeAOT consumer
         shell: pwsh
-        run: ./scripts/test-package-feed.ps1 -Feed artifacts/consumer-feed/packages -Version $env:RELEASE_VERSION -TargetFramework 'net${{ matrix.major }}.0' -EvidenceDirectory artifacts/package-consumer
-
-      - name: Upload package consumer evidence
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: package-consumer-${{ matrix.rid }}-net${{ matrix.major }}
-          path: artifacts/package-consumer/public-package-consumer.json
-          retention-days: 7
-          if-no-files-found: warn
+        run: ./scripts/test-package-feed.ps1 -Feed artifacts/consumer-feed/packages -Version $env:RELEASE_VERSION -TargetFramework 'net${{ matrix.major }}.0'
 
   draft:
     needs: [version, bundle, package-compatibility]

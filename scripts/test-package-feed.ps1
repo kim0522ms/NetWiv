@@ -2,70 +2,17 @@
 param(
     [Parameter(Mandatory)][string]$Feed,
     [Parameter(Mandatory)][string]$Version,
-    [ValidateSet("net8.0", "net9.0", "net10.0")][string]$TargetFramework = "net8.0",
-    [string]$EvidenceDirectory
+    [ValidateSet("net8.0", "net9.0", "net10.0")][string]$TargetFramework = "net8.0"
 )
 $ErrorActionPreference = 'Stop'
-function Write-PublicPackageEvidence {
-    param([string]$Directory, [System.Collections.IDictionary]$Record)
-    if (!$Directory) { return }
-    # Construct the public schema explicitly. Command output, paths and error
-    # messages must never become artifact fields, even on a failed consumer.
-    $public = [ordered]@{
-        version = $null
-        targetFramework = $Record.targetFramework
-        rid = $Record.rid
-        sdkVersion = $null
-        revision = $null
-        packageHashes = @()
-        status = $Record.status
-        stage = $Record.stage
-    }
-    foreach ($name in 'version', 'sdkVersion') {
-        # Prerelease labels can contain caller-provided identifiers. Only the
-        # numeric core is public; package hashes identify the exact test inputs.
-        if ($Record[$name] -is [string] -and
-            $Record[$name] -cmatch '\A([0-9]+\.[0-9]+\.[0-9]+)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?\z') {
-            $public[$name] = $Matches[1]
-        }
-    }
-    if ($Record.revision -is [string] -and $Record.revision -cmatch '\A[0-9a-f]{40}\z') { $public.revision = $Record.revision }
-    $public.packageHashes = @($Record.packageHashes | Where-Object { $_ -is [string] -and $_ -cmatch '\A[0-9A-Fa-f]{64}\z' })
-    if ($public.targetFramework -cnotin @('net8.0', 'net9.0', 'net10.0') -or
-        $public.rid -cnotin @('win-x64', 'win-arm64', 'win-x86', 'linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64') -or
-        $public.status -cnotin @('running', 'failed', 'passed') -or
-        $public.stage -cnotin @('preflight', 'provenance', 'cli-install', 'cli-version', 'cli-template',
-            'managed-build', 'managed-smoke', 'managed-bundle', 'managed-bundle-smoke',
-            'nativeaot-prepare', 'nativeaot-publish', 'nativeaot-startup', 'cleanup', 'complete')) {
-        throw 'Invalid public package consumer evidence fields.'
-    }
-    $public | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $Directory 'public-package-consumer.json')
-}
 $repository = Split-Path $PSScriptRoot -Parent
 $workspace = $null
 $previousPackages = $env:NUGET_PACKAGES
-$evidence = @{
-    version = $Version
-    targetFramework = $TargetFramework
-    rid = $(if ($IsWindows) { 'win' } elseif ($IsLinux) { 'linux' } else { 'osx' }) + '-' +
-        [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant()
-    sdkVersion = $null
-    revision = $null
-    packageHashes = @()
-    status = 'running'
-    stage = 'preflight'
-}
 try {
-    if ($EvidenceDirectory) {
-        $EvidenceDirectory = [IO.Path]::GetFullPath($EvidenceDirectory)
-        New-Item -ItemType Directory -Path $EvidenceDirectory -Force | Out-Null
-        Write-PublicPackageEvidence -Directory $EvidenceDirectory -Record $evidence
-    }
     $Feed = [IO.Path]::GetFullPath($Feed)
     # SDK selection alone does not isolate the runtimes used by net8.0 apphosts.
     $major = $TargetFramework.Substring(3).Split('.')[0]
     $sdk = & dotnet --version
-    $evidence.sdkVersion = $sdk
     if ($LASTEXITCODE -ne 0 -or $sdk -notlike "$major.*") { throw "Expected SDK major $major, found $sdk." }
     $runtimes = @(& dotnet --list-runtimes)
     if ($LASTEXITCODE -ne 0 -or !($runtimes -match "^Microsoft\.NETCore\.App $major\.") -or
@@ -86,22 +33,6 @@ try {
     Write-Output "Validating SDK $sdk with only runtime major $major"
     $workspace = Join-Path ([IO.Path]::GetTempPath()) ('netwiv-package-check-' + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $workspace | Out-Null
-    if ($EvidenceDirectory) {
-        $evidence.stage = 'provenance'
-        $sourceRecord = Join-Path (Split-Path $Feed) 'SOURCE.txt'
-        if (Test-Path -LiteralPath (Join-Path $repository '.git')) {
-            $revision = & git -C $repository rev-parse HEAD
-            if ($LASTEXITCODE -ne 0) { throw 'Could not identify the tested source revision.' }
-        }
-        elseif ((Test-Path -LiteralPath $sourceRecord) -and
-            (Get-Content -LiteralPath $sourceRecord -Raw) -match '(?m)^(?:Source commit: )?([0-9a-f]{40})\s*$') {
-            $revision = $Matches[1]
-        }
-        else { throw 'A source checkout or SOURCE.txt with the full source commit is required for evidence.' }
-        $evidence.revision = $revision
-        $evidence.packageHashes = @(Get-ChildItem -LiteralPath $Feed -Filter '*.nupkg' | Get-FileHash -Algorithm SHA256 |
-            ForEach-Object { $_.Hash } | Sort-Object)
-    }
     # A fresh consumer outside the checkout cannot inherit source project targets or cached NetWiv packages.
     $env:NUGET_PACKAGES = Join-Path $workspace 'cache'
     Copy-Item -LiteralPath (Join-Path $repository 'global.json') -Destination $workspace
@@ -110,14 +41,11 @@ try {
     $configuration.Save((Join-Path $workspace 'NuGet.Config'))
     Push-Location $workspace
     try {
-        $evidence.stage = 'cli-install'
         & dotnet tool install NetWiv.Cli --version $Version --tool-path tools --configfile NuGet.Config
         if ($LASTEXITCODE -ne 0) { throw 'CLI package installation failed.' }
         $cli = Join-Path $workspace ('tools/netwiv' + $(if ($IsWindows) { '.exe' } else { '' }))
-        $evidence.stage = 'cli-version'
         $reportedVersion = & $cli --version
         if ($LASTEXITCODE -ne 0 -or $reportedVersion -ne "netwiv-cli $Version") { throw "Incorrect CLI version: $reportedVersion" }
-        $evidence.stage = 'cli-template'
         & $cli new PackageExample --template react --source $Feed
         if ($LASTEXITCODE -ne 0) { throw 'CLI template creation from the installed package failed.' }
         @'
@@ -137,7 +65,6 @@ internal static class ManagedRuntimeProbe
         # its runtime payload publication in the newer Linux SDK jobs.
         if ($major -eq '8') { $modes += 'self-contained' }
         foreach ($mode in $modes) {
-            $evidence.stage = 'managed-build'
             Push-Location PackageExample
             try {
                 if ($mode -eq 'framework-dependent') { & $cli build --framework-dependent --no-bundle -- -warnaserror }
@@ -154,7 +81,6 @@ internal static class ManagedRuntimeProbe
             if (($mode -eq 'self-contained') -ne [bool]$runtimeConfig.runtimeOptions.includedFrameworks) {
                 throw "Generated $mode application has an unexpected runtime deployment policy."
             }
-            $evidence.stage = 'managed-smoke'
             if ($IsLinux) {
                 $managedOutput = @(& xvfb-run -a bash (Join-Path $repository 'scripts/run-linux-smoke-desktop.sh') $managed x11 --smoke-test)
             }
@@ -168,13 +94,11 @@ internal static class ManagedRuntimeProbe
             Write-Output "PASS managed ${mode}: GUI/IPC"
 
             if ($IsMacOS) {
-                $evidence.stage = 'managed-bundle'
                 Push-Location PackageExample
                 try { & $cli bundle --bundles app --no-sign }
                 finally { Pop-Location }
                 if ($LASTEXITCODE -ne 0) { throw "Generated $mode managed application bundle failed." }
                 $app = Join-Path (Split-Path $managed) 'bundle/macos/PackageExample.app/Contents/MacOS/PackageExample'
-                $evidence.stage = 'managed-bundle-smoke'
                 $bundledOutput = @(& $app --smoke-test)
                 $bundledExit = $LASTEXITCODE
                 $bundledOutput | Write-Output
@@ -187,7 +111,6 @@ internal static class ManagedRuntimeProbe
         }
 
         # Generate package consumers, retaining the test plugin as a separate assembly.
-        $evidence.stage = 'nativeaot-prepare'
         & "$PSScriptRoot/prepare-package-smoke.ps1" -Destination $workspace -Version $Version -TargetFramework $TargetFramework
         $smoke = Join-Path $workspace 'NetWiv.Desktop.Smoke'
         $projectPath = Join-Path $smoke 'NetWiv.Desktop.Smoke.csproj'
@@ -212,11 +135,9 @@ internal static class PackageBindingProbe
 }
 internal sealed class PackageOptions { public string Value { get; set; } = ""; }
 '@ | Set-Content -LiteralPath (Join-Path $smoke 'PackageBindingProbe.cs')
-        $evidence.stage = 'nativeaot-publish'
         & dotnet publish $projectPath -c Release -p:PublishAot=true -o published
         if ($LASTEXITCODE -ne 0) { throw 'Package-only NativeAOT publish failed.' }
         $executable = Join-Path $workspace ('published/NetWiv.Desktop.Smoke' + $(if ($IsWindows) { '.exe' } else { '' }))
-        $evidence.stage = 'nativeaot-startup'
         if ($IsLinux) {
             & xvfb-run -a bash (Join-Path $repository 'scripts/run-linux-smoke-desktop.sh') $executable x11 --no-window-smoke
         }
@@ -226,26 +147,7 @@ internal sealed class PackageOptions { public string Value { get; set; } = ""; }
     finally { Pop-Location }
     Write-Output "PASS ${TargetFramework}: packaged CLI, generated managed GUI/IPC, configuration binding and package-only NativeAOT startup"
 }
-catch {
-    Write-Output "FAIL package consumer: $($_.Exception.Message)"
-    $evidence.status = 'failed'
-    try { Write-PublicPackageEvidence -Directory $EvidenceDirectory -Record $evidence }
-    catch { Write-Warning 'Could not save public package consumer evidence.' }
-    throw
-}
 finally {
     $env:NUGET_PACKAGES = $previousPackages
-    if ($workspace) {
-        try { Remove-Item -LiteralPath $workspace -Recurse -Force }
-        catch {
-            $evidence.status = 'failed'
-            $evidence.stage = 'cleanup'
-            try { Write-PublicPackageEvidence -Directory $EvidenceDirectory -Record $evidence }
-            catch { Write-Warning 'Could not save public package consumer evidence.' }
-            throw
-        }
-    }
+    if ($workspace) { Remove-Item -LiteralPath $workspace -Recurse -Force }
 }
-$evidence.status = 'passed'
-$evidence.stage = 'complete'
-Write-PublicPackageEvidence -Directory $EvidenceDirectory -Record $evidence

@@ -256,7 +256,6 @@ jobs:
         shell: pwsh
         run: |
           ./scripts/test-package-smoke.ps1
-          ./scripts/test-package-feed-evidence.ps1
 
       - name: Publish Core tests with NativeAOT
         run: dotnet publish tests/NetWiv.Core.Tests -c Release -r '${{ matrix.rid }}' -p:PublishAot=true -o artifacts/ci/core-aot

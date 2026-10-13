@@ -127,6 +127,10 @@ collision after flattening namespace/generic names receives a deterministic
 type-identity hash. Names no longer depend on command traversal order; adding an
 unrelated command does not renumber every DTO.
 
+When the same DTO uses multiple JSON contexts, the hash also distinguishes their
+assembly names and context type names. Assembly versions are excluded, so a
+version-only upgrade of a producer or consumer preserves the exported names.
+
 Migration: rebuild to regenerate `commands.d.ts`, then replace any direct imports
 of old names such as `Dto17Output` with the corresponding named interface. Do not
 edit generated files. Callers that infer results from `commands` need no naming
@@ -232,7 +236,8 @@ input/output JSON names, recursive nullable DTOs, byte-array shapes, unsupported
 serialization features and metadata extraction without executing app code.
 Referenced-command regressions cover implementation/reference assemblies, public
 visibility, local/reference route collisions, per-producer JSON contexts, stable
-DTO naming and malformed/version-unknown metadata.
+DTO naming across producer/consumer assembly version changes and
+malformed/version-unknown metadata.
 Serializer comparisons use source-generated System.Text.Json metadata as the
 reference. These verify the NetWiv generator contract rather than TAURI®'s Rust
 business-logic implementation.

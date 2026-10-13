@@ -144,7 +144,7 @@ internal sealed class FrontendBindingEmitter
     }
 
     private static string ContextIdentity(INamedTypeSymbol? context)
-        => context is null ? "" : context.ContainingAssembly.Identity + ":" + context.ToDisplayString();
+        => context is null ? "" : context.ContainingAssembly.Identity.Name + ":" + context.ToDisplayString();
 
     private void ResolveNames(Dictionary<string, string> preferred, Dictionary<string, string> qualified)
     {

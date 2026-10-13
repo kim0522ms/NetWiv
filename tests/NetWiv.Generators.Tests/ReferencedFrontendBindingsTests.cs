@@ -164,6 +164,38 @@ public sealed class ReferencedFrontendBindingsTests
     }
 
     [Theory]
+    [InlineData(false, "2.0.0.0", "1.0.0.0")]
+    [InlineData(false, "1.0.0.0", "2.0.0.0")]
+    [InlineData(false, "2.0.0.0", "2.0.0.0")]
+    [InlineData(true, "2.0.0.0", "1.0.0.0")]
+    [InlineData(true, "1.0.0.0", "2.0.0.0")]
+    [InlineData(true, "2.0.0.0", "2.0.0.0")]
+    public void AssemblyVersionChangesPreserveMultiContextBindings(bool referenceAssembly, string producerVersion, string consumerVersion)
+    {
+        FrontendBindings Bindings(string producerAssemblyVersion, string consumerAssemblyVersion)
+        {
+            var producerSource = Preamble.Replace("[assembly: GenerateFrontendBindings]",
+                "[assembly: GenerateFrontendBindings]\n[assembly: System.Reflection.AssemblyVersion(\"" + producerAssemblyVersion + "\")]") +
+                "public sealed record Item(int Count); public static class Commands { [Command] public static Item Remote(Item item) => item; }";
+            var producer = Reference("Producer", Generate("Producer", producerSource), referenceAssembly);
+            var local = Preamble.Replace("[assembly: GenerateFrontendBindings]",
+                    "[assembly: GenerateFrontendBindings]\n[assembly: System.Reflection.AssemblyVersion(\"" + consumerAssemblyVersion + "\")]")
+                .Replace("JsonKnownNamingPolicy.SnakeCaseLower", "JsonKnownNamingPolicy.CamelCase")
+                .Replace("JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString", "JsonNumberHandling.Strict") +
+                "public static class Commands { [Command] public static Item Local(Item item) => item; }";
+            var consumer = Generate("Consumer", local, producer);
+            Assert.Empty(consumer.Errors);
+            return Read(consumer.Compilation);
+        }
+
+        var original = Bindings("1.0.0.0", "1.0.0.0");
+        var upgraded = Bindings(producerVersion, consumerVersion);
+        Assert.Equal(4, original.TypeScript.Split('\n').Where(line => line.StartsWith("export interface ")).Distinct().Count());
+        Assert.Equal(original.TypeScript, upgraded.TypeScript);
+        Assert.Equal(original.JavaScript, upgraded.JavaScript);
+    }
+
+    [Theory]
     [InlineData("NetWiv.Frontend.Commands.v2", "1", "", "unsupported")]
     [InlineData("NetWiv.Frontend.Commands.v1", "2", "", "marker")]
     [InlineData("NetWiv.Frontend.Commands.v1", "1", "[assembly: System.Reflection.AssemblyMetadata(\"NetWiv.Frontend.Command.v1:M:Commands.Ping\", \"invalid\")]", "malformed")]

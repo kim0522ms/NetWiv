@@ -13,6 +13,13 @@ desktop app the same foundations as an ASP.NET Core or worker app:
 The package is opt-in. `NetWiv.Core` depends only on the dependency-injection
 and logging abstractions, and the existing `Builder` API is unchanged.
 
+For a complete package-only app, use the
+[Hosting sample](../samples/NetWiv.HostingApp/README.md). It combines constructor
+injection, invocation-scoped application and plugin commands, options, logging,
+explicit capabilities and generated frontend bindings. Its verification helper
+separately records managed/AOT publication and real frontend IPC execution;
+it does not require expanding or changing the `netwiv new` templates.
+
 ## Create an application
 
 Reference `NetWiv.Hosting` next to `NetWiv.Platform.Desktop` and
@@ -284,6 +291,15 @@ then to a no-op factory.
 - Instance command receivers must be registered in DI by their declaring class.
   Plugin registration does not automatically register a command receiver in DI.
 - `netwiv new` templates do not use the host yet.
+
+The package-only Hosting sample keeps plugin lifecycle registration separate
+from DI command receivers and includes an opt-in embedded frontend smoke. It
+checks scope identities, concurrent awaited calls, disposal before IPC response,
+deny precedence and a generated-but-unregistered plugin command. Follow its
+[restore, publish and verification instructions](../samples/NetWiv.HostingApp/README.md#automated-verification)
+with an actual matching package feed. A `--build-only` result is publication
+evidence; only `--run` executes its managed and NativeAOT consumers, and manual
+desktop acceptance remains a separate check.
 
 `tests/NetWiv.Generators.Tests` covers generated service resolution, keys,
 optional services, instance command lifetimes and binding exclusion. The shared

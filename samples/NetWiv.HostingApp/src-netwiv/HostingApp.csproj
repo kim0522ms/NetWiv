@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NetWivVersion Condition="'$(NetWivVersion)' == ''">$(NETWIV_PACKAGE_VERSION)</NetWivVersion>
+    <NetWivFrontendDist>$(MSBuildProjectDirectory)/../dist</NetWivFrontendDist>
+    <NetWivFrontendBindingsDirectory>../frontend/generated</NetWivFrontendBindingsDirectory>
+    <NetWivConfigPath>$(MSBuildProjectDirectory)/netwiv.conf.json</NetWivConfigPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="NetWiv.Hosting" Version="$(NetWivVersion)" />
+    <PackageReference Include="NetWiv.Platform.Desktop" Version="$(NetWivVersion)" />
+    <PackageReference Include="NetWiv.Build" Version="$(NetWivVersion)" PrivateAssets="all" />
+    <PackageReference Include="NetWiv.Generators" Version="$(NetWivVersion)" PrivateAssets="all" />
+    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="RequireFrontend" BeforeTargets="PrepareForBuild" Condition="'$(NetWivBindingsOnly)' != 'true'">
+    <Error Condition="!Exists('$(NetWivFrontendDist)/index.html')" Text="Run npm ci and npm run build from the sample root before building the desktop app." />
+  </Target>
+</Project>

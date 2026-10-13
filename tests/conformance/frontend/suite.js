@@ -981,7 +981,7 @@ await test('webview.reparent-inflight-channel', async () => {
     assert(messages[0] === 0 && !replies.has('start'), 'stream did not pause at its first channel message');
     await child.reparent(target.label);
     await parent.destroy(); parent = null;
-    const moved = (await getAllWebviews()).find(view => view.label === child.label);
+    const moved = (await invoke('plugin:webview|get_all_webviews')).find(view => view.label === child.label);
     assert(moved?.window_label === target.label, 'destroying the old parent removed the moved WebView');
     await emitTo(child.label, 'inflight-probe', 'moved');
     await until(() => replies.has('moved'), 5000);

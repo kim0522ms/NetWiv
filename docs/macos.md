@@ -185,6 +185,8 @@ The creation-time `dataStoreIdentifier` follows the pinned Wry behavior: macOS 1
 uses the identified persistent store, older systems use the default store, and
 incognito WebViews use a nonpersistent store. Close every WebView using an identifier
 before removing its store; an Apple removal failure is returned as a command error.
+WebKit may release a closed WebView's store asynchronously, so a caller can still
+receive an in-use error immediately after closing it.
 Windows/Linux retain the upstream empty-list/no-op app API behavior.
 Per-window `skipTaskbar=true` is rejected on
 macOS; use `AppApi.SetDockVisibilityAsync` for the application-wide Dock entry.
@@ -237,7 +239,8 @@ a source-linked smoke result into package-only or release acceptance.
 
 ### Website data-store check
 
-The ordinary desktop smoke includes `MacOsDataStoreProbe` on macOS. On macOS 14+
+The ordinary desktop smoke includes `MacOsDataStoreProbe` on macOS. The same
+scenario runs independently with `--data-store-smoke`. On macOS 14+
 it creates a fresh random 16-byte identifier, uses unchanged
 `@tauri-apps/api@2.11.1` guest code to enumerate it, checks that removal while its
 WebView is open fails without invalidating that WebView, closes and reopens it to
@@ -253,14 +256,24 @@ After rebuilding the native adapter, run both managed and NativeAOT consumers:
 
 ```sh
 dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r osx-arm64 -p:PublishAot=false -o artifacts/data-store-smoke/managed
-artifacts/data-store-smoke/managed/NetWiv.Desktop.Smoke
+artifacts/data-store-smoke/managed/NetWiv.Desktop.Smoke --data-store-smoke
 dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r osx-arm64 -o artifacts/data-store-smoke/aot
-artifacts/data-store-smoke/aot/NetWiv.Desktop.Smoke
+artifacts/data-store-smoke/aot/NetWiv.Desktop.Smoke --data-store-smoke
 ```
 
-The test scenario is prepared; macOS compilation and real-device execution of
-this new data-store path remain unverified until these runs are recorded. This
-does not establish Intel or macOS 12/13 execution evidence.
+On October 13, 2026, source revision `c76f5cc` passed this focused scenario in
+both managed and NativeAOT execution on a physical Apple Silicon Mac mini running
+macOS 27.0, using .NET SDK 8.0.406 and Rust 1.95.0. The macOS native release unit
+suite passed 52 tests. This covers guest/SDK identifier byte order, active-store
+removal failure without WebView invalidation, persistence across closure, removal,
+empty recreation and cleanup. Cleanup retries only the known in-use error for up
+to five seconds after test-owned WebViews are destroyed.
+
+The native build used `CARGO_PROFILE_RELEASE_STRIP=none` to avoid the pinned Rust
+toolchain's [Mach-O strip alignment issue](https://github.com/rust-lang/rust/issues/157750)
+on macOS 27. The ordinary managed desktop smoke reached and passed this data-store
+scenario, then failed its separate monitor-geometry check; this focused result is
+not a full desktop-smoke pass. Intel and macOS 12/13 execution remain unverified.
 
 ---
 

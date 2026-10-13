@@ -172,7 +172,7 @@ try {
                         $key = "$hive`:\Software\Microsoft\Windows\CurrentVersion\Uninstall\$identifier"
                         Set-ItemProperty $key FileScopedUninstall 0
                         try {
-                            Install $package $format $install '' $true
+                            Install $package $format $install $true
                             Assert (Test-Path (Join-Path $initialInstall 'InstallerProbe.exe')) 'Rejected legacy relocation changed the previous installation.'
                         } finally { Set-ItemProperty $key FileScopedUninstall 1 }
                     }
@@ -182,7 +182,7 @@ try {
                         try {
                             # A failed removal must retain its registration and ownership information for retry.
                             Execute (Join-Path $install 'uninstall.exe') "/S _?=$install" @(2)
-                            Install $package $format '' '' $true
+                            Install $package $format '' $true
                             $hive = if ($scope -eq 'perMachine') { 'HKLM' } else { 'HKCU' }
                             $registration = Get-ItemProperty "$hive`:\Software\Microsoft\Windows\CurrentVersion\Uninstall\$identifier"
                             Assert ($registration.DisplayVersion -eq '1.0.0') 'Locked-file upgrade replaced the previous registration.'

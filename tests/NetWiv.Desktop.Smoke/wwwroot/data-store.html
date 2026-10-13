@@ -1,0 +1,30 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Website data-store probe</title></head><body>
+<script type="module">
+import { invoke } from './core.js';
+import { fetchDataStoreIdentifiers, removeDataStore } from './app.js';
+try {
+  const { phase, uuid } = await invoke('data_store_probe_config');
+  const contains = stores => stores.some(store => JSON.stringify(store) === JSON.stringify(uuid));
+  const key = 'netwiv-data-store-probe';
+  const marker = JSON.stringify(uuid);
+  if (phase === 'write') {
+    localStorage.setItem(key, marker);
+    if (!contains(await fetchDataStoreIdentifiers())) throw Error('Guest enumeration lost identifier bytes');
+    let rejected = false;
+    try { await removeDataStore(uuid); } catch { rejected = true; }
+    if (!rejected) throw Error('Removing an active website data store succeeded');
+    if (localStorage.getItem(key) !== marker) throw Error('Failed removal invalidated the active WebView');
+  } else if (phase === 'read') {
+    if (localStorage.getItem(key) !== marker) throw Error('Data did not persist after the WebView closed');
+  } else if (phase === 'remove') {
+    await removeDataStore(uuid);
+    if (contains(await fetchDataStoreIdentifiers())) throw Error('Removed data store is still enumerated');
+  } else if (phase === 'empty') {
+    if (localStorage.getItem(key) !== null) throw Error('Recreated data store retained removed data');
+  } else throw Error('Unknown data-store probe phase');
+  await invoke('data_store_probe_result');
+} catch (error) {
+  await invoke('data_store_probe_result', { error: String(error) });
+}
+</script></body></html>

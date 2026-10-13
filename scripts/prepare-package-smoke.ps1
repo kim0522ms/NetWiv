@@ -48,7 +48,12 @@ foreach ($name in @('NetWiv.Plugin.CommandFixture', 'NetWiv.Desktop.Smoke')) {
     }
     foreach ($resource in $project.SelectNodes('//EmbeddedResource')) {
         if ($resource.Include.StartsWith('../')) {
-            $resource.SetAttribute('Include', [IO.Path]::GetFullPath($resource.Include, $source))
+            $resourceSource = [IO.Path]::GetFullPath($resource.Include, $source)
+            $relative = Join-Path 'package-fixtures' ([IO.Path]::GetRelativePath($repository, $resourceSource))
+            $resourceDestination = Join-Path $directory $relative
+            New-Item -ItemType Directory -Path (Split-Path $resourceDestination) -Force | Out-Null
+            Copy-Item -LiteralPath $resourceSource -Destination $resourceDestination
+            $resource.SetAttribute('Include', $relative)
         }
     }
     $project.Save($projectPath)

@@ -42,7 +42,7 @@ function run(t, failures, appStatus) {
   tool('smoke', 'echo "PASS smoke fixture"; exit "$APP_STATUS"\n')
   const result = spawnSync('bash', ['-x', script, path.join(bin, 'smoke'), 'x11'], {
     encoding: 'utf8', env: { ...process.env, PATH: bin + path.delimiter + process.env.PATH,
-      FIXTURE: root, FAILURES: String(failures), APP_STATUS: String(appStatus), NETWIV_DESKTOP_LOG: path.join(root, 'logs') },
+      FIXTURE: root, FAILURES: String(failures), APP_STATUS: String(appStatus) },
   })
   assert.ifError(result.error)
   assert.match(result.stdout, /PASS smoke fixture/)

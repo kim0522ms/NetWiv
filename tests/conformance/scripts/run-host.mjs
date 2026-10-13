@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto'
 import { execFileSync, spawn } from 'node:child_process'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
-import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { selectCases } from './select-cases.mjs'
 import { startOriginServers } from './origin-server.mjs'
@@ -44,8 +43,7 @@ const metadata = {
   suiteSha256: await fingerprint(suitePaths),
   lockSha256: sha((await readFile(path.join(root, 'compatibility/upstream-lock.json'), 'utf8')).replaceAll('\r\n', '\n')),
   sourceSha256: await fingerprint(sourcePaths),
-  osRelease: os.release(), display: process.env.GDK_BACKEND || (process.env.WAYLAND_DISPLAY ? 'wayland' : process.env.DISPLAY ? 'x11' : 'native'),
-  startedAt: new Date().toISOString(), executable: path.resolve(executable),
+  display: process.env.GDK_BACKEND || (process.env.WAYLAND_DISPLAY ? 'wayland' : process.env.DISPLAY ? 'x11' : 'native'),
   executableSha256: sha(await readFile(executable))
 }
 const resultPath = path.resolve(output)

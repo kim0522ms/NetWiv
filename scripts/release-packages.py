@@ -75,7 +75,8 @@ def bundle(repository, feed, destination, version, revision):
         'Download and extract the ZIP, then follow its README to use `packages/` as a local NuGet feed. '
         'Contains the SDK, Hosting, CLI, managed plugins and native libraries for Windows x64, Linux x64, macOS arm64 and macOS x64.\n\n'
         'These packages are not published to NuGet.org. CI validates source builds on all four platforms '
-        'and performs a package-consumer NativeAOT check on Linux; this is not complete release acceptance, '
+        'and runs packaged managed GUI/IPC and NativeAOT startup checks on all four desktop RIDs '
+        '(.NET 8 everywhere, plus .NET 9/10 on Linux); this is not complete release acceptance, '
         'installer lifecycle validation, Developer ID signing or notarization.\n\n'
         'NetWiv is an independent project. See NOTICE and THIRD-PARTY-NOTICES.md in the bundle for upstream attribution.\n',
         encoding='utf-8')

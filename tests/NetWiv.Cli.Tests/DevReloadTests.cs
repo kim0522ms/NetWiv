@@ -248,7 +248,6 @@ internal static class DevReloadTests
         var output = new StringWriter();
         var session = DevCommand.RunAsync(arguments.ToArray(), TextWriter.Synchronized(output), app, stop.Token);
         var children = new List<ChildRun>();
-        var completed = false;
         try
         {
             children.Add(await WaitForRun("first|one"));
@@ -279,28 +278,19 @@ internal static class DevReloadTests
             await Until(() => ConcurrentFile.ReadCompleteLines(outputFile).Length > runCount);
             children.Add(ChildRun.Parse(ConcurrentFile.ReadCompleteLines(outputFile)[^1]));
             await RequireStopped(children[^2]);
-            completed = true;
         }
         finally
         {
             stop.Cancel();
             try { await session; } catch (OperationCanceledException) { }
             foreach (var child in children) await RequireStopped(child);
-            if (completed)
+            // All app PIDs have already exited. Windows can briefly retain an
+            // image mapping while the loader finishes releasing a killed job.
+            for (var attempt = 0; ; attempt++)
             {
-                // All app PIDs have already exited. Windows can briefly retain an
-                // image mapping while the loader finishes releasing a killed job.
-                for (var attempt = 0; ; attempt++)
-                {
-                    try { Directory.Delete(root, recursive: true); break; }
-                    catch (Exception error) when (attempt < 20 && error is IOException or UnauthorizedAccessException)
-                    { await Task.Delay(100); }
-                }
-            }
-            else
-            {
-                await File.WriteAllTextAsync(Path.Combine(root, "dev-session.log"), output.ToString());
-                Console.WriteLine("Failed development evidence retained: " + root);
+                try { Directory.Delete(root, recursive: true); break; }
+                catch (Exception error) when (attempt < 20 && error is IOException or UnauthorizedAccessException)
+                { await Task.Delay(100); }
             }
         }
 

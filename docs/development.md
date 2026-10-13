@@ -43,6 +43,8 @@ packages. It verifies unique package references and keeps the external test plug
 as a separate consumer assembly for .NET 8, 9 and 10. CI runs this check before
 release packaging; the release workflow additionally publishes and executes the
 consumers against the built package feed.
+External embedded fixtures are copied into the isolated consumer, preserving
+their bytes and logical names.
 
 The test-tool preparation downloads checksum-pinned official minisign 0.12
 binaries for the CLI signer interoperability test on Windows/Linux x64. On macOS
@@ -59,7 +61,16 @@ dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r win-x64
 ```
 
 On macOS, keep `App.Run()` on the process's original main thread and use a
-logged-in desktop session. Run the focused packaging checks with
+logged-in desktop session with an awake display. A sleeping display may be online
+while CoreGraphics reports no active monitors, causing the desktop smoke's
+`native monitor geometry` assertion to fail. For remote validation, temporarily
+keep the display awake for the executable's lifetime:
+
+```sh
+caffeinate -d -u -t 120 /path/to/publish/NetWiv.Desktop.Smoke
+```
+
+This does not change permanent power settings. Run the focused packaging checks with
 `dotnet run --project tests/NetWiv.Cli.Tests -c Release -- --filter macOS`;
 they invoke real `cc`, `codesign`, `plutil` and `hdiutil`. The full CLI signer suite
 also needs the pinned minisign 0.12 executable; see [macOS setup](macos.md).
@@ -114,8 +125,8 @@ managed and NativeAOT execution both provide required coverage. Native and
 NuGet caches are separated by runner image and RID, with restore prefixes that
 reuse available dependencies after lock/project changes; normal build/restore
 commands still validate them. NuGet keys also include the pinned .NET SDK.
-Logs, test reports, build binary logs and the published executables are retained
-as workflow artifacts for seven days.
+CI uses command exit codes and test assertions to determine success. It does not
+collect or upload separate validation reports or diagnostic archives.
 
 The existing desktop-only ignored Rust test and optional external MIME corpus
 remain explicitly skipped in their suite output. Passing CI does not establish
@@ -137,8 +148,8 @@ new package version and an unused output directory:
 # Output feed: artifacts/integration/0.1.0-local.1/packages
 ```
 
-This packages Core, Hosting, Generators, Build, Platform.Desktop, CLI and the managed plugins, and
-writes package SHA-256 hashes. It refuses an existing output directory and does
+This packages Core, Hosting, Generators, Build, Platform.Desktop, CLI and the managed plugins.
+It refuses an existing output directory and does
 not publish to a remote feed. Use a new version for changed contents to avoid
 NuGet cache collisions. Supply the resulting `packages` directory and version
 to application developers; a fresh clone does not contain a prebuilt feed.
@@ -150,8 +161,9 @@ The integration script's CLI already includes `netwiv new` with all 18 choices.
 
 Validate package-only consumers against the exact packages intended for release,
 including NativeAOT execution, frontend IPC and installer lifecycle on each
-supported platform. Retain source revisions, toolchain versions and artifact
-hashes with the results. Report skips and missing dependencies explicitly.
+supported platform. State the checks performed, results, skips and missing
+dependencies in the PR; do not add evidence collection or report storage to code
+or CI/CD.
 See [support and validation](implementation-status.md) for outstanding coverage.
 
 ---

@@ -16,14 +16,10 @@ $projects = @('NetWiv.Core', 'NetWiv.Hosting', 'NetWiv.Generators', 'NetWiv.Buil
 $projects += Get-ChildItem -LiteralPath (Join-Path $repository 'src') -Directory -Filter 'NetWiv.Plugin.*' |
     Sort-Object Name | Select-Object -ExpandProperty Name
 foreach ($project in $projects) {
-    $log = Join-Path $destination "$project.log"
-    & dotnet pack (Join-Path $repository "src/$project/$project.csproj") -c Release "-p:Version=$Version" -nodeReuse:false -o $feed *> $log
-    if ($LASTEXITCODE -ne 0) { throw "Packing $project failed; see $log" }
+    & dotnet pack (Join-Path $repository "src/$project/$project.csproj") -c Release "-p:Version=$Version" -nodeReuse:false -o $feed
+    if ($LASTEXITCODE -ne 0) { throw "Packing $project failed." }
     Write-Output "Packed $project $Version"
 }
 $packages = @(Get-ChildItem -LiteralPath $feed -Filter '*.nupkg')
 if ($packages.Count -ne $projects.Count) { throw "Expected $($projects.Count) packages, found $($packages.Count)." }
-$packages | Get-FileHash -Algorithm SHA256 |
-    Select-Object @{Name='File';Expression={Split-Path $_.Path -Leaf}}, Hash |
-    ConvertTo-Json | Set-Content -LiteralPath (Join-Path $destination 'package-hashes.json') -Encoding utf8
 Write-Output "Integration feed: $feed"

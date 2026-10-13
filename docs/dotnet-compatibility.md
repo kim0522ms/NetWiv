@@ -40,8 +40,11 @@ macOS x64. Separate Linux jobs exercise SDK/runtime 9 and 10 with the same
 `net8.0` source libraries, managed tests and NativeAOT Core tests; they do not
 rebuild Rust. The `CI required` check includes these jobs.
 
-Release packaging builds one feed and reuses it in three separate consumer
-jobs. Each job installs SDK/runtime 8, 9 or 10 in a private `DOTNET_ROOT`, removes
+Release packaging builds one feed and reuses it in six separate consumer
+jobs: Linux x64 with SDK/runtime 8, 9 and 10, plus Windows x64 and macOS arm64/x64
+with SDK/runtime 8. The baseline covers all packaged native RIDs; keeping newer
+SDK/runtime coverage on Linux bounds the CI cost. Each job uses a private
+`DOTNET_ROOT`, removes
 any extra LTS runtime installed by `setup-dotnet`, and verifies that no other
 runtime major is visible. A mixed installation or an ambient runtime-policy
 override fails the check.
@@ -49,11 +52,22 @@ override fails the check.
 Each job installs and runs the packaged CLI, publishes the generated React
 solution via `netwiv build --framework-dependent`, and executes its `net8.0`
 apphost through the WebView/IPC smoke flow.
-A test probe inside the generated app asserts its actual runtime major. It then
+The .NET 8 baseline jobs then publish and execute the default self-contained
+managed output. Its runtime configuration must include the bundled framework;
+framework-dependent output must request an installed framework. Both modes
+assert the actual runtime major and complete the GUI/IPC scenario.
+A test probe inside the generated app asserts its actual runtime major. macOS
+also bundles and executes the managed `.app` in both deployment modes through
+the same GUI/IPC scenario.
+Each job then
 publishes/runs a package-only NativeAOT desktop consumer targeting `net8.0`,
 `net9.0` or `net10.0`, including configuration binding from the packaged Hosting
-dependency with warnings as errors. The draft Release job requires all three
+dependency with warnings as errors. The draft Release job requires all six
 consumer jobs to pass. No package is published to NuGet.org.
+
+These hosted validation jobs check process exit codes and behavioral assertions.
+Windows/macOS .NET 9/10 package consumers and
+macOS minimum-OS acceptance remain outside this bounded release matrix.
 
 To select a newer test runtime while keeping library/package targets at .NET 8:
 
@@ -70,33 +84,14 @@ Use `net10.0` for SDK 10, or omit the variable for the baseline. Test fixture
 applications follow the test runtime so nested `dotnet run/watch/publish`
 commands exercise that version too.
 
-Local validation on macOS 15.4 / Apple Silicon (2026-10-11):
+The package gate's NativeAOT check is windowless startup. WSL/Xvfb runs are
+virtual/headless checks and do not establish physical desktop acceptance.
+Minimum-OS acceptance and Windows/macOS .NET 9/10 package consumers remain
+outside the release matrix.
 
-| Check | SDK 8.0.406 / net8.0 | SDK 9.0.200 / net9.0 | SDK 10.0.301 / net10.0 |
-| --- | --- | --- | --- |
-| Full solution build | Pass, no warnings | Pass, no warnings | Pass, no warnings |
-| Core managed tests | 203 passed, 2 skipped | 203 passed, 2 skipped | 203 passed, 2 skipped |
-| API / generator tests | 32 / 118 passed | 32 / 118 passed | 32 / 118 passed |
-| CLI tests | 99 passed, 2 skipped | 99 passed, 2 skipped | 99 passed, 2 skipped |
-| NativeAOT Core | 203 passed, 2 skipped | 203 passed, 2 skipped | 203 passed, 2 skipped |
-| NativeAOT desktop | Windowless + 3 GUI passes | Windowless + 3 GUI passes | Windowless + 3 GUI passes |
-| Package-only CLI / generated managed GUI + IPC / NativeAOT + binding | Passed, only runtime 8 installed | Passed, only runtime 9 installed | Passed, only runtime 10 installed |
-
-The native adapter binaries were reused; Rust was not changed. Core skips cover
-Windows-specific behavior and the optional external inference corpus. CLI skips
-cover Windows-specific checks. The modified `DevCommand`/`NewCommand` code had
-94.1% line / 78.09% branch coverage; every changed executable line was hit.
-The development regression checks cover empty feature overrides, configured
-feature lists, invalid feature rejection, configuration reload and child cleanup.
-
-A previous feasibility run had one AppKit `NSViewUpdateVibrancyForSubtree`
-SIGTRAP on .NET 8. It did not reproduce in these three consecutive GUI runs per
-version; no root cause or native crash fix is claimed. The original backport
-commit `c3dcb24` subsequently passed [all four desktop CI jobs and SDK 9/10
-checks](https://github.com/kim0522ms/NetWiv/actions/runs/38138372341).
-Minimum-OS acceptance still needs separate hardware evidence. The isolated
-Release consumer gate added after review was exercised locally on macOS for all
-three majors; its Linux release jobs still require a tagged workflow run.
+An intermittent AppKit `NSViewUpdateVibrancyForSubtree` SIGTRAP was observed
+in an earlier .NET 8 feasibility run. Later successful runs do not establish
+its root cause or a native crash fix.
 
 ---
 

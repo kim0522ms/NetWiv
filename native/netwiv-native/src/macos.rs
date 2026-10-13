@@ -9,6 +9,42 @@ use tao::{
 use tauri_utils::{TitleBarStyle, WindowEffect, WindowEffectState, config::WindowEffectsConfig};
 use window_vibrancy::{NSVisualEffectMaterial as Material, NSVisualEffectState as State};
 
+pub(crate) fn invoke_data_store(
+    command: &str,
+    args: &Value,
+    complete: impl FnOnce(Result<Value, String>) + Send + 'static,
+) -> Result<(), String> {
+    use objc2::{msg_send, runtime::AnyClass, sel};
+    use wry::{WebView, WebViewExtDarwin};
+
+    let identifier = if command == "plugin:app|remove_data_store" {
+        Some(serde_json::from_value::<[u8; 16]>(args.get("uuid").cloned().unwrap_or(Value::Null))
+            .map_err(|error| format!("invalid data store identifier: {error}"))?)
+    } else { None };
+    if objc2::MainThreadMarker::new().is_none() {
+        return Err("WKWebsiteDataStore operations must run on the process main thread.".into());
+    }
+    let class = AnyClass::get(c"WKWebsiteDataStore").ok_or("WKWebsiteDataStore is unavailable.")?;
+    // Wry's pinned methods do not perform availability checks. Both selectors
+    // were introduced in macOS 14; asking NSObject is safe on the macOS 12 baseline.
+    let selector = if identifier.is_some() {
+        sel!(removeDataStoreForIdentifier:completionHandler:)
+    } else { sel!(fetchAllDataStoreIdentifiers:) };
+    let available: bool = unsafe { msg_send![class, respondsToSelector: selector] };
+    if !available {
+        return Err("WKWebsiteDataStore identifier management requires macOS 14 or later.".into());
+    }
+    match identifier {
+        Some(identifier) => WebView::remove_data_store(&identifier, move |result| {
+            complete(result.map(|_| Value::Null).map_err(|error| error.to_string()));
+        }),
+        None => WebView::fetch_data_store_identifiers(move |identifiers| {
+            complete(Ok(serde_json::json!(identifiers)));
+        }).map_err(|error| error.to_string())?,
+    }
+    Ok(())
+}
+
 pub(crate) fn configure_window(
     mut builder: WindowBuilder,
     extra: &Value,
@@ -140,6 +176,25 @@ pub(crate) fn set_effects(
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn data_store_identifier_validation_precedes_appkit_access() {
+        for uuid in [Value::Null, json!([]), json!(vec![0; 15]), json!(vec![0; 17]),
+            json!(vec![256; 16]), json!(vec![-1; 16]), json!(vec![1.5; 16]), json!(vec!["0"; 16])] {
+            let error = invoke_data_store("plugin:app|remove_data_store", &json!({"uuid":uuid}), |_| panic!("invalid input must not complete asynchronously")).unwrap_err();
+            assert!(error.starts_with("invalid data store identifier:"), "{error}");
+        }
+    }
+
+    #[test]
+    fn data_store_operations_reject_workers_without_entering_webkit() {
+        for (command, args) in [
+            ("plugin:app|fetch_data_store_identifiers", json!({})),
+            ("plugin:app|remove_data_store", json!({"uuid": vec![255; 16]})),
+        ] {
+            assert!(invoke_data_store(command, &args, |_| panic!("worker must not start WebKit")).unwrap_err().contains("process main thread"));
+        }
+    }
 
     #[test]
     fn event_loop_rejects_worker_threads_without_entering_appkit() {

@@ -96,7 +96,7 @@ application commands and handwritten plugin registrations are unchanged.
 
 ## Optional frontend bindings
 
-With `[assembly: GenerateFrontendBindings]`, local plugin declarations export
+With `[assembly: GenerateFrontendBindings]`, plugin declarations export
 qualified names such as `commands['plugin:inventory|get_status']()`.
 The generator must prove the plugin name without running application code:
 use a non-virtual, non-overridden constant expression-bodied `Name` getter,
@@ -104,10 +104,15 @@ as above. Unsupported getters produce `DTOXGEN011` during frontend export.
 Runtime-only plugin registration still supports names chosen at runtime.
 
 The exporter includes declared commands, including ones not selected for
-registration. It does not infer execution of `Initialize`, and it does not
-aggregate frontend bindings from referenced assemblies. Export bindings in the
-plugin's own project or use `invoke` directly. See the
-[frontend generator contract](frontend-generator.md).
+registration. It does not infer execution of `Initialize`. When both a plugin
+project and its consuming application opt in and use `NetWiv.Generators`, public
+plugin commands aggregate through the compiler reference, including NuGet
+packages. The plugin need not export frontend files separately. Internal plugin
+types/commands remain local-only. Producer JSON contexts and proven plugin names
+are retained; duplicate final routes fail the consuming build. Runtime plugin
+installation, command selection and ACL remain explicit. See the
+[frontend generator contract](frontend-generator.md#referenced-command-assemblies)
+for versioned metadata, reference boundaries and diagnostics.
 
 This implements plugin-scoped command generation and explicit registration;
 it is not a claim of complete upstream plugin API or mobile support.

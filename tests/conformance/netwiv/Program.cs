@@ -96,12 +96,7 @@ internal static class Program
                 foreach (var value in input.EnumerateArray()) bytes[index++] = value.GetByte();
                 return ValueTask.FromResult(RuntimeInvokeResponse.FromBinary(bytes));
             }))
-            .RegisterCommand("stream_numbers", static (context, arguments, _) =>
-            {
-                using var channel = Channel.FromJson(context, arguments.GetProperty("channel"));
-                for (var value = 0; value < 3; value++) channel.Send(JsonValue.From(value));
-                return Value(JsonValue.Null);
-            })
+            .RegisterCommand("stream_numbers", LifetimeFixture.StreamNumbers)
             .RegisterCommand("custom_default_allowed", static (_, _, _) => Value(JsonValue.From("allowed")))
             .RegisterCommand("restricted", static (_, _, _) => Value(JsonValue.From("must be denied without its permission")))
             .RegisterCommand("scope_read", ScopeValue)

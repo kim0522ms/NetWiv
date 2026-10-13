@@ -66,7 +66,6 @@ internal static class FrontendDevTests
             for (var attempt = 0; attempt < 40 && await PortOpen(); attempt++) await Task.Delay(100);
             if (await PortOpen()) throw new Exception("The CLI left its Vite server running after cancellation.");
             Console.WriteLine("PASS React dev: native IPC before/after C# rename, regenerated JS/TS, process restart, app and Vite cleanup");
-            await File.AppendAllTextAsync(record, "PASS\n");
         }
         finally
         {
@@ -75,7 +74,7 @@ internal static class FrontendDevTests
             await File.WriteAllTextAsync(sourceFile, source);
             await File.WriteAllTextAsync(reactFile, react);
             Environment.SetEnvironmentVariable("NETWIV_DEV_PROBE_FILE", previous);
-            Console.WriteLine("Development evidence: " + record);
+            File.Delete(record);
         }
 
         async Task<int> WaitForProbe(string phase)

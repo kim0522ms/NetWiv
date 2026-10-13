@@ -1,0 +1,7 @@
+{
+  "productName": "NetWiv Hosting sample",
+  "version": "0.1.0",
+  "identifier": "dev.netwiv.hostingsample",
+  "build": { "dotnetProject": "HostingApp.csproj", "frontendDist": "../dist" },
+  "bundle": { "active": false }
+}

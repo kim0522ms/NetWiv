@@ -22,7 +22,6 @@ echo "PASS selected child cleanup (${elapsed}ms) preserves unrelated jobs"
 # A panel that needs its quit protocol must get that request before SIGTERM.
 source <(sed -n '/^stop_panel() {$/,/^}$/p' "$wrapper")
 mock=$(mktemp -d)
-export NETWIV_DESKTOP_LOG="$mock"
 export NETWIV_PANEL_TEST_READY="$mock/ready"
 export NETWIV_PANEL_TEST_SIGNALS="$mock/signals"
 cat >"$mock/xfce4-panel" <<'SH'

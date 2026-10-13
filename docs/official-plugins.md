@@ -67,6 +67,32 @@ aligned. Ordinary application restore and build operations do not require Cargo.
 
 ## Plugin-specific limitations
 
+`NetWiv.Plugin.Os` reports `macos` for both `platform()` and `type()` on macOS,
+`unix` for `family()`, `\n` for `eol()`, and an empty executable extension. Its
+`version()` is the macOS product version from `/usr/bin/sw_vers -productVersion`,
+formatted with three components (for example, `26.0.0`), rather than the Darwin
+kernel version. A failed, empty or timed-out query returns `Unknown`; startup
+waits at most five seconds for the query. `arch()` describes the executing app:
+`aarch64` on arm64 and `x86_64` on x64, including x64 apps running under Rosetta.
+The synchronous properties remain initialization values; `locale()` and
+`hostname()` remain capability-controlled commands, with hostname excluded from
+`os:default` and deny permissions taking precedence.
+
+This correction was checked against the source of
+[`@tauri-apps/plugin-os` 2.4.0, commit `a2364a5f216324439feedeb25b2db74e7b1eba90`](https://github.com/tauri-apps/plugins-workspace/tree/a2364a5f216324439feedeb25b2db74e7b1eba90/plugins/os),
+whose lockfile selects `os_info` 3.10.0. The repository's core upstream lock does
+not currently pin official plugin packages; this source comparison is separate
+from the core compatibility profile. Windows and Linux retain their existing
+.NET OS version and OS architecture values; full upstream version/architecture
+parity on those platforms is unverified. Managed and NativeAOT tests cover the
+seven initialization fields, locale/hostname permission and deny rules, and
+version-query failure/timeout fixtures. Run the managed case with
+`dotnet run --project tests/NetWiv.Core.Tests -c Release -- --filter "official OS"`;
+publish with `dotnet publish tests/NetWiv.Core.Tests -c Release -r osx-arm64 -p:PublishAot=true -o artifacts/os-aot`,
+then run `artifacts/os-aot/NetWiv.Core.Tests --filter "official OS"`.
+These tests use the fake desktop runtime; unchanged official guest execution
+in WKWebView and Rosetta/Intel macOS execution require separate evidence.
+
 `NetWiv.Plugin.Cli` exposes application launch arguments through `@tauri-apps/plugin-cli`'s `getMatches()`. It is separate from the `netwiv` CLI used to create and build projects. Application CLI configuration currently supports names, short options, positional arguments, required values, multiple values, allowed values, and subcommands. Unsupported clap features, including conditional constraints and help output, are explicitly rejected.
 
 Register `NetWiv.Plugin.PersistedScope` after `FsPlugin` and `DialogPlugin`. It saves dialog-selected paths to `.persisted-scope.netwiv.json` in the app's data directory and restores them on restart. It intentionally does not read Tauri's `.persisted-scope` bincode format: sharing formats across different runtime scope structures could restore access incorrectly. Users migrating from Tauri must select their files again. Arbitrary backend scope mutations and deny patterns are not yet persisted. Automated restart checks have passed; actual GUI selection and restart remain unverified.
@@ -91,7 +117,7 @@ Core WKWebView support does not imply that every official plugin has macOS OS in
 
 | Area | Current macOS scope |
 | --- | --- |
-| OS information | `OsPlugin` currently reports `linux` for `platform` and `os_type` on every non-Windows host. macOS detection is incomplete; do not use these values to select macOS behavior. |
+| OS information | macOS platform/type, Unix family/EOL, product version and executing-app architecture are implemented. Managed and arm64 NativeAOT payload/permission/query-fixture tests passed on a physical Apple Silicon Mac. Unchanged official guest execution in WKWebView and Rosetta/Intel execution require separate evidence. |
 | External opening | Opener URL/path operations and Shell `open` use `/usr/bin/open` on macOS; Opener reveal uses `open -R` to select the item in Finder. Linux retains `xdg-open` (reveal opens the containing directory). Explicit application selection remains unsupported. |
 | Autostart and DeepLink | OS registration/query/removal paths reject macOS. Parsing explicitly supplied launch URLs is separate from OS URL activation. |
 | Log and persisted scope | Shared managed persistence is available. Core's macOS app log path is `~/Library/Logs/<identifier>`; managed regression checks do not establish installed-app behavior. |

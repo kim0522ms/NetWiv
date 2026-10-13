@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { copyFile, mkdir, readFile, readdir, stat, utimes, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -20,26 +19,17 @@ const trap = path.join(runRoot, 'no-cargo');
 const dotnet = process.env.NETWIV_DOTNET ?? 'dotnet';
 const rid = process.platform === 'win32' ? 'win-x64' : 'linux-x64';
 const exe = process.platform === 'win32' ? 'BindingConsumer.exe' : 'BindingConsumer';
-await mkdir(trap, { recursive: true });
-await writeFile(path.join(trap, 'cargo.cmd'), '@echo Cargo must not run in a NuGet consumer. 1>&2\r\n@exit /b 97\r\n');
-await writeFile(path.join(trap, 'cargo'), '#!/bin/sh\necho "Cargo must not run in a NuGet consumer." >&2\nexit 97\n', { mode: 0o755 });
 const environment = { ...process.env, PATH: [trap, ...(path.isAbsolute(dotnet) ? [path.dirname(dotnet)] : []), process.env.PATH].join(path.delimiter),
   DOTNET_CLI_USE_MSBUILD_SERVER: '0', MSBUILDDISABLENODEREUSE: '1',
   DOTNET_ROOT: path.isAbsolute(dotnet) ? path.dirname(dotnet) : process.env.DOTNET_ROOT };
-let sequence = 0;
-const checks = [];
-const report = { formatVersion: 1, sdkVersion: version, templateVersion, platform: process.platform, rid,
-  startedAt: new Date().toISOString(), source: root, consumer, checks, packages: {} };
 const xml = text => text.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
-const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 
 async function run(command, args, cwd = consumer, timeout = 300000) {
-  const id = ++sequence;
-  console.log(`[${id}] ${command} ${args.join(' ')}`);
   const child = spawn(command, args, { cwd, env: environment, windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] });
-  const out = [], err = [];
-  child.stdout.on('data', chunk => { out.push(chunk); process.stdout.write(chunk); });
-  child.stderr.on('data', chunk => { err.push(chunk); process.stderr.write(chunk); });
+  const out = [];
+  const errors = [];
+  child.stdout.on('data', chunk => { out.push(chunk); });
+  child.stderr.on('data', chunk => { errors.push(chunk); });
   const timer = setTimeout(() => {
     if (process.platform === 'win32') spawn('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true });
     else { try { process.kill(-child.pid, 'SIGTERM'); } catch {} }
@@ -48,10 +38,9 @@ async function run(command, args, cwd = consumer, timeout = 300000) {
   try {
     code = await new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
   } finally { clearTimeout(timer); }
-  const stdout = Buffer.concat(out).toString('utf8'), stderr = Buffer.concat(err).toString('utf8');
-  await writeFile(path.join(runRoot, `${id}.log`), stdout + stderr);
-  assert.equal(code, 0, `Child failed; see ${runRoot}/${id}.log`);
-  return stdout;
+  if (code !== 0) console.error(Buffer.concat([...out, ...errors]).toString('utf8'));
+  assert.equal(code, 0, 'Child verification command failed');
+  return Buffer.concat(out).toString('utf8');
 }
 
 async function npm(args) {
@@ -61,10 +50,9 @@ async function npm(args) {
 }
 
 try {
-  for (const name of ['NetWiv.Core', 'NetWiv.Generators', 'NetWiv.Build', 'NetWiv.Platform.Desktop', 'NetWiv.Templates', 'NetWiv.Cli']) {
-    const file = `${name}.${name === 'NetWiv.Templates' ? templateVersion : version}.nupkg`;
-    report.packages[file] = sha(await readFile(path.join(feed, file)));
-  }
+  await mkdir(trap, { recursive: true });
+  await writeFile(path.join(trap, 'cargo.cmd'), '@echo Cargo must not run in a NuGet consumer. 1>&2\r\n@exit /b 97\r\n');
+  await writeFile(path.join(trap, 'cargo'), '#!/bin/sh\necho "Cargo must not run in a NuGet consumer." >&2\nexit 97\n', { mode: 0o755 });
   if (creator === '--new') {
     const bootstrap = path.join(runRoot, 'bootstrap-tool');
     await run(dotnet, ['tool', 'install', 'NetWiv.Cli', '--version', version, '--tool-path', bootstrap, '--add-source', feed], root);
@@ -72,7 +60,6 @@ try {
       ['new', 'BindingConsumer', '--output', consumer, '--source', feed], root);
     const sources = await readFile(path.join(consumer, 'NuGet.Config'), 'utf8');
     assert.ok(sources.includes(xml(feed)), 'netwiv new did not configure the package source');
-    checks.push('packaged .NET CLI creates the React app and configures its NuGet source without Cargo');
   } else {
     await run(dotnet, ['new', 'install', path.join(feed, `NetWiv.Templates.${templateVersion}.nupkg`), '--debug:custom-hive', hive], root);
     await run(dotnet, ['new', 'netwiv-react', '-n', 'BindingConsumer', '-o', consumer,
@@ -90,12 +77,10 @@ try {
   <packageSources><clear /><add key="netwiv" value="${xml(feed)}" /><add key="nuget.org" value="https://api.nuget.org/v3/index.json" /></packageSources>
   <packageSourceMapping><packageSource key="netwiv"><package pattern="NetWiv.*" /></packageSource><packageSource key="nuget.org"><package pattern="*" /></packageSource></packageSourceMapping>
 </configuration>\n`);
-  checks.push('template creates a package-only project with the selected SDK version');
   const manifest = JSON.parse(await readFile(path.join(consumer, '.config/dotnet-tools.json'), 'utf8'));
   assert.equal(manifest.tools['netwiv.cli'].version, version);
   await run(dotnet, ['tool', 'restore']);
   assert.ok((await run(dotnet, ['tool', 'run', 'netwiv', '--', '--version'])).includes(`netwiv-cli ${version}`));
-  checks.push('local CLI tool restores with the matching SDK version and reports its package version');
   const wirePath = path.join(consumer, 'src-netwiv/WireContract.cs');
   const wireSource = await readFile(path.join(here, 'WireContract.cs'), 'utf8');
   await writeFile(wirePath, wireSource);
@@ -153,19 +138,16 @@ try {
   const js = await readFile(jsFile, 'utf8'), dts = await readFile(dtsFile, 'utf8');
   assert.ok(js.includes('invoke("greet", args, options)'));
   assert.ok(dts.includes('"message": string') && dts.includes('"count": number'));
-  checks.push('clean frontend build automatically exports JavaScript and TypeScript from C#');
   await copyFile(path.join(here, 'calls.ts'), path.join(consumer, 'calls.ts'));
   await writeFile(path.join(consumer, 'tsconfig.json'), JSON.stringify({ compilerOptions: {
     strict: true, noEmit: true, module: 'ESNext', target: 'ES2022', moduleResolution: 'Bundler', skipLibCheck: false }, files: ['calls.ts'] }));
   await run(process.execPath, [path.join(here, 'node_modules/typescript/bin/tsc'), '-p', path.join(consumer, 'tsconfig.json')]);
-  checks.push('strict TypeScript accepts valid calls and rejects wrong types, names, casing and injected state');
   const timestamp = new Date('2000-01-01T00:00:00Z');
   await utimes(jsFile, timestamp, timestamp);
   await utimes(dtsFile, timestamp, timestamp);
   await npm(['run', 'bindings']);
   assert.equal((await stat(jsFile)).mtimeMs, timestamp.getTime());
   assert.equal((await stat(dtsFile)).mtimeMs, timestamp.getTime());
-  checks.push('unchanged builds preserve generated timestamps');
   const sourcePath = path.join(consumer, 'src-netwiv/Program.cs');
   const source = await readFile(sourcePath, 'utf8');
   await writeFile(sourcePath, source.replace(/\[Command\](\s+public static Greeting Greet)/, '[Command("renamed_greet")]$1'));
@@ -179,33 +161,19 @@ try {
   await writeFile(sourcePath, source);
   await writeFile(wirePath, wireSource);
   await npm(['run', 'build']);
-  checks.push('renaming or removing every command invalidates stale exports');
   const publish = path.join(consumer, 'publish', rid);
   const published = await run(dotnet, ['publish', 'src-netwiv', '-c', 'Release', '-r', rid,
     '-p:PublishAot=true', '-p:TreatWarningsAsErrors=true', '--disable-build-servers', '-o', publish]);
   assert.ok(!/\bwarning (?:IL\d+|SYSLIB\d+)/i.test(published), 'NativeAOT emitted interop/trimming warnings');
   assert.ok(!(await readdir(publish)).includes('NetWiv.Build.Tasks.dll'), 'MSBuild task leaked into product output');
-  checks.push('NativeAOT publish excludes MSBuild task binaries');
   const executable = path.join(publish, exe);
   const output = process.env.NETWIV_GUI_LAUNCHER
     ? await run('bash', [process.env.NETWIV_GUI_LAUNCHER, executable, process.env.NETWIV_GUI_BACKEND ?? 'x11', '--smoke-test'], consumer, 60000)
     : await run(executable, ['--smoke-test'], consumer, 60000);
   assert.ok(output.includes('PASS: React form'), 'Native WebView did not report the React IPC result');
-  checks.push('rendered React form calls generated wrappers and validates a real C# stateful response');
-  checks.push('NativeAOT DTO serialization matches generated string enums, inheritance, explicit JSON names and conditional omission');
-  checks.push('constructor-bound required inputs agree between strict TypeScript and NativeAOT invocation, while nullable/default fields may be omitted');
-  checks.push('nullable property enum converters preserve null, explicit names and unnamed numeric values in strict TypeScript and NativeAOT');
-  checks.push('JsonInclude public fields preserve explicit wire names while ordinary unconfigured fields remain absent');
   await checkInitializedApp({ consumer, dotnet, rid, version, run });
-  checks.push('packaged CLI init creates a matching Wry SDK/generator project, builds NativeAOT and runs generated IPC without Cargo');
-  checks.push('packaged CLI scaffolds a NuGet-only plugin; pack/add invokes its generated NativeAOT registration and remove eliminates its command');
-  report.status = 'passed';
-  report.bindingsSha256 = { js: sha(await readFile(jsFile)), dts: sha(await readFile(dtsFile)) };
+  console.log('Frontend verification passed.');
 } catch (error) {
-  report.status = 'failed'; report.error = String(error.stack ?? error); process.exitCode = 1;
+  process.exitCode = 1;
   console.error(error);
-} finally {
-  report.finishedAt = new Date().toISOString();
-  await writeFile(path.join(runRoot, 'report.json'), JSON.stringify(report, null, 2) + '\n');
-  console.log(`Report: ${runRoot}/report.json`);
 }

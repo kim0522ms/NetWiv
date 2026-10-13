@@ -14,9 +14,7 @@ const tool = path.join(runRoot, 'tool');
 const dotnet = process.env.NETWIV_DOTNET ?? 'dotnet';
 const rid = process.platform === 'win32' ? 'win-x64' : 'linux-x64';
 const exe = process.platform === 'win32' ? 'IdeApp.exe' : 'IdeApp';
-const checks = [];
 await mkdir(runRoot, { recursive: true });
-let sequence = 0;
 async function run(command, args, cwd = app, expectFailure = false) {
   const chunks = [];
   const child = spawn(command, args, { cwd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -29,17 +27,14 @@ async function run(command, args, cwd = app, expectFailure = false) {
   try { code = await new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); }); }
   finally { clearTimeout(timer); }
   const output = Buffer.concat(chunks).toString('utf8');
-  const log = path.join(runRoot, `${++sequence}.log`);
-  await writeFile(log, output);
-  console.log(`${expectFailure ? 'Expected failure' : 'Run'}: ${command} ${args.join(' ')} → ${code} (${log})`);
-  assert.ok(expectFailure ? code !== 0 : code === 0, output);
+  assert.ok(expectFailure ? code !== 0 : code === 0, 'Unexpected child verification command exit code');
   return output;
 }
 async function smoke(binary) {
   const output = process.platform === 'win32'
     ? await run(binary, ['--smoke-test'])
     : await run('bash', [path.join(root, 'scripts/run-linux-smoke-desktop.sh'), binary, process.env.NETWIV_TEST_BACKEND ?? 'x11', '--smoke-test']);
-  assert.ok(output.includes('PASS: React form'), output);
+  assert.ok(output.includes('PASS: React form'), 'Native WebView did not report the React IPC result');
 }
 function singleFrontendBuild(output) {
   assert.equal((output.match(/building client environment/g) ?? []).length, 1, 'Frontend must build exactly once per entry point');
@@ -60,7 +55,6 @@ try {
   assert.ok(projects.includes('IdeApp.csproj') && projects.includes('IdeApp.Frontend.esproj'));
   singleFrontendBuild(await run(dotnet, ['build', solution, '-c', 'Debug', '-m:2', '-warnaserror']));
   await smoke(path.join(app, 'src-netwiv/bin/Debug/net8.0', exe));
-  checks.push('fresh parallel SLNX build restores npm, generates bindings, embeds assets and runs IPC with one frontend build');
   const restoreTime = (await stat(path.join(app, 'node_modules/.netwiv-restore'))).mtimeMs;
   const oldAssets = await readdir(path.join(app, 'dist/assets'));
   await writeFile(reactPath, react.replace('!== "first"', '!== "second"'));
@@ -69,30 +63,24 @@ try {
   assert.equal((await stat(path.join(app, 'node_modules/.netwiv-restore'))).mtimeMs, restoreTime);
   assert.notDeepEqual(await readdir(path.join(app, 'dist/assets')), oldAssets);
   await smoke(path.join(app, 'src-netwiv/bin/Debug/net8.0', exe));
-  checks.push('frontend-only edits refresh hashed embedded assets without reinstalling unchanged dependencies');
   singleFrontendBuild(await run(dotnet, ['build', 'IdeApp.Frontend.esproj', '-warnaserror']));
   const items = JSON.parse(await run(dotnet, ['msbuild', 'IdeApp.Frontend.esproj', '-getItem:None']));
   const files = items.Items.None.map(item => item.Identity.replaceAll('\\', '/'));
   assert.ok(files.includes('src/App.jsx') && files.includes('package.json'));
   assert.ok(!files.some(file => file.startsWith('src-netwiv/') || file.startsWith('node_modules/') || file.startsWith('dist/')));
-  checks.push('standalone ESProj builds once and exposes only frontend files to the IDE');
   await writeFile(reactPath, 'this is deliberately invalid JSX !!!');
   await run(dotnet, ['msbuild', 'src-netwiv/IdeApp.csproj', '-t:BuildReactFrontend', '-p:DesignTimeBuild=true']);
   await run(dotnet, ['build', 'src-netwiv', '-p:NetWivBindingsOnly=true']);
   await run(dotnet, ['build', 'src-netwiv', '-p:NetWivDevelopment=true']);
   await run(dotnet, ['build', solution], app, true);
-  checks.push('design-time, bindings-only and dev-server paths skip React build; real build propagates frontend errors');
   await writeFile(reactPath, react);
   await writeFile(htmlPath, html);
   singleFrontendBuild(await run(dotnet, ['publish', 'src-netwiv', '-c', 'Release', '-r', rid, '-p:PublishAot=true', '-warnaserror', '-o', path.join(app, 'publish')]));
   await smoke(path.join(app, 'publish', exe));
-  checks.push('direct NativeAOT publish embeds matching frontend assets and runs real IPC');
   await run(dotnet, ['tool', 'restore']);
   singleFrontendBuild(await run(dotnet, ['tool', 'run', 'netwiv', '--', 'build', '--no-bundle']));
-  checks.push('netwiv build uses the same project graph without a duplicate frontend hook');
-  await writeFile(path.join(runRoot, 'report.json'), JSON.stringify({ version, platform: process.platform, checks, status: 'passed' }, null, 2));
-  console.log(`PASS: ${checks.length} IDE build scenarios; ${runRoot}`);
-} catch (error) {
-  await writeFile(path.join(runRoot, 'report.json'), JSON.stringify({ version, checks, status: 'failed', error: String(error) }, null, 2));
-  throw error;
+  console.log('IDE build verification passed.');
+} catch {
+  process.exitCode = 1;
+  console.error('IDE build verification failed.');
 }

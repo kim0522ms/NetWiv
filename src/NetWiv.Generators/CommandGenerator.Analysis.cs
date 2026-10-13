@@ -13,9 +13,15 @@ public sealed partial class CommandGenerator
         Compilation compilation,
         SourceProductionContext context,
         out bool invalid)
+        => FindJsonContext(compilation.Assembly, context, out invalid);
+
+    private static INamedTypeSymbol? FindJsonContext(
+        IAssemblySymbol assembly,
+        SourceProductionContext context,
+        out bool invalid)
     {
         invalid = false;
-        var attribute = compilation.Assembly.GetAttributes()
+        var attribute = assembly.GetAttributes()
             .FirstOrDefault(static attribute =>
                 attribute.AttributeClass?.ToDisplayString() == JsonContextAttributeName);
 

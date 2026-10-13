@@ -61,7 +61,8 @@ async function npm(args) {
 }
 
 try {
-  for (const name of ['NetWiv.Core', 'NetWiv.Generators', 'NetWiv.Build', 'NetWiv.Platform.Desktop', 'NetWiv.Templates', 'NetWiv.Cli']) {
+  for (const name of ['NetWiv.Core', 'NetWiv.Generators', 'NetWiv.Build', 'NetWiv.Platform.Desktop',
+    ...(creator === '--new' ? [] : ['NetWiv.Templates']), 'NetWiv.Cli']) {
     const file = `${name}.${name === 'NetWiv.Templates' ? templateVersion : version}.nupkg`;
     report.packages[file] = sha(await readFile(path.join(feed, file)));
   }

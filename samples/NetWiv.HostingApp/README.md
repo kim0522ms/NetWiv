@@ -110,8 +110,25 @@ the smoke assertions, generates the frontend, and publishes both self-contained
 managed and NativeAOT apps. `--build-only` is the default and never launches a GUI.
 `--run` additionally executes both resulting apps in your desktop session with
 `--smoke-test`. Both modes are explicit in `report.json`; publishing alone is
-never recorded as execution. Logs and package hashes are under
-`artifacts/hosting-<rid>-<timestamp>/`, or `NETWIV_TEST_ARTIFACTS` if set.
+never recorded as execution. Results are under
+`artifacts/hosting-<rid>-<random-id>/`, or `NETWIV_TEST_ARTIFACTS` if set.
+Only `report.json` is intended for sharing: format version 2 contains a relative
+run identifier, fixed package IDs with SHA-256 hashes, validated source revision,
+RID, requested/executed modes, fixed checks, outcome and stage/failure code.
+It omits absolute paths, raw errors, timestamps and the package version, whose
+prerelease labels may contain private identifiers. A failed verification uses
+`verification-failed` with the stage that failed; raw diagnostics are retained
+in `private-error.log` when the output directory is writable. Invalid arguments
+are rejected before creating artifacts.
+
+The entire run directory is private, including numbered logs, copied consumer,
+NuGet configuration/cache, binaries and `private-error.log`. Terminal output is
+also private: subprocesses and uncaught errors may print personal paths,
+account/host identifiers or arbitrary tool output. Do not upload the directory,
+console capture or logs. Review the intended sanitized `report.json` before
+sharing it; gather any additional evidence separately under the repository's
+privacy rules. Existing format version 1 reports may contain absolute paths and
+raw errors; this change does not sanitize older artifacts. Keep them private.
 
 The embedded frontend calls generated wrappers through the real WebView IPC to
 check configuration/constructor injection, shared constructor/parameter scope,

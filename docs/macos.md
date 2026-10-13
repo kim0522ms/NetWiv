@@ -178,9 +178,15 @@ child WebViews and a native menu selection/checked-state check. These checks
 establish integration evidence, not complete Tauri conformance.
 Broader keyboard/mouse interaction, all menu roles, multiple monitors, Developer ID certificates,
 notarization, package-only clean-machine installation and Intel execution need
-separate acceptance. Website data-store enumeration/removal returns an explicit
-unsupported error; the WKWebView creation-time identifier is forwarded but not
-part of the completed smoke scope. Per-window `skipTaskbar=true` is rejected on
+separate acceptance. Website data-store enumeration/removal is implemented through
+Wry's asynchronous WKWebsiteDataStore APIs on macOS 14 and later. Older systems
+receive an explicit unsupported error before either unavailable selector is called.
+The creation-time `dataStoreIdentifier` follows the pinned Wry behavior: macOS 14+
+uses the identified persistent store, older systems use the default store, and
+incognito WebViews use a nonpersistent store. Close every WebView using an identifier
+before removing its store; an Apple removal failure is returned as a command error.
+Windows/Linux retain the upstream empty-list/no-op app API behavior.
+Per-window `skipTaskbar=true` is rejected on
 macOS; use `AppApi.SetDockVisibilityAsync` for the application-wide Dock entry.
 The Autostart and DeepLink OS-registration plugins remain Windows/Linux-only.
 Their macOS failure paths are tested and are not reported as supported features.
@@ -228,6 +234,33 @@ harnesses still select Windows/Linux RIDs. They must be extended before being
 used as macOS package-consumer evidence. Keep per-run logs, coverage, toolchain
 versions, source/binary hashes and skips in ignored `artifacts/`; do not convert
 a source-linked smoke result into package-only or release acceptance.
+
+### Website data-store check
+
+The ordinary desktop smoke includes `MacOsDataStoreProbe` on macOS. On macOS 14+
+it creates a fresh random 16-byte identifier, uses unchanged
+`@tauri-apps/api@2.11.1` guest code to enumerate it, checks that removal while its
+WebView is open fails without invalidating that WebView, closes and reopens it to
+check local-storage persistence, then removes it from another WebView and checks
+that recreation has no previous data. SDK enumeration checks the same identifier
+bytes, and SDK cleanup deletes only the test-owned store. On macOS 12/13 the smoke
+checks explicit version errors for enumeration and removal. Native unit tests
+cover malformed identifiers, off-main-thread rejection and discarded completion
+after shutdown. Completions use the native event queue, do not retain WebViews or
+contexts, and cannot call managed code after runtime shutdown.
+
+After rebuilding the native adapter, run both managed and NativeAOT consumers:
+
+```sh
+dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r osx-arm64 -p:PublishAot=false -o artifacts/data-store-smoke/managed
+artifacts/data-store-smoke/managed/NetWiv.Desktop.Smoke
+dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r osx-arm64 -o artifacts/data-store-smoke/aot
+artifacts/data-store-smoke/aot/NetWiv.Desktop.Smoke
+```
+
+The test scenario is prepared; macOS compilation and real-device execution of
+this new data-store path remain unverified until these runs are recorded. This
+does not establish Intel or macOS 12/13 execution evidence.
 
 ---
 

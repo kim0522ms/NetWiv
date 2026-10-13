@@ -13,8 +13,9 @@ impl LocalRuntime {
         target: &EventLoopWindowTarget<UserEvent>,
         submission: &Submission,
         binary: &[u8],
+        request_id: u64,
     ) -> Result<InvokeResult, String> {
-        let _ = (&submission.source, &submission.scope, binary);
+        let _ = (&submission.source, &submission.scope, binary, request_id);
         if !submission.is_authorized {
             return Err(format!(
                 "native command '{}' was not authorized by Core",
@@ -55,7 +56,15 @@ impl LocalRuntime {
         }
         if matches!(command, "plugin:app|fetch_data_store_identifiers" | "plugin:app|remove_data_store") {
             #[cfg(target_os = "macos")]
-            return Err("WKWebsiteDataStore identifier management is not implemented by NetWiv on macOS.".into());
+            {
+                let shared = self.shared.clone();
+                crate::macos::invoke_data_store(command, &submission.args, move |result| {
+                    // WKWebView completes asynchronously. Never capture LocalRuntime or
+                    // call the managed callback directly: shutdown may precede completion.
+                    let _ = shared.enqueue(UserEvent::DataStoreCompletion { request_id, result });
+                })?;
+                return Ok(InvokeResult::Pending);
+            }
             #[cfg(not(target_os = "macos"))]
             return Ok(InvokeResult::Json(if command.ends_with("fetch_data_store_identifiers") { json!([]) } else { Value::Null }));
         }

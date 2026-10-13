@@ -52,8 +52,13 @@ override fails the check.
 Each job installs and runs the packaged CLI, publishes the generated React
 solution via `netwiv build --framework-dependent`, and executes its `net8.0`
 apphost through the WebView/IPC smoke flow.
+The .NET 8 baseline jobs then publish and execute the default self-contained
+managed output. Its runtime configuration must include the bundled framework;
+framework-dependent output must request an installed framework. Both modes
+assert the actual runtime major and complete the GUI/IPC scenario.
 A test probe inside the generated app asserts its actual runtime major. macOS
-also bundles and executes the managed `.app` through the same GUI/IPC scenario.
+also bundles and executes the managed `.app` in both deployment modes through
+the same GUI/IPC scenario.
 Each job then
 publishes/runs a package-only NativeAOT desktop consumer targeting `net8.0`,
 `net9.0` or `net10.0`, including configuration binding from the packaged Hosting

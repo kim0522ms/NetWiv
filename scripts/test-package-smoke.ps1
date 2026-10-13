@@ -27,7 +27,7 @@ try {
             if (!$smoke.SelectSingleNode("//PackageReference[@Include='$id']")) { throw "Missing $id package probe." }
         }
         $resources = @($smoke.SelectNodes('//EmbeddedResource') | Where-Object Include -like 'package-fixtures*')
-        if ($resources.Count -ne 3) { throw 'Expected all external smoke resources to be copied.' }
+        if ($resources.Count -ne 5) { throw 'Expected all external smoke resources, including the app/image guests, to be copied.' }
         $repository = Split-Path $PSScriptRoot -Parent
         $consumer = Join-Path $destination 'NetWiv.Desktop.Smoke'
         foreach ($resource in $resources) {

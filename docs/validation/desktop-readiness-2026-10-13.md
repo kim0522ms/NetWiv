@@ -97,6 +97,13 @@ The [Mac display record](macos-monitor-sleep/README.md) includes compact origina
 full-smoke logs and executable hashes. Transferred Mac archives also retain
 their source revision alongside reports, because an archive has no `.git`.
 
+These retained directories are private local diagnostics, not upload bundles.
+Earlier package transcripts, environment dumps and consumer reports can contain
+account names, machine details and absolute paths, including on failure. Do not
+attach those historical files or archive the entire run directory. Regenerate
+the public evidence using the current helpers and review the exact files to be
+shared; keep raw logs, copied consumers, caches and private diagnostics local.
+
 ## Limits and investigated failures
 
 - Intel Mac, macOS 12/13 execution, Rosetta, physical Linux, Wayland, multiple

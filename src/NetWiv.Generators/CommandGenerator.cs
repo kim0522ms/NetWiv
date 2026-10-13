@@ -66,16 +66,13 @@ public sealed partial class CommandGenerator : IIncrementalGenerator
     {
         var exportFrontend = compilation.Assembly.GetAttributes().Any(static attribute =>
             attribute.AttributeClass?.ToDisplayString() == "NetWiv.GenerateFrontendBindingsAttribute");
-        if (candidates.IsDefaultOrEmpty)
-        {
-            if (exportFrontend) FrontendBindingEmitter.Emit(context, null, Array.Empty<FrontendCommand>());
-            return;
-        }
+        if (candidates.IsDefaultOrEmpty && !exportFrontend) return;
 
-        var jsonContext = FindJsonContext(compilation, context, out var contextIsInvalid);
-        if (contextIsInvalid)
+        INamedTypeSymbol? jsonContext = null;
+        if (!candidates.IsDefaultOrEmpty)
         {
-            return;
+            jsonContext = FindJsonContext(compilation, context, out var contextIsInvalid);
+            if (contextIsInvalid) return;
         }
 
         var valid = new List<CommandModel>(candidates.Length);
@@ -109,18 +106,15 @@ public sealed partial class CommandGenerator : IIncrementalGenerator
             valid.RemoveAll(command => duplicateMethods.Contains(command.Method));
         }
 
-        if (valid.Count == 0)
-        {
-            if (exportFrontend) FrontendBindingEmitter.Emit(context, jsonContext, Array.Empty<FrontendCommand>());
-            return;
-        }
-
         valid.Sort(static (left, right) => StringComparer.Ordinal.Compare(
             left.Method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
             right.Method.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
 
-        var source = Render(valid, jsonContext);
-        context.AddSource("NetWiv.Commands.g.cs", SourceText.From(source, Encoding.UTF8));
+        if (valid.Count > 0)
+        {
+            var source = Render(valid, jsonContext);
+            context.AddSource("NetWiv.Commands.g.cs", SourceText.From(source, Encoding.UTF8));
+        }
         if (exportFrontend)
         {
             var frontend = new List<FrontendCommand>();
@@ -145,8 +139,10 @@ public sealed partial class CommandGenerator : IIncrementalGenerator
                 frontend.Add(new FrontendCommand(name,
                     command.Parameters.Where(static parameter => parameter.Injection is null)
                         .Select(static parameter => parameter.Symbol).ToArray(),
-                    command.Return.ValueType, command.Method));
+                    command.Return.ValueType, command.Method, jsonContext));
             }
+            EmitFrontendCommandMetadata(context, frontend);
+            if (!AddReferencedFrontendCommands(context, compilation, frontend)) return;
             var collisions = frontend.GroupBy(static command => command.Name, StringComparer.Ordinal).Where(static group => group.Count() > 1).ToArray();
             if (collisions.Length > 0)
             {

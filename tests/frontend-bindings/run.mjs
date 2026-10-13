@@ -197,8 +197,8 @@ try {
   checks.push('nullable property enum converters preserve null, explicit names and unnamed numeric values in strict TypeScript and NativeAOT');
   checks.push('JsonInclude public fields preserve explicit wire names while ordinary unconfigured fields remain absent');
   await checkInitializedApp({ consumer, dotnet, rid, version, run });
-  checks.push('packaged CLI init creates a matching Wry SDK/generator project, builds NativeAOT and runs generated IPC without Cargo');
-  checks.push('packaged CLI scaffolds a NuGet-only plugin; pack/add invokes its generated NativeAOT registration and remove eliminates its command');
+  checks.push('packaged CLI init creates a matching Wry SDK/generator project and runs generated IPC in managed and NativeAOT modes without Cargo');
+  checks.push('NuGet referenced application/plugin bindings retain producer JSON policies, pass strict TypeScript, and execute through managed/NativeAOT WebView IPC; unregistered and denied routes reject, and package removal invalidates exports');
   report.status = 'passed';
   report.bindingsSha256 = { js: sha(await readFile(jsFile)), dts: sha(await readFile(dtsFile)) };
 } catch (error) {

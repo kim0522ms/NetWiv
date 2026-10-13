@@ -17,29 +17,30 @@ const runRoot = path.join(process.env.NETWIV_TEST_ARTIFACTS ?? path.join(root, '
 const consumer = path.join(runRoot, 'consumer');
 const hive = path.join(runRoot, 'template-hive');
 const trap = path.join(runRoot, 'no-cargo');
+const diagnostics = path.join(runRoot, 'local-diagnostics');
 const dotnet = process.env.NETWIV_DOTNET ?? 'dotnet';
 const rid = process.platform === 'win32' ? 'win-x64' : 'linux-x64';
 const exe = process.platform === 'win32' ? 'BindingConsumer.exe' : 'BindingConsumer';
-await mkdir(trap, { recursive: true });
-await writeFile(path.join(trap, 'cargo.cmd'), '@echo Cargo must not run in a NuGet consumer. 1>&2\r\n@exit /b 97\r\n');
-await writeFile(path.join(trap, 'cargo'), '#!/bin/sh\necho "Cargo must not run in a NuGet consumer." >&2\nexit 97\n', { mode: 0o755 });
 const environment = { ...process.env, PATH: [trap, ...(path.isAbsolute(dotnet) ? [path.dirname(dotnet)] : []), process.env.PATH].join(path.delimiter),
   DOTNET_CLI_USE_MSBUILD_SERVER: '0', MSBUILDDISABLENODEREUSE: '1',
   DOTNET_ROOT: path.isAbsolute(dotnet) ? path.dirname(dotnet) : process.env.DOTNET_ROOT };
 let sequence = 0;
 const checks = [];
-const report = { formatVersion: 1, sdkVersion: version, templateVersion, platform: process.platform, rid,
-  startedAt: new Date().toISOString(), source: root, consumer, checks, packages: {} };
+// Only numeric version components are public; local prerelease/build labels may identify a tester.
+const publicVersion = value => /^(\d+\.\d+\.\d+)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.exec(value)?.[1] ?? null;
+const report = { formatVersion: 2, sdkVersion: publicVersion(version), templateVersion: publicVersion(templateVersion),
+  platform: process.platform, rid, source: 'tests/frontend-bindings', consumer: 'consumer', checks, packages: {} };
+let stage = 'setup';
 const xml = text => text.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 
 async function run(command, args, cwd = consumer, timeout = 300000) {
   const id = ++sequence;
-  console.log(`[${id}] ${command} ${args.join(' ')}`);
+  console.log(`[${id}] Running verification command`);
   const child = spawn(command, args, { cwd, env: environment, windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] });
   const out = [], err = [];
-  child.stdout.on('data', chunk => { out.push(chunk); process.stdout.write(chunk); });
-  child.stderr.on('data', chunk => { err.push(chunk); process.stderr.write(chunk); });
+  child.stdout.on('data', chunk => { out.push(chunk); });
+  child.stderr.on('data', chunk => { err.push(chunk); });
   const timer = setTimeout(() => {
     if (process.platform === 'win32') spawn('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true });
     else { try { process.kill(-child.pid, 'SIGTERM'); } catch {} }
@@ -49,8 +50,8 @@ async function run(command, args, cwd = consumer, timeout = 300000) {
     code = await new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
   } finally { clearTimeout(timer); }
   const stdout = Buffer.concat(out).toString('utf8'), stderr = Buffer.concat(err).toString('utf8');
-  await writeFile(path.join(runRoot, `${id}.log`), stdout + stderr);
-  assert.equal(code, 0, `Child failed; see ${runRoot}/${id}.log`);
+  await writeFile(path.join(diagnostics, `${id}.log`), `${command} ${args.join(' ')}\n${stdout}${stderr}`);
+  assert.equal(code, 0, `Child failed; see local-diagnostics/${id}.log`);
   return stdout;
 }
 
@@ -61,11 +62,18 @@ async function npm(args) {
 }
 
 try {
+  await mkdir(trap, { recursive: true });
+  await mkdir(diagnostics, { recursive: true });
+  await writeFile(path.join(trap, 'cargo.cmd'), '@echo Cargo must not run in a NuGet consumer. 1>&2\r\n@exit /b 97\r\n');
+  await writeFile(path.join(trap, 'cargo'), '#!/bin/sh\necho "Cargo must not run in a NuGet consumer." >&2\nexit 97\n', { mode: 0o755 });
+  stage = 'package-hashes';
   for (const name of ['NetWiv.Core', 'NetWiv.Generators', 'NetWiv.Build', 'NetWiv.Platform.Desktop',
     ...(creator === '--new' ? [] : ['NetWiv.Templates']), 'NetWiv.Cli']) {
     const file = `${name}.${name === 'NetWiv.Templates' ? templateVersion : version}.nupkg`;
-    report.packages[file] = sha(await readFile(path.join(feed, file)));
+    report.packages[name] = { version: publicVersion(name === 'NetWiv.Templates' ? templateVersion : version),
+      sha256: sha(await readFile(path.join(feed, file))) };
   }
+  stage = 'create-consumer';
   if (creator === '--new') {
     const bootstrap = path.join(runRoot, 'bootstrap-tool');
     await run(dotnet, ['tool', 'install', 'NetWiv.Cli', '--version', version, '--tool-path', bootstrap, '--add-source', feed], root);
@@ -79,6 +87,7 @@ try {
     await run(dotnet, ['new', 'netwiv-react', '-n', 'BindingConsumer', '-o', consumer,
       ...(templateVersion === version ? [] : ['--NetWivVersion', version]), '--debug:custom-hive', hive], root);
   }
+  stage = 'consumer-contract';
   const projectFile = path.join(consumer, 'src-netwiv/BindingConsumer.csproj');
   const project = await readFile(projectFile, 'utf8');
   assert.ok(project.includes(`<NetWivVersion>${version}</NetWivVersion>`));
@@ -94,9 +103,11 @@ try {
   checks.push('template creates a package-only project with the selected SDK version');
   const manifest = JSON.parse(await readFile(path.join(consumer, '.config/dotnet-tools.json'), 'utf8'));
   assert.equal(manifest.tools['netwiv.cli'].version, version);
+  stage = 'cli-restore';
   await run(dotnet, ['tool', 'restore']);
   assert.ok((await run(dotnet, ['tool', 'run', 'netwiv', '--', '--version'])).includes(`netwiv-cli ${version}`));
   checks.push('local CLI tool restores with the matching SDK version and reports its package version');
+  stage = 'frontend-build';
   const wirePath = path.join(consumer, 'src-netwiv/WireContract.cs');
   const wireSource = await readFile(path.join(here, 'WireContract.cs'), 'utf8');
   await writeFile(wirePath, wireSource);
@@ -155,11 +166,13 @@ try {
   assert.ok(js.includes('invoke("greet", args, options)'));
   assert.ok(dts.includes('"message": string') && dts.includes('"count": number'));
   checks.push('clean frontend build automatically exports JavaScript and TypeScript from C#');
+  stage = 'typescript-contract';
   await copyFile(path.join(here, 'calls.ts'), path.join(consumer, 'calls.ts'));
   await writeFile(path.join(consumer, 'tsconfig.json'), JSON.stringify({ compilerOptions: {
     strict: true, noEmit: true, module: 'ESNext', target: 'ES2022', moduleResolution: 'Bundler', skipLibCheck: false }, files: ['calls.ts'] }));
   await run(process.execPath, [path.join(here, 'node_modules/typescript/bin/tsc'), '-p', path.join(consumer, 'tsconfig.json')]);
   checks.push('strict TypeScript accepts valid calls and rejects wrong types, names, casing and injected state');
+  stage = 'export-invalidation';
   const timestamp = new Date('2000-01-01T00:00:00Z');
   await utimes(jsFile, timestamp, timestamp);
   await utimes(dtsFile, timestamp, timestamp);
@@ -181,12 +194,14 @@ try {
   await writeFile(wirePath, wireSource);
   await npm(['run', 'build']);
   checks.push('renaming or removing every command invalidates stale exports');
+  stage = 'nativeaot-publish';
   const publish = path.join(consumer, 'publish', rid);
   const published = await run(dotnet, ['publish', 'src-netwiv', '-c', 'Release', '-r', rid,
     '-p:PublishAot=true', '-p:TreatWarningsAsErrors=true', '--disable-build-servers', '-o', publish]);
   assert.ok(!/\bwarning (?:IL\d+|SYSLIB\d+)/i.test(published), 'NativeAOT emitted interop/trimming warnings');
   assert.ok(!(await readdir(publish)).includes('NetWiv.Build.Tasks.dll'), 'MSBuild task leaked into product output');
   checks.push('NativeAOT publish excludes MSBuild task binaries');
+  stage = 'nativeaot-ipc';
   const executable = path.join(publish, exe);
   const output = process.env.NETWIV_GUI_LAUNCHER
     ? await run('bash', [process.env.NETWIV_GUI_LAUNCHER, executable, process.env.NETWIV_GUI_BACKEND ?? 'x11', '--smoke-test'], consumer, 60000)
@@ -197,16 +212,22 @@ try {
   checks.push('constructor-bound required inputs agree between strict TypeScript and NativeAOT invocation, while nullable/default fields may be omitted');
   checks.push('nullable property enum converters preserve null, explicit names and unnamed numeric values in strict TypeScript and NativeAOT');
   checks.push('JsonInclude public fields preserve explicit wire names while ordinary unconfigured fields remain absent');
+  stage = 'initialized-app';
   await checkInitializedApp({ consumer, dotnet, rid, version, run });
   checks.push('packaged CLI init creates a matching Wry SDK/generator project and runs generated IPC in managed and NativeAOT modes without Cargo');
   checks.push('NuGet referenced application/plugin bindings retain producer JSON policies, pass strict TypeScript, and execute through managed/NativeAOT WebView IPC; unregistered and denied routes reject, and package removal invalidates exports');
   report.status = 'passed';
   report.bindingsSha256 = { js: sha(await readFile(jsFile)), dts: sha(await readFile(dtsFile)) };
 } catch (error) {
-  report.status = 'failed'; report.error = String(error.stack ?? error); process.exitCode = 1;
-  console.error(error);
+  report.status = 'failed'; report.failure = { stage, code: 'verification-failed' }; process.exitCode = 1;
+  try { await writeFile(path.join(diagnostics, 'failure.log'), String(error.stack ?? error) + '\n'); } catch {}
+  console.error(`Frontend verification failed (${stage}; verification-failed). Raw diagnostics are local only.`);
 } finally {
-  report.finishedAt = new Date().toISOString();
-  await writeFile(path.join(runRoot, 'report.json'), JSON.stringify(report, null, 2) + '\n');
-  console.log(`Report: ${runRoot}/report.json`);
+  try {
+    await writeFile(path.join(runRoot, 'report.json'), JSON.stringify(report, null, 2) + '\n');
+    console.log('Frontend report saved as report.json. Publish only this file; local-diagnostics and the consumer are private.');
+  } catch {
+    process.exitCode = 1;
+    console.error('Frontend report could not be saved (report-write-failed).');
+  }
 }

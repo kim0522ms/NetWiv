@@ -4,3 +4,6 @@
 # These upstream license bytes are addressed and verified by SHA-256.
 native/third-party-licenses/texts/*.txt -text
 native/license-overrides/texts/*.txt -text
+
+# The upstream config schema is also verified by its exact SHA-256 bytes.
+compatibility/generated/tauri.config.schema.json -text

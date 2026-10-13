@@ -1,6 +1,8 @@
 use std::{fs::OpenOptions, io::Write, path::PathBuf, sync::Mutex};
 use tauri::{ipc::{Channel, Response}, Manager, State};
 
+mod lifetime_fixture;
+
 struct Report(Mutex<PathBuf>);
 struct AssetFixture(PathBuf);
 impl Drop for AssetFixture {
@@ -29,8 +31,8 @@ fn always_fails() -> Result<(), &'static str> { Err("intentional conformance err
 fn echo_bytes(bytes: Vec<u8>) -> Response { Response::new(bytes) }
 
 #[tauri::command]
-fn stream_numbers(channel: Channel<u32>) {
-    for value in 0..3 { channel.send(value).unwrap(); }
+async fn stream_numbers(app: tauri::AppHandle, channel: Channel<u32>, resume_event: Option<String>) -> Result<(), String> {
+    lifetime_fixture::stream_numbers(app, channel, resume_event).await
 }
 
 #[tauri::command]

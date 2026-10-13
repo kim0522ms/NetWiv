@@ -67,6 +67,23 @@ Both hosts use the same explicit core capability permissions. The
 ungranted `restricted` command remains denied while the explicitly granted
 `echo_json` command succeeds. These strings are exact keys, not command globs.
 
+`webview.reparent-inflight-channel` pauses `stream_numbers` after channel value
+`0` using a harness event gate. It moves the invoking WebView, destroys its old
+parent, verifies that a new command loses the old window's capability, then
+resumes the admitted invocation and checks its ordered `1,2` messages and reply.
+The child imports the unchanged official Channel, invoke and event APIs. Run
+this case alongside `webview.reparent-capability`, `channel.ordered` and
+`security.frame-origins` to check the neighboring native document and ACL paths.
+The separate Core tests selected by `--filter "IPC boundary"` check both IPC
+transports with a fake runtime: replacement/close cancellation, rejected late
+resource creation, asynchronous DI scope disposal, and reparented channel and
+resource lifetime. Those tests do not establish native desktop behavior.
+
+The checksum-addressed upstream config schema is checked out without line-ending
+conversion, including when Windows Git uses `core.autocrlf=true`. Run
+`node tests/conformance/scripts/verify-fixtures.mjs` to verify its pinned bytes;
+regenerate compatibility data through the upstream manifest script when needed.
+
 # Reference feature profile
 
 The full desktop comparison enables Tauri `tray-icon`, `unstable`, `image-png`

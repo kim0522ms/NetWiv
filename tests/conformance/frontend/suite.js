@@ -965,6 +965,42 @@ await test('webview.reparent-capability', async () => {
     unready(); unreply();
   }
 });
+await test('webview.reparent-inflight-channel', async () => {
+  let ready = false, parent, target, child;
+  const messages = [], replies = new Map();
+  const unready = await listen('inflight-ready', () => { ready = true; });
+  const unmessage = await listen('inflight-channel', event => messages.push(event.payload));
+  const unreply = await listen('inflight-response', event => replies.set(event.payload.step, event.payload));
+  try {
+    parent = await created(new Window('conformance-child', { visible: false, width: 240, height: 180 }));
+    target = await created(new Window('move-target', { visible: false, width: 240, height: 180 }));
+    child = await created(new Webview(parent, 'moving-child', { url: 'reparent-lifetime.html', x: 0, y: 0, width: 80, height: 60 }));
+    await until(() => ready, 5000);
+    await emitTo(child.label, 'inflight-probe', 'start');
+    await until(() => messages.length === 1, 5000);
+    assert(messages[0] === 0 && !replies.has('start'), 'stream did not pause at its first channel message');
+    await child.reparent(target.label);
+    await parent.destroy(); parent = null;
+    const moved = (await getAllWebviews()).find(view => view.label === child.label);
+    assert(moved?.window_label === target.label, 'destroying the old parent removed the moved WebView');
+    await emitTo(child.label, 'inflight-probe', 'moved');
+    await until(() => replies.has('moved'), 5000);
+    const denied = replies.get('moved');
+    assert(denied.allowed === false && denied.error.includes('not allowed'), 'new invocation retained the old window capability');
+    assert(messages.length === 1 && !replies.has('start'), 'reparent completed the paused invocation');
+    await emit('inflight-resume', null);
+    await until(() => messages.length === 3 && replies.has('start'), 5000);
+    assert(String(messages) === '0,1,2', `moved document lost or reordered channel messages: ${messages}`);
+    assert(replies.get('start').allowed === true && replies.get('start').value === null, 'admitted invocation failed after reparent');
+    return { messages, admittedReply: true, destinationDenied: true, oldParentDestroyed: true };
+  } finally {
+    await emit('inflight-resume', null);
+    if (child) await child.close();
+    if (target) await target.destroy();
+    if (parent) await parent.destroy();
+    unready(); unmessage(); unreply();
+  }
+});
 await test('image.resource', async () => {
   const image = await Image.new(new Uint8Array([255, 0, 0, 255]), 1, 1)
   const size = await image.size()

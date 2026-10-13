@@ -24,8 +24,14 @@ const report = { formatVersion: 1, version, rid, mode, sourceRevision: revision.
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const xml = value => value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
 await mkdir(trap, { recursive: true });
-await cp(here, consumer, { recursive: true, filter: source => !path.relative(here, source).split(path.sep)
-  .some(part => ['artifacts', 'node_modules', 'bin', 'obj', 'dist', 'generated', '.nuget'].includes(part)) });
+await mkdir(consumer, { recursive: true });
+const excluded = ['artifacts', 'node_modules', 'bin', 'obj', 'dist', 'generated', '.nuget'];
+// Copy entries separately: Node rejects cp(sample, sample/artifacts/consumer), even with a filter.
+for (const entry of await readdir(here)) {
+  if (excluded.includes(entry)) continue;
+  await cp(path.join(here, entry), path.join(consumer, entry), { recursive: true,
+    filter: source => !path.relative(here, source).split(path.sep).some(part => excluded.includes(part)) });
+}
 await writeFile(path.join(trap, 'cargo.cmd'), '@echo Cargo must not run in a package consumer. 1>&2\r\n@exit /b 97\r\n');
 await writeFile(path.join(trap, 'cargo'), '#!/bin/sh\necho "Cargo must not run in a package consumer." >&2\nexit 97\n', { mode: 0o755 });
 const environment = { ...process.env, NETWIV_PACKAGE_VERSION: version, NUGET_PACKAGES: path.join(runRoot, 'packages'),

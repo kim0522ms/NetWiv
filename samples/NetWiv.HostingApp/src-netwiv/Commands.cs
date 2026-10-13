@@ -77,6 +77,7 @@ public sealed class EquipmentPlugin : IPlugin, IAsyncDisposable
         Interlocked.Increment(ref _audit.LifecycleInitialized);
         context.RegisterGeneratedCommands<EquipmentPlugin>("get_status", "reset");
         context.Permission(new("allow-status", "get_status"));
+        context.Permission(new("allow-unselected", "unselected"));
         context.Permission(new("allow-reset", "reset"));
         context.Permission(new("deny-reset", [], ["reset"]));
     }

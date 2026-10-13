@@ -30,7 +30,7 @@ internal static class Program
             .InvokeHandler("greet")
             .AppCommandManifest("greet")
             .Plugin(EquipmentPlugin.CreateLifecycle(audit))
-            .Capability(new("main", ["allow-greet", "equipment:allow-status", "equipment:allow-reset", "equipment:deny-reset"], Windows: ["main"]));
+            .Capability(new("main", ["allow-greet", "equipment:allow-status", "equipment:allow-unselected", "equipment:allow-reset", "equipment:deny-reset"], Windows: ["main"]));
         if (smoke)
         {
             builder.Desktop.InvokeHandler("audit_snapshot", "smoke_done")

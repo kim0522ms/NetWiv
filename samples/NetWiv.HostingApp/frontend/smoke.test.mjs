@@ -25,7 +25,7 @@ function fixture(change = () => ({})) {
       return { state: 'ready', workspaceId: id, receiverId: id, sharedDependency: true, lifecycleInitialized: false };
     },
     async 'plugin:equipment|reset'() { throw new Error('not allowed'); },
-    async 'plugin:equipment|unselected'() { throw new Error('not found'); }
+    async 'plugin:equipment|unselected'() { throw new Error('native window command is not implemented'); }
   };
   return { ...commands, ...change(commands, audit) };
 }

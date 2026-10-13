@@ -28,7 +28,7 @@ export async function runSmoke(commands) {
   require(statuses.every(value => audit.disposedWorkspaces.includes(value.workspaceId) && audit.disposedReceivers.includes(value.receiverId)),
     'Plugin async receiver/dependency disposal did not finish before IPC completion');
   await rejects(() => commands['plugin:equipment|reset'](), 'not allowed');
-  await rejects(() => commands['plugin:equipment|unselected'](), 'not found');
+  await rejects(() => commands['plugin:equipment|unselected'](), 'not implemented');
   const afterDenial = await commands.audit_snapshot();
   require(afterDenial.resetCalls === 0 && afterDenial.workspacesCreated === audit.workspacesCreated && afterDenial.receiversCreated === audit.receiversCreated,
     'Denied or unselected command activated a receiver or ran its body');

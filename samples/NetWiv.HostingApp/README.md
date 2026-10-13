@@ -87,8 +87,10 @@ audit only retains IDs/counters, never scoped services, and is caller-owned.
 The app manifest grants `greet` only to the local `main` window. The plugin
 registers `get_status` and `reset` explicitly. The capability includes both
 `equipment:allow-reset` and `equipment:deny-reset`; reset is denied because denies
-win. `unselected` is generated into the frontend bindings but deliberately not
-registered. Calling its wrapper fails with `not found`. Binding generation never
+win. `unselected` is generated into the frontend bindings and explicitly allowed
+by a capability, but deliberately not registered. After authorization the desktop
+runtime's native plugin fallback rejects its wrapper with `not implemented`;
+the generated C# command body never runs. Binding generation never
 registers commands or grants permission. All declarations are in this assembly,
 so this sample does not depend on referenced-assembly binding aggregation.
 

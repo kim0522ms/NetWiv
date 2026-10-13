@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="UTF-8"><title>in-flight reparent probe</title></head><body>
+<script type="module">
+import { Channel, invoke } from './vendor/@tauri-apps/api/core.js';
+import { emit, listen } from './vendor/@tauri-apps/api/event.js';
+await listen('inflight-probe', async event => {
+  let result;
+  try {
+    if (event.payload === 'start') {
+      const channel = new Channel(value => { void emit('inflight-channel', value); });
+      await invoke('stream_numbers', { channel, resumeEvent: 'inflight-resume' });
+      result = { allowed: true, value: null };
+    } else result = { allowed: true, value: await invoke('echo_json', { input: true }) };
+  } catch (error) { result = { allowed: false, error: String(error) }; }
+  await emit('inflight-response', { step: event.payload, ...result });
+});
+await emit('inflight-ready', true);
+</script></body></html>

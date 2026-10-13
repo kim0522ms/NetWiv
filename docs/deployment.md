@@ -91,8 +91,11 @@ macOS tests also execute the managed `.app` after staging and ad-hoc signing.
 Release package-feed validation executes the generated React GUI/IPC app via the
 managed CLI publish path on Windows x64, Linux x64 and macOS arm64/x64 with an
 isolated .NET 8 installation. Linux additionally runs isolated .NET 9/10 jobs.
+All jobs publish and execute framework-dependent consumers; the .NET 8 baseline
+jobs also publish and execute the default self-contained managed consumer.
 Every job publishes and executes a package-only NativeAOT consumer's windowless
-startup and configuration binding; macOS also runs the generated managed `.app`.
+startup and configuration binding; macOS also runs the generated managed `.app`
+in both deployment modes.
 The jobs reuse the same package bundle and retain package hashes, environment
 details and execution logs. Adding these jobs does not establish a successful
 hosted or physical-device run; inspect the evidence for the tested revision.

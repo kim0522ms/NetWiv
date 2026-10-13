@@ -71,8 +71,11 @@ install the packaged CLI, publish and run a generated .NET 8 React app with
 `netwiv build --framework-dependent` through its
 GUI/IPC smoke flow, and verify its actual runtime major. Each job also publishes
 a desktop smoke consumer with NativeAOT for its own target framework and executes
-windowless startup and configuration binding. Both macOS jobs also bundle and
-execute the managed `.app` through the GUI/IPC smoke flow. Logs, environment
+windowless startup and configuration binding. The .NET 8 baseline jobs additionally
+publish and execute the default managed self-contained React app, checking its
+bundled runtime policy and GUI/IPC behavior. Both macOS jobs also bundle and
+execute the managed `.app` in both deployment modes through the GUI/IPC smoke flow.
+Logs, environment
 details, test revision and exact package hashes are retained as seven-day
 `package-consumer-RID-netMAJOR` artifacts. All six must pass before the
 draft Release job runs. See [SDK compatibility](dotnet-compatibility.md).

@@ -114,6 +114,7 @@ internal static class Program
                     _ = RunScenario(context.App, probe);
                 return Value(JsonValue.Null);
             });
+        MacOsDataStoreProbe.Register(builder);
         using var app = builder.Build();
         using var watchdog = new Timer(_ =>
         {
@@ -285,8 +286,7 @@ internal static class Program
             Require(await PathApi.AppLogDirectoryAsync(app) == Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Logs", app.Metadata.Identifier), "macOS log directory");
             try { await main.SetSkipTaskbarAsync(true); throw new Exception("Unsupported per-window Dock operation succeeded."); }
             catch (InvokeException) { }
-            try { await AppApi.FetchDataStoreIdentifiersAsync(app); throw new Exception("Unimplemented data store enumeration succeeded."); }
-            catch (InvokeException) { }
+            await MacOsDataStoreProbe.VerifyAsync(app);
             Console.WriteLine("PASS macOS title bar, effects, Dock, app visibility, paths and unsupported-operation errors");
         }
         Require((await app.GetAllWindowsAsync()).Count == 2, "live window list");

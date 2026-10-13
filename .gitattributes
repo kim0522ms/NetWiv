@@ -4,3 +4,7 @@
 # These upstream license bytes are addressed and verified by SHA-256.
 native/third-party-licenses/texts/*.txt -text
 native/license-overrides/texts/*.txt -text
+
+# These unchanged upstream guest modules are verified by SHA-256 in the smoke.
+samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api/app.js -text
+samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api/image.js -text

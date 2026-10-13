@@ -178,9 +178,17 @@ child WebViews and a native menu selection/checked-state check. These checks
 establish integration evidence, not complete Tauri conformance.
 Broader keyboard/mouse interaction, all menu roles, multiple monitors, Developer ID certificates,
 notarization, package-only clean-machine installation and Intel execution need
-separate acceptance. Website data-store enumeration/removal returns an explicit
-unsupported error; the WKWebView creation-time identifier is forwarded but not
-part of the completed smoke scope. Per-window `skipTaskbar=true` is rejected on
+separate acceptance. Website data-store enumeration/removal is implemented through
+Wry's asynchronous WKWebsiteDataStore APIs on macOS 14 and later. Older systems
+receive an explicit unsupported error before either unavailable selector is called.
+The creation-time `dataStoreIdentifier` follows the pinned Wry behavior: macOS 14+
+uses the identified persistent store, older systems use the default store, and
+incognito WebViews use a nonpersistent store. Close every WebView using an identifier
+before removing its store; an Apple removal failure is returned as a command error.
+WebKit may release a closed WebView's store asynchronously, so a caller can still
+receive an in-use error immediately after closing it.
+Windows/Linux retain the upstream empty-list/no-op app API behavior.
+Per-window `skipTaskbar=true` is rejected on
 macOS; use `AppApi.SetDockVisibilityAsync` for the application-wide Dock entry.
 The Autostart and DeepLink OS-registration plugins remain Windows/Linux-only.
 Their macOS failure paths are tested and are not reported as supported features.
@@ -193,8 +201,8 @@ The `external opening` Core tests check launcher arguments and rejection paths
 without opening desktop applications. Local arm64 smoke checks also confirmed
 browser requests from Opener URL/`.webloc` opening and Shell URL opening;
 Finder selection itself still needs GUI acceptance.
-Explicit application selection remains unsupported. The OS plugin still identifies
-non-Windows hosts as Linux; consult the
+Explicit application selection remains unsupported. The OS plugin now reports
+macOS product versions and process architecture; consult the
 [plugin limits](official-plugins.md#macos-plugin-limits) before enabling them.
 
 Custom-protocol responses are queued to the native UI loop. A response submitted
@@ -225,9 +233,40 @@ separate workflows.
 
 The `tests/frontend-bindings/run.mjs`, `resources.mjs` and `native-version.mjs`
 harnesses still select Windows/Linux RIDs. They must be extended before being
-used as macOS package-consumer evidence. Keep per-run logs, coverage, toolchain
-versions, source/binary hashes and skips in ignored `artifacts/`; do not convert
-a source-linked smoke result into package-only or release acceptance.
+used for macOS package-consumer validation. Do not treat a source-linked smoke
+result as package-only or release acceptance.
+
+### Website data-store check
+
+The ordinary desktop smoke includes `MacOsDataStoreProbe` on macOS. The same
+scenario runs independently with `--data-store-smoke`. On macOS 14+
+it creates a fresh random 16-byte identifier, uses unchanged
+`@tauri-apps/api@2.11.1` guest code to enumerate it, checks that removal while its
+WebView is open fails without invalidating that WebView, closes and reopens it to
+check local-storage persistence, then removes it from another WebView and checks
+that recreation has no previous data. SDK enumeration checks the same identifier
+bytes, and SDK cleanup deletes only the test-owned store. On macOS 12/13 the smoke
+checks explicit version errors for enumeration and removal. Native unit tests
+cover malformed identifiers, off-main-thread rejection and discarded completion
+after shutdown. Completions use the native event queue, do not retain WebViews or
+contexts, and cannot call managed code after runtime shutdown.
+
+After rebuilding the native adapter, run both managed and NativeAOT consumers:
+
+```sh
+dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r osx-arm64 -p:PublishAot=false -o artifacts/data-store-smoke/managed
+artifacts/data-store-smoke/managed/NetWiv.Desktop.Smoke --data-store-smoke
+dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r osx-arm64 -o artifacts/data-store-smoke/aot
+artifacts/data-store-smoke/aot/NetWiv.Desktop.Smoke --data-store-smoke
+```
+
+Cleanup retries only the known in-use error for up to five seconds after
+test-owned WebViews are destroyed. Keep the display awake during the ordinary
+monitor-geometry smoke; a sleeping display can report no active monitors.
+For the pinned Rust toolchain's macOS 27
+[Mach-O strip alignment issue](https://github.com/rust-lang/rust/issues/157750),
+use `CARGO_PROFILE_RELEASE_STRIP=none` for the affected native build.
+Intel and macOS 12/13 execution remain unverified.
 
 ---
 

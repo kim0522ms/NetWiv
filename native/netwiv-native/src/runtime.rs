@@ -117,6 +117,8 @@ impl Shared {
 }
 
 pub(crate) enum UserEvent {
+    #[cfg(target_os = "macos")]
+    DataStoreCompletion { request_id: u64, result: Result<Value, String> },
     AssetResponse { id: u64, response: Response<Vec<u8>> },
     Submit {
         request_id: u64,
@@ -361,8 +363,10 @@ impl LocalRuntime {
                 let had_windows = !self.windows.is_empty();
                 let result = serde_json::from_str::<Submission>(&json)
                     .map_err(|e| format!("invalid submission: {e}"))
-                    .and_then(|submission| self.invoke(target, &submission, &binary));
+                    .and_then(|submission| self.invoke(target, &submission, &binary, request_id));
                 match result {
+                    #[cfg(target_os = "macos")]
+                    Ok(InvokeResult::Pending) => {}
                     Ok(InvokeResult::Json(value)) => {
                         self.shared.callback(
                             CALLBACK_COMPLETION,
@@ -391,6 +395,15 @@ impl LocalRuntime {
                 if had_windows && self.windows.is_empty() {
                     self.shutdown(control_flow);
                 }
+                Ok(())
+            }
+            #[cfg(target_os = "macos")]
+            UserEvent::DataStoreCompletion { request_id, result } => {
+                let payload = match result {
+                    Ok(value) => json!({"ok":true,"value":value,"isBinary":false}),
+                    Err(error) => json!({"ok":false,"error":error}),
+                };
+                self.shared.callback(CALLBACK_COMPLETION, request_id, &payload, &[]);
                 Ok(())
             }
             UserEvent::AssetResponse { id, response } => {
@@ -611,6 +624,8 @@ impl LocalRuntime {
 }
 
 enum InvokeResult {
+    #[cfg(target_os = "macos")]
+    Pending,
     Json(Value),
     #[allow(dead_code)]
     Binary(Vec<u8>),

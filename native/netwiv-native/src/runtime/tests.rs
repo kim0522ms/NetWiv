@@ -162,6 +162,20 @@ fn late_protocol_completion_after_shutdown_does_not_reenter_callbacks() {
     assert_eq!(CALLS.load(std::sync::atomic::Ordering::Relaxed), 0);
 }
 
+#[cfg(target_os = "macos")]
+#[test]
+fn late_data_store_completion_after_shutdown_does_not_reenter_callbacks() {
+    unsafe extern "C" fn callback(_: *mut std::ffi::c_void, _: u32, _: u64,
+        _: *const u8, _: usize, _: *const u8, _: usize) -> i32 {
+        panic!("late data-store callback must be discarded");
+    }
+    let shared = super::Shared::new(callback, std::ptr::null_mut());
+    shared.state.store(super::STATE_STOPPED, std::sync::atomic::Ordering::Release);
+    for result in [Ok(json!([])), Err("store is in use".into())] {
+        assert!(shared.enqueue(super::UserEvent::DataStoreCompletion { request_id: 42, result }).is_err());
+    }
+}
+
 #[test]
 fn reparent_updates_ipc_and_protocol_parent_without_replacing_document() {
     unsafe extern "C" fn callback(

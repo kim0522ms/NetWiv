@@ -1,10 +1,32 @@
 using System.Collections.Concurrent;
 using NetWiv;
+using NetWiv.Platform.Desktop;
 
 internal static class MacOsDataStoreProbe
 {
     private sealed record Probe(string Phase, byte[] Uuid, TaskCompletionSource Result);
     private static readonly ConcurrentDictionary<string, Probe> Probes = new();
+
+    internal static int Run()
+    {
+        if (!OperatingSystem.IsMacOS()) throw new PlatformNotSupportedException("This probe requires macOS.");
+        var result = 1;
+        var builder = new Builder().UseRuntime(new DesktopRuntime()).UseEmbeddedAssets()
+            .Window("main", "NetWiv website data-store probe", "quiet.html")
+            .Setup(app => _ = VerifyAndExitAsync(app.Handle));
+        Register(builder);
+        using var app = builder.Build();
+        using var watchdog = new Timer(_ => Environment.Exit(124), null, TimeSpan.FromSeconds(60), Timeout.InfiniteTimeSpan);
+        app.Run();
+        return result;
+
+        async Task VerifyAndExitAsync(AppHandle handle)
+        {
+            try { await VerifyAsync(handle); result = 0; }
+            catch (Exception error) { Console.WriteLine("FAIL " + error); }
+            finally { handle.Exit(result); }
+        }
+    }
 
     internal static void Register(Builder builder)
     {

@@ -40,8 +40,11 @@ macOS x64. Separate Linux jobs exercise SDK/runtime 9 and 10 with the same
 `net8.0` source libraries, managed tests and NativeAOT Core tests; they do not
 rebuild Rust. The `CI required` check includes these jobs.
 
-Release packaging builds one feed and reuses it in three separate consumer
-jobs. Each job installs SDK/runtime 8, 9 or 10 in a private `DOTNET_ROOT`, removes
+Release packaging builds one feed and reuses it in six separate consumer
+jobs: Linux x64 with SDK/runtime 8, 9 and 10, plus Windows x64 and macOS arm64/x64
+with SDK/runtime 8. The baseline covers all packaged native RIDs; keeping newer
+SDK/runtime coverage on Linux bounds the CI cost. Each job uses a private
+`DOTNET_ROOT`, removes
 any extra LTS runtime installed by `setup-dotnet`, and verifies that no other
 runtime major is visible. A mixed installation or an ambient runtime-policy
 override fails the check.
@@ -49,11 +52,19 @@ override fails the check.
 Each job installs and runs the packaged CLI, publishes the generated React
 solution via `netwiv build --framework-dependent`, and executes its `net8.0`
 apphost through the WebView/IPC smoke flow.
-A test probe inside the generated app asserts its actual runtime major. It then
+A test probe inside the generated app asserts its actual runtime major. macOS
+also bundles and executes the managed `.app` through the same GUI/IPC scenario.
+Each job then
 publishes/runs a package-only NativeAOT desktop consumer targeting `net8.0`,
 `net9.0` or `net10.0`, including configuration binding from the packaged Hosting
-dependency with warnings as errors. The draft Release job requires all three
+dependency with warnings as errors. The draft Release job requires all six
 consumer jobs to pass. No package is published to NuGet.org.
+
+Consumer evidence artifacts retain execution logs, `dotnet --info`, the test
+revision, OS/architecture, exact feed package SHA-256 hashes and the bundle's
+`SOURCE.txt` when present. These are hosted validation jobs; they do not replace
+physical-device desktop evidence. Windows/macOS .NET 9/10 package consumers and
+macOS minimum-OS acceptance remain outside this bounded release matrix.
 
 To select a newer test runtime while keeping library/package targets at .NET 8:
 

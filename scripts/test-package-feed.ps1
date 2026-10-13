@@ -2,7 +2,8 @@
 param(
     [Parameter(Mandatory)][string]$Feed,
     [Parameter(Mandatory)][string]$Version,
-    [ValidateSet("net8.0", "net9.0", "net10.0")][string]$TargetFramework = "net8.0"
+    [ValidateSet("net8.0", "net9.0", "net10.0")][string]$TargetFramework = "net8.0",
+    [string]$EvidenceDirectory
 )
 $ErrorActionPreference = 'Stop'
 $repository = Split-Path $PSScriptRoot -Parent
@@ -31,7 +32,28 @@ Write-Output "Validating SDK $sdk with only runtime major $major"
 $workspace = Join-Path ([IO.Path]::GetTempPath()) ('netwiv-package-check-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $workspace | Out-Null
 $previousPackages = $env:NUGET_PACKAGES
+$transcribing = $false
 try {
+    if ($EvidenceDirectory) {
+        $EvidenceDirectory = [IO.Path]::GetFullPath($EvidenceDirectory)
+        New-Item -ItemType Directory -Path $EvidenceDirectory -Force | Out-Null
+        Start-Transcript -LiteralPath (Join-Path $EvidenceDirectory 'package-consumer.log') | Out-Null
+        $transcribing = $true
+        & dotnet --info | Set-Content -LiteralPath (Join-Path $EvidenceDirectory 'dotnet-info.txt')
+        @{
+            version = $Version
+            targetFramework = $TargetFramework
+            revision = (& git -C $repository rev-parse HEAD)
+            os = [System.Runtime.InteropServices.RuntimeInformation]::OSDescription
+            architecture = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString()
+            packages = @(Get-ChildItem -LiteralPath $Feed -Filter '*.nupkg' | Get-FileHash -Algorithm SHA256 |
+                Select-Object @{Name='file';Expression={Split-Path $_.Path -Leaf}}, Hash)
+        } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $EvidenceDirectory 'provenance.json')
+        $sourceRecord = Join-Path (Split-Path $Feed) 'SOURCE.txt'
+        if (Test-Path -LiteralPath $sourceRecord) {
+            Copy-Item -LiteralPath $sourceRecord -Destination (Join-Path $EvidenceDirectory 'SOURCE.txt')
+        }
+    }
     # A fresh consumer outside the checkout cannot inherit source project targets or cached NetWiv packages.
     $env:NUGET_PACKAGES = Join-Path $workspace 'cache'
     Copy-Item -LiteralPath (Join-Path $repository 'global.json') -Destination $workspace
@@ -131,7 +153,12 @@ internal sealed class PackageOptions { public string Value { get; set; } = ""; }
     finally { Pop-Location }
     Write-Output "PASS ${TargetFramework}: packaged CLI, generated managed GUI/IPC, configuration binding and package-only NativeAOT startup"
 }
+catch {
+    Write-Output "FAIL package consumer: $($_.Exception.Message)"
+    throw
+}
 finally {
+    if ($transcribing) { Stop-Transcript | Out-Null }
     $env:NUGET_PACKAGES = $previousPackages
     Remove-Item -LiteralPath $workspace -Recurse -Force
 }

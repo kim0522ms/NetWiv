@@ -52,6 +52,8 @@ public sealed class NugetPermissionPlugin : IPlugin {
   await writeFile(path.join(initialized, 'message.txt'), 'NuGet resource through NativeAOT and generated JavaScript');
   const configFile = path.join(initialized, 'src-netwiv/netwiv.conf.json');
   const config = JSON.parse(await readFile(configFile, 'utf8'));
+  // WebView2 may keep its profile locked after exit; builds replace the publish directory.
+  config.app.windows[0].dataDirectory = path.join(initialized, 'webview-profile');
   config.bundle ??= {};
   config.bundle.resources = { '../message.txt': 'data/message.txt' };
   await writeFile(configFile, JSON.stringify(config));

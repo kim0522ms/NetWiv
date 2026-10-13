@@ -48,8 +48,8 @@ On WSL, reference/build-linux.sh stages reference sources on a Linux filesystem
 because upstream codegen changes permissions unsupported on some shared Windows
 files. Set NETWIV_REFERENCE_TARGET to the Linux Cargo output directory. Run the
 Node comparison runner under scripts/run-linux-smoke-desktop.sh for X11 or
-Wayland. It records source/dependency/binary hashes and refuses source edits
-during the pair. Both missing results and identical failures fail comparison.
+Wayland. It refuses source edits during the pair. Both missing results and
+identical failures fail comparison.
 
 Seventeen cases exercise public behavior: queued startup, nested IPC values,
 three binary input shapes, header records/clone errors, structured errors,

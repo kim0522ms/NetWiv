@@ -6,32 +6,33 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $repository = Split-Path $PSScriptRoot -Parent
-$Feed = [IO.Path]::GetFullPath($Feed)
-# SDK selection alone does not isolate the runtimes used by net8.0 apphosts.
-$major = $TargetFramework.Substring(3).Split('.')[0]
-$sdk = & dotnet --version
-if ($LASTEXITCODE -ne 0 -or $sdk -notlike "$major.*") { throw "Expected SDK major $major, found $sdk." }
-$runtimes = @(& dotnet --list-runtimes)
-if ($LASTEXITCODE -ne 0 -or !($runtimes -match "^Microsoft\.NETCore\.App $major\.") -or
-    @($runtimes | Where-Object { $_ -notmatch "^\S+ $major\." }).Count) {
-    throw "Expected only runtime major $major in the selected dotnet installation: $($runtimes -join '; ')"
-}
-$dotnetRoot = Split-Path (Get-Command dotnet).Source -Parent
-if (!$env:DOTNET_ROOT -or [IO.Path]::GetFullPath($env:DOTNET_ROOT) -ne $dotnetRoot) {
-    throw 'DOTNET_ROOT must point to the selected private dotnet installation.'
-}
-foreach ($name in 'DOTNET_ROOT_X64', 'DOTNET_ROOT_ARM64', 'DOTNET_ROOT_X86', 'DOTNET_ROOT(x86)') {
-    $value = [Environment]::GetEnvironmentVariable($name)
-    if ($value -and [IO.Path]::GetFullPath($value) -ne $dotnetRoot) { throw "$name points outside the isolated dotnet installation." }
-}
-foreach ($name in 'DOTNET_ROLL_FORWARD', 'DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX') {
-    if ([Environment]::GetEnvironmentVariable($name)) { throw "$name would override the application's runtime policy." }
-}
-Write-Output "Validating SDK $sdk with only runtime major $major"
-$workspace = Join-Path ([IO.Path]::GetTempPath()) ('netwiv-package-check-' + [guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Path $workspace | Out-Null
+$workspace = $null
 $previousPackages = $env:NUGET_PACKAGES
 try {
+    $Feed = [IO.Path]::GetFullPath($Feed)
+    # SDK selection alone does not isolate the runtimes used by net8.0 apphosts.
+    $major = $TargetFramework.Substring(3).Split('.')[0]
+    $sdk = & dotnet --version
+    if ($LASTEXITCODE -ne 0 -or $sdk -notlike "$major.*") { throw "Expected SDK major $major, found $sdk." }
+    $runtimes = @(& dotnet --list-runtimes)
+    if ($LASTEXITCODE -ne 0 -or !($runtimes -match "^Microsoft\.NETCore\.App $major\.") -or
+        @($runtimes | Where-Object { $_ -notmatch "^\S+ $major\." }).Count) {
+        throw "Expected only runtime major $major in the selected dotnet installation: $($runtimes -join '; ')"
+    }
+    $dotnetRoot = Split-Path (Get-Command dotnet).Source -Parent
+    if (!$env:DOTNET_ROOT -or [IO.Path]::GetFullPath($env:DOTNET_ROOT) -ne $dotnetRoot) {
+        throw 'DOTNET_ROOT must point to the selected private dotnet installation.'
+    }
+    foreach ($name in 'DOTNET_ROOT_X64', 'DOTNET_ROOT_ARM64', 'DOTNET_ROOT_X86', 'DOTNET_ROOT(x86)') {
+        $value = [Environment]::GetEnvironmentVariable($name)
+        if ($value -and [IO.Path]::GetFullPath($value) -ne $dotnetRoot) { throw "$name points outside the isolated dotnet installation." }
+    }
+    foreach ($name in 'DOTNET_ROLL_FORWARD', 'DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX') {
+        if ([Environment]::GetEnvironmentVariable($name)) { throw "$name would override the application's runtime policy." }
+    }
+    Write-Output "Validating SDK $sdk with only runtime major $major"
+    $workspace = Join-Path ([IO.Path]::GetTempPath()) ('netwiv-package-check-' + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $workspace | Out-Null
     # A fresh consumer outside the checkout cannot inherit source project targets or cached NetWiv packages.
     $env:NUGET_PACKAGES = Join-Path $workspace 'cache'
     Copy-Item -LiteralPath (Join-Path $repository 'global.json') -Destination $workspace
@@ -59,38 +60,53 @@ internal static class ManagedRuntimeProbe
     }
 }
 '@.Replace('__MAJOR__', $major) | Set-Content PackageExample/src-netwiv/ManagedRuntimeProbe.cs
-        Push-Location PackageExample
-        try { & $cli build --framework-dependent --no-bundle -- -warnaserror }
-        finally { Pop-Location }
-        if ($LASTEXITCODE -ne 0) { throw 'Generated solution or packaged MSBuild tasks failed.' }
-        if (!(Get-ChildItem PackageExample/src/generated -File)) { throw 'Packaged frontend generator produced no bindings.' }
-        $managedFiles = @(Get-ChildItem PackageExample/target -Recurse -File |
-            Where-Object { $_.Name -eq ('PackageExample' + $(if ($IsWindows) { '.exe' } else { '' })) -and $_.Directory.Name -eq 'release' })
-        if ($managedFiles.Count -ne 1) { throw 'Expected one published managed apphost.' }
-        $managed = $managedFiles[0].FullName
-        if ($IsLinux) {
-            $managedOutput = @(& xvfb-run -a bash (Join-Path $repository 'scripts/run-linux-smoke-desktop.sh') $managed x11 --smoke-test)
-        }
-        else { $managedOutput = @(& $managed --smoke-test) }
-        $managedExit = $LASTEXITCODE
-        $managedOutput | Write-Output
-        if ($managedExit -ne 0 -or !($managedOutput -contains "PASS managed runtime $major") -or
-            !($managedOutput -contains 'PASS: React form → generated C# → JSON')) {
-            throw 'Generated managed application smoke failed.'
-        }
-
-        if ($IsMacOS) {
+        $modes = @('framework-dependent')
+        # Exercise the default deployment on each baseline RID without repeating
+        # its runtime payload publication in the newer Linux SDK jobs.
+        if ($major -eq '8') { $modes += 'self-contained' }
+        foreach ($mode in $modes) {
             Push-Location PackageExample
-            try { & $cli bundle --bundles app --no-sign }
+            try {
+                if ($mode -eq 'framework-dependent') { & $cli build --framework-dependent --no-bundle -- -warnaserror }
+                else { & $cli build --no-bundle -- -warnaserror }
+            }
             finally { Pop-Location }
-            if ($LASTEXITCODE -ne 0) { throw 'Generated managed application bundle failed.' }
-            $app = Join-Path (Split-Path $managed) 'bundle/macos/PackageExample.app/Contents/MacOS/PackageExample'
-            $bundledOutput = @(& $app --smoke-test)
-            $bundledExit = $LASTEXITCODE
-            $bundledOutput | Write-Output
-            if ($bundledExit -ne 0 -or !($bundledOutput -contains "PASS managed runtime $major") -or
-                !($bundledOutput -contains 'PASS: React form → generated C# → JSON')) {
-                throw 'Bundled managed application smoke failed.'
+            if ($LASTEXITCODE -ne 0) { throw "Generated $mode solution or packaged MSBuild tasks failed." }
+            if (!(Get-ChildItem PackageExample/src/generated -File)) { throw 'Packaged frontend generator produced no bindings.' }
+            $managedFiles = @(Get-ChildItem PackageExample/target -Recurse -File |
+                Where-Object { $_.Name -eq ('PackageExample' + $(if ($IsWindows) { '.exe' } else { '' })) -and $_.Directory.Name -eq 'release' })
+            if ($managedFiles.Count -ne 1) { throw 'Expected one published managed apphost.' }
+            $managed = $managedFiles[0].FullName
+            $runtimeConfig = Get-Content -LiteralPath (Join-Path (Split-Path $managed) 'PackageExample.runtimeconfig.json') -Raw | ConvertFrom-Json
+            if (($mode -eq 'self-contained') -ne [bool]$runtimeConfig.runtimeOptions.includedFrameworks) {
+                throw "Generated $mode application has an unexpected runtime deployment policy."
+            }
+            if ($IsLinux) {
+                $managedOutput = @(& xvfb-run -a bash (Join-Path $repository 'scripts/run-linux-smoke-desktop.sh') $managed x11 --smoke-test)
+            }
+            else { $managedOutput = @(& $managed --smoke-test) }
+            $managedExit = $LASTEXITCODE
+            $managedOutput | Write-Output
+            if ($managedExit -ne 0 -or !($managedOutput -contains "PASS managed runtime $major") -or
+                !($managedOutput -contains 'PASS: React form → generated C# → JSON')) {
+                throw "Generated $mode managed application smoke failed."
+            }
+            Write-Output "PASS managed ${mode}: GUI/IPC"
+
+            if ($IsMacOS) {
+                Push-Location PackageExample
+                try { & $cli bundle --bundles app --no-sign }
+                finally { Pop-Location }
+                if ($LASTEXITCODE -ne 0) { throw "Generated $mode managed application bundle failed." }
+                $app = Join-Path (Split-Path $managed) 'bundle/macos/PackageExample.app/Contents/MacOS/PackageExample'
+                $bundledOutput = @(& $app --smoke-test)
+                $bundledExit = $LASTEXITCODE
+                $bundledOutput | Write-Output
+                if ($bundledExit -ne 0 -or !($bundledOutput -contains "PASS managed runtime $major") -or
+                    !($bundledOutput -contains 'PASS: React form → generated C# → JSON')) {
+                    throw "Bundled $mode managed application smoke failed."
+                }
+                Write-Output "PASS bundled managed ${mode}: GUI/IPC"
             }
         }
 
@@ -133,5 +149,5 @@ internal sealed class PackageOptions { public string Value { get; set; } = ""; }
 }
 finally {
     $env:NUGET_PACKAGES = $previousPackages
-    Remove-Item -LiteralPath $workspace -Recurse -Force
+    if ($workspace) { Remove-Item -LiteralPath $workspace -Recurse -Force }
 }

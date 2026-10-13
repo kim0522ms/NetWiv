@@ -145,8 +145,10 @@ draft, not to mark a test as passed.
 
 For each device run, provide:
 
-1. **Revision and environment:** tested commit SHA, device/CPU architecture,
-   OS version, relevant SDK/runtime and WebView/native dependency versions.
+1. **Revision and environment:** tested commit SHA, execution type (physical,
+   VM or headless), architecture, OS version, and relevant SDK/runtime and
+   WebView/native dependency versions. Specific PC specifications and device,
+   CPU, GPU or monitor model names are not required and must be omitted by default.
 2. **Procedure:** exact commands or reproduction steps, configuration, artifact
    tested, and any relevant managed/AOT, privilege or installation mode.
 3. **Results:** expected versus observed behavior, before/after evidence for a
@@ -157,8 +159,20 @@ For each device run, provide:
 
 Attach evidence to the PR or link an accessible report. Keep logs tied to the
 revision tested; after a meaningful revision, rerun affected checks and update
-the evidence. Redact credentials and personal or customer data without removing
-the diagnostic context. Reviewers should be able to reproduce the result.
+the evidence. Reviewers should be able to reproduce the result using sanitized
+commands and paths.
+
+Personal information includes details that can identify a person or their
+environment indirectly or in combination, not only names and credentials.
+Do not publish credentials, identifying hardware details, hostnames, account names, personal
+paths, network addresses, serial numbers or personal/customer content. Minimize
+environment details to what is necessary to explain the validation. Review the
+PR body, complete diff, logs, screenshots and uploaded artifacts before submission;
+real-device evidence does not require disclosure of a tester's hardware inventory.
+If a detail is necessary but potentially identifying, or its sensitivity is
+unclear, withhold it and agree on the exact disclosure and purpose with the user
+before publishing. Keep that agreement in the user's approved private local
+storage outside the repository and published artifacts, not in the public report.
 
 The [CI workflow](.github/workflows/ci.yml) supplies additional platform checks.
 Read failing logs before changing code or requesting a retry. Do not use repeated

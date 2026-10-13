@@ -32,8 +32,8 @@ integration checkout. macOS x64 was cross-compiled, not executed on Intel.
 
 | Host | Environment and observed result |
 | --- | --- |
-| Physical Windows x64 | Ryzen 9 9950X, Windows build 26200, WebView2 154.0.4258.62. Framework SDK 10.0.302; isolated consumer SDK 8.0.406/runtime 8.0.13. Core managed and NativeAOT each passed 221 checks. API 33, generator 176, CLI 107 and native Rust 50 tests passed. Full NativeAOT desktop smoke passed. |
-| Physical Apple Silicon | M1 Mac mini, macOS 27.0 beta (26A5388g), WebKit 22625.1.24.11.2, Xcode 27, SDK 8.0.406/runtime 8.0.13, Rust 1.95.0. OS-information managed/AOT checks passed. Native Rust 52 tests and website-data-store guest/SDK managed/AOT checks passed. Full managed/AOT desktop smoke passed with the display awake. |
+| Physical Windows x64 | Windows build 26200, WebView2 154.0.4258.62. Framework SDK 10.0.302; isolated consumer SDK 8.0.406/runtime 8.0.13. Core managed and NativeAOT each passed 221 checks. API 33, generator 176, CLI 107 and native Rust 50 tests passed. Full NativeAOT desktop smoke passed. |
+| Physical macOS arm64 | macOS 27.0 beta, WebKit 22625.1.24.11.2, Xcode 27, SDK 8.0.406/runtime 8.0.13, Rust 1.95.0. OS-information managed/AOT checks passed. Native Rust 52 tests and website-data-store guest/SDK managed/AOT checks passed. Full managed/AOT desktop smoke passed with the display awake. |
 | WSL2 Linux x64 | Ubuntu 24.04, GTK 3.24.41, WebKitGTK 2.52.6, SDK 10.0.302. Integrated Core NativeAOT and desktop NativeAOT smoke passed under Xvfb/X11 with an XFCE window manager. This is virtual/headless evidence, not physical Linux or Wayland acceptance. |
 
 Windows IPC differential verification compared the unchanged official guest in

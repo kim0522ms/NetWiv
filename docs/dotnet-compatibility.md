@@ -95,7 +95,7 @@ Local package-consumer validation (2026-10-13), using the same 30-package
 | Host | Isolated SDK / runtime | Managed GUI/IPC | Package NativeAOT startup + binding |
 | --- | --- | --- | --- |
 | Physical Windows x64 | 8.0.406 / 8.0.13 | Framework-dependent and default self-contained passed | Passed |
-| Physical Apple M1, macOS 27.0 beta | 8.0.406 / 8.0.13 | Both modes and both `.app` bundles passed | Passed |
+| Physical macOS arm64, macOS 27.0 beta | 8.0.406 / 8.0.13 | Both modes and both `.app` bundles passed | Passed |
 | Ubuntu 24.04.4, WSL2/Xvfb x64 | 10.0.302 / 10.0.10 | Framework-dependent passed on runtime 10 | Passed |
 
 All three runs verified the exact feed hashes. See the

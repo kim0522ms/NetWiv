@@ -86,7 +86,7 @@ from the core compatibility profile. Windows and Linux retain their existing
 .NET OS version and OS architecture values; full upstream version/architecture
 parity on those platforms is unverified. Windows managed and NativeAOT tests
 cover the current-host payload, command permissions and macOS-version query
-fixtures. On a physical Apple Silicon Mac running macOS 27.0 (build 26A5388g),
+fixtures. On physical macOS arm64 hardware running macOS 27.0,
 .NET SDK 8.0.406/runtime 8.0.13, the same filtered tests passed in managed and
 arm64 NativeAOT execution at revision `cedc31d4f7eb9c7f635b7b59d0706ce29de1113d`.
 They verified all seven initialization fields, including product version

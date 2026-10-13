@@ -1,24 +1,24 @@
 # macOS sleeping-display diagnostic
 
 On 2026-10-13, the full desktop smoke failed `native monitor geometry` on a
-physical Apple M1 Mac mini with macOS 27.0 beta (26A5388g), Xcode 27,
+physical macOS arm64 hardware with macOS 27.0 beta, Xcode 27,
 .NET SDK 8.0.406/runtime 8.0.13 and Rust 1.95.0. The logged-in console had an
-online Q90A display, reported as 3840x2160 with a 1920x1080 desktop, but
+online display, but
 `system_profiler SPDisplaysDataType` also reported `Display Asleep: Yes`.
 
 The unchanged Tao 0.36.0 macOS implementation obtains `available_monitors()`
 from `CGGetActiveDisplayList`. The standalone [CoreGraphics diagnostic](display.c)
-returned `active error=0 count=0`, `online error=0 count=1`, `main=1` while the
+returned `active error=0 count=0`, `online error=0 count=1` while the
 display was asleep. No NetWiv filtering or monitor deserialization defect was
 found. The assertion requires a nonempty list with positive width and scale.
 
-After a temporary `caffeinate -u -t 120` wake, the same diagnostic returned:
+After a temporary `caffeinate -u -t 120` wake, the same diagnostic returned
+the following excerpt (display identifiers, dimensions and positions omitted):
 
 ```text
 active error=0 count=1
-id=1 online=1 active=1 asleep=0 pixels=1920x1080 bounds=0,0 1920x1080
+online=1 active=1 asleep=0
 online error=0 count=1
-main=1
 ```
 
 The unchanged managed executable then passed the entire ordinary smoke, exit 0.

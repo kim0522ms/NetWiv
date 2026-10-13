@@ -262,7 +262,7 @@ artifacts/data-store-smoke/aot/NetWiv.Desktop.Smoke --data-store-smoke
 ```
 
 On October 13, 2026, source revision `c76f5cc` passed this focused scenario in
-both managed and NativeAOT execution on a physical Apple Silicon Mac mini running
+both managed and NativeAOT execution on physical macOS arm64 hardware running
 macOS 27.0, using .NET SDK 8.0.406 and Rust 1.95.0. The macOS native release unit
 suite passed 52 tests. This covers guest/SDK identifier byte order, active-store
 removal failure without WebView invalidation, persistence across closure, removal,

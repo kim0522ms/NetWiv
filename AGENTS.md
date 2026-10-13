@@ -4,6 +4,31 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) for branch naming, contributor
 responsibility, real-device evidence and PR requirements. These apply to
 agent-assisted work as well as manually written contributions.
 
+## Privacy before publication
+
+- Do not submit information that can identify the user or their personal
+  environment in PRs, issues, commits, documentation, logs, screenshots or
+  uploaded artifacts. Personal information includes indirect identifiers and
+  combinations of environment details, not only names, passwords or secrets.
+- Specific PC specifications and device, CPU, GPU or monitor model names are
+  not required for validation evidence and must not be included by default.
+  Use only the necessary execution type (physical, VM or headless), OS,
+  architecture and relevant software versions; minimize even these details.
+  Remove hostnames, account names, personal paths, network addresses, serial
+  numbers and other identifying details before publication.
+- If identifying information might be needed or its sensitivity is unclear,
+  withhold it and discuss the exact information, purpose and disclosure scope
+  with the user before submission. Permission to test, commit or open a PR is
+  not permission to disclose personal environment information.
+- Record the resulting agreement in the user's private local environment,
+  outside the repository and uploaded artifacts, using a user-approved storage
+  location. Record the agreed boundaries rather than copying sensitive values;
+  do not put the private agreement in public project documentation. Consult it
+  on later runs and seek new agreement before expanding disclosure.
+- Review the actual outgoing PR body, complete diff and attached evidence for
+  identifying information before publishing. Real-device evidence requirements
+  do not override these privacy rules.
+
 NetWiv is a .NET 8 or later WebView desktop framework with optional NativeAOT publishing with TAURI® v2 compatibility as an important support goal.
 
 The product spelling is `NetWiv`. Public C# namespaces and NuGet IDs use

@@ -43,6 +43,10 @@ packages. It verifies unique package references and keeps the external test plug
 as a separate consumer assembly for .NET 8, 9 and 10. CI runs this check before
 release packaging; the release workflow additionally publishes and executes the
 consumers against the built package feed.
+External embedded fixtures are copied into the isolated consumer, preserving
+their bytes and logical names. `scripts/test-package-feed-evidence.ps1` checks
+failure diagnostics, exact package hashes and cleanup without restoring packages
+or launching a GUI.
 
 The test-tool preparation downloads checksum-pinned official minisign 0.12
 binaries for the CLI signer interoperability test on Windows/Linux x64. On macOS

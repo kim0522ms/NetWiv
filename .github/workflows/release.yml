@@ -83,17 +83,38 @@ jobs:
 
   package-compatibility:
     needs: [version, bundle]
-    name: Package consumers with only .NET ${{ matrix.major }} installed
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    name: ${{ matrix.rid }} package consumers with only .NET ${{ matrix.major }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        major: [8, 9, 10]
+        # Keep newer SDK/runtime coverage on Linux; validate each packaged native
+        # RID on the baseline without multiplying all platforms by every SDK.
+        include:
+          - os: ubuntu-24.04
+            rid: linux-x64
+            major: 8
+          - os: ubuntu-24.04
+            rid: linux-x64
+            major: 9
+          - os: ubuntu-24.04
+            rid: linux-x64
+            major: 10
+          - os: windows-2025
+            rid: win-x64
+            major: 8
+          - os: macos-15
+            rid: osx-arm64
+            major: 8
+          - os: macos-15-intel
+            rid: osx-x64
+            major: 8
     env:
       RELEASE_VERSION: ${{ needs.version.outputs.version }}
       DOTNET_NOLOGO: '1'
       DOTNET_INSTALL_DIR: ${{ github.workspace }}/artifacts/consumer-dotnet
+      DOTNET_ROOT: ${{ github.workspace }}/artifacts/consumer-dotnet
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -110,8 +131,16 @@ jobs:
         run: |
           # setup-dotnet also installs the current LTS runtime. Remove that extra
           # runtime only from this job's private installation, never the runner's.
-          Get-ChildItem "$env:DOTNET_INSTALL_DIR/shared" -Directory | Get-ChildItem -Directory |
-            Where-Object { $_.Name -notlike "$env:RUNTIME_MAJOR.*" } | Remove-Item -Recurse -Force
+          $privateRoot = [IO.Path]::GetFullPath($env:DOTNET_INSTALL_DIR)
+          $shared = Join-Path $privateRoot 'shared'
+          Get-ChildItem -LiteralPath $shared -Directory | Get-ChildItem -Directory |
+            Where-Object { $_.Name -notlike "$env:RUNTIME_MAJOR.*" } | ForEach-Object {
+              $target = [IO.Path]::GetFullPath($_.FullName)
+              if (!$target.StartsWith($shared + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+                throw "Refusing to remove runtime outside the private install: $target"
+              }
+              Remove-Item -LiteralPath $target -Recurse -Force
+            }
           @{ sdk = @{ version = $env:SDK_VERSION; rollForward = 'disable'; allowPrerelease = $false } } |
             ConvertTo-Json | Set-Content global.json
           dotnet --info
@@ -125,15 +154,34 @@ jobs:
       - name: Extract the already-built package feed
         shell: pwsh
         run: Expand-Archive "artifacts/release/NetWiv-$env:RELEASE_VERSION-packages.zip" artifacts/consumer-feed
-      - name: Install package consumer build dependencies
+      - name: Install Linux package consumer build dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             clang zlib1g-dev libgtk-3-0t64 libwebkit2gtk-4.1-0 libayatana-appindicator3-1 libxdo3 \
             xvfb xserver-xephyr xfwm4 xfce4-panel dbus-x11 x11-utils
+      - name: Check macOS consumer build tools
+        if: runner.os == 'macOS'
+        run: |
+          xcode-select -p
+          xcrun --find clang
+      - name: Ensure Windows WebView2 Runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/ensure-webview2.ps1
       - name: Execute packaged CLI, generated managed app and NativeAOT consumer
         shell: pwsh
-        run: ./scripts/test-package-feed.ps1 -Feed artifacts/consumer-feed/packages -Version $env:RELEASE_VERSION -TargetFramework 'net${{ matrix.major }}.0'
+        run: ./scripts/test-package-feed.ps1 -Feed artifacts/consumer-feed/packages -Version $env:RELEASE_VERSION -TargetFramework 'net${{ matrix.major }}.0' -EvidenceDirectory artifacts/package-consumer
+
+      - name: Upload package consumer evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: package-consumer-${{ matrix.rid }}-net${{ matrix.major }}
+          path: artifacts/package-consumer/
+          retention-days: 7
+          if-no-files-found: warn
 
   draft:
     needs: [version, bundle, package-compatibility]

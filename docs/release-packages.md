@@ -63,13 +63,18 @@ and NativeAOT validation before exporting native inputs. A packaging job then
 collects those exact files and runs `scripts/pack-integration.ps1`, including
 Hosting and every managed plugin. The bundle validator checks package versions,
 the expected package set, license notices and all five native payload files
-against the CI inputs. Three fresh Linux consumer jobs reuse that single bundle,
-each with only SDK/runtime 8, 9 or 10 visible in a private installation. They
+against the CI inputs. Six fresh consumer jobs reuse that single bundle:
+Linux x64 with SDK/runtime 8, 9 and 10, plus Windows x64 and macOS arm64/x64 with
+SDK/runtime 8. Each has only its selected SDK/runtime major visible in a private
+installation. They
 install the packaged CLI, publish and run a generated .NET 8 React app with
 `netwiv build --framework-dependent` through its
 GUI/IPC smoke flow, and verify its actual runtime major. Each job also publishes
 a desktop smoke consumer with NativeAOT for its own target framework and executes
-windowless startup and configuration binding. All three must pass before the
+windowless startup and configuration binding. Both macOS jobs also bundle and
+execute the managed `.app` through the GUI/IPC smoke flow. Logs, environment
+details, test revision and exact package hashes are retained as seven-day
+`package-consumer-RID-netMAJOR` artifacts. All six must pass before the
 draft Release job runs. See [SDK compatibility](dotnet-compatibility.md).
 
 The final job creates a **draft Release**, attaches the ZIP and its SHA-256
@@ -84,7 +89,9 @@ Release in this public repository is public. Tags, source code, Actions logs
 and workflow artifacts in a public repository are not a private distribution
 channel; a draft only delays publication of the Release page/assets.
 
-Source CI covers all four platforms. The additional package-consumer check is
-Linux-only; full package-consumer GUI testing and installer lifecycle checks
-on every supported platform remain separate release acceptance work. These
+Source and package-consumer CI cover all four desktop RIDs. These hosted smoke
+checks do not establish physical-device acceptance, Windows/macOS package
+consumers on .NET 9/10, the macOS 12 minimum OS, or full installer lifecycle
+acceptance on every supported platform. Adding a job does not prove it passed;
+inspect the tagged workflow's evidence before making release claims. These
 packages do not provide Developer ID signing or macOS notarization.

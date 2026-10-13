@@ -26,6 +26,18 @@ try {
         foreach ($id in @('NetWiv.Hosting', 'NetWiv.Build')) {
             if (!$smoke.SelectSingleNode("//PackageReference[@Include='$id']")) { throw "Missing $id package probe." }
         }
+        $resources = @($smoke.SelectNodes('//EmbeddedResource') | Where-Object Include -like 'package-fixtures*')
+        if ($resources.Count -ne 3) { throw 'Expected all external smoke resources to be copied.' }
+        $repository = Split-Path $PSScriptRoot -Parent
+        $consumer = Join-Path $destination 'NetWiv.Desktop.Smoke'
+        foreach ($resource in $resources) {
+            if ([IO.Path]::IsPathRooted($resource.Include)) { throw 'Consumer resource still depends on an absolute checkout path.' }
+            $original = Join-Path $repository $resource.Include.Substring('package-fixtures/'.Length)
+            $copied = Join-Path $consumer $resource.Include
+            if ((Get-FileHash -LiteralPath $original).Hash -ne (Get-FileHash -LiteralPath $copied).Hash) {
+                throw "Copied resource differs from its fixture: $($resource.Include)"
+            }
+        }
         if (!(Test-Path (Join-Path $destination 'NetWiv.Plugin.CommandFixture/ExternalCommandPlugin.cs'))) { throw 'Fixture source missing.' }
         Write-Output "PASS $framework package consumer project: unique dependencies, separate plugin assembly, no framework source references"
     }

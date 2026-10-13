@@ -201,8 +201,8 @@ The `external opening` Core tests check launcher arguments and rejection paths
 without opening desktop applications. Local arm64 smoke checks also confirmed
 browser requests from Opener URL/`.webloc` opening and Shell URL opening;
 Finder selection itself still needs GUI acceptance.
-Explicit application selection remains unsupported. The OS plugin still identifies
-non-Windows hosts as Linux; consult the
+Explicit application selection remains unsupported. The OS plugin now reports
+macOS product versions and process architecture; consult the
 [plugin limits](official-plugins.md#macos-plugin-limits) before enabling them.
 
 Custom-protocol responses are queued to the native UI loop. A response submitted
@@ -271,9 +271,11 @@ to five seconds after test-owned WebViews are destroyed.
 
 The native build used `CARGO_PROFILE_RELEASE_STRIP=none` to avoid the pinned Rust
 toolchain's [Mach-O strip alignment issue](https://github.com/rust-lang/rust/issues/157750)
-on macOS 27. The ordinary managed desktop smoke reached and passed this data-store
-scenario, then failed its separate monitor-geometry check; this focused result is
-not a full desktop-smoke pass. Intel and macOS 12/13 execution remain unverified.
+on macOS 27. The initial ordinary smoke failed its separate monitor-geometry
+check because the connected display was asleep. Both unchanged managed and
+NativeAOT executables subsequently passed the full smoke with a temporary display
+wake; see the [display diagnostic](validation/macos-monitor-sleep/README.md).
+Intel and macOS 12/13 execution remain unverified.
 
 ---
 

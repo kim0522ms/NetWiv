@@ -89,6 +89,22 @@ Use `net10.0` for SDK 10, or omit the variable for the baseline. Test fixture
 applications follow the test runtime so nested `dotnet run/watch/publish`
 commands exercise that version too.
 
+Local package-consumer validation (2026-10-13), using the same 30-package
+`0.1.0-readiness.1` feed:
+
+| Host | Isolated SDK / runtime | Managed GUI/IPC | Package NativeAOT startup + binding |
+| --- | --- | --- | --- |
+| Physical Windows x64 | 8.0.406 / 8.0.13 | Framework-dependent and default self-contained passed | Passed |
+| Physical Apple M1, macOS 27.0 beta | 8.0.406 / 8.0.13 | Both modes and both `.app` bundles passed | Passed |
+| Ubuntu 24.04.4, WSL2/Xvfb x64 | 10.0.302 / 10.0.10 | Framework-dependent passed on runtime 10 | Passed |
+
+All three runs verified the exact feed hashes. See the
+[desktop readiness record](validation/desktop-readiness-2026-10-13.md) for
+source identity, environments, procedures, diagnostics and retained evidence.
+This package gate's AOT check is windowless startup; WSL/Xvfb is virtual/headless
+evidence. Intel Mac, minimum macOS, physical Linux and the remaining hosted
+matrix combinations were not established by these local package runs.
+
 Local validation on macOS 15.4 / Apple Silicon (2026-10-11):
 
 | Check | SDK 8.0.406 / net8.0 | SDK 9.0.200 / net9.0 | SDK 10.0.301 / net10.0 |

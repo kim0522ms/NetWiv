@@ -63,7 +63,18 @@ dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r win-x64
 ```
 
 On macOS, keep `App.Run()` on the process's original main thread and use a
-logged-in desktop session. Run the focused packaging checks with
+logged-in desktop session with an awake display. A sleeping display may be online
+while CoreGraphics reports no active monitors, causing the desktop smoke's
+`native monitor geometry` assertion to fail. For remote validation, temporarily
+keep the display awake for the executable's lifetime:
+
+```sh
+caffeinate -d -u -t 120 /path/to/publish/NetWiv.Desktop.Smoke
+```
+
+This does not change permanent power settings. See the
+[physical Mac diagnostic](validation/macos-monitor-sleep/README.md) for the
+before/after evidence. Run the focused packaging checks with
 `dotnet run --project tests/NetWiv.Cli.Tests -c Release -- --filter macOS`;
 they invoke real `cc`, `codesign`, `plutil` and `hdiutil`. The full CLI signer suite
 also needs the pinned minisign 0.12 executable; see [macOS setup](macos.md).

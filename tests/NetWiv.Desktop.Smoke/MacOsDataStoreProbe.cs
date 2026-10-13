@@ -51,13 +51,19 @@ internal static class MacOsDataStoreProbe
                 throw new Exception("SDK enumeration did not preserve the sixteen identifier bytes.");
             await RunPhase("remove", useIdentifier: false);
             await RunPhase("empty", useIdentifier: true);
-            Console.WriteLine("PASS macOS website data-store guest/SDK enumeration, active-store error, persistence, removal and recreation");
         }
         finally
         {
             // Only this random test-owned identifier is removed, never other application stores.
-            await AppApi.RemoveDataStoreAsync(app, identifier);
+            // WKWebView teardown can release its store asynchronously after Destroy.
+            for (var attempt = 0; ; attempt++)
+            {
+                try { await AppApi.RemoveDataStoreAsync(app, identifier); break; }
+                catch (InvokeException error) when (attempt < 100 && error.Message.Contains("data store is currently opened"))
+                { await Task.Delay(50); }
+            }
         }
+        Console.WriteLine("PASS macOS website data-store guest/SDK enumeration, active-store error, persistence, removal and recreation");
 
         async Task RunPhase(string phase, bool useIdentifier)
         {

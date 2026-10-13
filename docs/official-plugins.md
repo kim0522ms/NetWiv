@@ -86,8 +86,17 @@ from the core compatibility profile. Windows and Linux retain their existing
 .NET OS version and OS architecture values; full upstream version/architecture
 parity on those platforms is unverified. Windows managed and NativeAOT tests
 cover the current-host payload, command permissions and macOS-version query
-fixtures. macOS device execution, unchanged official guest execution and
-Rosetta/Intel macOS execution require separate evidence.
+fixtures. On a physical Apple Silicon Mac running macOS 27.0 (build 26A5388g),
+.NET SDK 8.0.406/runtime 8.0.13, the same filtered tests passed in managed and
+arm64 NativeAOT execution at revision `cedc31d4f7eb9c7f635b7b59d0706ce29de1113d`.
+They verified all seven initialization fields, including product version
+`27.0.0` and architecture `aarch64`, locale/hostname permission and deny rules,
+and version-query failure/timeout fixtures. Run the managed case with
+`dotnet run --project tests/NetWiv.Core.Tests -c Release -- --filter "official OS"`;
+publish with `dotnet publish tests/NetWiv.Core.Tests -c Release -r osx-arm64 -p:PublishAot=true -o artifacts/os-aot`,
+then run `artifacts/os-aot/NetWiv.Core.Tests --filter "official OS"`.
+These tests use the fake desktop runtime; unchanged official guest execution
+in WKWebView and Rosetta/Intel macOS execution require separate evidence.
 
 `NetWiv.Plugin.Cli` exposes application launch arguments through `@tauri-apps/plugin-cli`'s `getMatches()`. It is separate from the `netwiv` CLI used to create and build projects. Application CLI configuration currently supports names, short options, positional arguments, required values, multiple values, allowed values, and subcommands. Unsupported clap features, including conditional constraints and help output, are explicitly rejected.
 
@@ -113,7 +122,7 @@ Core WKWebView support does not imply that every official plugin has macOS OS in
 
 | Area | Current macOS scope |
 | --- | --- |
-| OS information | macOS platform/type, Unix family/EOL, product version and executing-app architecture are implemented. Windows host tests cover permissions and macOS-version query fixtures; macOS device execution, unchanged official guest execution and Rosetta/Intel execution require separate evidence. |
+| OS information | macOS platform/type, Unix family/EOL, product version and executing-app architecture are implemented. Managed and arm64 NativeAOT payload/permission/query-fixture tests passed on a physical Apple Silicon Mac. Unchanged official guest execution in WKWebView and Rosetta/Intel execution require separate evidence. |
 | External opening | Opener URL/path operations and Shell `open` use `/usr/bin/open` on macOS; Opener reveal uses `open -R` to select the item in Finder. Linux retains `xdg-open` (reveal opens the containing directory). Explicit application selection remains unsupported. |
 | Autostart and DeepLink | OS registration/query/removal paths reject macOS. Parsing explicitly supplied launch URLs is separate from OS URL activation. |
 | Log and persisted scope | Shared managed persistence is available. Core's macOS app log path is `~/Library/Logs/<identifier>`; managed regression checks do not establish installed-app behavior. |

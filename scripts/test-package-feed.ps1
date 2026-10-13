@@ -40,16 +40,25 @@ try {
         Start-Transcript -LiteralPath (Join-Path $EvidenceDirectory 'package-consumer.log') | Out-Null
         $transcribing = $true
         & dotnet --info | Set-Content -LiteralPath (Join-Path $EvidenceDirectory 'dotnet-info.txt')
+        $sourceRecord = Join-Path (Split-Path $Feed) 'SOURCE.txt'
+        if (Test-Path -LiteralPath (Join-Path $repository '.git')) {
+            $revision = & git -C $repository rev-parse HEAD
+            if ($LASTEXITCODE -ne 0) { throw 'Could not identify the tested source revision.' }
+        }
+        elseif ((Test-Path -LiteralPath $sourceRecord) -and
+            (Get-Content -LiteralPath $sourceRecord -Raw) -match '(?m)^(?:Source commit: )?([0-9a-f]{40})\s*$') {
+            $revision = $Matches[1]
+        }
+        else { throw 'A source checkout or SOURCE.txt with the full source commit is required for evidence.' }
         @{
             version = $Version
             targetFramework = $TargetFramework
-            revision = (& git -C $repository rev-parse HEAD)
+            revision = $revision
             os = [System.Runtime.InteropServices.RuntimeInformation]::OSDescription
             architecture = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString()
             packages = @(Get-ChildItem -LiteralPath $Feed -Filter '*.nupkg' | Get-FileHash -Algorithm SHA256 |
                 Select-Object @{Name='file';Expression={Split-Path $_.Path -Leaf}}, Hash)
         } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $EvidenceDirectory 'provenance.json')
-        $sourceRecord = Join-Path (Split-Path $Feed) 'SOURCE.txt'
         if (Test-Path -LiteralPath $sourceRecord) {
             Copy-Item -LiteralPath $sourceRecord -Destination (Join-Path $EvidenceDirectory 'SOURCE.txt')
         }

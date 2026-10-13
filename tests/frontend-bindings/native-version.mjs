@@ -9,11 +9,9 @@ const dotnet = process.env.NETWIV_DOTNET ?? 'dotnet';
 const root = path.join(process.env.NETWIV_TEST_ARTIFACTS ?? path.join(repo, 'artifacts'), `native-version-${process.platform}-${Date.now()}`);
 const rid = process.platform === 'win32' ? 'win-x64' : 'linux-x64';
 await mkdir(root, { recursive: true });
-const checks = [];
 function run(command, args, cwd = repo) {
-  const result = spawnSync(command, args, { cwd, env: { ...process.env, DOTNET_CLI_USE_MSBUILD_SERVER: '0', MSBUILDDISABLENODEREUSE: '1' }, encoding: 'utf8', timeout: 300000 });
-  process.stdout.write(result.stdout ?? ''); process.stderr.write(result.stderr ?? '');
-  assert.equal(result.status, 0, result.error?.message ?? `Failed: ${command} ${args.join(' ')}`);
+  const result = spawnSync(command, args, { cwd, env: { ...process.env, DOTNET_CLI_USE_MSBUILD_SERVER: '0', MSBUILDDISABLENODEREUSE: '1' }, stdio: 'ignore', timeout: 300000 });
+  assert.equal(result.status, 0, 'Child verification command failed');
 }
 run(dotnet, ['build', 'src/NetWiv.Cli', '-c', 'Release', '--disable-build-servers']);
 run(dotnet, [path.join(repo, 'src/NetWiv.Cli/bin/Release/net8.0/netwiv.dll'), 'init', '--ci', '--directory', root, '--app-name', 'VersionProbe', '--netwiv-source', repo]);
@@ -45,7 +43,4 @@ internal static class Program {
 // Direct publish uses the raw path-valued configuration, not CLI normalization.
 run(dotnet, ['publish', 'src-netwiv', '-c', 'Release', '-r', rid, '-p:PublishAot=true', '-p:TreatWarningsAsErrors=true', '--disable-build-servers', '-o', path.join(root, 'publish')], root);
 run(path.join(root, 'publish', 'NetWiv.App' + (process.platform === 'win32' ? '.exe' : '')), [], root);
-checks.push('direct NativeAOT publish resolves package.json into runtime and assembly metadata');
-if (process.platform === 'win32') checks.push('actual NativeAOT PE resource contains 1.2.3.42');
-await writeFile(path.join(root, 'report.json'), JSON.stringify({ status: 'passed', rid, checks }, null, 2));
-console.log('Report: ' + path.join(root, 'report.json'));
+console.log('Native version verification passed.');

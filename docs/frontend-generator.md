@@ -266,17 +266,8 @@ node tests/frontend-bindings/run.mjs /path/to/feed PACKAGE_VERSION PACKAGE_VERSI
 ```
 
 For direct `dotnet new` validation, omit `--new` and supply an SDK version and
-a template version whose packages are both available in that feed. The harness
-writes package hashes and per-check outcomes to `report.json` in its output
-directory. Report format 2 uses fixed relative source/consumer identities and
-package IDs, retains only numeric version components (prerelease/build labels
-are withheld), and reports failures with fixed stage/code values. Exact package
-identity remains available through SHA-256 hashes. Publish only `report.json`;
-raw commands, child output and exceptions in `local-diagnostics/`, the generated
-consumer and caches contain private paths and must remain local. The regression
-`node --test scripts/frontend-report.test.mjs` executes the harness with synthetic
-private paths and fake tools; it tests report privacy, not WebView or NativeAOT
-behavior.
+a template version whose packages are both available in that feed. The generated
+consumer, package caches and build outputs are local test artifacts.
 
 Linux can set `NETWIV_DOTNET` to an absolute dotnet executable,
 `NETWIV_GUI_LAUNCHER` to `scripts/run-linux-smoke-desktop.sh`,

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PublishAot>true</PublishAot>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/NetWiv.Platform.Desktop/NetWiv.Platform.Desktop.csproj" />
+    <EmbeddedResource Include="wwwroot/**/*" LogicalName="netwiv.assets.%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../conformance/dist/vendor/@tauri-apps/api/**/*.js" LogicalName="netwiv.assets.vendor/@tauri-apps/api/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <Target Name="RequirePinnedGuest" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('../conformance/dist/vendor/@tauri-apps/api/menu.js')" Text="Run node tests/conformance/scripts/build-frontend.mjs before building the menu/tray smoke." />
+  </Target>
+</Project>

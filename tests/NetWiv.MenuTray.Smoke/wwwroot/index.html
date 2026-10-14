@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Menu and tray probe</title>
+<style>body{font:16px system-ui;margin:24px;max-width:780px}button{padding:8px;margin:4px}label{display:block;margin:12px 0}output{display:block;white-space:pre-wrap;margin:16px 0}fieldset{margin:16px 0}</style></head><body>
+<h1>macOS menu and tray check</h1>
+<p>This probe uses unchanged @tauri-apps/api. Successful calls alone do not verify native presentation. Confirm each visible result after interacting with the native UI.</p>
+<fieldset><legend>Application menu</legend>
+<p>Open Assistance and use its Search field to find Application → “Probe action”. Choose the result, then select its highlighted Application command. Confirm that the Help action counter increases. Open Scenes, select the secondary window, then return here using Scenes. Open Application → About menu probe.</p>
+<p>Setup refreshes the two test-owned window titles through the public API after assigning the Scenes role, so AppKit registers these pre-existing windows.</p>
+<label><input type="checkbox" id="help"> Assistance has a working Search field</label>
+<label><input type="checkbox" id="windows"> Scenes lists both windows and switches between them</label>
+<label><input type="checkbox" id="about"> About displays “NetWiv menu probe”, both version values “1.2”/“1.2.3” and “NETWIV CREDITS CHECK”</label>
+</fieldset>
+<fieldset><legend>Tray image</legend>
+<p>The NW tray begins as a template ring. Perform these mutations in order and inspect NW after each.</p>
+<label><input type="checkbox" id="initial"> Initial template ring is monochrome and has a transparent center/background</label>
+<button id="color" disabled>1. Replace with color icon</button>
+<label><input type="checkbox" id="colored"> Replacement ring is red</label>
+<button id="template" disabled>2. Mark current icon as template</button>
+<label><input type="checkbox" id="templated"> Current red ring becomes monochrome</label>
+<button id="replace" disabled>3. Replace with template square</button>
+<label><input type="checkbox" id="replaced"> Replacement square is monochrome with a transparent background</label>
+</fieldset>
+<fieldset><legend>Tray input and menu mutation</legend>
+<p>Left-click NW: no menu should open, and Left Down/Up counts should increase. Right-click NW and select “Tray action”. Then enable left-click menus, left-click NW and select “Tray action”.</p>
+<label><input type="checkbox" id="left-off"> Left click initially sends Down/Up without opening a menu</label>
+<button id="left" disabled>4. Enable left-click menu</button>
+<button id="swap" disabled>5. Replace tray menu</button>
+<p>After replacing the menu, right-click NW and select “Replacement action”; the old action must be absent.</p>
+<label><input type="checkbox" id="menu-replaced"> Replacement menu contains the new action and no old action</label>
+</fieldset>
+<output id="status" role="status">Preparing native menus and tray…</output>
+<button id="finish" disabled>Finish and remove tray</button>
+<script type="module" src="./probe.js"></script>
+</body></html>

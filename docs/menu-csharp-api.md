@@ -93,11 +93,21 @@ ownership changes. Context menus use the owning native view.
 
 The official guest methods `Submenu.setAsHelpMenuForNSApp` and
 `Submenu.setAsWindowsMenuForNSApp` forward to muda's NSApplication roles.
+Attach the submenu to the current application menu before assigning its role;
+muda resolves the live AppKit submenu after attachment. A role call returning
+success for an unattached submenu does not establish that macOS assigned it.
 `NativeIcon` values and About metadata, including credits, are forwarded on
-macOS. Native menu selection and checked-state changes have been exercised in
-a real Apple Silicon app; every role, system-icon appearance and About-field
-presentation have not been verified. See [API status](api-status.md) and
+macOS. Managed and NativeAOT runs on physical macOS arm64 verified Help Search,
+window-menu switching, About name/version/credits, tray template/color/icon
+replacement, left/right menu actions and cleanup. Other roles, system icons and
+About fields remain unverified. See [API status](api-status.md) and
 [macOS limits](macos.md#validation-and-limits).
+
+The maintained [menu/tray smoke](../tests/NetWiv.MenuTray.Smoke/README.md) uses
+unchanged pinned guest modules. It requires real menu and tray selections,
+then separate manual confirmation of the Help Search field, Window switching,
+About credits and template-icon rendering. Its managed build and wire tests
+alone do not verify those native presentation and input behaviors.
 
 ---
 

@@ -46,7 +46,7 @@ do not run Cargo or require the source archive.
 
 ## Linux tray validation
 
-The pinned `tray-icon` 0.24.2 GTK backend uses
+The pinned `tray-icon` 0.25.1 `libappindicator` backend uses
 `libappindicator::AppIndicator`. A bare WSLg Wayland session does not provide a
 StatusNotifierWatcher or another tray host. Ayatana AppIndicator then falls
 back to `GtkStatusIcon`, which is not a usable tray implementation on pure
@@ -65,6 +65,36 @@ mark tray interaction as skipped when no tray host exists. Tray creation,
 interaction, visibility changes, and removal must be tested in a prepared
 desktop with a StatusNotifier host; the first milestone also records the X11
 result separately.
+
+## Menu and tray dependency update
+
+NetWiv pins `tray-icon` 0.25.1 and its shared menu dependency `muda` 0.20.0.
+The tray update includes the [macOS 27 left-click fix](https://github.com/tauri-apps/tray-icon/pull/365):
+the status item's menu is attached only while it is presented, so AppKit does
+not swallow left-click events when `showMenuOnLeftClick` is false. Linux keeps
+GTK3/AppIndicator (`libappindicator`), and Windows keeps common controls v6
+(`muda-common-controls-v6`); the optional `ksni` and GTK4 backends are not enabled.
+The C ABI and managed/guest APIs do not change. Framework maintainers must
+rebuild every native RID; package consumers continue to use prebuilt assets.
+
+The required muda update changes observable behavior relative to the pinned
+Tauri reference. On Windows, detached check items retain their checked state.
+Unsupported predefined items now remain visible as disabled entries instead
+of being omitted: `Fullscreen`, `HideOthers`, `ShowAll`, `Services` and
+`BringAllToFront` on Windows; `Undo`, `Redo`, `Minimize`, `Maximize`, `Fullscreen`,
+`Hide`, `HideOthers`, `ShowAll`, `CloseWindow`, `Quit`, `Services` and
+`BringAllToFront` on GTK3. Applications that want to omit these entries should
+leave them out of the platform's menu definition. These differences are
+deliberate consequences of adopting the maintained upstream tray fix rather
+than maintaining a local fork; they are not Tauri compatibility passes.
+macOS supports all predefined kinds exposed by NetWiv.
+
+Validation must cover creation and `setMenu`, toggling `setShowMenuOnLeftClick`,
+left-click events without a popup when false, left-click/right-click menu
+presentation, and hide/show/remove lifetimes. Menu replacement and accelerator
+dispatch, checked-state retention and unsupported-item rendering require
+separate regressions. A compile or serialized event test does not prove AppKit
+mouse routing; use the menu/tray desktop probe on the affected macOS version.
 
 ## IPC frame boundary
 

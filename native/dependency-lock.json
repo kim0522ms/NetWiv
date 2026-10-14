@@ -77,18 +77,18 @@
       "features": ["rwh_06", "x11@linux", "dbus@linux"]
     },
     "muda": {
-      "version": "0.19.3",
-      "checksum": "1dd04e60bc0b07438a6771710ee1698f98f6ebbc7f89b61264af1563b8aeb878",
-      "features": ["serde", "gtk@linux", "common-controls-v6@windows"]
+      "version": "0.20.0",
+      "checksum": "cca139e57da4383727f189e43e66e84fa372347027fc996f9f1a007ec0a37996",
+      "features": ["serde", "gtk3@linux", "common-controls-v6@windows"]
     },
     "notify-rust": {
       "version": "4.11.0",
       "checksum": "5312f837191c317644f313f7b2b39f9cb1496570c74f7c17152dd3961219551f"
     },
     "tray-icon": {
-      "version": "0.24.2",
-      "checksum": "045979e3f037cd18ad1cb2a419dfda133c5c29c9f3453370079f2255d46c257e",
-      "features": ["serde", "gtk@linux", "common-controls-v6@windows"]
+      "version": "0.25.1",
+      "checksum": "b2b9c52859a94554803ccd4a24b98f74148ebc73b90676d783f3490b1bff9d72",
+      "features": ["serde", "libappindicator@linux", "muda-common-controls-v6@windows"]
     },
     "url": {
       "version": "2.5.8",

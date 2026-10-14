@@ -395,3 +395,45 @@ fn menu_enumeration_returns_independent_handles_and_remove_at_is_nullable() {
         Value::Null
     );
 }
+
+#[cfg(target_os = "windows")]
+#[test]
+fn detached_check_items_preserve_checked_state_independently_of_enabled() {
+    let menu = muda::Menu::new();
+    let item = muda::CheckMenuItem::new("Checked", true, false, None);
+    let native = super::menus::MenuNative::Check(item.clone());
+    assert!(!native.checked().unwrap());
+    menu.append(&item).unwrap();
+    native.set_checked(true).unwrap();
+    assert!(native.checked().unwrap());
+    menu.remove(&item).unwrap();
+    native.set_enabled(false).unwrap();
+    assert!(native.checked().unwrap());
+    native.set_checked(false).unwrap();
+    native.set_enabled(true).unwrap();
+    assert!(!native.checked().unwrap());
+}
+
+#[cfg(target_os = "windows")]
+#[test]
+fn unsupported_predefined_items_remain_in_native_menu_as_disabled_entries() {
+    use muda::ContextMenu;
+    use windows::Win32::UI::WindowsAndMessaging::{GetMenuItemCount, GetMenuState, HMENU, MF_BYPOSITION, MF_GRAYED};
+    let menu = muda::Menu::with_items(&[
+        &muda::PredefinedMenuItem::fullscreen(None),
+        &muda::PredefinedMenuItem::hide_others(None),
+        &muda::PredefinedMenuItem::show_all(None),
+        &muda::PredefinedMenuItem::services(None),
+        &muda::PredefinedMenuItem::bring_all_to_front(None),
+    ]).unwrap();
+    let handle = HMENU(menu.hpopupmenu() as _);
+    // SAFETY: the native handle belongs to the live test-owned menu.
+    unsafe {
+        assert_eq!(GetMenuItemCount(Some(handle)), 5);
+        for position in 0..5 {
+            let state = GetMenuState(handle, position, MF_BYPOSITION);
+            assert_ne!(state, u32::MAX);
+            assert_ne!(state & MF_GRAYED.0, 0);
+        }
+    }
+}

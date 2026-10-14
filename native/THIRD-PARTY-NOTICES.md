@@ -7,7 +7,7 @@ Verbatim license and NOTICE candidates are stored by SHA-256 under
 `native/third-party-licenses/texts`; `manifest.json` maps each package and original filename
 to those bytes and explicitly marks packages for which no candidate was found.
 
-Cargo.lock SHA-256: `a445a0f9bb23a0af8407fcb49badc02a8e679dccc0631a7807d15630d5cb791e`
+Cargo.lock SHA-256: `669d490dffe427341a0ed382920440c269cbebca4cc696c2aabd55250d154b1f`
 
 Regenerate this file with `node native/generate-third-party-notices.mjs` after changing
 the native dependency graph.
@@ -116,6 +116,7 @@ the native dependency graph.
 | digest | 0.10.7 | MIT OR Apache-2.0 | https://github.com/RustCrypto/traits | 2 |
 | dirs | 4.0.0 | MIT OR Apache-2.0 | https://github.com/soc/dirs-rs | 2 |
 | dirs | 6.0.0 | MIT OR Apache-2.0 | https://github.com/soc/dirs-rs | 2 |
+| dirs | 7.0.0 | MIT OR Apache-2.0 | https://codeberg.org/dirs/dirs-rs | 2 |
 | dirs-next | 2.0.0 | MIT OR Apache-2.0 | https://github.com/xdg-rs/dirs | 2 |
 | dirs-sys | 0.3.7 | MIT OR Apache-2.0 | https://github.com/dirs-dev/dirs-sys-rs | 2 |
 | dirs-sys | 0.5.0 | MIT OR Apache-2.0 | https://github.com/dirs-dev/dirs-sys-rs | 2 |
@@ -250,6 +251,7 @@ the native dependency graph.
 | jsonptr | 0.6.3 | MIT OR Apache-2.0 | https://github.com/chanced/jsonptr | 2 |
 | k256 | 0.13.4 | Apache-2.0 OR MIT | https://github.com/RustCrypto/elliptic-curves/tree/master/k256 | 2 |
 | keyboard-types | 0.7.0 | MIT OR Apache-2.0 | https://github.com/pyfisch/keyboard-types | 2 |
+| keyboard-types | 0.8.3 | MIT OR Apache-2.0 | https://github.com/rust-windowing/keyboard-types | 2 |
 | libappindicator | 0.9.0 | Apache-2.0 OR MIT | https://crates.io/crates/libappindicator/0.9.0 | 2 |
 | libappindicator-sys | 0.9.0 | Apache-2.0 OR MIT | https://crates.io/crates/libappindicator-sys/0.9.0 | 2 |
 | libc | 0.2.189 | MIT OR Apache-2.0 | https://github.com/rust-lang/libc | 2 |
@@ -272,7 +274,7 @@ the native dependency graph.
 | miniz_oxide | 0.8.9 | MIT OR Zlib OR Apache-2.0 | https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide | 4 |
 | miniz_oxide | 0.9.1 | MIT OR Zlib OR Apache-2.0 | https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide | 4 |
 | moxcms | 0.8.1 | BSD-3-Clause OR Apache-2.0 | https://github.com/awxkee/moxcms.git | 2 |
-| muda | 0.19.3 | Apache-2.0 OR MIT | https://github.com/tauri-apps/muda | 3 |
+| muda | 0.20.0 | Apache-2.0 OR MIT | https://github.com/tauri-apps/muda | 3 |
 | ndk | 0.9.0 | MIT OR Apache-2.0 | https://github.com/rust-mobile/ndk | 2 |
 | ndk-context | 0.1.1 | MIT OR Apache-2.0 | https://github.com/rust-windowing/android-ndk-rs | 2 |
 | ndk-sys | 0.6.0+11769913 | MIT OR Apache-2.0 | https://github.com/rust-mobile/ndk | 2 |
@@ -456,7 +458,7 @@ the native dependency graph.
 | tracing | 0.1.44 | MIT | https://github.com/tokio-rs/tracing | 1 |
 | tracing-attributes | 0.1.31 | MIT | https://github.com/tokio-rs/tracing | 1 |
 | tracing-core | 0.1.36 | MIT | https://github.com/tokio-rs/tracing | 1 |
-| tray-icon | 0.24.2 | MIT OR Apache-2.0 | https://github.com/tauri-apps/tray-icon | 3 |
+| tray-icon | 0.25.1 | MIT OR Apache-2.0 | https://github.com/tauri-apps/tray-icon | 3 |
 | tree_magic_mini | 3.2.2 | MIT | https://github.com/mbrubeck/tree_magic/ | 1 |
 | typed-path | 0.12.3 | MIT OR Apache-2.0 | https://github.com/chipsenkbeil/typed-path | 2 |
 | typeid | 1.0.3 | MIT OR Apache-2.0 | https://github.com/dtolnay/typeid | 2 |

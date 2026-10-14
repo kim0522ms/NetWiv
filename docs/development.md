@@ -161,9 +161,11 @@ The integration script's CLI already includes `netwiv new` with all 18 choices.
 
 Validate package-only consumers against the exact packages intended for release,
 including NativeAOT execution, frontend IPC and installer lifecycle on each
-supported platform. State the checks performed, results, skips and missing
-dependencies in the PR; do not add evidence collection or report storage to code
-or CI/CD.
+supported platform. The Windows package-consumer check runs each managed
+deployment from a separate copy, keeping WebView2 profile locks out of the
+build output that the next deployment mode cleans. State the checks performed,
+results, skips and missing dependencies in the PR; do not add evidence collection
+or report storage to code or CI/CD.
 See [support and validation](implementation-status.md) for outstanding coverage.
 
 ---

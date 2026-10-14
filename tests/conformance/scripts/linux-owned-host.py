@@ -42,25 +42,28 @@ finally:
     except ProcessLookupError:
         pass
     code = host.wait()
-    # Only our direct/adopted children are inspected. Repeating handles a child
-    # that created its own session and descendants adopted as its parent exits.
-    children = Path(f"/proc/self/task/{os.getpid()}/children")
+    # Reap until ECHILD, independently of PID 1 and the optional procfs
+    # task/children entry (which requires CONFIG_CHECKPOINT_RESTORE).
     while True:
-        owned = children.read_text().split()
-        if not owned:
+        try:
+            reaped, _ = os.waitpid(-1, os.WNOHANG)
+        except ChildProcessError:
             break
-        for child in owned:
+        if reaped:
+            continue
+        # A live adopted child may have created a separate session. Standard
+        # procfs stat exposes PPID even when task/children is unavailable. Only
+        # signal our children; their PIDs cannot be reused until we reap them.
+        for entry in Path('/proc').iterdir():
+            if not entry.name.isdecimal():
+                continue
             try:
-                os.kill(int(child), signal.SIGKILL)
-            except ProcessLookupError:
+                fields = (entry / 'stat').read_bytes().rpartition(b')')[2].split()
+                if int(fields[1]) == os.getpid():
+                    os.kill(int(entry.name), signal.SIGKILL)
+            except (FileNotFoundError, ProcessLookupError, PermissionError):
+                # Unrelated processes can disappear or be hidden by procfs.
                 pass
-        while True:
-            try:
-                reaped, _ = os.waitpid(-1, os.WNOHANG)
-            except ChildProcessError:
-                break
-            if reaped == 0:
-                break
         time.sleep(0.01)
 
 sys.exit(code if code >= 0 else 128 - code)

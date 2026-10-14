@@ -54,7 +54,9 @@ On Windows, the runner uses system Windows PowerShell to place each suspended
 host in a kill-on-close Job Object before it starts. This also cleans descendants
 after the host exits. Linux requires Python 3 and uses a child subreaper that
 terminates and waits for owned descendants before exiting, including when PID 1
-does not reap or a child creates a separate session. macOS uses an owned process
+does not reap or a child creates a separate session. Reaping uses `waitpid`;
+live adopted children are identified by PPID in standard `/proc/<pid>/stat`,
+without requiring the optional procfs `task/children` entry. macOS uses an owned process
 group. The isolation runner shares these launchers. No process inventory or
 execution report is retained.
 Availability skips require an exact known upstream/platform boundary and are

@@ -79,3 +79,26 @@ test('CLI runs the selected reference and candidate sequentially and compares in
   assert.match(output, /full gate not run/);
   assert.doesNotMatch(output, /NETWIV_CONFORMANCE|platform|architecture|Sha256/);
 });
+
+test('reaps a detached Linux descendant with non-UTF8 bytes and delimiters in its process name', { skip: process.platform !== 'linux' }, async () => {
+  const code = String.raw`
+import ctypes, json, os, time
+read, write = os.pipe()
+child = os.fork()
+if child == 0:
+    os.close(read)
+    os.setsid()
+    assert ctypes.CDLL(None).prctl(15, ctypes.c_char_p(b'child) \xff\n'), 0, 0, 0) == 0
+    os.write(write, b'1')
+    os.close(write)
+    time.sleep(30)
+    os._exit(0)
+os.close(write)
+assert os.read(read, 1) == b'1'
+os.close(read)
+print('NETWIV_CONFORMANCE ' + json.dumps(dict(type='case', name='name-bytes', status='pass', value=child)), flush=True)
+print('NETWIV_CONFORMANCE ' + json.dumps(dict(type='complete', count=1)), flush=True)
+`;
+  const values = await runHost(['python3', '-c', code], ['name-bytes']);
+  assert.throws(() => process.kill(values[0].value, 0), error => error.code === 'ESRCH');
+});

@@ -132,6 +132,10 @@ jobs:
           restore-keys: |
             nuget-${{ matrix.os }}-${{ matrix.rid }}-${{ hashFiles('global.json') }}-
 
+      - name: Prepare pinned NSIS compiler
+        if: runner.os == 'Windows'
+        run: node scripts/prepare-nsis.mjs
+
       - name: Windows installer lifecycle acceptance
         if: runner.os == 'Windows'
         timeout-minutes: 15
@@ -140,11 +144,9 @@ jobs:
           # Fail packaging acceptance before the expensive native and full-solution builds.
           dotnet build src/NetWiv.Cli -c Release
           if ($LASTEXITCODE -ne 0) { throw 'CLI build failed.' }
-          choco install nsis --version=3.11 -y --no-progress
-          if ($LASTEXITCODE -ne 0) { throw 'NSIS installation failed.' }
           $wixBin = Join-Path $env:WIX 'bin'
           if (-not (Test-Path (Join-Path $wixBin 'candle.exe'))) { throw 'WiX v3 is missing from the runner.' }
-          $env:PATH = "${env:ProgramFiles(x86)}\NSIS;$wixBin;$env:PATH"
+          $env:PATH = "$wixBin;$env:PATH"
           ./scripts/test-windows-installers.ps1
 
       - name: Install Linux build and desktop dependencies

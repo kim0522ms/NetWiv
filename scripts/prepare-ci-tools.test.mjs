@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -24,7 +24,10 @@ function fixture(t, script) {
       Object.defineProperty(process, 'arch', { value: process.env.TEST_ARCH })
       cp.execFileSync = (command, args) => {
         appendFileSync('commands.jsonl', JSON.stringify([command, args]) + '\\n')
-        if (process.env.TEST_EXEC_FAIL) throw new Error('fixture tool failed')
+        if (process.env.TEST_EXEC_FAIL === '1' ||
+            (process.env.TEST_EXEC_FAIL === 'version' && args[0] === '/VERSION'))
+          throw new Error('fixture tool failed')
+        if (args[0] === '/VERSION') return process.env.TEST_VERSION || 'v3.11\\n'
       }
       syncBuiltinESMExports()
     }
@@ -118,6 +121,54 @@ for (const rid of ['osx-arm64', 'osx-x64', 'linux-x64', 'win-x64']) {
     assert.match(f.run([rid, 'output']).stderr, /SHA-256 mismatch: LATEST.tar.gz/)
     f.write('native/Cargo.lock', '')
     assert.match(f.run([rid, 'output']).stderr, /does not match Cargo.lock/)
+  })
+}
+
+test('NSIS prepares the pinned compiler and exports its directory', t => {
+  const f = fixture(t, 'prepare-nsis.mjs')
+  const source = readFileSync(path.join(root, 'scripts/prepare-nsis.mjs'), 'utf8')
+  const bytes = 'verified NSIS archive fixture'
+  // Substitute only the archive checksum; network and subprocess fixtures exercise the script itself.
+  const pinnedHash = 'c7d27f780ddb6cffb4730138cd1591e841f4b7edb155856901cdf5f214394fa1'
+  assert.ok(source.includes(`const expected = '${pinnedHash}'`))
+  f.write('scripts/prepare-nsis.mjs', source.replace(pinnedHash, hash(bytes)))
+  f.write('download.bin', bytes)
+  const pathFile = path.join(f.directory, 'github-path')
+  const result = f.run([], { TEST_PLATFORM: 'win32', TEST_ARCH: 'x64', GITHUB_PATH: pathFile })
+  assert.equal(result.status, 0, result.stderr)
+  assert.match(result.stdout, /Verified NSIS v3\.11/)
+  assert.equal(readFileSync(path.join(f.directory, 'downloads.log'), 'utf8').trim(),
+    'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.11/nsis-3.11.zip')
+  const commands = readFileSync(path.join(f.directory, 'commands.jsonl'), 'utf8').trim().split('\n').map(JSON.parse)
+  assert.equal(commands[0][0], 'pwsh')
+  assert.match(commands[0][1].at(-1), /ErrorActionPreference = 'Stop'; Expand-Archive/)
+  assert.deepEqual(commands.at(-1)[1], ['/VERSION'])
+  assert.equal(readFileSync(pathFile, 'utf8'), `${path.join(realpathSync(f.directory), 'artifacts/tools/nsis-3.11/nsis-3.11')}\n`)
+})
+
+for (const [label, env, expected, commandCount] of [
+  ['unsupported host', { TEST_PLATFORM: 'linux' }, /supports Windows x64/, 0],
+  ['unsupported architecture', { TEST_ARCH: 'arm64' }, /supports Windows x64/, 0],
+  ['download failure', { TEST_STATUS: '503' }, /Download failed \(503\)/, 0],
+  ['checksum mismatch', { TEST_TAMPER: '1' }, /SHA-256 mismatch/, 0],
+  ['extraction failure', { TEST_EXEC_FAIL: '1' }, /fixture tool failed/, 1],
+  ['compiler failure', { TEST_EXEC_FAIL: 'version' }, /fixture tool failed/, 2],
+  ['wrong compiler version', { TEST_VERSION: 'v3.12' }, /NSIS version mismatch/, 2],
+]) {
+  test(`NSIS rejects ${label} without exporting its directory`, t => {
+    const f = fixture(t, 'prepare-nsis.mjs')
+    const source = readFileSync(path.join(root, 'scripts/prepare-nsis.mjs'), 'utf8')
+    const bytes = 'verified NSIS archive fixture'
+    f.write('scripts/prepare-nsis.mjs', source.replace(/(const expected = ')[a-f0-9]+(')/, `$1${hash(bytes)}$2`))
+    f.write('download.bin', env.TEST_TAMPER ? 'corrupt archive' : bytes)
+    const pathFile = path.join(f.directory, 'github-path')
+    const result = f.run([], { TEST_PLATFORM: 'win32', TEST_ARCH: 'x64', GITHUB_PATH: pathFile, ...env })
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, expected)
+    assert.throws(() => readFileSync(pathFile), { code: 'ENOENT' })
+    const commands = commandCount ? readFileSync(path.join(f.directory, 'commands.jsonl'), 'utf8').trim().split('\n') : []
+    if (!commandCount) assert.throws(() => readFileSync(path.join(f.directory, 'commands.jsonl')), { code: 'ENOENT' })
+    assert.equal(commands.length, commandCount)
   })
 }
 

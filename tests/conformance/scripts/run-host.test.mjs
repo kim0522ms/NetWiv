@@ -50,7 +50,7 @@ for (const exitParent of [true, false]) {
     };
     const code = `const {spawn}=require('node:child_process');
       const child=spawn(process.execPath,['-e',"process.send('ready');setInterval(()=>{},1000);"],
-        {detached:${process.platform === 'win32' && exitParent},stdio:['ignore',process.stdout,'ignore','ipc']});
+        {detached:${['win32', 'linux'].includes(process.platform) && exitParent},stdio:['ignore',process.stdout,'ignore','ipc']});
       child.once('message',()=>{console.log('NETWIV_TEST_CHILD '+child.pid);${exitParent ? 'process.exit(0)' : 'setInterval(()=>{},1000)'}});`;
     try {
       const timeout = exitParent ? 5000 : process.platform === 'win32' ? 5000 : 250;

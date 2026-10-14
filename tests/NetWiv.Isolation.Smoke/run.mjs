@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compare } from './compare.mjs';
-import { spawnOwnedHost } from '../conformance/scripts/run-host.mjs';
+import { spawnOwnedHost, stopOwnedTree } from '../conformance/scripts/run-host.mjs';
 
 export function runHost(command, host, timeoutMs = 70000, closeTimeoutMs = 2000) {
   return new Promise((resolve, reject) => {
@@ -17,23 +17,14 @@ export function runHost(command, host, timeoutMs = 70000, closeTimeoutMs = 2000)
       else if (!Array.isArray(cases) || !cases.length) reject(Error(`${host}: missing functional assertion result`));
       else resolve({ exitCode, cases });
     };
-    const terminate = () => {
-      if (!child.pid) return;
-      if (process.platform === 'win32') {
-        child.kill('SIGKILL');
-      } else {
-        try { process.kill(-child.pid, 'SIGKILL'); }
-        catch { child.kill('SIGKILL'); }
-      }
-    };
     const stop = error => {
       if (failure || settled) return;
       failure = error;
-      terminate();
+      stopOwnedTree(child);
       clearTimeout(cleanupTimer);
       cleanupTimer = setTimeout(() => {
         child.stdout.destroy();
-        child.kill('SIGKILL');
+        stopOwnedTree(child);
         finish(failure);
       }, closeTimeoutMs);
     };

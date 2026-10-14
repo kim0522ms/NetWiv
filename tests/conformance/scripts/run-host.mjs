@@ -104,6 +104,9 @@ exit [NetWivOwnedHost]::Run($arguments)
 `;
 
 export function spawnOwnedHost(command, options) {
+  if (process.platform === 'linux') return spawn('python3', [
+    fileURLToPath(new URL('./linux-owned-host.py', import.meta.url)), ...command
+  ], options);
   if (process.platform !== 'win32') return spawn(command[0], command.slice(1), options);
   return spawn('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand',
     Buffer.from(windowsLauncher, 'utf16le').toString('base64')], {
@@ -112,9 +115,12 @@ export function spawnOwnedHost(command, options) {
   });
 }
 
-function stopOwnedTree(child) {
+export function stopOwnedTree(child) {
   if (!child.pid) return;
-  if (process.platform === 'win32') {
+  if (process.platform === 'linux') {
+    // The subreaper must survive until all owned descendants have been waited.
+    child.kill('SIGTERM');
+  } else if (process.platform === 'win32') {
     // Kill the owned launcher handle; closing its job terminates the whole tree.
     child.kill('SIGKILL');
   } else {

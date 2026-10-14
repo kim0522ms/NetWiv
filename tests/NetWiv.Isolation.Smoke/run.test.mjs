@@ -32,7 +32,7 @@ async function descendant(mode) {
   try {
     const code = `const {spawn}=require('node:child_process');
       const child=spawn(process.execPath,['-e','process.send("ready");setInterval(()=>{},1000)'],
-        {detached:process.platform==='win32'&&${mode === 'exit'},stdio:['ignore',process.stdout,'ignore','ipc']});
+        {detached:${['win32', 'linux'].includes(process.platform) && mode === 'exit'},stdio:['ignore',process.stdout,'ignore','ipc']});
       child.once('message',()=>{
         console.log('isolation-child-pid:'+child.pid);
         ${row}
@@ -40,8 +40,8 @@ async function descendant(mode) {
       });`;
     const started = Date.now();
     const timeout = process.platform === 'win32' ? 5000 : 700;
-    if (mode === 'exit' && process.platform === 'win32') {
-      // The job closes as the host exits, so inherited stdout closes normally.
+    if (mode === 'exit' && ['win32', 'linux'].includes(process.platform)) {
+      // The owned launcher cleans descendants before it closes stdout.
       assert.deepEqual(await runHost(command(code), 'fixture', timeout, 300), { exitCode: 0, cases: result });
     } else await assert.rejects(runHost(command(code), 'fixture', timeout, 300),
       mode === 'exit' ? /stdout remained open/ : /timed out/);

@@ -26,6 +26,8 @@ Its key is generated per application instance and never sent to the parent.
 Core authenticates and decrypts the envelope before capability and command
 dispatch. Bundled asset CSP hashes and nonces use an HTML5 parser. The iframe
 protocol rejects cross-origin reads and serves only its secure index route.
+Every isolation invoke requires an authenticated envelope, including commands
+without arguments; an empty protocol body cannot bypass the hook.
 
 Wry registers an asynchronous IPC protocol. Fetch uses native request headers,
 WebView identity and document generation. Request injection exposes its JSON
@@ -40,7 +42,7 @@ use a plain header record for isolation invokes.
 frontend. After building both native executables:
 
 ```sh
-node tests/NetWiv.Isolation.Smoke/run.mjs /path/to/reference /path/to/NetWiv.Isolation.Smoke /path/to/results
+node tests/NetWiv.Isolation.Smoke/run.mjs /path/to/reference /path/to/NetWiv.Isolation.Smoke
 node --test tests/NetWiv.Isolation.Smoke/compare.test.mjs
 ```
 
@@ -48,17 +50,40 @@ On WSL, reference/build-linux.sh stages reference sources on a Linux filesystem
 because upstream codegen changes permissions unsupported on some shared Windows
 files. Set NETWIV_REFERENCE_TARGET to the Linux Cargo output directory. Run the
 Node comparison runner under scripts/run-linux-smoke-desktop.sh for X11 or
-Wayland. It refuses source edits during the pair. Both missing results and
-identical failures fail comparison.
+Wayland. Build both hosts from the same stable source before the pair. The
+runner consumes functional assertions from stdout in memory; it does not save
+reports, logs or source inventories. Missing results and identical public
+failures fail comparison.
 
-Seventeen cases exercise public behavior: queued startup, nested IPC values,
+Twenty-one cases exercise public behavior: queued startup, nested IPC values,
 three binary input shapes, header records/clone errors, structured errors,
 Channel ordering, hook blocking, origin boundaries, reload recovery and CSP
-fallback. Two additional NetWiv security regressions inject forged private
-messages or reuse old private callback IDs. They must pass on NetWiv. Pinned
-Tauri's failures are retained as observations, not counted as public conformance
+fallback. The added combinations check fallback Channel ordering, hook
+blocking, opaque-frame denial and successful IPC after a second reload.
+Three additional NetWiv security regressions inject forged private messages
+or reuse old private callback IDs after protocol and fallback requests.
+They must pass on NetWiv. Pinned
+Tauri's failures appear as observations, not counted as public conformance
 failures or passes. Direct mutation of `__TAURI_INTERNALS__` is outside the
 repository's public compatibility guarantee.
+
+The Core assertion harness separately covers isolation on/off, protocol/forced
+fallback and replacement/close combinations. Each combination starts with an
+allowed local invoke, denies a remote source carrying spoofed local payload
+and fallback headers, then verifies invocation cancellation and document-owned
+resource disposal. A late handler deliberately ignores cancellation to check
+fallback callback suppression. The fake runtime cannot establish browser frame
+attestation or delivery of protocol responses after navigation; those require
+the desktop fixture. These checks are NetWiv security regressions rather than
+additional upstream business-test comparisons.
+
+Windows x64 managed and NativeAOT desktop comparisons passed all twenty-one
+public cases and the three NetWiv security regressions. The integrated Linux
+X11 NativeAOT candidate also passed all twenty-four assertions under Xvfb with
+a tray host. That headless execution is not a paired reference comparison or
+physical Linux desktop acceptance. The integrated macOS arm64 NativeAOT
+candidate also passed all twenty-four assertions; its reference comparison and
+manual interaction remain unverified.
 
 This suite does not establish full API coverage, package-install acceptance or
 manual GUI acceptance. The upstream business-test parity gate remains open.
@@ -70,11 +95,10 @@ Mac desktop session:
 
 ```sh
 dotnet publish tests/NetWiv.Isolation.Smoke -c Release -r osx-arm64
-mkdir -p artifacts
-NETWIV_ISOLATION_REPORT="$PWD/artifacts/macos-isolation.json" tests/NetWiv.Isolation.Smoke/bin/Release/net8.0/osx-arm64/publish/NetWiv.Isolation.Smoke
+tests/NetWiv.Isolation.Smoke/bin/Release/net8.0/osx-arm64/publish/NetWiv.Isolation.Smoke
 ```
 
-Use `osx-x64` on Intel. Apple Silicon has passed the NetWiv encrypted IPC,
+Use `osx-x64` on Intel. Earlier Apple Silicon runs passed the NetWiv encrypted IPC,
 Channel, forged/opaque-frame, reload and fallback smoke. This single-host run is
 not the paired Tauri differential suite above; macOS reference comparison and
 Intel execution remain open. Do not apply WebKitGTK frame/CORS observations to

@@ -91,7 +91,7 @@ internal static class IsolationTests
 
     private static AssetResponse Response(IsolationPattern pattern) => pattern.Resolve(
         new(new Uri(pattern.Scheme + "://localhost/"), "GET", new Dictionary<string, string>(), WindowOrigin: "tauri://localhost"), new HashSet<string>(), new Dictionary<string, string>());
-    private static byte[] Key(IsolationPattern pattern)
+    internal static byte[] Key(IsolationPattern pattern)
     {
         var html = Encoding.UTF8.GetString(Response(pattern).Body.Span);
         const string marker = "const aesGcmKeyRaw = new Uint8Array(";
@@ -99,7 +99,7 @@ internal static class IsolationTests
         using var document = JsonDocument.Parse(html[start..html.IndexOf(')', start)]);
         return document.RootElement.EnumerateArray().Select(static element => element.GetByte()).ToArray();
     }
-    private static JsonElement Encrypt(byte[] key, byte[] bytes, bool binary)
+    internal static JsonElement Encrypt(byte[] key, byte[] bytes, bool binary)
     {
         var nonce = RandomNumberGenerator.GetBytes(12);
         var ciphertext = new byte[bytes.Length]; var tag = new byte[16];
@@ -107,7 +107,7 @@ internal static class IsolationTests
         cipher.Encrypt(nonce, bytes, ciphertext, tag);
         return JsonValue.Parse($$"""{"nonce":[{{string.Join(',', nonce)}}],"payload":[{{string.Join(',', ciphertext.Concat(tag))}}],"contentType":"{{(binary ? "application/octet-stream" : "application/json")}}"}""");
     }
-    private static string InvokeKey(FakeRuntime runtime)
+    internal static string InvokeKey(FakeRuntime runtime)
     {
         const string marker = "__NETWIV_INVOKE_KEY__: '";
         return runtime.Context!.InitializationScript.Substring(runtime.Context.InitializationScript.IndexOf(marker, StringComparison.Ordinal) + marker.Length, 64);

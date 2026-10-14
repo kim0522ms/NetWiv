@@ -12,37 +12,95 @@ window.addEventListener('securitypolicyviolation', event => {
   console.error('CSP', event.violatedDirective, event.blockedURI);
 });
 
+async function opaqueFrame(probe) {
+  const frame = document.createElement('iframe');
+  frame.sandbox.add('allow-scripts');
+  const secured = document.querySelector('#__tauri_isolation__');
+  let leaked = false;
+  let probeReady;
+  const started = new Promise(resolve => { probeReady = resolve; });
+  const receive = event => {
+    if (event.source === frame.contentWindow && event.data === 'probe-started') probeReady();
+    if (event.data?.cmd === 'echo' && event.data?.callback === 90909090) leaked = true;
+  };
+  window.addEventListener('message', receive);
+  frame.src = 'data:text/html,' + encodeURIComponent('<script>' + probe + '<\/script>');
+  document.body.append(frame);
+  try {
+    await Promise.race([started, delay(2000).then(() => { throw new Error('Origin probe did not execute'); })]);
+    await delay(150);
+    require(!leaked && secured.contentWindow !== frame.contentWindow, 'Foreign frame entered isolation');
+  } finally {
+    frame.remove();
+    window.removeEventListener('message', receive);
+  }
+}
+
+async function reloadWithPending(phase) {
+  const channel = new Channel(() => {});
+  const before = new Set(window.__TAURI_INTERNALS__.callbacks.keys());
+  invoke('pending', { channel });
+  const added = [...window.__TAURI_INTERNALS__.callbacks.keys()].filter(id => !before.has(id));
+  await invoke('wait_pending_started');
+  sessionStorage.setItem('old-callback', String(added[0]));
+  sessionStorage.setItem('old-channel', String(channel.id));
+  sessionStorage.setItem('isolation-results', JSON.stringify(results));
+  sessionStorage.setItem('isolation-reloaded', phase);
+  location.reload();
+}
+
 try {
-  if (sessionStorage.getItem('isolation-reloaded') === '1') {
+  const phase = sessionStorage.getItem('isolation-reloaded');
+  if (phase === '1' || phase === '2') {
     // Reuse the callback id from the previous document. A late reply must not hit it.
     const callbackId = Number(sessionStorage.getItem('old-callback'));
     let late = false;
     window.__TAURI_INTERNALS__.callbacks.set(callbackId, () => { late = true; });
     window.__TAURI_INTERNALS__.callbacks.set(Number(sessionStorage.getItem('old-channel')), () => { late = true; });
-    await test('reload discards old command and Channel callbacks', async () => {
+    await test(phase === '1' ? 'reload discards old command and Channel callbacks' : 'fallback reload discards old command and Channel callbacks', async () => {
       await invoke('wait_pending');
       await delay(100);
       require(!late, 'Old document callback was delivered after reload');
     }, 'netwiv-security');
-    await test('new isolation frame works after reload', async () => {
+    await test(phase === '1' ? 'new isolation frame works after reload' : 'new isolation frame works after fallback reload', async () => {
       require((await invoke('echo', { value: 'reloaded' })).filtered, 'Reload lost secure IPC');
     });
-    const policy = document.createElement('meta');
-    policy.httpEquiv = 'Content-Security-Policy';
-    policy.content = "connect-src 'none'";
-    document.head.append(policy);
-    const bytes = new Uint8Array([99, 1, 41, 65, 12, 78, 99]);
-    for (const [kind, value] of [['ArrayBuffer', bytes.slice(1, 6).buffer], ['DataView', new DataView(bytes.buffer, 1, 5)], ['number array', [1, 41, 65, 12, 78]]]) {
-      await test(`CSP fallback receives ${kind} as JSON bytes`, async () => {
-        const response = await invoke('body_info', value);
-        require(!response.binary && String(response.value) === '1,41,65,12,78', 'Fallback body kind or bytes changed');
+    if (phase === '2') {
+      sessionStorage.removeItem('isolation-reloaded');
+      sessionStorage.removeItem('isolation-results');
+      await invoke('complete', { results });
+    } else {
+      const probe = await fetch('iframe-probe.js').then(response => response.text());
+      const policy = document.createElement('meta');
+      policy.httpEquiv = 'Content-Security-Policy';
+      policy.content = "connect-src 'none'";
+      document.head.append(policy);
+      const bytes = new Uint8Array([99, 1, 41, 65, 12, 78, 99]);
+      for (const [kind, value] of [['ArrayBuffer', bytes.slice(1, 6).buffer], ['DataView', new DataView(bytes.buffer, 1, 5)], ['number array', [1, 41, 65, 12, 78]]]) {
+        await test(`CSP fallback receives ${kind} as JSON bytes`, async () => {
+          const response = await invoke('body_info', value);
+          require(!response.binary && String(response.value) === '1,41,65,12,78', 'Fallback body kind or bytes changed');
+        });
+      }
+      await test('CSP fallback preserves custom request headers and JSON', async () => {
+        const response = await invoke('request_info', { value: 42 }, { headers: { 'X-Test': 'fallback' } });
+        require(response.header === 'fallback' && response.value === 42 && !response.binary, 'Fallback request metadata changed');
       });
+      await test('CSP fallback Channel retains ordering', async () => {
+        const values = [];
+        await invoke('channel', { channel: new Channel(value => values.push(value)) });
+        await delay(100);
+        require(String(values) === '0,1,2,3,4', 'Fallback Channel order changed');
+      });
+      await test('CSP fallback retains isolation hook blocking', async () => {
+        let completed = false;
+        invoke('blocked').then(() => { completed = true; });
+        await delay(150);
+        require(!completed && await invoke('blocked_count') === 0, 'Fallback bypassed hook');
+      });
+      await test('CSP fallback denies opaque-origin iframe', () => opaqueFrame(probe));
+      await reloadWithPending('2');
     }
-    await test('CSP fallback preserves custom request headers and JSON', async () => {
-      const response = await invoke('request_info', { value: 42 }, { headers: { 'X-Test': 'fallback' } });
-      require(response.header === 'fallback' && response.value === 42 && !response.binary, 'Fallback request metadata changed');
-    });
-    await invoke('complete', { results });
   } else {
     sessionStorage.removeItem('isolation-results');
     await test('invoke queues before secure iframe ready', async () => {
@@ -106,39 +164,10 @@ try {
       window.__TAURI_INTERNALS__.unregisterCallback(id);
       require(!called && await invoke('blocked_count') === 0, 'Untrusted message entered native IPC');
     }, 'netwiv-security');
-    await test('opaque-origin iframe cannot invoke secure hook', async () => {
-      const frame = document.createElement('iframe');
-      frame.sandbox.add('allow-scripts');
-      const secured = document.querySelector('#__tauri_isolation__');
-      let leaked = false;
-      let probeReady;
-      const started = new Promise(resolve => { probeReady = resolve; });
-      const receive = event => {
-        if (event.source === frame.contentWindow && event.data === 'probe-started') probeReady();
-        if (event.data?.cmd === 'echo' && event.data?.callback === 90909090) leaked = true;
-      };
-      window.addEventListener('message', receive);
-      // Message originates from an opaque origin, rather than the configured parent origin.
-      const probe = await fetch('iframe-probe.js').then(response => response.text());
-      frame.src = 'data:text/html,' + encodeURIComponent('<script>' + probe + '<\/script>');
-      document.body.append(frame);
-      await Promise.race([started, delay(2000).then(() => { throw new Error('Origin probe did not execute'); })]);
-      await delay(150);
-      frame.remove();
-      window.removeEventListener('message', receive);
-      require(!leaked && secured.contentWindow !== frame.contentWindow, 'Foreign frame entered isolation');
-    });
+    await test('opaque-origin iframe cannot invoke secure hook', async () =>
+      opaqueFrame(await fetch('iframe-probe.js').then(response => response.text())));
     // The command acknowledges it started before navigation so the test cannot pass vacuously.
-    const channel = new Channel(() => {});
-    const before = new Set(window.__TAURI_INTERNALS__.callbacks.keys());
-    invoke('pending', { channel });
-    const added = [...window.__TAURI_INTERNALS__.callbacks.keys()].filter(id => !before.has(id));
-    await invoke('wait_pending_started');
-    sessionStorage.setItem('old-callback', String(added[0]));
-    sessionStorage.setItem('old-channel', String(channel.id));
-    sessionStorage.setItem('isolation-results', JSON.stringify(results));
-    sessionStorage.setItem('isolation-reloaded', '1');
-    location.reload();
+    await reloadWithPending('1');
   }
 } catch (error) {
   results.push({ name: 'suite', passed: false, error: String(error) });

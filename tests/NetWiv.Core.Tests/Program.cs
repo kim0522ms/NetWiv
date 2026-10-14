@@ -245,6 +245,8 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("upstream acl::capability::permission_entry_de", PermissionInputTests.PermissionEntryDe),
     ("capability parsing rejects malformed permissions and scopes", PermissionInputTests.InvalidInputs),
     ("isolation ciphertext authentication and secure asset boundaries", IsolationTests.CipherAndProtocolBoundaries),
+    ("IPC cross-condition isolation rejects missing envelopes", IpcBoundaryMatrixTests.IsolationRequiresEnvelope),
+    ("IPC cross-condition origin lifetime and resource boundaries", IpcBoundaryMatrixTests.OriginAndLifetime),
 };
 if (OperatingSystem.IsLinux())
     tests.Add(("official fs scope rejects a symlink escaping its allowed directory", FsPluginTests.SymlinkScope));

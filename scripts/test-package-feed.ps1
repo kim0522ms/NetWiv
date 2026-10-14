@@ -81,6 +81,14 @@ internal static class ManagedRuntimeProbe
             if (($mode -eq 'self-contained') -ne [bool]$runtimeConfig.runtimeOptions.includedFrameworks) {
                 throw "Generated $mode application has an unexpected runtime deployment policy."
             }
+            if ($IsWindows) {
+                # WebView2 can retain profile locks briefly after the app exits.
+                # Execute each deployment from its own copy so the next build
+                # can clean its output without racing browser shutdown.
+                $executionDirectory = Join-Path $workspace "managed-$mode"
+                Copy-Item -LiteralPath (Split-Path $managed) -Destination $executionDirectory -Recurse
+                $managed = Join-Path $executionDirectory (Split-Path $managed -Leaf)
+            }
             if ($IsLinux) {
                 $managedOutput = @(& xvfb-run -a bash (Join-Path $repository 'scripts/run-linux-smoke-desktop.sh') $managed x11 --smoke-test)
             }

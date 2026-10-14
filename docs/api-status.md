@@ -1,37 +1,42 @@
 # NetWiv API implementation status
 
-Core public API counts are a **2026-09-12 source-review snapshot**.
-Plugin and SDK descriptions include later contracts; execution results do not update automatically.
+Core classifications were reconciled with the source on **2026-10-13**.
+The classification checks dispatch paths, platform adapters, options and test
+definitions. It does not establish full desktop acceptance or every argument/error
+combination; feature-specific execution checks and limits are noted separately.
+Plugin rows remain feature-group inventories, not method-by-method audits.
 Targets: **Windows x64 / Linux x64 / macOS arm64 and x64**, official `@tauri-apps/api@2.11.1`.
 This is a source-based feature inventory, not a declaration of complete TAURI® equivalence or release acceptance.
 
-The macOS entries below reflect the new runtime paths; historical aggregate counts
-remain the dated snapshot and are not recalculated as compatibility passes.
+Implementation, declaration availability and validation are separate. Counts below
+are derived from the individual core rows, not from CI results or a completion score.
 
 ## Reading the status table
 
 | Status | Meaning |
 | --- | --- |
-| Implemented | An execution path exists within the stated scope. For types and constants, this means the official npm declaration is provided. It does not imply individual comparison or GUI acceptance. |
+| Declaration available | A type or constant is supplied by the unchanged official npm package. This does not establish the behavior of its members or options. |
+| Implemented | An execution path exists within the stated platform scope. This includes guest-only implementations and documented platform no-ops. It does not imply complete argument/error equivalence, individual comparison or GUI acceptance. |
 | Unsupported (intentional) | Deliberately rejected to preserve NetWiv runtime identity; this is a documented compatibility difference, not a pending implementation or a compatibility pass. |
 | Planned | Included in the support goals, with implementation or validation work remaining. This does not mean ready for use or scheduled for a specific release. |
-| Partial | Some behavior is available, with limits on features, platforms or validation. |
+| Partial | In the core inventory, part of the stated functional or platform scope is missing. Coarse plugin rows also retain their stated readiness limits; they are not method-level classifications. Core validation gaps are tracked separately. |
 | Not implemented | The feature is unavailable, including declarations that only return empty results or ignore options. Support timelines are announced separately. |
 
 - **Functions, objects, constructors, types, configuration fields and object members are distinct.** An implemented object/type does not imply every member is implemented. Options distinguish declarations from actual application.
 - APIs that provide behavior on at least one target OS identify that OS. Unimplemented Apple/mobile features remain explicitly marked. A no-op on an OS unsupported by upstream is not necessarily a NetWiv-specific compatibility defect.
 - Window behavior depends on the OS, window manager and WebView version. Linux child WebViews follow GTK Box layout. Read the [platform behavior notes](pinned-upstream-behavior.md) alongside this table.
 - The comparison column records only the **presence** of an [API fixture mapping](../compatibility/implementation-evidence.json). Comparison results apply to the tested source, platform and version. A missing mapping does not prove a missing implementation; a mapping does not establish full compatibility.
+- **Validation pending** is tracked in the behavior/limits column and the [validation backlog](#implementation-decisions-and-validation-backlog), independently of implementation status. All implemented rows retain this boundary, including rows without an individually named validation gap.
 - This table does not mark per-API GUI acceptance complete. See [support and validation](implementation-status.md) for NativeAOT, execution, GUI and package acceptance boundaries.
 
 ## Desktop plugins and extensions
 
-The updater runtime remains **Not implemented in v1**.
+Mobile targets and the updater runtime remain **Not implemented and excluded from project work scope**. Expansion of distribution notarization is also excluded. These are not deferred milestones; existing signing/packaging support is separate.
 The following feature groups cover official desktop plugins outside the core npm inventory. They do not enumerate every method of each plugin. Partial implementations do not count as full compatibility.
 
 | Feature ID | Feature | Status | Scope and alternatives |
 | --- | --- | --- | --- |
-| EXT-UPDATER | Update checks, downloads and installation | **Not implemented** | Outside v1. CLI signing support does not provide an updater runtime. |
+| EXT-UPDATER | Update checks, downloads and installation | **Not implemented** | Excluded from project work scope; not deferred. CLI signing support does not provide an updater runtime. |
 | EXT-DIALOG | Native open/save and message dialogs | **Planned** | `NetWiv.Plugin.Dialog` and the native rfd path are implemented. Windows/Linux/macOS GUI selection, cancellation, parent windows and custom buttons need validation. |
 | EXT-FS | Frontend file and directory read/write APIs | **Planned** | Main `NetWiv.Plugin.Fs` commands, scopes and binary IPC are implemented. Watching, the full file-option/metadata surface and upstream comparison remain incomplete. |
 | EXT-OS | OS information, hostname and locale | **Partial** | `NetWiv.Plugin.Os` reports macOS and its product version with process architecture. Windows x64 and Apple Silicon managed/NativeAOT payload and ACL tests passed. Unchanged official OS guest, Intel/Rosetta and minimum-macOS comparison remain unverified; see [OS information](official-plugins.md). |
@@ -57,7 +62,7 @@ The following feature groups cover official desktop plugins outside the core npm
 | EXT-WEBSOCKET | WebSocket client | **Planned** | `NetWiv.Plugin.Websocket` implements official guest `connect`/`send`, text/binary/close and Channel reception. Local echo and reload cleanup checks passed. Ping/Pong and some buffer/frame options are explicitly unsupported; TLS and upstream comparison remain incomplete. |
 | EXT-WINDOW-STATE | Window-state persistence and restoration | **Partial** | Official JS commands, JSON persistence, per-flag restoration, monitor checks, automatic startup restoration and normal-shutdown persistence are implemented. Maximized-window shutdown and restoration in a new process were verified on Windows/Linux X11. macOS save/relaunch restoration, forced-exit durability, Wayland position restoration and full upstream equivalence remain unverified. |
 | EXT-MAC | macOS runtime | **Partial** | WKWebView/AppKit, NativeAOT and app/DMG support; Apple Silicon integration checked. Intel execution and full conformance are unverified. See [macOS](macos.md). |
-| EXT-MOBILE | Android and iOS runtimes | **Not implemented** | Outside v1. |
+| EXT-MOBILE | Android and iOS runtimes | **Not implemented** | Excluded from project work scope; not deferred. |
 
 This is an implementation inventory, not a catalog of fully validated installations.
 `core.checkPermissions`, `requestPermissions` and `addPluginListener` forward commands to a target plugin; they do not provide these features automatically.
@@ -68,21 +73,21 @@ All **688 identifiers** in the [pinned declaration inventory](../compatibility/g
 
 **These are not independent feature counts or development completion percentages.** Window/WebviewWindow entry points for the same behavior, types and fields are counted separately.
 
-| Module | Total | Implemented | Planned | Not implemented | Has fixture mapping |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| [app](#module-app) | 17 | 11 | 0 | 6 | 11 |
-| [core](#module-core) | 28 | 28 | 0 | 0 | 15 |
-| [dpi](#module-dpi) | 46 | 46 | 0 | 0 | 46 |
-| [event](#module-event) | 15 | 15 | 0 | 0 | 4 |
-| [image](#module-image) | 14 | 14 | 0 | 0 | 8 |
-| [menu](#module-menu) | 123 | 120 | 0 | 3 | 56 |
-| [mocks](#module-mocks) | 6 | 6 | 0 | 0 | 4 |
-| [path](#module-path) | 34 | 34 | 0 | 0 | 33 |
-| [tray](#module-tray) | 35 | 32 | 0 | 3 | 4 |
-| [webview](#module-webview) | 56 | 51 | 0 | 5 | 13 |
-| [webviewWindow](#module-webviewwindow) | 100 | 96 | 0 | 4 | 6 |
-| [window](#module-window) | 214 | 198 | 0 | 16 | 44 |
-| **Total** | **688** | **651** | **0** | **37** | **244** |
+| Module | Total | Declaration available | Implemented | Partial | Not implemented | Intentional difference | Has fixture mapping |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| [app](#module-app) | 17 | 3 | 12 | 0 | 1 | 1 | 10 |
+| [core](#module-core) | 28 | 4 | 24 | 0 | 0 | 0 | 15 |
+| [dpi](#module-dpi) | 46 | 0 | 46 | 0 | 0 | 0 | 46 |
+| [event](#module-event) | 15 | 7 | 8 | 0 | 0 | 0 | 4 |
+| [image](#module-image) | 14 | 2 | 12 | 0 | 0 | 0 | 8 |
+| [menu](#module-menu) | 123 | 8 | 115 | 0 | 0 | 0 | 56 |
+| [mocks](#module-mocks) | 6 | 1 | 5 | 0 | 0 | 0 | 4 |
+| [path](#module-path) | 34 | 1 | 33 | 0 | 0 | 0 | 33 |
+| [tray](#module-tray) | 35 | 7 | 28 | 0 | 0 | 0 | 4 |
+| [webview](#module-webview) | 56 | 4 | 51 | 0 | 1 | 0 | 13 |
+| [webviewWindow](#module-webviewwindow) | 100 | 2 | 96 | 0 | 2 | 0 | 6 |
+| [window](#module-window) | 214 | 18 | 190 | 0 | 6 | 0 | 44 |
+| **Total** | **688** | **57** | **620** | **0** | **10** | **1** | **243** |
 
 ## Window-effect support
 
@@ -91,54 +96,87 @@ the Linux no-op behavior; this does not establish visual-effect or full GUI equi
 
 | API identifier | Kind | Status | Behavior and limits | Source | Comparison fixtures |
 | --- | --- | --- | --- | --- | --- |
-| `webviewWindow.WebviewWindow.setEffects` | Object member | **Implemented** | Apply/remove Windows and macOS effects with full argument validation. Linux performs the same validation, then follows upstream's no-op behavior. | [N] | 1 mapped |
-| `window.Window.setEffects` | Object member | **Implemented** | Apply/remove Windows and macOS effects with full argument validation. Linux performs the same validation, then follows upstream's no-op behavior. | [N] | 1 mapped |
+| `webviewWindow.WebviewWindow.setEffects` | Object member | **Implemented** | Apply/remove Windows and macOS effects with full argument validation. macOS replacement and clearing deliberately differ from pinned upstream behavior; native view lifecycle is checked separately from visual appearance. Linux validates, then follows the upstream no-op. See [effect differences](pinned-upstream-behavior.md#window-effects-and-frame-bridge-availability). | [N] | 1 mapped |
+| `window.Window.setEffects` | Object member | **Implemented** | Apply/remove Windows and macOS effects with full argument validation. macOS replacement and clearing deliberately differ from pinned upstream behavior; native view lifecycle is checked separately from visual appearance. Linux validates, then follows the upstream no-op. See [effect differences](pinned-upstream-behavior.md#window-effects-and-frame-bridge-availability). | [N] | 1 mapped |
 | `window.WindowOptions.windowEffects` | Configuration member | **Implemented** | The pinned WindowEffectsConfig validates effects, color, state, radius and unknown fields. Invalid creation options are rejected before allocating a window. | [N] | 1 mapped |
 
-## Incomplete core entries
+## Implementation decisions and validation backlog
 
-This includes partial implementations, features for unsupported platforms and declarations that only return empty results.
-Not every entry is part of the v1 support goals.
+The 25 core rows previously marked Partial all have execution paths in the
+reviewed platform adapters. They are classified as Implemented below, while
+retaining their validation limits. This is a source classification change, not
+25 new implementations or 25 new compatibility passes. No known missing portion
+was identified in those 25 paths by this review; it does not rule out defects in
+unexercised arguments, platform versions or interactions.
 
-| API identifier | Kind | Status | Behavior and limits | Source | Comparison fixtures |
-| --- | --- | --- | --- | --- | --- |
-| `app.fetchDataStoreIdentifiers` | Function | **Implemented** | macOS 14+ uses asynchronous WKWebsiteDataStore enumeration/removal; older macOS returns an explicit availability error. Apple Silicon managed/NativeAOT guest and SDK checks passed; pinned non-Apple empty/no-op behavior is retained. See [macOS limits](macos.md). | [A] | 1 mapped |
-| `app.hide` | Function | **Partial** | Forwarded to the AppKit event-loop target on macOS; NativeAOT smoke exercised. Non-Apple desktop behavior remains a no-op. | [A] | 1 mapped |
-| `app.onBackButtonPress` | Function | **Not implemented** | Android back-button behavior is not implemented (outside v1). Only the JS entry point exists. | [U] [A] | No individual mapping |
-| `app.removeDataStore` | Function | **Implemented** | macOS 14+ uses asynchronous WKWebsiteDataStore enumeration/removal; older macOS returns an explicit availability error. Apple Silicon managed/NativeAOT guest and SDK checks passed; pinned non-Apple empty/no-op behavior is retained. See [macOS limits](macos.md). | [A] | 1 mapped |
-| `app.setDockVisibility` | Function | **Partial** | Forwarded to the AppKit event-loop target on macOS; NativeAOT smoke exercised. Non-Apple desktop behavior remains a no-op. | [A] | 1 mapped |
-| `app.show` | Function | **Partial** | Forwarded to the AppKit event-loop target on macOS; NativeAOT smoke exercised. Non-Apple desktop behavior remains a no-op. | [A] | 1 mapped |
-| `menu.AboutMetadata.credits` | Configuration member | **Partial** | Metadata is forwarded to muda on macOS; credits display remains unverified. | [M] [U] | No individual mapping |
-| `menu.Submenu.setAsHelpMenuForNSApp` | Object member | **Partial** | Forwarded to muda on macOS; interactive menu-role behavior remains unverified. | [M] | No individual mapping |
-| `menu.Submenu.setAsWindowsMenuForNSApp` | Object member | **Partial** | Forwarded to muda on macOS; interactive menu-role behavior remains unverified. | [M] | No individual mapping |
-| `tray.TrayIcon.setIconAsTemplate` | Object member | **Partial** | Forwarded to tray-icon on macOS; template-image appearance remains unverified. | [M] | No individual mapping |
-| `tray.TrayIcon.setIconWithAsTemplate` | Object member | **Partial** | Forwarded to tray-icon on macOS; template-image appearance remains unverified. | [M] | No individual mapping |
-| `tray.TrayIconOptions.iconAsTemplate` | Configuration member | **Partial** | Forwarded to tray-icon on macOS; template-image appearance remains unverified. | [M] | No individual mapping |
-| `webview.WebviewOptions.acceptFirstMouse` | Configuration member | **Partial** | Forwarded to Wry on macOS; first-click interaction remains unverified. The option has no effect on Windows/Linux. | [N] [U] | No individual mapping |
-| `webview.WebviewOptions.allowLinkPreview` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
-| `webview.WebviewOptions.backgroundThrottling` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
-| `webview.WebviewOptions.dataStoreIdentifier` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Apple Silicon managed/NativeAOT checks cover isolated persistence, active-store deletion errors and empty recreation after removal. Intel, minimum OS and paired upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
-| `webview.WebviewOptions.disableInputAccessoryView` | Configuration member | **Not implemented** | Apple-only WebView option (outside v1). Not applied during native creation. | [N] [U] | No individual mapping |
-| `webviewWindow.WebviewWindow.activityName` | Object member | **Not implemented** | Mobile activity/scene lookup is not implemented (outside v1). No native command handler exists. | [N] [U] | No individual mapping |
-| `webviewWindow.WebviewWindow.sceneIdentifier` | Object member | **Not implemented** | Mobile activity/scene lookup is not implemented (outside v1). No native command handler exists. | [N] [U] | No individual mapping |
-| `webviewWindow.WebviewWindow.setBadgeLabel` | Object member | **Partial** | Applied through Tao on macOS; NativeAOT smoke exercised. No mutation on Windows/Linux. | [N] | No individual mapping |
-| `webviewWindow.WebviewWindow.setTitleBarStyle` | Object member | **Partial** | Applied through Tao on macOS; NativeAOT smoke exercised. No mutation on Windows/Linux. | [N] | No individual mapping |
-| `window.Effects.radius` | Configuration member | **Partial** | Validated and applied through window-vibrancy on macOS; Sidebar effect and clearing exercised. | [N] | No individual mapping |
-| `window.Effects.state` | Configuration member | **Partial** | Validated and applied through window-vibrancy on macOS; Sidebar effect and clearing exercised. | [N] | No individual mapping |
-| `window.Window.activityName` | Object member | **Not implemented** | Mobile activity/scene lookup is not implemented (outside v1). No native command handler exists. | [N] [U] | No individual mapping |
-| `window.Window.sceneIdentifier` | Object member | **Not implemented** | Mobile activity/scene lookup is not implemented (outside v1). No native command handler exists. | [N] [U] | No individual mapping |
-| `window.Window.setBadgeLabel` | Object member | **Partial** | Applied through Tao on macOS; NativeAOT smoke exercised. No mutation on Windows/Linux. | [N] | No individual mapping |
-| `window.Window.setTitleBarStyle` | Object member | **Partial** | Applied through Tao on macOS; NativeAOT smoke exercised. No mutation on Windows/Linux. | [N] | No individual mapping |
-| `window.WindowOptions.activityName` | Configuration member | **Not implemented** | Apple/mobile-only creation option (outside v1). Type/configuration acceptance does not apply it to native behavior. | [N] [U] | No individual mapping |
-| `window.WindowOptions.allowLinkPreview` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
-| `window.WindowOptions.backgroundThrottling` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
-| `window.WindowOptions.createdByActivityName` | Configuration member | **Not implemented** | Apple/mobile-only creation option (outside v1). Type/configuration acceptance does not apply it to native behavior. | [N] [U] | No individual mapping |
-| `window.WindowOptions.disableInputAccessoryView` | Configuration member | **Not implemented** | Apple/mobile-only creation option (outside v1). Type/configuration acceptance does not apply it to native behavior. | [N] [U] | No individual mapping |
-| `window.WindowOptions.hiddenTitle` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
-| `window.WindowOptions.requestedBySceneIdentifier` | Configuration member | **Not implemented** | Apple/mobile-only creation option (outside v1). Type/configuration acceptance does not apply it to native behavior. | [N] [U] | No individual mapping |
-| `window.WindowOptions.tabbingIdentifier` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
-| `window.WindowOptions.titleBarStyle` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
-| `window.WindowOptions.trafficLightPosition` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
+The inventory now separates **620 entries with execution paths**, **57 type or
+constant declarations**, **10 unimplemented mobile entries**, and **one intentional
+identity rejection**. These are identifier counts, not independent features.
+The 243 fixture-mapped entries overlap those categories and are not a pass count.
+The ten mobile entries remain in the upstream inventory for completeness; they
+are excluded from the implementation backlog.
+
+### Existing implementation with validation still needed
+
+| API group | Implementation classification and source | Existing checks and remaining work |
+| --- | --- | --- |
+| App visibility: `app.show`, `hide`, `setDockVisibility` | Implemented on macOS through the event-loop target in [app dispatch](../native/netwiv-native/src/runtime/commands.rs); no native mutation on Windows/Linux. | [Desktop smoke](../tests/NetWiv.Desktop.Smoke/Program.cs) calls these APIs. The mapped `app.desktop-platform-contract` fixture asserts non-Apple defaults; it does not validate macOS hide/show interaction. Broader focus and activation acceptance remains pending. |
+| Website stores: `app.fetchDataStoreIdentifiers`, `removeDataStore`, `webview.WebviewOptions.dataStoreIdentifier` | Implemented through [WKWebsiteDataStore](../native/netwiv-native/src/macos.rs) and [WebView creation](../native/netwiv-native/src/runtime/webview.rs). Enumeration/removal require macOS 14+; creation on older systems retains Wry's default-store behavior. Windows/Linux app operations use the pinned empty/no-op behavior. | [Guest/SDK store probe](../tests/NetWiv.Desktop.Smoke/MacOsDataStoreProbe.cs) checks enumeration, persistence, in-use errors and removal/recreation. The bounded SDK-created-store comparison passed on macOS arm64 in managed/NativeAOT; the public creation option passed separately in NetWiv and deliberately differs from pinned upstream. Full-suite, Intel and minimum-OS execution remain pending. See [the storage difference](pinned-upstream-behavior.md#website-data-store-creation-and-removal). |
+| macOS menu roles and credits: `menu.Submenu.setAsHelpMenuForNSApp`, `setAsWindowsMenuForNSApp`, `menu.AboutMetadata.credits` | Implemented in [resource dispatch](../native/netwiv-native/src/resources.rs) and [About metadata conversion](../native/netwiv-native/src/resources/menus.rs). | [Help Search, window-menu switching and displayed About name/version/credits](../tests/NetWiv.MenuTray.Smoke/README.md) passed with actual remote desktop input on physical macOS arm64 in managed and NativeAOT runs. Other roles and About fields remain unverified. |
+| macOS tray template images: `tray.TrayIcon.setIconAsTemplate`, `setIconWithAsTemplate`, `tray.TrayIconOptions.iconAsTemplate` | Implemented by [tray-icon setters](../native/netwiv-native/src/resources.rs) and [tray creation](../native/netwiv-native/src/resources/trays.rs). | [Dedicated menu/tray probe](../tests/NetWiv.MenuTray.Smoke/README.md) passed on physical macOS arm64 in managed/NativeAOT: template/color/image replacement, left-click menu off/on, right/left actions, menu replacement and cleanup. Other input gestures/themes remain unverified. Linux requires a tray host and has different input support. |
+| macOS WebView options: `acceptFirstMouse`, `allowLinkPreview`, `backgroundThrottling` | Implemented in [WebView creation](../native/netwiv-native/src/runtime/webview.rs); the latter two also appear through `window.WindowOptions`. | [Live native option checks](macos-webview-options.md) pass in managed and NativeAOT for initial/dynamic root/child WebViews, including the three macOS 14+ scheduling values. Remote desktop input confirms first-click behavior in both modes. Preview gestures, background timing and paired upstream comparison remain unverified. |
+| macOS window appearance: `setBadgeLabel`, `setTitleBarStyle`, `Effects.state`, `Effects.radius`, and `hiddenTitle`, `tabbingIdentifier`, `titleBarStyle`, `trafficLightPosition` options | Implemented through [window dispatch](../native/netwiv-native/src/runtime/window.rs), [macOS adapters](../native/netwiv-native/src/macos.rs) and WebView creation where applicable. Window/WebviewWindow setters share the same paths. | Desktop smoke calls title-bar setters, badges and Sidebar vibrancy/clearing. Parsing tests check some malformed options. Full title/tab/button layout, material/state/radius appearance and paired upstream comparison remain pending. The documented intermittent AppKit SIGTRAP remains unresolved; see [runtime limits](dotnet-compatibility.md). |
+
+The same separation applies to rows that were already Implemented. For example,
+macOS `setSimpleFullscreen`, shadows and effect clearing already have adapters;
+older descriptions saying they were Windows-only or out of scope were stale.
+Their presence does not establish interactive acceptance. Configuration acceptance
+alone is insufficient: the option must reach a runtime consumer on its stated OS.
+
+### Unimplemented and intentionally different behavior
+
+| Classification | APIs / scope | Implementation decision |
+| --- | --- | --- |
+| Not implemented; excluded from project scope | `app.onBackButtonPress` (one entry) | Android back-button listener behavior is absent. The official JS wrapper does not supply a mobile runtime. |
+| Not implemented; excluded from project scope | `Window.activityName`, `Window.sceneIdentifier` and their WebviewWindow counterparts (four entries) | No native activity/scene command handlers. Do not treat successful desktop window operations as support for these mobile methods. |
+| Not implemented; excluded from project scope | `WindowOptions.activityName`, `createdByActivityName`, `requestedBySceneIdentifier` (three entries); `disableInputAccessoryView` in WindowOptions/WebviewOptions (two entries) | Mobile configuration is not applied by the desktop creation paths. These five options are excluded work, not future implementation tasks. |
+| Unsupported (intentional) | `app.getTauriVersion` | [Core dispatch](../src/NetWiv.Core/BuiltIn/BuiltInCommands.cs) explicitly rejects impersonating the Tauri runtime. This is not a missing version getter; use `getVersion` for app metadata. See [identity differences](implementation-status.md#runtime-identity-differences). |
+| Documented difference within implemented window APIs | Default window title and macOS per-window `skipTaskbar=true` | The title is `NetWiv App`. macOS rejects the per-window taskbar operation; application-wide Dock visibility is the alternative. Keep these differences visible in comparisons instead of declaring them passes. |
+
+### Core paths and existing test scope
+
+This table identifies code and test definitions, not newly executed results.
+Tests cover selected behavior; fixture mapping is maintained separately and can
+lag behind tests added to a suite.
+
+| Area | Execution path reviewed | Existing checks / remaining boundary |
+| --- | --- | --- |
+| Core IPC, Channel and resources | [Initialization](../src/NetWiv.Core/Ipc/InitializationScript.cs), [protocol IPC](../src/NetWiv.Core/Ipc/AppHandle.Protocol.cs), [Channel](../src/NetWiv.Core/Ipc/Channel.cs), [resources](../src/NetWiv.Core/Resources/ResourceTable.cs) | [Protocol tests](../tests/NetWiv.Core.Tests/ProtocolIpcTests.cs), [document lifetime tests](../tests/NetWiv.Core.Tests/IpcBoundaryLifetimeTests.cs), [ownership tests](../tests/NetWiv.Core.Tests/ResourceOwnershipTests.cs) and `core.*`/`channel.*` fixtures. Isolation child frames and forced fallback transport still lack full comparison. |
+| Events and paths | [Built-in dispatch](../src/NetWiv.Core/BuiltIn/BuiltInCommands.cs), [event bus](../src/NetWiv.Core/Events/EventBus.cs), [native directories](../native/netwiv-native/src/paths.rs) | [Upstream event tests](../tests/NetWiv.Core.Tests/UpstreamEventTests.cs), [path tests](../tests/NetWiv.Core.Tests/UpstreamPathAndUrlTests.cs) and `event.*`/`path.*` fixtures. OS directory availability and full event-trigger interaction remain separate. |
+| Images, menus and trays | [Native resource dispatch](../native/netwiv-native/src/resources.rs), [images](../native/netwiv-native/src/resources/images.rs), [menus](../native/netwiv-native/src/resources/menus.rs), [trays](../native/netwiv-native/src/resources/trays.rs) | [Native resource tests](../native/netwiv-native/src/resources/tests.rs), desktop smoke and `image.*`/`menu.*`/`tray.*` fixtures. Display, accelerators, popup roles and native input are not established by resource roundtrips alone. |
+| Window / Webview / WebviewWindow | [Window dispatch](../native/netwiv-native/src/runtime/window.rs), [WebView dispatch](../native/netwiv-native/src/runtime/webview.rs), [platform adapters](../native/netwiv-native/src/runtime/platform.rs), [C# wrappers](../src/NetWiv.Core/Api/WindowApi.cs) | [API tests](../tests/NetWiv.Api.Tests/WindowApiTests.cs), [native option tests](../native/netwiv-native/src/runtime/tests.rs), desktop smoke and window/WebView fixtures including reparenting. OS effects, native input, multi-monitor transitions and Wayland geometry remain separate acceptance work. |
+| Guest-only DPI and mocks | Unchanged official guest package pinned by [upstream lock](../compatibility/upstream-lock.json) | `dpi.public-shapes-and-conversions` and `mocks.public-functions` in the [shared suite](../tests/conformance/frontend/suite.js). C# numeric conversions have separate [DPI oracle tests](../tests/NetWiv.Core.Tests/DpiOracleTests.cs). JS helper availability does not prove physical DPI transitions. |
+
+### SDK and tooling implementation gaps
+
+- Referenced command aggregation is implemented in
+  [CommandGenerator.FrontendReferences.cs](../src/NetWiv.Generators/CommandGenerator.FrontendReferences.cs),
+  with [reference tests](../tests/NetWiv.Generators.Tests/ReferencedFrontendBindingsTests.cs)
+  and a [package consumer](../tests/frontend-bindings/ReferencedCommands.cs).
+  Both producer and consumer must opt in; aggregation does not recursively load
+  arbitrary dependencies. This is no longer a missing feature.
+- Advanced frontend JSON mappings remain unimplemented: custom converters,
+  polymorphism, unsupported ExtensionData and nonpublic JsonInclude produce
+  `DTOXGEN009`. These are actual mapping gaps, unlike the existing core native
+  adapters above. See [serialization limits](frontend-generator.md#serialization-and-current-boundaries).
+- Interactive `info --fix` and plugin workflow generation remain explicitly
+  unsupported tooling features. They do not block the desktop core API inventory.
+- Plugin implementations remain a separate, coarser feature inventory above.
+  Their Planned/Partial labels must not be read as an absence of code: FS watching,
+  Store autosave debounce, Shell sidecars and SQL migrations are examples of
+  implementation work, whereas dialog GUI selection and installed-app restart
+  require validation of existing paths. A method-level plugin audit is still needed
+  before scheduling a plugin as a whole.
 
 ## Complete public JavaScript/TypeScript API inventory
 
@@ -151,22 +189,22 @@ Union alternatives within type aliases and every enum value are not expanded int
 
 | API identifier | Kind | Status | Behavior and limits | Source | Comparison fixtures |
 | --- | --- | --- | --- | --- | --- |
-| `app.BundleType` | Constant | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `app.DataStoreIdentifier` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `app.BundleType` | Constant | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `app.DataStoreIdentifier` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `app.defaultWindowIcon` | Function | **Implemented** | Application metadata and desktop command handling. | [B] [A] | No individual mapping |
-| `app.fetchDataStoreIdentifiers` | Function | **Implemented** | macOS 14+ uses asynchronous WKWebsiteDataStore enumeration/removal; older macOS returns an explicit availability error. Apple Silicon managed/NativeAOT guest and SDK checks passed; pinned non-Apple empty/no-op behavior is retained. See [macOS limits](macos.md). | [A] | 1 mapped |
+| `app.fetchDataStoreIdentifiers` | Function | **Implemented** | macOS 14+ uses asynchronous WKWebsiteDataStore enumeration/removal; older macOS returns an explicit availability error. macOS arm64 managed/NativeAOT SDK-created-store comparisons passed with unchanged public guest APIs; pinned non-Apple empty/no-op behavior is retained. The exact in-use guest removal error matches upstream while the C# SDK retains its detailed error. Full-suite and minimum-OS checks remain pending; see [storage limits](pinned-upstream-behavior.md#website-data-store-creation-and-removal). | [A] | 1 mapped |
 | `app.getBundleType` | Function | **Implemented** | Application metadata and desktop command handling. | [B] [A] | 1 mapped |
 | `app.getIdentifier` | Function | **Implemented** | Application metadata and desktop command handling. | [B] [A] | 1 mapped |
 | `app.getName` | Function | **Implemented** | Application metadata and desktop command handling. | [B] [A] | 1 mapped |
 | `app.getTauriVersion` | Function | **Unsupported (intentional)** | Rejects because NetWiv does not embed the TAURI framework. The command identifier remains accepted; no upstream or NetWiv version is substituted. See [identity differences](implementation-status.md#runtime-identity-differences). | [B] | Not a compatibility pass |
 | `app.getVersion` | Function | **Implemented** | Application metadata and desktop command handling. | [B] [A] | 1 mapped |
-| `app.hide` | Function | **Partial** | Forwarded to the AppKit event-loop target on macOS; NativeAOT smoke exercised. Non-Apple desktop behavior remains a no-op. | [A] | 1 mapped |
-| `app.onBackButtonPress` | Function | **Not implemented** | Android back-button behavior is not implemented (outside v1). Only the JS entry point exists. | [U] [A] | No individual mapping |
-| `app.OnBackButtonPressPayload` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `app.removeDataStore` | Function | **Implemented** | macOS 14+ uses asynchronous WKWebsiteDataStore enumeration/removal; older macOS returns an explicit availability error. Apple Silicon managed/NativeAOT guest and SDK checks passed; pinned non-Apple empty/no-op behavior is retained. See [macOS limits](macos.md). | [A] | 1 mapped |
-| `app.setDockVisibility` | Function | **Partial** | Forwarded to the AppKit event-loop target on macOS; NativeAOT smoke exercised. Non-Apple desktop behavior remains a no-op. | [A] | 1 mapped |
+| `app.hide` | Function | **Implemented** | Forwarded to the AppKit event-loop target on macOS; NativeAOT smoke exercised. Non-Apple desktop behavior remains a no-op. | [A] | 1 mapped |
+| `app.onBackButtonPress` | Function | **Not implemented** | Android back-button behavior is not implemented (excluded from project scope). Only the JS entry point exists. | [U] [A] | No individual mapping |
+| `app.OnBackButtonPressPayload` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `app.removeDataStore` | Function | **Implemented** | macOS 14+ uses asynchronous WKWebsiteDataStore enumeration/removal; older macOS returns an explicit availability error. macOS arm64 managed/NativeAOT SDK-created-store comparisons passed with unchanged public guest APIs; pinned non-Apple empty/no-op behavior is retained. The exact in-use guest removal error matches upstream while the C# SDK retains its detailed error. Full-suite and minimum-OS checks remain pending; see [storage limits](pinned-upstream-behavior.md#website-data-store-creation-and-removal). | [A] | 1 mapped |
+| `app.setDockVisibility` | Function | **Implemented** | Forwarded to the AppKit event-loop target on macOS; NativeAOT smoke exercised. Non-Apple desktop behavior remains a no-op. | [A] | 1 mapped |
 | `app.setTheme` | Function | **Implemented** | Applies the theme to all windows through the native runtime. | [N] | No individual mapping |
-| `app.show` | Function | **Partial** | Forwarded to the AppKit event-loop target on macOS; NativeAOT smoke exercised. Non-Apple desktop behavior remains a no-op. | [A] | 1 mapped |
+| `app.show` | Function | **Implemented** | Forwarded to the AppKit event-loop target on macOS; NativeAOT smoke exercised. Non-Apple desktop behavior remains a no-op. | [A] | 1 mapped |
 | `app.supportsMultipleWindows` | Function | **Implemented** | Application metadata and desktop command handling. | [B] [A] | 1 mapped |
 
 <a id="module-core"></a>
@@ -185,11 +223,11 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `core.checkPermissions` | Function | **Implemented** | Official JS wrapper is provided. The target C# plugin must register its listener/permission commands; this is not a general OS permission facility. | [U] [H] [C] | No individual mapping |
 | `core.convertFileSrc` | Function | **Implemented** | File-URL conversion and asset-protocol integration. Loading requires file-scope and CSP permissions. | [I] [F] | 1 mapped |
 | `core.invoke` | Function | **Implemented** | Official JS API connected to the C# IPC bridge. | [U] [I] [P] | 12 mapped |
-| `core.InvokeArgs` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `core.InvokeOptions` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `core.InvokeArgs` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `core.InvokeOptions` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `core.InvokeOptions.headers` | Configuration member | **Implemented** | Forwards request headers to the IPC Request. | [P] | No individual mapping |
 | `core.isTauri` | Function | **Implemented** | Official JS API connected to the C# IPC bridge. | [U] [I] [P] | 2 mapped |
-| `core.PermissionState` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `core.PermissionState` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `core.PluginListener` | Object | **Implemented** | Official JS API connected to the C# IPC bridge. Object availability does not imply every member is complete. | [U] [I] [P] | No individual mapping |
 | `core.PluginListener.channelId` | Object member | **Implemented** | Official JS API connected to the C# IPC bridge. | [U] [I] [P] | No individual mapping |
 | `core.PluginListener.constructor` | Constructor | **Implemented** | Official JS API connected to the C# IPC bridge for supported options; see option rows for unsupported behavior. | [U] [I] [P] | No individual mapping |
@@ -201,7 +239,7 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `core.Resource.close` | Object member | **Implemented** | Connects resource IDs and close operations to managed/native resource cleanup. | [U] [R] [M] | 1 mapped |
 | `core.Resource.constructor` | Constructor | **Implemented** | Connects resource IDs and close operations to managed/native resource cleanup. | [U] [R] [M] | 1 mapped |
 | `core.Resource.rid` | Object member | **Implemented** | Connects resource IDs and close operations to managed/native resource cleanup. | [U] [R] [M] | 1 mapped |
-| `core.SERIALIZE_TO_IPC_FN` | Constant | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | 1 mapped |
+| `core.SERIALIZE_TO_IPC_FN` | Constant | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | 1 mapped |
 | `core.transformCallback` | Function | **Implemented** | Official JS API connected to the C# IPC bridge. | [U] [I] [P] | 1 mapped |
 
 <a id="module-dpi"></a>
@@ -265,19 +303,19 @@ Union alternatives within type aliases and every enum value are not expanded int
 | --- | --- | --- | --- | --- | --- |
 | `event.emit` | Function | **Implemented** | Event registration, targeting, delivery and removal. | [B] [E] | 3 mapped |
 | `event.emitTo` | Function | **Implemented** | Event registration, targeting, delivery and removal. | [B] [E] | 1 mapped |
-| `event.Event` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `event.Event` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `event.Event.event` | Data member | **Implemented** | Event registration, targeting, delivery and removal. | [B] [E] | No individual mapping |
 | `event.Event.id` | Data member | **Implemented** | Event registration, targeting, delivery and removal. | [B] [E] | No individual mapping |
 | `event.Event.payload` | Data member | **Implemented** | Event registration, targeting, delivery and removal. | [B] [E] | No individual mapping |
-| `event.EventCallback` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `event.EventName` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `event.EventTarget` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `event.EventCallback` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `event.EventName` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `event.EventTarget` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `event.listen` | Function | **Implemented** | Event registration, targeting, delivery and removal. | [B] [E] | 4 mapped |
 | `event.once` | Function | **Implemented** | Event registration, targeting, delivery and removal. | [B] [E] | 1 mapped |
-| `event.Options` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `event.Options` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `event.Options.target` | Configuration member | **Implemented** | Event registration, targeting, delivery and removal. | [B] [E] | No individual mapping |
-| `event.TauriEvent` | Constant | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `event.UnlistenFn` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `event.TauriEvent` | Constant | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `event.UnlistenFn` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 
 <a id="module-image"></a>
 
@@ -294,10 +332,10 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `image.Image.static.fromBytes` | Static member | **Implemented** | Image decoding, RGBA and resource lifetime handling. | [M] [R] | 2 mapped |
 | `image.Image.static.fromPath` | Static member | **Implemented** | Image decoding, RGBA and resource lifetime handling. | [M] [R] | 2 mapped |
 | `image.Image.static.new` | Static member | **Implemented** | Image decoding, RGBA and resource lifetime handling. | [M] [R] | 1 mapped |
-| `image.ImageSize` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `image.ImageSize` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `image.ImageSize.height` | Data member | **Implemented** | Image decoding, RGBA and resource lifetime handling. | [M] [R] | 1 mapped |
 | `image.ImageSize.width` | Data member | **Implemented** | Image decoding, RGBA and resource lifetime handling. | [M] [R] | 1 mapped |
-| `image.MenuIcon` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `image.MenuIcon` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `image.transformImage` | Function | **Implemented** | Image decoding, RGBA and resource lifetime handling. | [M] [R] | No individual mapping |
 
 <a id="module-menu"></a>
@@ -306,12 +344,12 @@ Union alternatives within type aliases and every enum value are not expanded int
 
 | API identifier | Kind | Status | Behavior and limits | Source | Comparison fixtures |
 | --- | --- | --- | --- | --- | --- |
-| `menu.AboutMetadata` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `menu.AboutMetadata` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `menu.AboutMetadata.authors` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
 | `menu.AboutMetadata.comments` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
 | `menu.AboutMetadata.copyright` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
-| `menu.AboutMetadata.credits` | Configuration member | **Partial** | Metadata is forwarded to muda on macOS; credits display remains unverified. | [M] [U] | No individual mapping |
-| `menu.AboutMetadata.icon` | Configuration member | **Implemented** | Decodes the image and forwards it to muda's About dialog. Displayed on Linux; unsupported on Windows. | [M] [U] | 1 mapped |
+| `menu.AboutMetadata.credits` | Configuration member | **Implemented** | Credits display passed physical macOS arm64 managed/NativeAOT interaction checks; other OS versions remain unverified. | [M] [U] | No individual mapping |
+| `menu.AboutMetadata.icon` | Configuration member | **Implemented** | Decodes the image and forwards it to muda's About dialog on Linux/macOS; unsupported on Windows. Visual acceptance remains separate. | [M] [U] | 1 mapped |
 | `menu.AboutMetadata.license` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
 | `menu.AboutMetadata.name` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
 | `menu.AboutMetadata.shortVersion` | Configuration member | **Implemented** | Forwarded to muda. Displayed in parentheses after the version on Windows/Linux. | [M] [U] | No individual mapping |
@@ -331,7 +369,7 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `menu.CheckMenuItem.setText` | Object member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
 | `menu.CheckMenuItem.static.new` | Static member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
 | `menu.CheckMenuItem.text` | Object member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
-| `menu.CheckMenuItemOptions` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `menu.CheckMenuItemOptions` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `menu.CheckMenuItemOptions.accelerator` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
 | `menu.CheckMenuItemOptions.action` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
 | `menu.CheckMenuItemOptions.checked` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
@@ -350,7 +388,7 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `menu.IconMenuItem.setText` | Object member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
 | `menu.IconMenuItem.static.new` | Static member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
 | `menu.IconMenuItem.text` | Object member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
-| `menu.IconMenuItemOptions` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `menu.IconMenuItemOptions` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `menu.IconMenuItemOptions.accelerator` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
 | `menu.IconMenuItemOptions.action` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
 | `menu.IconMenuItemOptions.enabled` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
@@ -386,16 +424,16 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `menu.MenuItem.setText` | Object member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 2 mapped |
 | `menu.MenuItem.static.new` | Static member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 2 mapped |
 | `menu.MenuItem.text` | Object member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 2 mapped |
-| `menu.MenuItemOptions` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `menu.MenuItemOptions` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `menu.MenuItemOptions.accelerator` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
 | `menu.MenuItemOptions.action` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
 | `menu.MenuItemOptions.enabled` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
 | `menu.MenuItemOptions.id` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
 | `menu.MenuItemOptions.text` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
-| `menu.MenuOptions` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `menu.MenuOptions` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `menu.MenuOptions.id` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
 | `menu.MenuOptions.items` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
-| `menu.NativeIcon` | Constant | **Implemented** | The official enum is forwarded to muda for macOS system icons; visual appearance remains unverified. | [U] [M] | No individual mapping |
+| `menu.NativeIcon` | Constant | **Declaration available** | Official enum declaration; its values are forwarded to muda for macOS system icons. Visual appearance remains unverified. | [U] [M] | No individual mapping |
 | `menu.PredefinedMenuItem` | Object | **Implemented** | muda menus, items and resources. Support varies by OS. Object availability does not imply every member is complete. | [M] [N] | No individual mapping |
 | `menu.PredefinedMenuItem.close` | Object member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
 | `menu.PredefinedMenuItem.constructor` | Constructor | **Implemented** | muda menus, items and resources. Support varies by OS; see option rows for unsupported behavior. | [M] [N] | No individual mapping |
@@ -404,7 +442,7 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `menu.PredefinedMenuItem.setText` | Object member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
 | `menu.PredefinedMenuItem.static.new` | Static member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 2 mapped |
 | `menu.PredefinedMenuItem.text` | Object member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 2 mapped |
-| `menu.PredefinedMenuItemOptions` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `menu.PredefinedMenuItemOptions` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `menu.PredefinedMenuItemOptions.item` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
 | `menu.PredefinedMenuItemOptions.text` | Configuration member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
 | `menu.Submenu` | Object | **Implemented** | muda menus, items and resources. Support varies by OS. Object availability does not imply every member is complete. | [M] [N] | No individual mapping |
@@ -421,14 +459,14 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `menu.Submenu.remove` | Object member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
 | `menu.Submenu.removeAt` | Object member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
 | `menu.Submenu.rid` | Object member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
-| `menu.Submenu.setAsHelpMenuForNSApp` | Object member | **Partial** | Forwarded to muda on macOS; interactive menu-role behavior remains unverified. | [M] | No individual mapping |
-| `menu.Submenu.setAsWindowsMenuForNSApp` | Object member | **Partial** | Forwarded to muda on macOS; interactive menu-role behavior remains unverified. | [M] | No individual mapping |
+| `menu.Submenu.setAsHelpMenuForNSApp` | Object member | **Implemented** | Forwarded to muda on macOS; Help Search and window switching passed physical macOS arm64 managed/NativeAOT interaction checks. Other platforms/versions remain unverified. | [M] | No individual mapping |
+| `menu.Submenu.setAsWindowsMenuForNSApp` | Object member | **Implemented** | Forwarded to muda on macOS; Help Search and window switching passed physical macOS arm64 managed/NativeAOT interaction checks. Other platforms/versions remain unverified. | [M] | No individual mapping |
 | `menu.Submenu.setEnabled` | Object member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
 | `menu.Submenu.setIcon` | Object member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | No individual mapping |
 | `menu.Submenu.setText` | Object member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
 | `menu.Submenu.static.new` | Static member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
 | `menu.Submenu.text` | Object member | **Implemented** | muda menus, items and resources. Support varies by OS. | [M] [N] | 1 mapped |
-| `menu.SubmenuOptions` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `menu.SubmenuOptions` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 
 <a id="module-mocks"></a>
 
@@ -439,7 +477,7 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `mocks.clearMocks` | Function | **Implemented** | Uses the official JS implementation; no separate native feature is required. | [U] | 1 mapped |
 | `mocks.mockConvertFileSrc` | Function | **Implemented** | Uses the official JS implementation; no separate native feature is required. | [U] | 1 mapped |
 | `mocks.mockIPC` | Function | **Implemented** | Uses the official JS implementation; no separate native feature is required. | [U] | 1 mapped |
-| `mocks.MockIPCOptions` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `mocks.MockIPCOptions` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `mocks.MockIPCOptions.shouldMockEvents` | Configuration member | **Implemented** | Uses the official JS implementation; no separate native feature is required. | [U] | No individual mapping |
 | `mocks.mockWindows` | Function | **Implemented** | Uses the official JS implementation; no separate native feature is required. | [U] | 1 mapped |
 
@@ -455,7 +493,7 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `path.appLocalDataDir` | Function | **Implemented** | Path operations and OS directory queries. Missing directories may produce errors. | [B] [D] | 1 mapped |
 | `path.appLogDir` | Function | **Implemented** | Path operations and OS directory queries. Missing directories may produce errors. | [B] [D] | 1 mapped |
 | `path.audioDir` | Function | **Implemented** | Path operations and OS directory queries. Missing directories may produce errors. | [B] [D] | 1 mapped |
-| `path.BaseDirectory` | Constant | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `path.BaseDirectory` | Constant | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `path.basename` | Function | **Implemented** | Path operations and OS directory queries. Missing directories may produce errors. | [B] [D] | 1 mapped |
 | `path.cacheDir` | Function | **Implemented** | Path operations and OS directory queries. Missing directories may produce errors. | [B] [D] | 1 mapped |
 | `path.configDir` | Function | **Implemented** | Path operations and OS directory queries. Missing directories may produce errors. | [B] [D] | 1 mapped |
@@ -490,41 +528,41 @@ Union alternatives within type aliases and every enum value are not expanded int
 
 | API identifier | Kind | Status | Behavior and limits | Source | Comparison fixtures |
 | --- | --- | --- | --- | --- | --- |
-| `tray.MouseButton` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `tray.MouseButtonState` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `tray.MouseButton` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `tray.MouseButtonState` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `tray.TrayIcon` | Object | **Implemented** | tray-icon integration. Linux requires a tray host; input-event support varies by platform. Object availability does not imply every member is complete. | [M] [N] | No individual mapping |
 | `tray.TrayIcon.close` | Object member | **Implemented** | tray-icon integration. Linux requires a tray host; input-event support varies by platform. | [M] [N] | No individual mapping |
 | `tray.TrayIcon.constructor` | Constructor | **Implemented** | tray-icon integration. Linux requires a tray host; input-event support varies by platform. See option rows for unsupported behavior. | [M] [N] | No individual mapping |
 | `tray.TrayIcon.id` | Object member | **Implemented** | tray-icon integration. Linux requires a tray host; input-event support varies by platform. | [M] [N] | No individual mapping |
 | `tray.TrayIcon.rid` | Object member | **Implemented** | tray-icon integration. Linux requires a tray host; input-event support varies by platform. | [M] [N] | No individual mapping |
 | `tray.TrayIcon.setIcon` | Object member | **Implemented** | tray-icon integration. Linux requires a tray host; input-event support varies by platform. | [M] [N] | No individual mapping |
-| `tray.TrayIcon.setIconAsTemplate` | Object member | **Partial** | Forwarded to tray-icon on macOS; template-image appearance remains unverified. | [M] | No individual mapping |
-| `tray.TrayIcon.setIconWithAsTemplate` | Object member | **Partial** | Forwarded to tray-icon on macOS; template-image appearance remains unverified. | [M] | No individual mapping |
+| `tray.TrayIcon.setIconAsTemplate` | Object member | **Implemented** | Template/color/image replacement passed physical macOS arm64 managed/NativeAOT interaction checks; other themes and OS versions remain unverified. | [M] | No individual mapping |
+| `tray.TrayIcon.setIconWithAsTemplate` | Object member | **Implemented** | Template/color/image replacement passed physical macOS arm64 managed/NativeAOT interaction checks; other themes and OS versions remain unverified. | [M] | No individual mapping |
 | `tray.TrayIcon.setMenu` | Object member | **Implemented** | tray-icon integration. Linux requires a tray host; input-event support varies by platform. | [M] [N] | No individual mapping |
-| `tray.TrayIcon.setMenuOnLeftClick` | Object member | **Implemented** | Configures left-click menus on Windows. Unsupported on Linux. menuOnLeftClick is a deprecated alias. | [M] | No individual mapping |
-| `tray.TrayIcon.setShowMenuOnLeftClick` | Object member | **Implemented** | Configures left-click menus on Windows. Unsupported on Linux. menuOnLeftClick is a deprecated alias. | [M] | No individual mapping |
+| `tray.TrayIcon.setMenuOnLeftClick` | Object member | **Implemented** | Forwards left-click menu behavior to tray-icon on Windows/macOS. Unsupported on Linux. menuOnLeftClick is a deprecated alias. Left-click menu off/on and native actions passed macOS arm64 managed/NativeAOT GUI checks; Windows input remains separately unverified. | [M] | No individual mapping |
+| `tray.TrayIcon.setShowMenuOnLeftClick` | Object member | **Implemented** | Forwards left-click menu behavior to tray-icon on Windows/macOS. Unsupported on Linux. menuOnLeftClick is a deprecated alias. Left-click menu off/on and native actions passed macOS arm64 managed/NativeAOT GUI checks; Windows input remains separately unverified. | [M] | No individual mapping |
 | `tray.TrayIcon.setTempDirPath` | Object member | **Implemented** | Configures the temporary icon path on Linux. No effect on Windows. | [M] | No individual mapping |
-| `tray.TrayIcon.setTitle` | Object member | **Implemented** | Linux tray-title integration requires icon/host support. Unsupported on Windows. | [M] | No individual mapping |
-| `tray.TrayIcon.setTooltip` | Object member | **Implemented** | Windows tray-tooltip integration. Unsupported on Linux. | [M] | No individual mapping |
+| `tray.TrayIcon.setTitle` | Object member | **Implemented** | Forwards tray titles on macOS/Linux; Linux requires icon/host support. Unsupported on Windows; native display requires GUI validation. | [M] | No individual mapping |
+| `tray.TrayIcon.setTooltip` | Object member | **Implemented** | Forwards tooltips to tray-icon on Windows/macOS. Unsupported on Linux; native display requires GUI validation. | [M] | No individual mapping |
 | `tray.TrayIcon.setVisible` | Object member | **Implemented** | tray-icon integration. Linux requires a tray host; input-event support varies by platform. | [M] [N] | 1 mapped |
 | `tray.TrayIcon.static.getById` | Static member | **Implemented** | tray-icon integration. Linux requires a tray host; input-event support varies by platform. | [M] [N] | 1 mapped |
 | `tray.TrayIcon.static.new` | Static member | **Implemented** | tray-icon integration. Linux requires a tray host; input-event support varies by platform. | [M] [N] | 1 mapped |
 | `tray.TrayIcon.static.removeById` | Static member | **Implemented** | tray-icon integration. Linux requires a tray host; input-event support varies by platform. | [M] [N] | 1 mapped |
-| `tray.TrayIconClickEvent` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `tray.TrayIconEvent` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `tray.TrayIconEventBase` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `tray.TrayIconEventType` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `tray.TrayIconOptions` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `tray.TrayIconClickEvent` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `tray.TrayIconEvent` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `tray.TrayIconEventBase` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `tray.TrayIconEventType` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `tray.TrayIconOptions` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `tray.TrayIconOptions.action` | Configuration member | **Implemented** | tray-icon integration. Linux requires a tray host; input-event support varies by platform. | [M] [N] | No individual mapping |
 | `tray.TrayIconOptions.icon` | Configuration member | **Implemented** | tray-icon integration. Linux requires a tray host; input-event support varies by platform. | [M] [N] | No individual mapping |
-| `tray.TrayIconOptions.iconAsTemplate` | Configuration member | **Partial** | Forwarded to tray-icon on macOS; template-image appearance remains unverified. | [M] | No individual mapping |
+| `tray.TrayIconOptions.iconAsTemplate` | Configuration member | **Implemented** | Template/color/image replacement passed physical macOS arm64 managed/NativeAOT interaction checks; other themes and OS versions remain unverified. | [M] | No individual mapping |
 | `tray.TrayIconOptions.id` | Configuration member | **Implemented** | tray-icon integration. Linux requires a tray host; input-event support varies by platform. | [M] [N] | No individual mapping |
 | `tray.TrayIconOptions.menu` | Configuration member | **Implemented** | tray-icon integration. Linux requires a tray host; input-event support varies by platform. | [M] [N] | No individual mapping |
-| `tray.TrayIconOptions.menuOnLeftClick` | Configuration member | **Implemented** | Configures left-click menus on Windows. Unsupported on Linux. menuOnLeftClick is a deprecated alias. | [M] | No individual mapping |
-| `tray.TrayIconOptions.showMenuOnLeftClick` | Configuration member | **Implemented** | Configures left-click menus on Windows. Unsupported on Linux. menuOnLeftClick is a deprecated alias. | [M] | No individual mapping |
+| `tray.TrayIconOptions.menuOnLeftClick` | Configuration member | **Implemented** | Forwards left-click menu behavior to tray-icon on Windows/macOS. Unsupported on Linux. menuOnLeftClick is a deprecated alias. Left-click menu off/on and native actions passed macOS arm64 managed/NativeAOT GUI checks; Windows input remains separately unverified. | [M] | No individual mapping |
+| `tray.TrayIconOptions.showMenuOnLeftClick` | Configuration member | **Implemented** | Forwards left-click menu behavior to tray-icon on Windows/macOS. Unsupported on Linux. menuOnLeftClick is a deprecated alias. Left-click menu off/on and native actions passed macOS arm64 managed/NativeAOT GUI checks; Windows input remains separately unverified. | [M] | No individual mapping |
 | `tray.TrayIconOptions.tempDirPath` | Configuration member | **Implemented** | Configures the temporary icon path on Linux. No effect on Windows. | [M] | No individual mapping |
-| `tray.TrayIconOptions.title` | Configuration member | **Implemented** | Linux tray-title integration requires icon/host support. Unsupported on Windows. | [M] | No individual mapping |
-| `tray.TrayIconOptions.tooltip` | Configuration member | **Implemented** | Windows tray-tooltip integration. Unsupported on Linux. | [M] | No individual mapping |
+| `tray.TrayIconOptions.title` | Configuration member | **Implemented** | Forwards tray titles on macOS/Linux; Linux requires icon/host support. Unsupported on Windows; native display requires GUI validation. | [M] | No individual mapping |
+| `tray.TrayIconOptions.tooltip` | Configuration member | **Implemented** | Forwards tooltips to tray-icon on Windows/macOS. Unsupported on Linux; native display requires GUI validation. | [M] | No individual mapping |
 
 <a id="module-webview"></a>
 
@@ -532,8 +570,8 @@ Union alternatives within type aliases and every enum value are not expanded int
 
 | API identifier | Kind | Status | Behavior and limits | Source | Comparison fixtures |
 | --- | --- | --- | --- | --- | --- |
-| `webview.Color` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `webview.DragDropEvent` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `webview.Color` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `webview.DragDropEvent` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `webview.getAllWebviews` | Function | **Implemented** | wry WebView behavior connected to the official JS objects. GTK layout constraints apply. | [N] [I] | 2 mapped |
 | `webview.getCurrentWebview` | Function | **Implemented** | wry WebView behavior connected to the official JS objects. GTK layout constraints apply. | [N] [I] | 1 mapped |
 | `webview.Webview` | Object | **Implemented** | wry WebView behavior connected to the official JS objects. GTK layout constraints apply. Object availability does not imply every member is complete. | [N] [I] | No individual mapping |
@@ -562,16 +600,16 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `webview.Webview.static.getByLabel` | Static member | **Implemented** | wry WebView behavior connected to the official JS objects. GTK layout constraints apply. | [N] [I] | 1 mapped |
 | `webview.Webview.static.getCurrent` | Static member | **Implemented** | wry WebView behavior connected to the official JS objects. GTK layout constraints apply. | [N] [I] | No individual mapping |
 | `webview.Webview.window` | Object member | **Implemented** | wry WebView behavior connected to the official JS objects. GTK layout constraints apply. | [N] [I] | No individual mapping |
-| `webview.WebviewLabel` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `webview.WebviewOptions` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `webview.WebviewOptions.acceptFirstMouse` | Configuration member | **Partial** | Forwarded to Wry on macOS; first-click interaction remains unverified. The option has no effect on Windows/Linux. | [N] [U] | No individual mapping |
-| `webview.WebviewOptions.allowLinkPreview` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
+| `webview.WebviewLabel` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `webview.WebviewOptions` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `webview.WebviewOptions.acceptFirstMouse` | Configuration member | **Implemented** | Forwarded to Wry on macOS; managed/NativeAOT remote desktop input confirms activation-click behavior for both values. See [validation limits](macos-webview-options.md). The option has no effect on Windows/Linux. | [N] [U] | No individual mapping |
+| `webview.WebviewOptions.allowLinkPreview` | Configuration member | **Implemented** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
 | `webview.WebviewOptions.backgroundColor` | Configuration member | **Implemented** | wry WebView behavior connected to the official JS objects. GTK layout constraints apply. | [N] [I] | No individual mapping |
-| `webview.WebviewOptions.backgroundThrottling` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
+| `webview.WebviewOptions.backgroundThrottling` | Configuration member | **Implemented** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
 | `webview.WebviewOptions.dataDirectory` | Configuration member | **Implemented** | wry WebView behavior connected to the official JS objects. GTK layout constraints apply. | [N] [I] | No individual mapping |
-| `webview.WebviewOptions.dataStoreIdentifier` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Apple Silicon managed/NativeAOT checks cover isolated persistence, active-store deletion errors and empty recreation after removal. Intel, minimum OS and paired upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
+| `webview.WebviewOptions.dataStoreIdentifier` | Configuration member | **Implemented** | Forwarded to the macOS Tao/Wry backend. NetWiv-only managed/NativeAOT public constructor checks cover isolated persistence, incognito precedence, deletion errors and empty recreation. Pinned Tauri drops this public creation option; SDK-created-store comparison is separate. Intel and minimum OS remain unverified; see [the deliberate difference](pinned-upstream-behavior.md#website-data-store-creation-and-removal). | [N] [U] | No individual mapping |
 | `webview.WebviewOptions.devtools` | Configuration member | **Implemented** | wry WebView behavior connected to the official JS objects. GTK layout constraints apply. | [N] [I] | No individual mapping |
-| `webview.WebviewOptions.disableInputAccessoryView` | Configuration member | **Not implemented** | Apple-only WebView option (outside v1). Not applied during native creation. | [N] [U] | No individual mapping |
+| `webview.WebviewOptions.disableInputAccessoryView` | Configuration member | **Not implemented** | Mobile input-accessory option (excluded from project scope). Not applied during native creation. | [N] [U] | No individual mapping |
 | `webview.WebviewOptions.dragDropEnabled` | Configuration member | **Implemented** | wry WebView behavior connected to the official JS objects. GTK layout constraints apply. | [N] [I] | No individual mapping |
 | `webview.WebviewOptions.focus` | Configuration member | **Implemented** | wry WebView behavior connected to the official JS objects. GTK layout constraints apply. | [N] [I] | No individual mapping |
 | `webview.WebviewOptions.generalAutofillEnabled` | Configuration member | **Implemented** | Configures WebView2 autocomplete on Windows. No-op on Linux. | [N] | No individual mapping |
@@ -595,15 +633,15 @@ Union alternatives within type aliases and every enum value are not expanded int
 
 | API identifier | Kind | Status | Behavior and limits | Source | Comparison fixtures |
 | --- | --- | --- | --- | --- | --- |
-| `webviewWindow.Color` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `webviewWindow.DragDropEvent` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `webviewWindow.Color` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `webviewWindow.DragDropEvent` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `webviewWindow.getAllWebviewWindows` | Function | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | 1 mapped |
 | `webviewWindow.getCurrentWebviewWindow` | Function | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow` | Object | **Implemented** | Combined window and WebView object. Individual member/option limits apply. Object availability does not imply every member is complete. | [N] [I] | No individual mapping |
-| `webviewWindow.WebviewWindow.activityName` | Object member | **Not implemented** | Mobile activity/scene lookup is not implemented (outside v1). No native command handler exists. | [N] [U] | No individual mapping |
+| `webviewWindow.WebviewWindow.activityName` | Object member | **Not implemented** | Mobile activity/scene lookup is not implemented (excluded from project scope). No native command handler exists. | [N] [U] | No individual mapping |
 | `webviewWindow.WebviewWindow.center` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.clearAllBrowsingData` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
-| `webviewWindow.WebviewWindow.clearEffects` | Object member | **Implemented** | Windows effect removal is implemented. No effect on Linux. This is separate from remaining setEffects object-argument validation work. | [N] | No individual mapping |
+| `webviewWindow.WebviewWindow.clearEffects` | Object member | **Implemented** | Clears Windows effects and macOS vibrancy. Linux validates the request and performs no native mutation. Visual acceptance remains separate. | [N] | No individual mapping |
 | `webviewWindow.WebviewWindow.close` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | 1 mapped |
 | `webviewWindow.WebviewWindow.constructor` | Constructor | **Implemented** | Combined window and WebView object. Individual member/option limits apply; see option rows for unsupported behavior. | [N] [I] | 5 mapped |
 | `webviewWindow.WebviewWindow.destroy` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
@@ -643,13 +681,13 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `webviewWindow.WebviewWindow.reparent` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.requestUserAttention` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.scaleFactor` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
-| `webviewWindow.WebviewWindow.sceneIdentifier` | Object member | **Not implemented** | Mobile activity/scene lookup is not implemented (outside v1). No native command handler exists. | [N] [U] | No individual mapping |
+| `webviewWindow.WebviewWindow.sceneIdentifier` | Object member | **Not implemented** | Mobile activity/scene lookup is not implemented (excluded from project scope). No native command handler exists. | [N] [U] | No individual mapping |
 | `webviewWindow.WebviewWindow.setAlwaysOnBottom` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setAlwaysOnTop` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setAutoResize` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setBackgroundColor` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
-| `webviewWindow.WebviewWindow.setBadgeCount` | Object member | **Implemented** | Linux badge-count integration depends on the desktop host. Unsupported on Windows; use setOverlayIcon instead. | [N] | No individual mapping |
-| `webviewWindow.WebviewWindow.setBadgeLabel` | Object member | **Partial** | Applied through Tao on macOS; NativeAOT smoke exercised. No mutation on Windows/Linux. | [N] | No individual mapping |
+| `webviewWindow.WebviewWindow.setBadgeCount` | Object member | **Implemented** | Uses the macOS Dock badge label or Linux desktop badge integration. Linux requires host support. No badge mutation on Windows; use setOverlayIcon instead. | [N] | No individual mapping |
+| `webviewWindow.WebviewWindow.setBadgeLabel` | Object member | **Implemented** | Applied through Tao on macOS; NativeAOT smoke exercised. No mutation on Windows/Linux. | [N] | No individual mapping |
 | `webviewWindow.WebviewWindow.setClosable` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setContentProtected` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setCursorGrab` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
@@ -657,7 +695,7 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `webviewWindow.WebviewWindow.setCursorPosition` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setCursorVisible` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setDecorations` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
-| `webviewWindow.WebviewWindow.setEffects` | Object member | **Implemented** | Apply/remove Windows and macOS effects with full argument validation. Linux performs the same validation, then follows upstream's no-op behavior. | [N] | 1 mapped |
+| `webviewWindow.WebviewWindow.setEffects` | Object member | **Implemented** | Apply/remove Windows and macOS effects with full argument validation. macOS replacement and clearing deliberately differ from pinned upstream behavior; native view lifecycle is checked separately from visual appearance. Linux validates, then follows the upstream no-op. See [effect differences](pinned-upstream-behavior.md#window-effects-and-frame-bridge-availability). | [N] | 1 mapped |
 | `webviewWindow.WebviewWindow.setEnabled` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setFocus` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setFocusable` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
@@ -668,18 +706,18 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `webviewWindow.WebviewWindow.setMaxSize` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setMinimizable` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setMinSize` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
-| `webviewWindow.WebviewWindow.setOverlayIcon` | Object member | **Implemented** | Windows overlay-icon integration. Linux returns an explicit unsupported error. | [N] | No individual mapping |
+| `webviewWindow.WebviewWindow.setOverlayIcon` | Object member | **Implemented** | Windows overlay-icon integration. Linux and macOS return an explicit unsupported error. | [N] | No individual mapping |
 | `webviewWindow.WebviewWindow.setPosition` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setProgressBar` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setResizable` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
-| `webviewWindow.WebviewWindow.setShadow` | Object member | **Implemented** | Window shadows on Windows. No effect on Linux. | [N] | No individual mapping |
-| `webviewWindow.WebviewWindow.setSimpleFullscreen` | Object member | **Implemented** | Windows/Linux use the same borderless fullscreen as setFullscreen, following the official JS non-macOS contract. The macOS-only mode is out of scope. | [N] [U] | No individual mapping |
+| `webviewWindow.WebviewWindow.setShadow` | Object member | **Implemented** | Applies the Windows undecorated shadow or macOS shadow setter. No native mutation on Linux; visual appearance remains platform-dependent. | [N] | No individual mapping |
+| `webviewWindow.WebviewWindow.setSimpleFullscreen` | Object member | **Implemented** | Calls Tao simple fullscreen on macOS; Windows/Linux use ordinary borderless fullscreen. macOS simple-fullscreen interaction remains unverified. | [N] [U] | No individual mapping |
 | `webviewWindow.WebviewWindow.setSize` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setSizeConstraints` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
-| `webviewWindow.WebviewWindow.setSkipTaskbar` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
+| `webviewWindow.WebviewWindow.setSkipTaskbar` | Object member | **Implemented** | Windows/Linux use the native taskbar setting. macOS rejects true for an individual window; use application-wide Dock visibility. See [macOS limits](macos.md). | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setTheme` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setTitle` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
-| `webviewWindow.WebviewWindow.setTitleBarStyle` | Object member | **Partial** | Applied through Tao on macOS; NativeAOT smoke exercised. No mutation on Windows/Linux. | [N] | No individual mapping |
+| `webviewWindow.WebviewWindow.setTitleBarStyle` | Object member | **Implemented** | Applied through Tao on macOS; NativeAOT smoke exercised. No mutation on Windows/Linux. | [N] | No individual mapping |
 | `webviewWindow.WebviewWindow.setVisibleOnAllWorkspaces` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.setZoom` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
 | `webviewWindow.WebviewWindow.show` | Object member | **Implemented** | Combined window and WebView object. Individual member/option limits apply. | [N] [I] | No individual mapping |
@@ -703,25 +741,25 @@ Union alternatives within type aliases and every enum value are not expanded int
 | API identifier | Kind | Status | Behavior and limits | Source | Comparison fixtures |
 | --- | --- | --- | --- | --- | --- |
 | `window.availableMonitors` | Function | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.BackgroundThrottlingPolicy` | Constant | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.BackgroundThrottlingPolicy` | Constant | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `window.CloseRequestedEvent` | Object | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. Object availability does not imply every member is complete. | [N] [I] | No individual mapping |
 | `window.CloseRequestedEvent.constructor` | Constructor | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply; see option rows for unsupported behavior. | [N] [I] | No individual mapping |
 | `window.CloseRequestedEvent.event` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.CloseRequestedEvent.id` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.CloseRequestedEvent.isPreventDefault` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.CloseRequestedEvent.preventDefault` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.Color` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.Color` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `window.currentMonitor` | Function | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.CursorIcon` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.CursorIcon` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `window.cursorPosition` | Function | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.DragDropEvent` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `window.Effect` | Constant | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `window.Effects` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `window.Effects.color` | Configuration member | **Implemented** | Windows blur/acrylic color parsing and application. See setEffects for validation limits on the complete effect configuration. | [N] | No individual mapping |
-| `window.Effects.effects` | Configuration member | **Implemented** | Processes effect-name arrays and selects a supported Windows effect. Apple effects are out of scope; see setEffects for full configuration validation. | [N] | No individual mapping |
-| `window.Effects.radius` | Configuration member | **Partial** | Validated and applied through window-vibrancy on macOS; Sidebar effect and clearing exercised. | [N] | No individual mapping |
-| `window.Effects.state` | Configuration member | **Partial** | Validated and applied through window-vibrancy on macOS; Sidebar effect and clearing exercised. | [N] | No individual mapping |
-| `window.EffectState` | Constant | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.DragDropEvent` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.Effect` | Constant | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.Effects` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.Effects.color` | Configuration member | **Implemented** | Validates the pinned color representation and applies it to Windows blur/acrylic. macOS uses material/state/radius; Linux has no native effect mutation. | [N] | No individual mapping |
+| `window.Effects.effects` | Configuration member | **Implemented** | Validates the effect array and selects a supported Windows effect or macOS vibrancy material. Linux validates without applying an effect; full visual equivalence remains unverified. | [N] | No individual mapping |
+| `window.Effects.radius` | Configuration member | **Implemented** | Validated and applied through window-vibrancy on macOS; Sidebar effect and clearing exercised. | [N] | No individual mapping |
+| `window.Effects.state` | Configuration member | **Implemented** | Validated and applied through window-vibrancy on macOS; Sidebar effect and clearing exercised. | [N] | No individual mapping |
+| `window.EffectState` | Constant | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `window.getAllWindows` | Function | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 2 mapped |
 | `window.getCurrentWindow` | Function | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
 | `window.LogicalPosition` | Object | **Implemented** | Uses the official JS implementation; no separate native feature is required. | [U] | No individual mapping |
@@ -740,7 +778,7 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `window.LogicalSize.toPhysical` | Object member | **Implemented** | Uses the official JS implementation; no separate native feature is required. | [U] | No individual mapping |
 | `window.LogicalSize.type` | Object member | **Implemented** | Uses the official JS implementation; no separate native feature is required. | [U] | No individual mapping |
 | `window.LogicalSize.width` | Object member | **Implemented** | Uses the official JS implementation; no separate native feature is required. | [U] | No individual mapping |
-| `window.Monitor` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.Monitor` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `window.Monitor.name` | Data member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.Monitor.position` | Data member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.Monitor.scaleFactor` | Data member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
@@ -764,21 +802,21 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `window.PhysicalSize.type` | Object member | **Implemented** | Uses the official JS implementation; no separate native feature is required. | [U] | No individual mapping |
 | `window.PhysicalSize.width` | Object member | **Implemented** | Uses the official JS implementation; no separate native feature is required. | [U] | No individual mapping |
 | `window.primaryMonitor` | Function | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.ProgressBarState` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.ProgressBarState` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `window.ProgressBarState.progress` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.ProgressBarState.status` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.ProgressBarStatus` | Constant | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `window.ScaleFactorChanged` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.ProgressBarStatus` | Constant | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.ScaleFactorChanged` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `window.ScaleFactorChanged.scaleFactor` | Data member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.ScaleFactorChanged.size` | Data member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.ScrollBarStyle` | Constant | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `window.Theme` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `window.TitleBarStyle` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `window.UserAttentionType` | Constant | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.ScrollBarStyle` | Constant | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.Theme` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.TitleBarStyle` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.UserAttentionType` | Constant | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `window.Window` | Object | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. Object availability does not imply every member is complete. | [N] [I] | No individual mapping |
-| `window.Window.activityName` | Object member | **Not implemented** | Mobile activity/scene lookup is not implemented (outside v1). No native command handler exists. | [N] [U] | No individual mapping |
+| `window.Window.activityName` | Object member | **Not implemented** | Mobile activity/scene lookup is not implemented (excluded from project scope). No native command handler exists. | [N] [U] | No individual mapping |
 | `window.Window.center` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.Window.clearEffects` | Object member | **Implemented** | Windows effect removal is implemented. No effect on Linux. This is separate from remaining setEffects object-argument validation work. | [N] | No individual mapping |
+| `window.Window.clearEffects` | Object member | **Implemented** | Clears Windows effects and macOS vibrancy. Linux validates the request and performs no native mutation. Visual acceptance remains separate. | [N] | No individual mapping |
 | `window.Window.close` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
 | `window.Window.constructor` | Constructor | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply; see option rows for unsupported behavior. | [N] [I] | 1 mapped |
 | `window.Window.destroy` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 2 mapped |
@@ -816,12 +854,12 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `window.Window.outerSize` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
 | `window.Window.requestUserAttention` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.Window.scaleFactor` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
-| `window.Window.sceneIdentifier` | Object member | **Not implemented** | Mobile activity/scene lookup is not implemented (outside v1). No native command handler exists. | [N] [U] | No individual mapping |
+| `window.Window.sceneIdentifier` | Object member | **Not implemented** | Mobile activity/scene lookup is not implemented (excluded from project scope). No native command handler exists. | [N] [U] | No individual mapping |
 | `window.Window.setAlwaysOnBottom` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.Window.setAlwaysOnTop` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
 | `window.Window.setBackgroundColor` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
-| `window.Window.setBadgeCount` | Object member | **Implemented** | Linux badge-count integration depends on the desktop host. Unsupported on Windows; use setOverlayIcon instead. | [N] | 1 mapped |
-| `window.Window.setBadgeLabel` | Object member | **Partial** | Applied through Tao on macOS; NativeAOT smoke exercised. No mutation on Windows/Linux. | [N] | No individual mapping |
+| `window.Window.setBadgeCount` | Object member | **Implemented** | Uses the macOS Dock badge label or Linux desktop badge integration. Linux requires host support. No badge mutation on Windows; use setOverlayIcon instead. | [N] | 1 mapped |
+| `window.Window.setBadgeLabel` | Object member | **Implemented** | Applied through Tao on macOS; NativeAOT smoke exercised. No mutation on Windows/Linux. | [N] | No individual mapping |
 | `window.Window.setClosable` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
 | `window.Window.setContentProtected` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.Window.setCursorGrab` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
@@ -829,7 +867,7 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `window.Window.setCursorPosition` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.Window.setCursorVisible` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.Window.setDecorations` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
-| `window.Window.setEffects` | Object member | **Implemented** | Apply/remove Windows and macOS effects with full argument validation. Linux performs the same validation, then follows upstream's no-op behavior. | [N] | 1 mapped |
+| `window.Window.setEffects` | Object member | **Implemented** | Apply/remove Windows and macOS effects with full argument validation. macOS replacement and clearing deliberately differ from pinned upstream behavior; native view lifecycle is checked separately from visual appearance. Linux validates, then follows the upstream no-op. See [effect differences](pinned-upstream-behavior.md#window-effects-and-frame-bridge-availability). | [N] | 1 mapped |
 | `window.Window.setEnabled` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
 | `window.Window.setFocus` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.Window.setFocusable` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
@@ -840,18 +878,18 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `window.Window.setMaxSize` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.Window.setMinimizable` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
 | `window.Window.setMinSize` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.Window.setOverlayIcon` | Object member | **Implemented** | Windows overlay-icon integration. Linux returns an explicit unsupported error. | [N] | No individual mapping |
+| `window.Window.setOverlayIcon` | Object member | **Implemented** | Windows overlay-icon integration. Linux and macOS return an explicit unsupported error. | [N] | No individual mapping |
 | `window.Window.setPosition` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
 | `window.Window.setProgressBar` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
 | `window.Window.setResizable` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
-| `window.Window.setShadow` | Object member | **Implemented** | Window shadows on Windows. No effect on Linux. | [N] | No individual mapping |
-| `window.Window.setSimpleFullscreen` | Object member | **Implemented** | Windows/Linux use the same borderless fullscreen as setFullscreen, following the official JS non-macOS contract. The macOS-only mode is out of scope. | [N] [U] | No individual mapping |
+| `window.Window.setShadow` | Object member | **Implemented** | Applies the Windows undecorated shadow or macOS shadow setter. No native mutation on Linux; visual appearance remains platform-dependent. | [N] | No individual mapping |
+| `window.Window.setSimpleFullscreen` | Object member | **Implemented** | Calls Tao simple fullscreen on macOS; Windows/Linux use ordinary borderless fullscreen. macOS simple-fullscreen interaction remains unverified. | [N] [U] | No individual mapping |
 | `window.Window.setSize` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 2 mapped |
 | `window.Window.setSizeConstraints` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.Window.setSkipTaskbar` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
+| `window.Window.setSkipTaskbar` | Object member | **Implemented** | Windows/Linux use the native taskbar setting. macOS rejects true for an individual window; use application-wide Dock visibility. See [macOS limits](macos.md). | [N] [I] | No individual mapping |
 | `window.Window.setTheme` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.Window.setTitle` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
-| `window.Window.setTitleBarStyle` | Object member | **Partial** | Applied through Tao on macOS; NativeAOT smoke exercised. No mutation on Windows/Linux. | [N] | No individual mapping |
+| `window.Window.setTitleBarStyle` | Object member | **Implemented** | Applied through Tao on macOS; NativeAOT smoke exercised. No mutation on Windows/Linux. | [N] | No individual mapping |
 | `window.Window.setVisibleOnAllWorkspaces` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.Window.show` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 2 mapped |
 | `window.Window.startDragging` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
@@ -865,25 +903,25 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `window.Window.toggleMaximize` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
 | `window.Window.unmaximize` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
 | `window.Window.unminimize` | Object member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.WindowLabel` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `window.WindowOptions` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
-| `window.WindowOptions.activityName` | Configuration member | **Not implemented** | Apple/mobile-only creation option (outside v1). Type/configuration acceptance does not apply it to native behavior. | [N] [U] | No individual mapping |
-| `window.WindowOptions.allowLinkPreview` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
+| `window.WindowLabel` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.WindowOptions` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.WindowOptions.activityName` | Configuration member | **Not implemented** | Mobile activity/scene or input-accessory creation option (excluded from project scope). Type/configuration acceptance does not apply it to native behavior. | [N] [U] | No individual mapping |
+| `window.WindowOptions.allowLinkPreview` | Configuration member | **Implemented** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
 | `window.WindowOptions.alwaysOnBottom` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowOptions.alwaysOnTop` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowOptions.backgroundColor` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.WindowOptions.backgroundThrottling` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
+| `window.WindowOptions.backgroundThrottling` | Configuration member | **Implemented** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
 | `window.WindowOptions.center` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowOptions.closable` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowOptions.contentProtected` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.WindowOptions.createdByActivityName` | Configuration member | **Not implemented** | Apple/mobile-only creation option (outside v1). Type/configuration acceptance does not apply it to native behavior. | [N] [U] | No individual mapping |
+| `window.WindowOptions.createdByActivityName` | Configuration member | **Not implemented** | Mobile activity/scene or input-accessory creation option (excluded from project scope). Type/configuration acceptance does not apply it to native behavior. | [N] [U] | No individual mapping |
 | `window.WindowOptions.decorations` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.WindowOptions.disableInputAccessoryView` | Configuration member | **Not implemented** | Apple/mobile-only creation option (outside v1). Type/configuration acceptance does not apply it to native behavior. | [N] [U] | No individual mapping |
+| `window.WindowOptions.disableInputAccessoryView` | Configuration member | **Not implemented** | Mobile activity/scene or input-accessory creation option (excluded from project scope). Type/configuration acceptance does not apply it to native behavior. | [N] [U] | No individual mapping |
 | `window.WindowOptions.focus` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowOptions.focusable` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowOptions.fullscreen` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowOptions.height` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.WindowOptions.hiddenTitle` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
+| `window.WindowOptions.hiddenTitle` | Configuration member | **Implemented** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
 | `window.WindowOptions.javascriptDisabled` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowOptions.maxHeight` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowOptions.maximizable` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
@@ -894,16 +932,16 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `window.WindowOptions.minWidth` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowOptions.parent` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowOptions.preventOverflow` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.WindowOptions.requestedBySceneIdentifier` | Configuration member | **Not implemented** | Apple/mobile-only creation option (outside v1). Type/configuration acceptance does not apply it to native behavior. | [N] [U] | No individual mapping |
+| `window.WindowOptions.requestedBySceneIdentifier` | Configuration member | **Not implemented** | Mobile activity/scene or input-accessory creation option (excluded from project scope). Type/configuration acceptance does not apply it to native behavior. | [N] [U] | No individual mapping |
 | `window.WindowOptions.resizable` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowOptions.scrollBarStyle` | Configuration member | **Implemented** | Configures WebView2 fluentOverlay on Windows. Unsupported on Linux. | [N] | No individual mapping |
-| `window.WindowOptions.shadow` | Configuration member | **Implemented** | Window shadows on Windows. No effect on Linux. | [N] | No individual mapping |
-| `window.WindowOptions.skipTaskbar` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.WindowOptions.tabbingIdentifier` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
+| `window.WindowOptions.shadow` | Configuration member | **Implemented** | Applies the Windows undecorated shadow or macOS shadow setter. No native mutation on Linux; visual appearance remains platform-dependent. | [N] | No individual mapping |
+| `window.WindowOptions.skipTaskbar` | Configuration member | **Implemented** | Windows/Linux use the native taskbar setting. macOS rejects true for an individual window; use application-wide Dock visibility. See [macOS limits](macos.md). | [N] [I] | No individual mapping |
+| `window.WindowOptions.tabbingIdentifier` | Configuration member | **Implemented** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
 | `window.WindowOptions.theme` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowOptions.title` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.WindowOptions.titleBarStyle` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
-| `window.WindowOptions.trafficLightPosition` | Configuration member | **Partial** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
+| `window.WindowOptions.titleBarStyle` | Configuration member | **Implemented** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
+| `window.WindowOptions.trafficLightPosition` | Configuration member | **Implemented** | Forwarded to the macOS Tao/Wry backend. Option-specific interaction and upstream comparison remain unverified; see [macOS](macos.md). | [N] [U] | No individual mapping |
 | `window.WindowOptions.transparent` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowOptions.visible` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | 1 mapped |
 | `window.WindowOptions.visibleOnAllWorkspaces` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
@@ -911,7 +949,7 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `window.WindowOptions.windowEffects` | Configuration member | **Implemented** | The pinned WindowEffectsConfig validates effects, color, state, radius and unknown fields. Invalid creation options are rejected before allocating a window. | [N] | 1 mapped |
 | `window.WindowOptions.x` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowOptions.y` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
-| `window.WindowSizeConstraints` | Type | **Implemented** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
+| `window.WindowSizeConstraints` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `window.WindowSizeConstraints.maxHeight` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowSizeConstraints.maxWidth` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
 | `window.WindowSizeConstraints.minHeight` | Configuration member | **Implemented** | tao window behavior connected to the official JS objects. Window-manager constraints apply. | [N] [I] | No individual mapping |
@@ -935,9 +973,9 @@ The following table groups .NET functionality by **feature**. It is not a one-to
 | SDK-SCOPE | FileScope / AllowFile·Directory / ForbidFile·Directory | **Implemented** | Dynamic file scopes, path boundaries and deny precedence. Review of all upstream edge cases remains incomplete. | [FileScope](../src/NetWiv.Core/Security/FileScope.cs), [mutations](../src/NetWiv.Core/Security/FileScope.Mutations.cs) |
 | SDK-CSP | CSP / isolation / document-generation IPC | **Implemented** | Security enforcement and isolation transport exist. This does not establish full security acceptance. | [CSP](../src/NetWiv.Core/Security/ContentSecurityPolicy.cs), [isolation](../src/NetWiv.Core/Security/IsolationPattern.cs), [IPC](../src/NetWiv.Core/Ipc/AppHandle.Protocol.cs) |
 | SDK-REMOTE-PARITY | Detailed remote URLPattern and iframe-origin equivalence | **Implemented** | Compared 363 URLPatterns and 3364 URL decisions with upstream. Standard IPC comparisons cover per-frame Windows origin checks and the Linux main-frame bridge. Isolation child frames and forced fallback are outside this scope and listed in knownGaps. | [URLPattern](../src/NetWiv.Core/Security/RemoteUrlPattern.cs), [known gaps](../compatibility/implementation-evidence.json) |
-| GEN-BINDINGS | Generated JavaScript functions and TypeScript DTOs | **Implemented** | C#-named input/output DTOs, name disambiguation, generics, build integration and actual React calls. | [Usage](frontend-generator.md), [Emitter](../src/NetWiv.Generators/FrontendBindingEmitter.cs) |
+| GEN-BINDINGS | Generated JavaScript functions and TypeScript DTOs | **Implemented** | C#-named input/output DTOs, name disambiguation, generics, build integration and opted-in referenced command aggregation. Missing/version-incompatible producer metadata produces DTOXGEN013; JSON mappings retain the separate GEN-ADVANCED limits. | [Usage](frontend-generator.md), [Emitter](../src/NetWiv.Generators/FrontendBindingEmitter.cs) |
 | GEN-SERIALIZATION | JSON names, enums, nulls, directional ignores and supported ExtensionData | **Implemented** | Generates only supported DTO shapes. Does not guess types or silently use any. | [Supported scope](frontend-generator.md) |
-| GEN-ADVANCED | Custom converters, polymorphism, unsupported ExtensionData and nonpublic JsonInclude | **Not implemented** | Explicitly rejected with DTOXGEN009. No additional support timeline is set. | [Limits](frontend-generator.md), [Emitter](../src/NetWiv.Generators/FrontendBindingEmitter.cs) |
+| GEN-ADVANCED | Polymorphic JSON mappings and advanced serialization | **Partial** | Explicit JsonPolymorphic abstract/interface roots with uniquely tagged sealed JsonDerivedType variants produce directional TS unions and source-generated command JSON. String/integer tags, nullable and recursive variants are supported. The discriminator must be the first JSON property. Fallback, concrete roots, nonsealed or nested declarations, arbitrary converters, unsupported ExtensionData and nonpublic JsonInclude remain rejected with DTOXGEN009. | [Limits](frontend-generator.md), [Emitter](../src/NetWiv.Generators/FrontendBindingEmitter.cs) |
 | CLI-NEW | netwiv new / React template | **Implemented** | NuGet consumer project, CLI manifest and pinned versions. | [NewCommand](../src/NetWiv.Cli/Commands/NewCommand.cs), [usage](project-creation.md) |
 | CLI-INIT | netwiv init | **Implemented** | Initializes configuration and .NET integration for an existing project. | [InitCommand](../src/NetWiv.Cli/Commands/InitCommand.cs) |
 | CLI-DEV | netwiv dev / managed and AOT / watching / restart / hooks | **Implemented** | Development execution and child-process cleanup. Does not claim equivalence for every upstream option. | [DevCommand](../src/NetWiv.Cli/Commands/DevCommand.cs), [development workflow](react-development.md) |
@@ -952,7 +990,7 @@ The following table groups .NET functionality by **feature**. It is not a one-to
 | CLI-PLUGIN | netwiv plugin new·init / add / remove | **Implemented** | .NET plugin scaffolding, NuGet references and static registration. | [PluginCommand](../src/NetWiv.Cli/Commands/PluginCommand.cs) |
 | CLI-PLUGIN-CI | plugin --github-workflows | **Not implemented** | Automatic CI workflow generation is explicitly rejected. | [PluginCommand](../src/NetWiv.Cli/Commands/PluginCommand.cs) |
 | CLI-SIGNER | netwiv signer generate·sign | **Implemented** | Key/signature format support through minisign. The updater runtime remains unimplemented. | [SignerCommand](../src/NetWiv.Cli/Commands/SignerCommand.cs) |
-| CLI-BUNDLE | MSI, NSIS, deb, rpm, AppImage, app and DMG generation | **Implemented** | Generation paths exist and require OS-specific packaging tools. macOS supports ad-hoc/identity signing configuration; notarization is not implemented. Installation/execution/removal acceptance for all formats remains incomplete. | [NativeBundler](../src/NetWiv.Cli/Commands/NativeBundler.cs), [support and validation](implementation-status.md) |
+| CLI-BUNDLE | MSI, NSIS, deb, rpm, AppImage, app and DMG generation | **Implemented** | Generation paths exist and require OS-specific packaging tools. macOS supports ad-hoc/identity signing configuration; notarization expansion is excluded and notarization automation is not implemented. Installation/execution/removal acceptance for all formats remains incomplete. | [NativeBundler](../src/NetWiv.Cli/Commands/NativeBundler.cs), [support and validation](implementation-status.md) |
 | SDK-NUGET | RID-specific native assets / app consumption without Rust | **Implemented** | Native assets cover win-x64, linux-x64, osx-arm64 and osx-x64. macOS package-only consumption remains unverified; separate from public NuGet distribution. | [Getting started](integration-quickstart.md) |
 | TEMPLATE-IDE | React .sln and .esproj / IDE build integration | **Implemented** | Build integration exists with automated execution evidence. Actual Rider/VS solution loading and debugger GUI acceptance remain unverified. | [Template](../templates/react-app/ReactExample.sln), [support and validation](implementation-status.md) |
 
@@ -960,11 +998,11 @@ The following table groups .NET functionality by **feature**. It is not a one-to
 
 Implementation status and the acceptance work below are separate. Each must be updated using its own evidence.
 
-- API fixtures map 244 of 688 entries. A row with a source link may still lack a comparison fixture or execution evidence.
+- API fixtures map 243 of 688 entries. A row with a source link may still lack a comparison fixture or execution evidence.
 - Further comparison is needed across errors, arguments, permissions, lifetimes, isolation, file scopes and remote origins. Specific gaps are maintained in [knownGaps](../compatibility/implementation-evidence.json).
 - Upstream business-test ports, full GUI acceptance, package installation/execution/removal and performance measurements are tracked separately in [support and validation](implementation-status.md).
 - Before changing a status, review the implementation, supported OSes and behavior, and record fixtures and execution results separately. Adding a type or IPC command name alone does not make a feature implemented.
-- Reconcile identifier sets when updating the upstream inventory. This table is a manually reviewed snapshot for the pinned version, not an automatically refreshed execution report.
+- Reconcile identifier sets when updating the upstream inventory. This table is a maintained source inventory for the pinned version, not an execution report. Recompute aggregates from the individual rows and the fixture map when classifications change.
 - Include a feature ID such as `EXT-DIALOG`, or an API identifier such as `window.Window.setEffects`, and the target OS in feature requests and bug reports.
 
 ## Source legend

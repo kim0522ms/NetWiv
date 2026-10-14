@@ -53,8 +53,11 @@ coverage. These principles do not relax security, NativeAOT or testing standards
 
 ## Scope
 
-v1 focuses on desktop core functionality. The updater runtime remains
-**Not implemented** and is not a v1 completion blocker. Existing CLI signing
+v1 focuses on desktop core functionality. Mobile targets, the updater runtime
+and expansion of distribution notarization are excluded from the project work
+scope, not deferred milestones or release blockers. They must not be scheduled
+unless the maintainer explicitly changes this scope. Unsupported APIs remain
+visible in compatibility inventories. Existing CLI signing and packaging
 support is separate. The [API status table](api-status.md) describes support and
 limits for ancillary extensions.
 

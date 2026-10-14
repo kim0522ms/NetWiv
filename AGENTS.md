@@ -62,8 +62,9 @@ upstream name.
 
 - Desktop baseline: Windows x64 with WebView2, Linux x64 on Ubuntu 24.04/WSLg with GTK3/WebKitGTK 4.1, and macOS 12+ arm64/x64 with WKWebView/AppKit. Apple Silicon has local NativeAOT/GUI evidence; Intel and minimum-OS execution remain unverified. See [macOS support](docs/macos.md).
 - Desktop core includes app, core, DPI, events, image, menu, path, resources, tray, window, webview and webview-window behavior.
-- The plugin host is in scope; official plugin implementations, mobile targets and Tauri v1 migration are later milestones.
-- v1 prioritizes desktop core. The updater runtime remains Not Implemented and is not a v1 completion blocker; existing CLI signer support is separate. Use [the API status table](docs/api-status.md) for user-selected ancillary extensions rather than scheduling them automatically.
+- The plugin host is in scope; official plugin implementations and Tauri v1 migration are separate milestones.
+- Mobile targets, the updater runtime and expansion of distribution notarization are excluded from the project work scope. Do not list them as deferred work, later milestones or release blockers, or propose them again unless the user explicitly changes this scope. Keep their unsupported status visible in compatibility inventories; existing signing and packaging functionality is separate.
+- v1 prioritizes desktop core. Use [the API status table](docs/api-status.md) for user-selected ancillary extensions rather than scheduling them automatically.
 - `netwiv dev` and `netwiv build` default to the managed runtime; `--aot` opts into NativeAOT. Consumer publishing also supports `--framework-dependent`. Keep framework and release NativeAOT validation alongside managed consumer validation.
 - The primary config is `src-netwiv/netwiv.conf.json`; `src-tauri/tauri.conf.json` is accepted as a compatibility input.
 

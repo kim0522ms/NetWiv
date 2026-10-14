@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { addReferencedPolymorphism, polymorphismGuestChecks, referencedPolymorphismCalls } from './polymorphism.mjs';
 
 export async function checkInitializedApp({ consumer, dotnet, rid, version, run }) {
   const initialized = path.join(consumer, 'initialized');
@@ -18,6 +19,7 @@ export async function checkInitializedApp({ consumer, dotnet, rid, version, run 
   assert.ok(!pluginProject.includes('ProjectReference') && !pluginProject.includes('__'));
   assert.equal((pluginProject.match(new RegExp(`Version="${version.replaceAll('.', '\\.')}"`, 'g')) ?? []).length, 2);
   await copyFile(new URL('./ReferencedCommands.cs', import.meta.url), path.join(plugin, 'Plugin.cs'));
+  await addReferencedPolymorphism(path.join(plugin, 'Plugin.cs'));
   await run(dotnet, ['pack', plugin, '-c', 'Release', '-o', pluginFeed, '-p:TreatWarningsAsErrors=true', '--disable-build-servers']);
   const nugetFile = path.join(consumer, 'NuGet.Config');
   const escapedFeed = pluginFeed.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
@@ -29,7 +31,7 @@ export async function checkInitializedApp({ consumer, dotnet, rid, version, run 
   const pluginCapability = '.Capability(new("scaffold", ["library-check:default"], Windows: ["main"]))';
   const programFile = path.join(initialized, 'src-netwiv/Program.cs');
   await writeFile(programFile, (await readFile(programFile, 'utf8'))
-    .replace('.InvokeHandler("greet")', '.InvokeHandler("greet").InvokeHandler("package_echo").InvokeHandler("init_done").InvokeHandler("read_bundled").RegisterUriSchemeProtocol("nuget-probe", InitProbe.Protocol).Plugin(new NugetPermissionPlugin()).Capability(new("nuget", ["nuget:default"], Windows: ["main"]))' + pluginCapability) + `
+    .replace('.InvokeHandler("greet")', '.InvokeHandler("greet").InvokeHandler("package_echo").InvokeHandler("package_polymorphic_profile").InvokeHandler("init_done").InvokeHandler("read_bundled").RegisterUriSchemeProtocol("nuget-probe", InitProbe.Protocol).Plugin(new NugetPermissionPlugin()).Capability(new("nuget", ["nuget:default"], Windows: ["main"]))' + pluginCapability) + `
 public static class InitProbe {
   public static NetWiv.Runtime.AssetResponse Protocol(UriSchemeContext context, NetWiv.Runtime.AssetRequest request) =>
     new(200, "text/plain", "NuGet custom URI"u8.ToArray(), new Dictionary<string, string> { ["Access-Control-Allow-Origin"] = "*" });
@@ -85,6 +87,7 @@ try {
     try { await commands[route](); } catch { rejected = true; }
     if (!rejected) throw new Error('Binding aggregation exposed unregistered or denied command: ' + route);
   }
+  ${polymorphismGuestChecks('package_polymorphic_profile', true)}
   if (await (await fetch(convertFileSrc('probe', 'nuget-probe'))).text() !== 'NuGet custom URI') throw new Error('Custom URI handler failed');
   document.querySelector('#result').textContent = response;
   await commands.init_done({ result: 'PASS: init Wry + generated JavaScript' });
@@ -110,6 +113,7 @@ result.input_only;
 // @ts-expect-error Numeric outputs are serialized as strings by the producer.
 const wrongCount: number = result.count;
 void [count, output, wrongCount];
+${referencedPolymorphismCalls}
 `);
   await run(process.execPath, [fileURLToPath(new URL('./node_modules/typescript/bin/tsc', import.meta.url)),
     '--ignoreConfig', '--strict', '--noEmit', '--module', 'ESNext', '--target', 'ES2022', '--moduleResolution', 'Bundler', calls], initialized);
@@ -128,7 +132,8 @@ void [count, output, wrongCount];
   assert.ok(aotOutput.includes('PASS: init Wry + generated JavaScript'));
   await run(dotnet, ['tool', 'run', 'netwiv', '--', 'remove', 'library-check'], initialized);
   assert.ok(!(await readFile(projectFile, 'utf8')).includes('NetWiv.Plugin.LibraryCheck'));
-  await writeFile(programFile, (await readFile(programFile, 'utf8')).replace(pluginCapability, '').replace('.InvokeHandler("package_echo")', ''));
+  await writeFile(programFile, (await readFile(programFile, 'utf8')).replace(pluginCapability, '').replace('.InvokeHandler("package_echo")', '')
+    .replace('.InvokeHandler("package_polymorphic_profile")', ''));
   const html = path.join(dist, 'index.html');
   await writeFile(html, (await readFile(html, 'utf8')).replace(
     "if (await commands['plugin:library-check|ping']() !== 'pong') throw new Error('Packaged generated plugin did not register');",
@@ -139,6 +144,7 @@ void [count, output, wrongCount];
   await run(dotnet, ['tool', 'run', 'netwiv', '--', 'build', '--no-bundle', '--', '-p:TreatWarningsAsErrors=true'], initialized);
   assert.ok(!(await readFile(declarationFile, 'utf8')).includes('"plugin:library-check|profile"'));
   assert.ok(!(await readFile(declarationFile, 'utf8')).includes('"package_echo"'));
+  assert.ok(!(await readFile(declarationFile, 'utf8')).includes('PackagePolyWire'));
   const removedOutput = process.env.NETWIV_GUI_LAUNCHER
     ? await run('bash', [process.env.NETWIV_GUI_LAUNCHER, executable, process.env.NETWIV_GUI_BACKEND ?? 'x11'], initialized, 60000)
     : await run(executable, [], initialized, 60000);

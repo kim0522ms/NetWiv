@@ -207,6 +207,10 @@ internal sealed class FrontendBindingEmitter
         var converter = Attribute(type, "JsonConverterAttribute");
         if (converter is not null && !(type.TypeKind == TypeKind.Enum && IsStringEnumConverter(converter, type)))
             throw new NotSupportedException(type.Name + " uses a custom JSON converter");
+        // Check tagged roots before ordinary collection mappings can return a type.
+        if (type is INamedTypeSymbol polymorphic &&
+            (Attribute(type, "JsonPolymorphicAttribute") is not null || Attribute(type, "JsonDerivedTypeAttribute") is not null) && IsEnumerable(polymorphic))
+            throw new NotSupportedException(type.Name + " enumerable polymorphic roots require a different JSON wire mapping");
         switch (type.SpecialType)
         {
             case SpecialType.System_String:
@@ -251,7 +255,8 @@ internal sealed class FrontendBindingEmitter
             }
         }
         var ns = named.ContainingNamespace.ToDisplayString();
-        if (ns == "System" || ns.StartsWith("System.", StringComparison.Ordinal) || named.TypeKind is not (TypeKind.Class or TypeKind.Struct))
+        if (ns == "System" || ns.StartsWith("System.", StringComparison.Ordinal) ||
+            named.TypeKind is not (TypeKind.Class or TypeKind.Struct) && Attribute(named, "JsonPolymorphicAttribute") is null)
             throw new NotSupportedException("unsupported wire type " + fullName);
         return ObjectType(named, input);
     }
@@ -264,13 +269,18 @@ internal sealed class FrontendBindingEmitter
             (input ? ":input" : ":output") + "\0" + _contextIdentity;
         if (_names.TryGetValue(key, out var existing)) return existing;
         if (type.GetAttributes().Any(attribute => attribute.AttributeClass?.ContainingNamespace.ToDisplayString() == "System.Text.Json.Serialization" &&
-                attribute.AttributeClass.Name != "JsonNumberHandlingAttribute"))
+                attribute.AttributeClass.Name is not ("JsonNumberHandlingAttribute" or "JsonPolymorphicAttribute" or "JsonDerivedTypeAttribute")))
             throw new NotSupportedException(type.Name + " has type-level JSON attributes that need an explicit wire mapping");
         var direction = input ? "Input" : "Output";
         var name = _resolvedNames is null ? "Dto" + _names.Count.ToString(CultureInfo.InvariantCulture) : _resolvedNames[key];
         _preferredNames[key] = TypeName(type, false) + direction;
         _qualifiedNames[key] = TypeName(type, true) + direction;
         _names.Add(key, name);
+        if (Attribute(type, "JsonPolymorphicAttribute") is not null || Attribute(type, "JsonDerivedTypeAttribute") is not null)
+        {
+            _declarations.Add(name, "export type " + name + " = " + PolymorphicType(type, input) + ";");
+            return name;
+        }
         var members = new SortedDictionary<string, string>(StringComparer.Ordinal);
         var constructor = input ? DeserializationConstructor(type) : null;
         var selectedMembers = new Dictionary<string, ISymbol>(StringComparer.Ordinal);
@@ -372,6 +382,63 @@ internal sealed class FrontendBindingEmitter
             (extensionData ? "\n  [key: string]: unknown;" : "") + "\n}");
         return name;
     }
+
+    private string PolymorphicType(INamedTypeSymbol type, bool input)
+    {
+        var options = Attribute(type, "JsonPolymorphicAttribute");
+        if (options is null || !type.IsAbstract || type.TypeKind is not (TypeKind.Class or TypeKind.Interface))
+            throw new NotSupportedException(type.Name + " polymorphism requires an abstract class or interface with JsonPolymorphic");
+        var discriminator = "$type";
+        foreach (var option in options.NamedArguments)
+        {
+            if (option.Key == "TypeDiscriminatorPropertyName") discriminator = option.Value.Value as string ?? "$type";
+            else if (option.Key == "IgnoreUnrecognizedTypeDiscriminators" && option.Value.Value is false) continue;
+            else if (option.Key == "UnknownDerivedTypeHandling" && Convert.ToInt32(option.Value.Value, CultureInfo.InvariantCulture) == 0) continue;
+            else throw new NotSupportedException(type.Name + " polymorphic fallback behavior is not mapped");
+        }
+        if (discriminator is "$id" or "$ref" or "$values")
+            throw new NotSupportedException(type.Name + " discriminator conflicts with reserved JSON metadata");
+        var variants = new List<string>();
+        var tags = new HashSet<string>(StringComparer.Ordinal);
+        var derivedTypes = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
+        foreach (var attribute in type.GetAttributes().Where(attribute =>
+                     attribute.AttributeClass?.ToDisplayString() == "System.Text.Json.Serialization.JsonDerivedTypeAttribute"))
+        {
+            if (attribute.ConstructorArguments.Length != 2 || attribute.ConstructorArguments[0].Value is not INamedTypeSymbol derived ||
+                attribute.ConstructorArguments[1].Value is not (string or int))
+                throw new NotSupportedException(type.Name + " derived types require explicit string or integer discriminators");
+            var tag = attribute.ConstructorArguments[1].Value is string text ? Quote(text)
+                : Convert.ToString(attribute.ConstructorArguments[1].Value, CultureInfo.InvariantCulture)!;
+            if (!tags.Add(tag) || !derivedTypes.Add(derived))
+                throw new NotSupportedException(type.Name + " has duplicate polymorphic types or discriminators");
+            if (derived.TypeKind != TypeKind.Class || !derived.IsSealed || derived.IsAbstract ||
+                Attribute(derived, "JsonPolymorphicAttribute") is not null || Attribute(derived, "JsonDerivedTypeAttribute") is not null)
+                throw new NotSupportedException(type.Name + " variants must be sealed concrete classes without nested polymorphism");
+            if (IsEnumerable(derived))
+                throw new NotSupportedException(derived.Name + " enumerable polymorphic variants require a different JSON wire mapping");
+            var assignable = derived.AllInterfaces.Any(candidate => SymbolEqualityComparer.Default.Equals(candidate, type));
+            for (var parent = derived.BaseType; parent is not null; parent = parent.BaseType)
+                assignable |= SymbolEqualityComparer.Default.Equals(parent, type);
+            if (!assignable) throw new NotSupportedException(derived.Name + " is not derived from " + type.Name);
+            for (var current = derived; current is not null; current = current.BaseType)
+                foreach (var member in current.GetMembers().Where(member => !member.IsStatic && JsonMemberType(member) is not null))
+                {
+                    if (Attribute(member, "JsonExtensionDataAttribute") is not null)
+                        throw new NotSupportedException(derived.Name + " polymorphic extension data is not mapped");
+                    var wireName = Attribute(member, "JsonPropertyNameAttribute")?.ConstructorArguments.FirstOrDefault().Value as string
+                        ?? JsonWireNames.ConvertName(member.Name, _namingPolicy);
+                    if (wireName == discriminator)
+                        throw new NotSupportedException(derived.Name + " has a property colliding with discriminator " + discriminator);
+                }
+            variants.Add("(" + Type(derived.WithNullableAnnotation(NullableAnnotation.NotAnnotated), input) + " & { " + Quote(discriminator) + ": " + tag + " })");
+        }
+        if (variants.Count == 0) throw new NotSupportedException(type.Name + " polymorphism requires at least one tagged derived type");
+        return string.Join(" | ", variants);
+    }
+
+    private static bool IsEnumerable(INamedTypeSymbol type) => type.AllInterfaces.Any(candidate =>
+        candidate.ToDisplayString() == "System.Collections.IEnumerable" ||
+        candidate.OriginalDefinition.ToDisplayString() == "System.Collections.Generic.IAsyncEnumerable<T>");
 
     private static int? NumberHandling(ISymbol symbol)
     {

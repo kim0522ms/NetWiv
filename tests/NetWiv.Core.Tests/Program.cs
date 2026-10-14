@@ -22,6 +22,8 @@ GeneratedCommandRegistry.Register("generated_selected", static registry =>
 
 var tests = new List<(string Name, Func<Task> Run)>
 {
+    ("polymorphic command input validates derived required nullable and numeric members", PolymorphicInputTests.DerivedMembers),
+    ("polymorphic command input preserves discriminator rejection and explicit fallback", PolymorphicInputTests.DiscriminatorErrors),
     ("generated plugin commands dispatch through IPC with isolated names and explicit selection", GeneratedPluginCommandTests.DispatchAndIsolation),
     ("generated plugin commands require capability and respect deny precedence", GeneratedPluginCommandTests.Permissions),
     ("generated plugin commands reject invalid owners selections and registrations", GeneratedPluginCommandTests.InvalidSelection),

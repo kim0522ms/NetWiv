@@ -53,6 +53,8 @@
     "allow-conformance-record",
     "allow-conformance-finish",
     "allow-conformance-profile",
-    "allow-conformance-cases"
+    "allow-conformance-cases",
+    "allow-conformance-platform",
+    "allow-create-data-store-fixture"
   ]
 }

@@ -1,0 +1,37 @@
+<!doctype html>
+<html><head><meta charset="UTF-8"><title>NetWiv public data-store option regression</title></head><body>
+<script type="module">
+import { invoke } from './vendor/@tauri-apps/api/core.js';
+import { fetchDataStoreIdentifiers, removeDataStore } from './vendor/@tauri-apps/api/app.js';
+import { WebviewWindow } from './vendor/@tauri-apps/api/webviewWindow.js';
+import { listen } from './vendor/@tauri-apps/api/event.js';
+import { websiteDataStoreContract } from './data-store.js';
+const name = 'webview.data-store-public-option';
+const untilAsync = async (predicate, timeout = 5000) => {
+  const deadline = performance.now() + timeout;
+  while (!await predicate()) {
+    if (performance.now() >= deadline) throw Error('Public data-store option timed out');
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+};
+try {
+  const feature = await invoke('conformance_platform');
+  if (feature.os !== 'macos' || !feature.websiteDataStores) throw Error('This independent option regression requires macOS 14+');
+  const value = await websiteDataStoreContract(feature, {
+    fetchDataStoreIdentifiers, removeDataStore, WebviewWindow, listen, untilAsync,
+    createWindow: async options => {
+      const child = new WebviewWindow('conformance-child', options);
+      await new Promise((resolve, reject) => {
+        child.once('tauri://created', resolve);
+        child.once('tauri://error', event => reject(event.payload));
+      });
+      return child;
+    }
+  });
+  await invoke('conformance_record', { result: { type: 'case', name, status: 'pass', value } });
+} catch (error) {
+  await invoke('conformance_record', { result: { type: 'case', name, status: 'fail', error: String(error) } });
+}
+await invoke('conformance_record', { result: { type: 'complete', count: 1 } });
+await invoke('conformance_finish');
+</script></body></html>

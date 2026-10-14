@@ -1,127 +1,68 @@
-import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
-import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import path from 'node:path'
-import test from 'node:test'
-import { fileURLToPath } from 'node:url'
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { compareResults, validateResults } from './compare-results.mjs';
 
-const script = path.join(path.dirname(fileURLToPath(import.meta.url)), 'compare-results.mjs')
-const directory = mkdtempSync(path.join(tmpdir(), 'netwiv-compare-'))
-const write = (name, values) => {
-  const file = path.join(directory, name)
-  const metadata = {type:'run', host:name.includes('ref') ? 'reference' : 'netwiv', mode:name.includes('ref') ? 'native' : 'nativeaot', platform:'win32', display:'native', architecture:'x64', suiteSha256:'a'.repeat(64), lockSha256:'b'.repeat(64), sourceSha256:'c'.repeat(64), executableSha256:'e'.repeat(64)}
-  metadata.expectedCases = Array.isArray(values) ? [...new Set(values.filter(value => value.type === 'case').map(value => value.name))] : []
-  writeFileSync(file, Array.isArray(values) ? `${[metadata, ...values].map(JSON.stringify).join('\n')}\n` : values)
-  return file
-}
-const run = (reference, candidate) => execFileSync(process.execPath, [script, reference, candidate], { encoding: 'utf8', stdio: 'pipe' })
-const rejects = (reference, candidate, pattern) => assert.throws(() => run(reference, candidate), pattern)
+const passing = (name = 'a', value = 42) => [{type:'case', name, status:'pass', value}, {type:'complete', count:1}];
+const reason = {platforms:['macos'], source:'https://github.com/tauri-apps/wry/blob/wry-v0.55.1/src/wkwebview/mod.rs',
+  detail:'macOS below 14 cannot safely execute the pinned identifier-management selectors; creation falls back to the default store.'};
+const skipped = () => [{type:'case', name:'app.website-data-store-sdk-lifecycle', status:'skip', reason}, {type:'complete', count:1}];
 
-test('accepts complete matching passing runs', () => {
-  const values = [{ type: 'case', name: 'invoke.json', status: 'pass', value: 42 }, { type: 'complete', count: 1 }]
-  assert.match(run(write('pass-ref.jsonl', values), write('pass-netwiv.jsonl', values)), /matched 1 reference cases/)
-})
+test('compares complete matching functional results in memory', () => {
+  assert.deepEqual(compareResults(passing(), passing(), ['a']), {passed:1, skipped:0});
+  assert.deepEqual(compareResults(passing('a', {one:1, two:2}), passing('a', {two:2, one:1}), ['a']), {passed:1, skipped:0});
+});
 
-test('focused comparisons cannot report the full suite as passed', () => {
-  const values = [{ type: 'case', name: 'a', status: 'pass', value: 42 }, { type: 'complete', count: 1 }]
-  const files = ['focused-ref.jsonl', 'focused-netwiv.jsonl'].map(name => write(name, values))
-  const rewrite = (file, selection, suiteCases) => {
-    const rows = readFileSync(file, 'utf8').trim().split('\n').map(JSON.parse)
-    Object.assign(rows[0], { selection, suiteCases })
-    writeFileSync(file, rows.map(JSON.stringify).join('\n'))
+test('rejects matching failures rather than counting them as parity', () => {
+  const values = [{type:'case', name:'a', status:'fail', error:'intentional'}, {type:'complete', count:1}];
+  assert.throws(() => compareResults(values, values, ['a']), /failed/);
+});
+
+test('rejects zero, missing and unexpected cases including stale executable inventories', () => {
+  assert.throws(() => validateResults([{type:'complete', count:0}], ['a']), /zero cases/);
+  assert.throws(() => compareResults(passing(), passing(), ['a', 'b']), /differs from source selection/);
+  assert.throws(() => compareResults(passing(), passing('b'), ['a']), /differs from source selection/);
+});
+
+test('rejects duplicate cases and invalid or incomplete completion records', () => {
+  for (const values of [[...passing().slice(0,1), ...passing()], passing().slice(0,1),
+    [...passing(), {type:'complete', count:1}], [passing()[1], passing()[0]],
+    [passing()[0], {type:'complete', count:2}]])
+    assert.throws(() => validateResults(values, ['a']), /Duplicate|completion/);
+});
+
+test('rejects malformed records, unknown types, statuses and invalid expected inventories', () => {
+  for (const values of [null, [null], [{type:'run'}], [{type:'harness-error'}],
+    [{type:'case', name:'a', status:'unknown'}, {type:'complete', count:1}]])
+    assert.throws(() => validateResults(values, ['a']), /Unexpected|invalid status/);
+  for (const names of [null, [], [''], ['a','a'], [42]])
+    assert.throws(() => validateResults(passing(), names), /inventory/);
+});
+
+test('rejects unequal public results', () => {
+  assert.throws(() => compareResults(passing(), passing('a', 43), ['a']), /result differs/);
+});
+
+test('macOS skips require the exact pinned pre-14 availability reason and remain skips', () => {
+  const names = ['app.website-data-store-sdk-lifecycle'];
+  assert.deepEqual(compareResults(skipped(), skipped(), names, 'darwin'), {passed:0, skipped:1});
+  for (const platform of ['win32', 'linux'])
+    assert.throws(() => compareResults(skipped(), skipped(), names, platform), /unverified availability/);
+  for (const patch of [{name:'app.other'}, {reason:{...reason, source:'https://github.com/tauri-apps/wry/blob/main/src/wkwebview/mod.rs'}},
+    {reason:{...reason, detail:'not available'}}, {reason:{...reason, platforms:['macos','linux']}}]) {
+    const values = skipped(); Object.assign(values[0], patch);
+    assert.throws(() => validateResults(values, [values[0].name], 'darwin'), /unverified availability/);
   }
-  for (const file of files) rewrite(file, 'focused', ['a', 'b'])
-  assert.match(run(...files), /matched 1 reference cases \(focused run of 2; full gate not run\)/)
-  rewrite(files[1], 'full', ['a', 'b'])
-  rejects(...files, /case selection does not match/)
-  rewrite(files[1], 'focused', ['a', 'c'])
-  rejects(...files, /provenance differs: suiteCases/)
-  rewrite(files[1], 'focused', ['b', 'c'])
-  rejects(...files, /invalid full suite inventory/)
-})
+  assert.throws(() => compareResults(skipped(), passing(names[0]), names, 'darwin'), /status differs/);
+});
 
-test('rejects missing or mismatched source provenance', () => {
-  const valid = write('provenance-ref.jsonl', [{type:'case',name:'a',status:'pass',value:1},{type:'complete',count:1}])
-  rejects(valid, write('no-metadata.jsonl', '{"type":"case","name":"a","status":"pass","value":1}\n{"type":"complete","count":1}\n'), /run metadata/)
-  const other = write('different-netwiv.jsonl', [{type:'case',name:'a',status:'pass',value:1},{type:'complete',count:1}])
-  const data = [
-    {type:'run',host:'netwiv',mode:'nativeaot',platform:'win32',display:'native',architecture:'x64',suiteSha256:'d'.repeat(64),lockSha256:'b'.repeat(64),sourceSha256:'c'.repeat(64),executableSha256:'e'.repeat(64),expectedCases:['a']},
-    {type:'case',name:'a',status:'pass',value:1},{type:'complete',count:1}
-  ]
-  writeFileSync(other, data.map(JSON.stringify).join('\n'))
-  rejects(valid, other, /provenance differs: suiteSha256/)
-})
-
-test('rejects matching failures', () => {
-  const values = [{ type: 'case', name: 'invoke.json', status: 'fail', error: 'same bug' }, { type: 'complete', count: 1 }]
-  rejects(write('fail-ref.jsonl', values), write('fail-netwiv.jsonl', values), /failed/)
-})
-
-test('rejects matching stale binaries even when their counts and source hashes agree', () => {
-  const values = [{type:'case', name:'old', status:'pass', value:1}, {type:'complete', count:1}]
-  const files = ['stale-ref.jsonl', 'stale-netwiv.jsonl'].map(name => write(name, values))
-  for (const file of files) {
-    const lines = readFileSync(file, 'utf8').trim().split('\n').map(JSON.parse)
-    lines[0].expectedCases = ['old', 'new']
-    writeFileSync(file, lines.map(JSON.stringify).join('\n') + '\n')
+test('preserves source-backed Windows and Linux platform skips and rejects wrong or missing sources', () => {
+  for (const [platform, os] of [['linux','linux'], ['win32','windows']]) {
+    const values = [{type:'case', name:'security.frame-origins', status:'skip',
+      reason:{platforms:[os], source:'https://github.com/tauri-apps/wry/blob/wry-v0.55.1/src/lib.rs', detail:'Documented platform limitation'}},
+      {type:'complete', count:1}];
+    assert.deepEqual(compareResults(values, values, ['security.frame-origins'], platform), {passed:0, skipped:1});
+    assert.throws(() => validateResults(values, ['security.frame-origins'], platform === 'linux' ? 'win32' : 'linux'), /unverified/);
+    const missing = structuredClone(values); delete missing[0].reason.source;
+    assert.throws(() => validateResults(missing, ['security.frame-origins'], platform), /unverified/);
   }
-  rejects(...files, /fixture set differs from source; missing: new/)
-})
-
-test('rejects zero-case and truncated runs', () => {
-  const empty = write('empty.jsonl', [{ type: 'complete', count: 0 }])
-  const valid = write('valid.jsonl', [{ type: 'case', name: 'a', status: 'pass', value: 1 }, { type: 'complete', count: 1 }])
-  rejects(empty, valid, /zero cases/)
-  rejects(write('truncated.jsonl', [{ type: 'case', name: 'a', status: 'pass', value: 1 }]), valid, /completion record/)
-})
-
-test('rejects duplicate names and malformed JSON', () => {
-  const duplicate = write('duplicate.jsonl', [
-    { type: 'case', name: 'a', status: 'pass', value: 1 },
-    { type: 'case', name: 'a', status: 'pass', value: 1 },
-    { type: 'complete', count: 2 }
-  ])
-  const valid = write('valid-2.jsonl', [{ type: 'case', name: 'a', status: 'pass', value: 1 }, { type: 'complete', count: 1 }])
-  rejects(duplicate, valid, /duplicate/)
-  rejects(write('malformed.jsonl', '{broken\n'), valid, /malformed JSON/)
-})
-
-test('accepts only source-backed platform skips', () => {
-  const verified = [
-    { type: 'case', name: 'platform.fixture', status: 'skip', reason: { platforms: ['windows'], source: 'https://github.com/tauri-apps/tauri/blob/pinned/path' } },
-    { type: 'complete', count: 1 }
-  ]
-  assert.doesNotThrow(() => run(write('skip-ref.jsonl', verified), write('skip-netwiv.jsonl', verified)))
-  const unverified = [{ type: 'case', name: 'tray.event', status: 'skip', reason: 'not implemented' }, { type: 'complete', count: 1 }]
-  rejects(write('bad-skip.jsonl', unverified), write('skip-netwiv-2.jsonl', verified), /unverified skip/)
-  const wrongPlatform = structuredClone(verified)
-  wrongPlatform[0].reason.platforms = ['linux']
-  rejects(write('wrong-platform-ref.jsonl',wrongPlatform),write('wrong-platform-netwiv.jsonl',wrongPlatform),/unverified skip/)
-})
-
-test('rejects mixed Linux display backends and missing artifact identity', () => {
-  const values = [{type:'case',name:'a',status:'pass',value:1},{type:'complete',count:1}]
-  const ref = write('display-ref.jsonl',values)
-  const candidate = write('display-netwiv.jsonl',values)
-  const change = (file, action) => {
-    const rows = readFileSync(file,'utf8').trim().split('\n').map(JSON.parse)
-    action(rows[0]); writeFileSync(file,rows.map(JSON.stringify).join('\n'))
-  }
-  change(ref, row=>{row.platform='linux';row.display='x11'})
-  change(candidate,row=>{row.platform='linux';row.display='wayland'})
-  rejects(ref,candidate,/provenance differs: display/)
-  change(candidate,row=>{row.display='x11';delete row.executableSha256})
-  rejects(ref,candidate,/invalid executableSha256 provenance/)
-})
-
-test('rejects harness errors and unknown records', () => {
-  const valid = write('valid-3.jsonl', [{ type: 'case', name: 'a', status: 'pass', value: 1 }, { type: 'complete', count: 1 }])
-  const harnessError = write('harness-error.jsonl', [
-    { type: 'case', name: 'a', status: 'pass', value: 1 },
-    { type: 'harness-error', error: 'timed out' },
-    { type: 'complete', count: 1 }
-  ])
-  rejects(harnessError, valid, /unexpected harness-error record/)
-  rejects(write('unknown.jsonl', [{ type: 'wat' }, { type: 'case', name: 'a', status: 'pass', value: 1 }, { type: 'complete', count: 1 }]), valid, /unexpected wat record/)
-})
+});

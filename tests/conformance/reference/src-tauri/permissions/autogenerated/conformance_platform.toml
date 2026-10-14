@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-conformance-platform"
+description = "Enables the conformance_platform command without any pre-configured scope."
+commands.allow = ["conformance_platform"]
+
+[[permission]]
+identifier = "deny-conformance-platform"
+description = "Denies the conformance_platform command without any pre-configured scope."
+commands.deny = ["conformance_platform"]

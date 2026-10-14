@@ -1,0 +1,19 @@
+<!doctype html>
+<html><head><meta charset="UTF-8"><title>Website data-store contract</title></head><body>
+<script type="module">
+import { emit } from './vendor/@tauri-apps/api/event.js';
+const query = new URLSearchParams(location.search);
+const key = 'conformance-website-data-store';
+try {
+  const expected = query.get('expected') || null;
+  if (localStorage.getItem(key) !== expected) throw Error(`Website data-store expected ${expected ?? 'empty'} before ${query.get('write') || 'read'}`);
+  const write = query.get('write');
+  if (write) {
+    localStorage.setItem(key, write);
+    if (localStorage.getItem(key) !== write) throw Error('Website data-store write did not persist');
+  }
+  await emit('data-store-result', { ok: true });
+} catch (error) {
+  await emit('data-store-result', { ok: false, error: String(error) });
+}
+</script></body></html>

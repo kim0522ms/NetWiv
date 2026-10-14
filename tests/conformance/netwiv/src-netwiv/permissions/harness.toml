@@ -54,3 +54,11 @@ commands.deny = ["echo_json"]
 identifier = "literal-command-keys"
 commands.allow = ["*", "custom_*"]
 commands.deny = ["echo_*"]
+
+[[permission]]
+identifier = "allow-conformance-platform"
+commands.allow = ["conformance_platform"]
+
+[[permission]]
+identifier = "allow-create-data-store-fixture"
+commands.allow = ["create_data_store_fixture"]

@@ -35,8 +35,8 @@ static PENDING_FINISHED: tokio::sync::Notify = tokio::sync::Notify::const_new();
 #[tauri::command] fn complete(app: tauri::AppHandle, results: Value) {
     let cases = results.as_array().unwrap();
     for result in cases { println!("{} {} {}", if result["passed"] == true {"PASS"} else {"FAIL"}, result["name"], result.get("error").unwrap_or(&Value::Null)); }
-    if let Some(path) = std::env::var_os("NETWIV_ISOLATION_REPORT") { std::fs::write(path, results.to_string()).unwrap(); }
-    app.exit(if cases.len() == 19 && cases.iter().filter(|value|value["scope"] == "public").all(|value|value["passed"] == true) {0} else {1});
+    println!("ISOLATION_RESULT {}", results);
+    app.exit(if cases.len() == 24 && cases.iter().filter(|value|value["scope"] == "public").all(|value|value["passed"] == true) {0} else {1});
 }
 fn main() {
     tauri::Builder::default()

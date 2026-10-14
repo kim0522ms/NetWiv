@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using NetWiv;
@@ -17,18 +16,14 @@ namespace NetWiv.Conformance;
 
 internal static class Program
 {
-    private static readonly object ReportGate = new();
+    private static readonly object ResultGate = new();
     private static readonly string SuiteDirectory = FindSuiteDirectory();
     private static readonly string DistributionDirectory = Path.Combine(SuiteDirectory, "dist");
-    private static readonly string ReportPath = Environment.GetEnvironmentVariable("NETWIV_CONFORMANCE_RESULT")
-        ?? Path.Combine(SuiteDirectory, "results", "netwiv.jsonl");
 
     [STAThread]
     private static int Main()
     {
         using var assets = new AssetFixture();
-        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(ReportPath))!);
-        File.Delete(ReportPath);
 
 #if !NETWIV_EMBEDDED_CONFIG
         var capability = new Capability(
@@ -46,7 +41,7 @@ internal static class Program
                 "core:app:allow-app-show", "core:app:allow-app-hide", "core:app:allow-set-dock-visibility",
                 "literal-command-keys", "allow-echo-json", "allow-always-fails", "allow-echo-bytes", "allow-stream-numbers",
                 "scope-read", "scope-write",
-                "allow-custom-default-allowed", "allow-typed-request", "allow-conformance-record", "allow-conformance-finish", "allow-conformance-profile", "allow-conformance-cases"
+                "allow-custom-default-allowed", "allow-typed-request", "allow-conformance-record", "allow-conformance-finish", "allow-conformance-profile", "allow-conformance-cases", "allow-conformance-platform", "allow-create-data-store-fixture"
             ],
             Windows: ["main", "conformance-child"],
             PermissionScopes: [new("scope-read", [JsonValue.From("extension")]), new("scope-write", [JsonValue.From("extension")])]);
@@ -73,7 +68,7 @@ internal static class Program
             .Capability(capability)
             .Capability(new("reparent-events", ["core:event:default"], Webviews: ["moving-child"]))
             .AppCommandManifest("echo_json", "always_fails", "echo_bytes", "stream_numbers", "custom_default_allowed",
-                "typed_request", "restricted", "conformance_record", "conformance_finish", "conformance_profile", "conformance_cases")
+                "typed_request", "restricted", "conformance_record", "conformance_finish", "conformance_profile", "conformance_cases", "conformance_platform", "create_data_store_fixture")
 #endif
             .ResolveAssets(ResolveAsset)
             .RegisterUriSchemeProtocol("contract-sync", (context, request) => ResolveProtocol(context, request, 201))
@@ -101,11 +96,22 @@ internal static class Program
             .RegisterCommand("restricted", static (_, _, _) => Value(JsonValue.From("must be denied without its permission")))
             .RegisterCommand("scope_read", ScopeValue)
             .RegisterCommand("scope_write", ScopeValue)
+            .RegisterCommand("create_data_store_fixture", async (context, arguments, _) =>
+            {
+                var bytes = arguments.GetProperty("uuid").EnumerateArray().Select(value => value.GetByte()).ToArray();
+                await new WebviewWindowBuilder(context.App, "conformance-child")
+                    .Url(arguments.GetProperty("url").GetString()!).Visible(false)
+                    .DataStoreIdentifier(new DataStoreIdentifier(bytes))
+                    .Incognito(arguments.GetProperty("incognito").GetBoolean()).BuildAsync();
+                return JsonValue.Null;
+            })
+            .RegisterCommand("conformance_platform", static (_, _, _) => Value(JsonValue.Parse(
+                $$"""{"os":"{{(OperatingSystem.IsMacOS() ? "macos" : OperatingSystem.IsWindows() ? "windows" : "linux")}}","websiteDataStores":{{(OperatingSystem.IsMacOSVersionAtLeast(14) ? "true" : "false")}}}""")))
             .RegisterCommand("conformance_cases", static (_, _, _) =>
                 Value(JsonValue.Parse(Environment.GetEnvironmentVariable("NETWIV_CONFORMANCE_CASES") ?? "null")))
             .RegisterCommand("conformance_record", static (_, arguments, _) =>
             {
-                lock (ReportGate) File.AppendAllText(ReportPath, arguments.GetProperty("result").GetRawText() + Environment.NewLine, Encoding.UTF8);
+                lock (ResultGate) Console.WriteLine("NETWIV_CONFORMANCE " + arguments.GetProperty("result").GetRawText());
                 return Value(JsonValue.Null);
             })
             .RegisterCommand("conformance_finish", static (context, _, _) =>
@@ -124,9 +130,9 @@ internal static class Program
         using var app = builder.Build();
         watchdog.Token.Register(() =>
         {
-            lock (ReportGate)
+            lock (ResultGate)
             {
-                File.AppendAllText(ReportPath, "{\"type\":\"harness-error\",\"error\":\"NetWiv host timed out\"}" + Environment.NewLine, Encoding.UTF8);
+                Console.WriteLine("NETWIV_CONFORMANCE {\"type\":\"harness-error\",\"error\":\"NetWiv host timed out\"}");
             }
             app.Handle.Exit(124);
         });
@@ -159,6 +165,8 @@ internal static class Program
     {
         var relative = Uri.UnescapeDataString(request.Uri.AbsolutePath.TrimStart('/'));
         if (string.IsNullOrEmpty(relative)) relative = "index.html";
+        if (relative == "index.html" && Environment.GetEnvironmentVariable("NETWIV_CONFORMANCE_STORE_OPTIONS") == "1")
+            relative = "data-store-options.html";
         var fullPath = Path.GetFullPath(Path.Combine(DistributionDirectory, relative.Replace('/', Path.DirectorySeparatorChar)));
         if (!fullPath.StartsWith(Path.GetFullPath(DistributionDirectory) + Path.DirectorySeparatorChar, StringComparison.Ordinal) || !File.Exists(fullPath)) return null;
         var contentType = Path.GetExtension(fullPath).ToLowerInvariant() switch

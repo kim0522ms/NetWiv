@@ -6,13 +6,12 @@ The same browser code imports the unchanged official `@tauri-apps/api@2.11.1` pa
 node tests/conformance/scripts/build-frontend.mjs
 ```
 
-Build both hosts from one stable checkout, then launch their executables through the provenance wrapper. A run records source, suite, upstream lock and executable hashes, platform, display backend and process failures. Source hashes describe the checkout at execution time; rebuild both hosts after source changes. Parallel source edits invalidate a run.
+Build both hosts from one stable checkout, then run the pair sequentially. Functional case and completion records travel over stdout and are compared in memory. The runner does not retain reports or record source, executable or environment inventories. Rebuild both hosts after source changes; do not edit the checkout while a pair is running.
 
 Reference host, from the repository root (use the platform's native executable path):
 
 ```sh
 cargo build --locked --manifest-path tests/conformance/reference/src-tauri/Cargo.toml
-node tests/conformance/scripts/run-host.mjs reference native tests/conformance/results/reference.jsonl -- tests/conformance/reference/src-tauri/target/debug/netwiv-tauri-reference
 ```
 
 For the current fixture profile, build NetWiv through the CLI below. A direct
@@ -23,7 +22,7 @@ Direct project publishing remains useful for separate host development:
 
 ```sh
 dotnet publish tests/conformance/netwiv/NetWiv.Conformance.csproj -c Release -r linux-x64 -p:NetWivRuntime=wry -o artifacts/conformance/linux-x64
-node tests/conformance/scripts/run-host.mjs netwiv nativeaot tests/conformance/results/netwiv.jsonl -- artifacts/conformance/linux-x64/NetWiv.Conformance
+node tests/conformance/scripts/run-host.mjs --reference tests/conformance/reference/src-tauri/target/debug/netwiv-tauri-reference --candidate artifacts/conformance/linux-x64/NetWiv.Conformance
 ```
 
 For the file-based application ACL profile, run the CLI from
@@ -42,24 +41,25 @@ filesystem if the Windows mount rejects MSBuild timestamp updates.
 
 CLI integration is a separate check: change into `tests/conformance/netwiv`, then run `netwiv dev`. The CLI `--config` option is a merge overlay and is not a project selector.
 
-Build `netwiv-native` explicitly before publishing the Wry host. On Windows use `win-x64` and `.exe` paths. Under WSL keep Cargo's build directory on the Linux filesystem, set `CARGO_TARGET_DIR` explicitly and adjust the reference executable path. Select `GDK_BACKEND=x11` or `GDK_BACKEND=wayland` and record separate runs; WSLg's Wayland socket may require `WAYLAND_DISPLAY=/mnt/wslg/runtime-dir/wayland-0`.
+Build `netwiv-native` explicitly before publishing the Wry host. On Windows use `win-x64` and `.exe` paths. Under WSL keep Cargo's build directory on the Linux filesystem, set `CARGO_TARGET_DIR` explicitly and adjust the reference executable path. Select `GDK_BACKEND=x11` or `GDK_BACKEND=wayland` for separate comparisons; WSLg's Wayland socket may require `WAYLAND_DISPLAY=/mnt/wslg/runtime-dir/wayland-0`.
 
-The wrapper sets `NETWIV_CONFORMANCE_RESULT` and `NETWIV_CONFORMANCE_ROOT`. Compare completed runs with:
+The runner sets `NETWIV_CONFORMANCE_ROOT` for fixture assets and passes the
+validated source-selected inventory through `NETWIV_CONFORMANCE_CASES`. For a
+focused regression, put `--cases invoke.invalid-arguments,invoke.json` before
+`--reference`. Unknown, empty and duplicate names are errors. Each executable
+must emit every selected case exactly once and a matching completion count.
+The runner rejects malformed records, failures, missing/duplicate cases,
+nonzero exits and timeouts, and closes its child and origin servers on failure.
+On Windows, the runner uses system Windows PowerShell to place each suspended
+host in a kill-on-close Job Object before it starts. This also cleans descendants
+after the host exits; other platforms use an owned process group. The isolation
+runner shares this launcher. No process inventory or execution report is retained.
+Availability skips require an exact known upstream/platform boundary and are
+counted separately from passes. Unselected cases do not count toward API
+coverage; a focused comparison does not replace the full desktop gate.
 
-```sh
-node tests/conformance/scripts/compare-results.mjs tests/conformance/results/reference.jsonl tests/conformance/results/netwiv.jsonl
-```
-
-For a focused regression, pass `--cases invoke.invalid-arguments,invoke.json`
-before `--` on both `run-host.mjs` commands. Unknown, empty and duplicate names
-are errors. The wrapper passes the validated selection through
-`NETWIV_CONFORMANCE_CASES`; the hosts expose it only to the harness frontend.
-Reports retain the full suite inventory and explicitly mark focused runs.
-Unselected cases have no result and do not count toward API coverage. Both
-executables must include the current suite and harness; a focused run does not
-replace the full desktop acceptance gate.
-
-The runner records every real success, failure, and platform skip. A missing result, unexpected failure, or stubbed result fails comparison. Menu and tray tests validate construction, mutation and resource disposal; native pointer-event automation is tracked separately because it needs an OS driver.
+Menu and tray tests validate construction, mutation and resource disposal;
+native pointer-event automation needs a separate OS driver.
 
 Both hosts use the same explicit core capability permissions. The
 `security.literal-command-permissions` fixture grants the literal command keys
@@ -90,8 +90,8 @@ The full desktop comparison enables Tauri `tray-icon`, `unstable`, `image-png`
 and `image-ico`, plus `protocol-asset`, in addition to its default features. Child Webview creation is
 feature-gated upstream; image decoding also requires its format feature. The
 profile is pinned in `compatibility/upstream-lock.json` and the reference
-`Cargo.toml`. Results from the earlier tray-only profile are not evidence for
-the expanded profile. They are rejected by the lock identity check.
+`Cargo.toml`. Executables from the earlier tray-only profile must be rebuilt for the expanded
+profile; matching results do not prove that a stale executable used the current lock.
 
 The `core.convert-file-src-http` fixture verifies successful scoped text and
 binary fetches, HEAD, ranges, denied/missing paths, traversal, directory and NUL
@@ -122,19 +122,72 @@ netwiv build --target osx-arm64 --no-bundle -- -p:NetWivRuntime=wry
 Then, from the repository root:
 
 ```sh
-node tests/conformance/scripts/run-host.mjs netwiv nativeaot tests/conformance/results/netwiv-macos-arm64.jsonl -- tests/conformance/netwiv/target/osx-arm64/release/NetWiv.Conformance
+node tests/conformance/scripts/run-host.mjs --reference tests/conformance/reference/src-tauri/target/debug/netwiv-tauri-reference --candidate tests/conformance/netwiv/target/osx-arm64/release/NetWiv.Conformance
 ```
 
-Use `osx-x64` on Intel and a matching reference binary on the same Mac. The wrapper
-records Node's `darwin` platform and CPU architecture; the native ready event
-reports `macos`. Keep results for each architecture separate. If platform-specific
-fixtures need adjustment, retain failures/skips rather than changing the unchanged
-official guest or treating two failures as a match. Windows/WebKitGTK observations
+Use `osx-x64` on Intel and a matching reference binary on the same Mac. The runner
+uses the current platform only to validate availability skips; it does not record
+platform metadata. Run each architecture separately. If platform-specific
+fixtures need adjustment, keep failures/skips visible rather than changing the
+unchanged official guest or treating two failures as a match. Windows/WebKitGTK observations
 above do not establish WKWebView behavior.
+
+For a source-linked NativeAOT fixture, reuse the expanded configuration produced
+by the managed CLI build above. From the repository root:
+
+```sh
+dotnet publish tests/conformance/netwiv/NetWiv.Conformance.csproj -c Release -r osx-arm64 --self-contained true \
+  -p:PublishAot=true -p:NetWivRuntime=wry \
+  -p:NetWivConfigPath="$PWD/tests/conformance/netwiv/src-netwiv/obj/netwiv/osx-arm64/release/effective.conf.json" \
+  -p:NetWivResourceBaseDirectory="$PWD/tests/conformance/netwiv/src-netwiv" \
+  -p:NetWivFrontendDist="$PWD/tests/conformance/dist" -o artifacts/conformance/aot
+```
+
+Use `artifacts/conformance/aot/NetWiv.Conformance` as the candidate. This route
+was published and executed for the focused store comparison. The source-linked
+fixture's CLI `build --aot` currently propagates `PublishTrimmed=true` to its
+`netstandard2.0` generator project and fails with `NETSDK1124`; the direct publish
+above avoids that global property. It does not establish that CLI route as passing.
 
 The Apple Silicon smoke and local app/DMG tests described in the
 [macOS guide](../../docs/macos.md) have run; the full macOS reference/candidate
 comparison described here remains unverified.
+
+### Website data stores
+
+Select `app.website-data-store-sdk-lifecycle` for the bounded website-data-store
+comparison. Both hosts execute the same unchanged public guest app and window
+functions from `@tauri-apps/api@2.11.1`. Windows/Linux must return an empty
+identifier list and successful no-op removal. A test-only command uses each
+host's SDK to create two random test-owned stores on macOS 14+; this fixture
+does not compare the public JavaScript creation option. The guest APIs assert
+exact identifier bytes, isolated persistence after close, active-store removal
+rejection, incognito precedence, closed-store deletion and empty recreation.
+Cleanup removes only the generated identifiers, never ambient stores. Initial
+enumeration waits up to five seconds for WebKit to create the persistent store
+after its first write. Only the pinned removal-error string after closing is
+retried, for at most five seconds; other errors remain failures. The pinned
+runtime collapses native removal failures into that string.
+
+The host exposes only an OS enum and feature-availability boolean for this test's
+branching. macOS below 14 skips the unsafe pinned-upstream identifier selectors
+with a specific availability reason; NetWiv's SDK smoke still checks its explicit
+unsupported error. A matching skip is not a macOS compatibility pass. The focused
+SDK lifecycle comparison passed managed and NativeAOT on physical macOS arm64;
+the full suite, Intel and minimum-OS executions remain unverified.
+
+For the independent NetWiv public creation-option regression, run a NetWiv
+conformance executable through the same in-memory assertion transport:
+
+```sh
+NETWIV_CONFORMANCE_STORE_OPTIONS=1 node --input-type=module -e "import { runHost } from './tests/conformance/scripts/run-host.mjs'; await runHost(['path/to/NetWiv.Conformance'], ['webview.data-store-public-option']);"
+```
+
+Run separately for managed and NativeAOT on macOS 14+. This page creates windows
+with the unchanged public `WebviewWindow` constructor and performs the same
+storage lifecycle assertions. The pinned upstream's guest/config conversion
+does not forward `dataStoreIdentifier`, so this independent result is not an
+upstream compatibility pass; see [the source and observed difference](../../docs/pinned-upstream-behavior.md#website-data-store-creation-and-removal).
 
 ---
 

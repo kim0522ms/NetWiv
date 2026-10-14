@@ -38,7 +38,7 @@ public sealed partial class AppHandle
             if (!MediaTypeHeaderValue.TryParse(contentType, out var parsedType)) throw new InvokeException("unknown content type");
             contentType = parsedType.ToString().ToLowerInvariant();
             var bytes = request.Body;
-            if (Isolation is not null && !bytes.IsEmpty)
+            if (Isolation is not null)
             {
                 using var envelope = JsonDocument.Parse(bytes);
                 var innerType = envelope.RootElement.GetProperty("contentType").GetString();

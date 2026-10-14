@@ -1,6 +1,6 @@
 export function compare(reference, candidate) {
   function validate(cases, host) {
-    if (!Array.isArray(cases) || cases.length !== 19) throw new Error(`${host}: expected 19 recorded cases`);
+    if (!Array.isArray(cases) || cases.length !== 24) throw new Error(`${host}: expected 24 recorded cases`);
     const names = new Set();
     const counts = { public: 0, 'netwiv-security': 0 };
     for (const result of cases) {
@@ -9,7 +9,7 @@ export function compare(reference, candidate) {
       if (result.passed === false && typeof result.error !== 'string') throw new Error(`${host}: failed case is missing its error`);
       names.add(result.name); counts[result.scope]++;
     }
-    if (counts.public !== 17 || counts['netwiv-security'] !== 2) throw new Error(`${host}: case scope counts changed`);
+    if (counts.public !== 21 || counts['netwiv-security'] !== 3) throw new Error(`${host}: case scope counts changed`);
     return new Map(cases.map(result => [result.name, result]));
   }
   const expected = validate(reference, 'reference');
@@ -22,8 +22,8 @@ export function compare(reference, candidate) {
   }
   return {
     passed: failures.length === 0,
-    public: { total: 17, pairedPassed: reference.filter(result => result.scope === 'public' && result.passed && actual.get(result.name).passed).length },
-    security: { total: 2, candidatePassed: candidate.filter(result => result.scope === 'netwiv-security' && result.passed).length,
+    public: { total: 21, pairedPassed: reference.filter(result => result.scope === 'public' && result.passed && actual.get(result.name).passed).length },
+    security: { total: 3, candidatePassed: candidate.filter(result => result.scope === 'netwiv-security' && result.passed).length,
       referenceObservations: reference.filter(result => result.scope === 'netwiv-security') },
     failures
   };

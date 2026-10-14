@@ -1,9 +1,8 @@
-use std::{fs::OpenOptions, io::Write, path::PathBuf, sync::Mutex};
+use std::{io::Write, path::PathBuf};
 use tauri::{ipc::{Channel, Response}, Manager, State};
 
 mod lifetime_fixture;
 
-struct Report(Mutex<PathBuf>);
 struct AssetFixture(PathBuf);
 impl Drop for AssetFixture {
     fn drop(&mut self) { let _ = std::fs::remove_dir_all(&self.0); }
@@ -58,10 +57,9 @@ fn scope_read(scope: tauri::ipc::CommandScope<serde_json::Value>) -> serde_json:
 fn scope_write(scope: tauri::ipc::CommandScope<serde_json::Value>) -> serde_json::Value { scope_value(scope) }
 
 #[tauri::command]
-fn conformance_record(result: serde_json::Value, report: State<'_, Report>) -> Result<(), String> {
-    let path = report.0.lock().map_err(|error| error.to_string())?;
-    let mut file = OpenOptions::new().create(true).append(true).open(&*path).map_err(|error| error.to_string())?;
-    writeln!(file, "{result}").map_err(|error| error.to_string())
+fn conformance_record(result: serde_json::Value) -> Result<(), String> {
+    let mut output = std::io::stdout().lock();
+    writeln!(output, "NETWIV_CONFORMANCE {result}").map_err(|_| "Cannot emit conformance result".to_string())
 }
 
 #[tauri::command]
@@ -69,6 +67,30 @@ fn conformance_finish(app: tauri::AppHandle) { app.exit(0); }
 
 #[tauri::command]
 fn conformance_profile() -> &'static str { if cfg!(debug_assertions) { "debug" } else { "release" } }
+
+#[tauri::command]
+async fn create_data_store_fixture(app: tauri::AppHandle, uuid: [u8; 16], url: String, incognito: bool) -> Result<(), String> {
+    tauri::WebviewWindowBuilder::new(&app, "conformance-child", tauri::WebviewUrl::App(url.into()))
+        .data_store_identifier(uuid).incognito(incognito).visible(false).build().map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn conformance_platform() -> Result<serde_json::Value, String> {
+    #[cfg(target_os = "macos")]
+    let supported = {
+        let output = std::process::Command::new("/usr/bin/sw_vers").arg("-productVersion")
+            .output().map_err(|_| "Cannot determine website data-store availability")?;
+        if !output.status.success() { return Err("Cannot determine website data-store availability".into()); }
+        let major = std::str::from_utf8(&output.stdout).ok().and_then(|version| version.trim().split('.').next())
+            .and_then(|major| major.parse::<u32>().ok()).ok_or("Cannot determine website data-store availability")?;
+        major >= 14
+    };
+    #[cfg(not(target_os = "macos"))]
+    let supported = false;
+    let os = if cfg!(target_os = "macos") { "macos" } else if cfg!(target_os = "windows") { "windows" } else { "linux" };
+    Ok(serde_json::json!({"os": os, "websiteDataStores": supported}))
+}
 
 #[tauri::command]
 fn conformance_cases() -> Result<Option<Vec<String>>, String> {
@@ -111,11 +133,6 @@ fn main() {
     ] { std::fs::write(assets.join(name), bytes).unwrap(); }
     std::fs::write(assets.join("bytes.bin"), (0..=255_u8).collect::<Vec<_>>()).unwrap();
     let fixture = AssetFixture(assets);
-    let output = std::env::var_os("NETWIV_CONFORMANCE_RESULT")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("results/reference.jsonl"));
-    if let Some(parent) = output.parent() { std::fs::create_dir_all(parent).unwrap(); }
-    let _ = std::fs::remove_file(&output);
     tauri::Builder::default()
         .register_uri_scheme_protocol("contract-sync", |context, request| protocol_response(context.webview_label(), request, 201))
         .register_asynchronous_uri_scheme_protocol("contract-async", |context, request, responder| {
@@ -129,11 +146,7 @@ fn main() {
             .setup(|app, api| { app.manage(PluginSettings(api.config().clone())); Ok(()) })
             .invoke_handler(tauri::generate_handler![read_config]).build())
         .manage(fixture)
-        .manage(Report(Mutex::new(output)))
-        .invoke_handler(tauri::generate_handler![asset_fixture, echo_json, always_fails, echo_bytes, stream_numbers, custom_default_allowed, typed_request, restricted, scope_read, scope_write, conformance_record, conformance_finish, conformance_profile, conformance_cases])
-        .on_page_load(|webview, payload| {
-            eprintln!("reference page load {:?}: {:?}", payload.event(), webview.url());
-        })
+        .invoke_handler(tauri::generate_handler![asset_fixture, echo_json, always_fails, echo_bytes, stream_numbers, custom_default_allowed, typed_request, restricted, scope_read, scope_write, conformance_record, conformance_finish, conformance_profile, conformance_cases, conformance_platform, create_data_store_fixture])
         .setup(|app| {
             let handle = app.handle().clone();
             std::thread::spawn(move || {

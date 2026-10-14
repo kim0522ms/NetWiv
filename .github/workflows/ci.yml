@@ -240,9 +240,13 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           node --test tests/conformance/scripts/*.test.mjs \
-            tests/NetWiv.Isolation.Smoke/compare.test.mjs \
+            tests/NetWiv.Isolation.Smoke/*.test.mjs \
             compatibility/scripts/upstream-test-inventory.test.mjs \
             native/license-provenance.test.mjs
+
+      - name: Windows owned-host cleanup tests
+        if: runner.os == 'Windows'
+        run: node --test tests/conformance/scripts/run-host.test.mjs tests/NetWiv.Isolation.Smoke/run.test.mjs
 
       - name: Platform build-tool script tests
         run: |
@@ -293,9 +297,11 @@ jobs:
 
       - name: macOS NativeAOT WKWebView smoke
         if: runner.os == 'macOS'
-        timeout-minutes: 5
+        timeout-minutes: 8
         run: |
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --no-window-smoke
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --effects-smoke
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --webview-options-smoke
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke
 
       - name: Publish macOS isolation smoke with NativeAOT

@@ -12,6 +12,8 @@ fn main() {
         "conformance_finish",
         "conformance_profile",
         "conformance_cases",
+        "conformance_platform",
+        "create_data_store_fixture",
     ]);
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(manifest)
         .plugin("contract", tauri_build::InlinedPlugin::new().commands(&["read_config"]))).unwrap();

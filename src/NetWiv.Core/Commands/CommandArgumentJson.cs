@@ -18,7 +18,7 @@ public static class CommandArgumentJson
         {
             throw new InvokeException($"invalid args `{argument}` for command `{command}`: {error.Message}");
         }
-        catch (JsonException error)
+        catch (Exception error) when (error is JsonException || error is NotSupportedException && typeInfo.PolymorphismOptions is not null)
         {
             throw new InvokeException($"invalid args `{argument}` for command `{command}`: {error.Message}", error);
         }
@@ -34,6 +34,19 @@ public static class CommandArgumentJson
         if (info.Kind == JsonTypeInfoKind.Object)
         {
             if (value.ValueKind != JsonValueKind.Object) Invalid(value, Expected(info));
+            // Select the same declared variant as STJ before validating its members. The
+            // original base metadata still owns deserialization and discriminator errors.
+            if (info.PolymorphismOptions is { } polymorphism &&
+                value.TryGetProperty(polymorphism.TypeDiscriminatorPropertyName, out var discriminator))
+            {
+                foreach (var derived in polymorphism.DerivedTypes)
+                    if (derived.TypeDiscriminator is string text && discriminator.ValueKind == JsonValueKind.String && discriminator.GetString() == text ||
+                        derived.TypeDiscriminator is int tagNumber && discriminator.ValueKind == JsonValueKind.Number && discriminator.TryGetInt32(out var actual) && actual == tagNumber)
+                    {
+                        info = info.Options.GetTypeInfo(derived.DerivedType);
+                        break;
+                    }
+            }
             // serde_json::Value uses a sorted object map in the pinned Tauri build.
             foreach (var field in value.EnumerateObject().OrderBy(static property => property.Name, StringComparer.Ordinal))
             {

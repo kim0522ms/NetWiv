@@ -229,6 +229,7 @@ public static class IntegrationCommands
 [JsonSerializable(typeof(ComplexResponse))]
 [JsonSerializable(typeof(ProgressMessage))]
 [JsonSerializable(typeof(TypedRequest))]
+[JsonSerializable(typeof(CommandPolyItem))]
 [JsonSerializable(typeof(ConstructorRecord))]
 [JsonSerializable(typeof(SingleConstructorDto))]
 [JsonSerializable(typeof(PreferredDefaultDto))]

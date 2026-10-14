@@ -12,7 +12,7 @@ Package installation is described in the [quickstart](integration-quickstart.md)
 | Windows x64 | WebView2 Runtime | Wry desktop runtime and NativeAOT applications. |
 | Linux x64 | GTK3 and WebKitGTK 4.1 | Ubuntu 24.04 is the baseline environment; X11 and Wayland require separate validation. |
 | macOS 12+ arm64 / x64 | System WKWebView and AppKit | Native runtime, CLI and app/DMG support. Apple Silicon smoke verified; Intel execution remains unverified. See [macOS](macos.md). |
-| Android, iOS | — | Outside the current desktop baseline. |
+| Android, iOS | — | Excluded from project work scope; not a later milestone. |
 
 Applications use the native libraries delivered in `NetWiv.Platform.Desktop`.
 Ordinary JS/TS and Blazor app development does not require Cargo. Native library
@@ -24,7 +24,7 @@ toolchain. See [native architecture](native-architecture.md).
 | Area | Available behavior | Limits |
 | --- | --- | --- |
 | C# SDK | Commands, state, events, channels, windows, WebViews and managed resources. | Applications must follow cancellation, concurrency and ownership contracts. |
-| Frontend bindings | Generated JS calls and TS declarations from C# commands and supported JSON metadata. | Custom converters, polymorphism and referenced-command aggregation are incomplete. |
+| Frontend bindings | Generated JS calls and TS declarations from local and opted-in referenced C# commands and supported JSON metadata. | Explicit tagged polymorphic roots and sealed variants are supported; custom converters, fallback polymorphism and other advanced JSON mappings remain incomplete. Referenced producers need compatible generated metadata; arbitrary dependency discovery is not supported. |
 | Project creation | 18 frontend choices through `netwiv new`; a matching local CLI manifest and SDK references. | Template availability does not establish GUI acceptance for every frontend/toolchain combination. |
 | Development | Frontend updates and C# binding regeneration with backend restart. | Rider and Visual Studio solution loading/debugging require further interactive validation. |
 | NativeAOT | Release publication for Windows/Linux x64 and macOS arm64/x64. | Successful compilation alone does not verify a working desktop session. |
@@ -34,6 +34,10 @@ Use the [C# contract](csharp-api.md), [binding contract](frontend-generator.md),
 [API status table](api-status.md) and [plugin guide](official-plugins.md)
 for feature-specific details. API implementation and comparison coverage are
 separate measurements; declaration counts are not completion percentages.
+The [core reclassification](api-status.md#implementation-decisions-and-validation-backlog)
+separates execution paths, declarations, mobile-only gaps and intentional
+differences. Existing macOS adapters with pending GUI checks are not classified
+as missing implementations. This does not mark those GUI checks as passed.
 
 ## Runtime identity differences
 
@@ -85,8 +89,8 @@ The following release boundaries remain open:
   signing verification. WebView2 automatic installation and Fixed Version
   bundling are not provided by the current installer path.
 - macOS Intel and minimum macOS 12 execution, package-only clean-machine
-  installation, Developer ID signing and notarization. Universal binaries and
-  notarization automation are not implemented. Ad-hoc execution does not prove
+  installation and Developer ID signing. Universal binaries are not implemented.
+  Ad-hoc execution does not prove
   Gatekeeper acceptance; see [macOS limits](macos.md#validation-and-limits).
 - RPM dependency resolution on an RPM-native distribution and ordinary AppImage
   FUSE mounting; extraction-based execution is a separate test.
@@ -97,6 +101,10 @@ The following release boundaries remain open:
   windows. See [platform behavior](pinned-upstream-behavior.md).
 - Performance measurements for startup, memory and application size under matched
   conditions. No performance parity or size guarantee is made.
+
+Mobile targets, the updater runtime and expansion of distribution notarization
+are excluded work, not outstanding release tasks. Notarization automation is not
+implemented; existing signing support does not establish notarized distribution.
 
 ## Compatibility and security validation
 
@@ -123,9 +131,10 @@ Start with [framework development](development.md). The repository provides:
 - A [package consumer harness](frontend-generator.md#verification) for generated
   bindings, TypeScript checks and React-to-C# IPC in a real WebView.
 
-Run on each target OS/display backend and record source revision, package and
-binary hashes, toolchain versions, results and skips. Tests against an earlier
-package or native library do not validate a later build. Validation instructions refer to repository sources and reproducible commands.
+Run on each affected target OS/display backend and summarize the tested scope,
+results and skips in the PR. Tests against an earlier package or native library
+do not validate a later build. Use repository sources and reproducible commands;
+do not retain per-run reports or environment inventories in the repository.
 
 ---
 

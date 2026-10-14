@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "cargoLockSha256": "a445a0f9bb23a0af8407fcb49badc02a8e679dccc0631a7807d15630d5cb791e",
-  "packageCount": 589,
+  "cargoLockSha256": "669d490dffe427341a0ed382920440c269cbebca4cc696c2aabd55250d154b1f",
+  "packageCount": 591,
   "uniqueTextCount": 320,
   "packages": [
     {
@@ -2260,6 +2260,29 @@
       "licenseFile": null,
       "source": "registry+https://github.com/rust-lang/crates.io-index",
       "repository": "https://github.com/soc/dirs-rs",
+      "files": [
+        {
+          "path": "LICENSE-APACHE",
+          "sha256": "d3174ad63e721d4c9dccb8ad4320848992d314369bc46319720b5802c9153fe9",
+          "bytes": 9694,
+          "origin": "crate-package"
+        },
+        {
+          "path": "LICENSE-MIT",
+          "sha256": "6a2e0ade09a7d5f816f11566fee2b151b32235a7fad52b41d49cce96f833c1a9",
+          "bytes": 1069,
+          "origin": "crate-package"
+        }
+      ],
+      "status": "collected-from-crate-package"
+    },
+    {
+      "name": "dirs",
+      "version": "7.0.0",
+      "license": "MIT OR Apache-2.0",
+      "licenseFile": null,
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "repository": "https://codeberg.org/dirs/dirs-rs",
       "files": [
         {
           "path": "LICENSE-APACHE",
@@ -5218,6 +5241,29 @@
       "status": "collected-from-crate-package"
     },
     {
+      "name": "keyboard-types",
+      "version": "0.8.3",
+      "license": "MIT OR Apache-2.0",
+      "licenseFile": null,
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "repository": "https://github.com/rust-windowing/keyboard-types",
+      "files": [
+        {
+          "path": "LICENSE-APACHE",
+          "sha256": "769f80b5bcb42ed0af4e4d2fd74e1ac9bf843cb80c5a29219d1ef3544428a6bb",
+          "bytes": 10846,
+          "origin": "crate-package"
+        },
+        {
+          "path": "LICENSE-MIT",
+          "sha256": "31dbbab009f1b2e59a1622d5955dfafc38ebe834000215b49d954c6f85fe927c",
+          "bytes": 1050,
+          "origin": "crate-package"
+        }
+      ],
+      "status": "collected-from-crate-package"
+    },
+    {
       "name": "libappindicator",
       "version": "0.9.0",
       "license": "Apache-2.0 OR MIT",
@@ -5726,7 +5772,7 @@
     },
     {
       "name": "muda",
-      "version": "0.19.3",
+      "version": "0.20.0",
       "license": "Apache-2.0 OR MIT",
       "licenseFile": null,
       "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -9709,7 +9755,7 @@
     },
     {
       "name": "tray-icon",
-      "version": "0.24.2",
+      "version": "0.25.1",
       "license": "MIT OR Apache-2.0",
       "licenseFile": null,
       "source": "registry+https://github.com/rust-lang/crates.io-index",

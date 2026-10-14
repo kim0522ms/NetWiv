@@ -153,6 +153,42 @@ takes precedence over the app menu. App show/hide and Dock visibility affect the
 application. Title bars, shadows, vibrancy and simple fullscreen use the macOS
 Tao/Wry backend. See [menu behavior](menu-csharp-api.md#macos-application-menus).
 
+## Window effects
+
+Creation-time `windowEffects` and runtime `setEffects` select the first supported
+macOS material. Each supported application replaces the previous effect view;
+`clearEffects` removes it, and clearing again is harmless. Empty lists and lists
+of Windows-only materials preserve the existing effect. See the
+[pinned behavior difference](pinned-upstream-behavior.md#window-effects-and-frame-bridge-availability)
+for the Tauri 2.11.5 distinction and migration impact.
+
+After building the native adapter, run the focused effects probe in a logged-in
+desktop session with `App.Run()` on the original process main thread:
+
+```sh
+dotnet build tests/NetWiv.Desktop.Smoke -c Release
+caffeinate -d -u -t 95 dotnet tests/NetWiv.Desktop.Smoke/bin/Release/net8.0/NetWiv.Desktop.Smoke.dll --effects-smoke
+dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r osx-arm64
+caffeinate -d -u -t 95 tests/NetWiv.Desktop.Smoke/bin/Release/net8.0/osx-arm64/publish/NetWiv.Desktop.Smoke --effects-smoke
+```
+
+Use `osx-x64` on Intel. The probe reads its own AppKit content-view subviews on
+the UI thread and asserts one effect after replacement, none after clearing,
+and the last requested native material/state. It exercises creation with and
+without an implicit WKWebView, explicit child creation, radius arguments,
+attached-effect close/destroy and label reuse over twelve cycles. It has a
+90-second watchdog and does not retain native pointers across dispatches.
+It does not establish pixel appearance, corner rendering, every material,
+minimum-OS support or paired upstream conformance.
+Focused managed and NativeAOT executions on physical macOS arm64 with .NET 8
+passed these assertions. The unmodified adapter failed the same probe after
+its first effect change with two native effect views instead of one.
+
+The earlier intermittent `NSViewUpdateVibrancyForSubtree` SIGTRAP remains
+unresolved. Preventing view accumulation addresses a demonstrated replacement
+defect; passing bounded lifecycle runs does not identify or eliminate the
+earlier crash. See [SDK runtime limits](dotnet-compatibility.md).
+
 ## Validation and limits
 
 The [GitHub Actions workflow](../.github/workflows/ci.yml) includes separate
@@ -160,7 +196,8 @@ The [GitHub Actions workflow](../.github/workflows/ci.yml) includes separate
 runs managed/Rust/JavaScript tests, executes the Core suite with NativeAOT,
 checks native startup failures, and runs real WKWebView and isolation NativeAOT
 smokes. The CLI suite includes real app/DMG packaging and signing-failure tests.
-Logs, reports and published executables are uploaded for seven days. See the
+Validation results remain in ordinary CI console output; separate validation
+reports and diagnostic archives are not collected or uploaded. See the
 [CI guide](development.md#continuous-integration) for scope and prerequisites.
 A configured job is not a passing hosted run; Intel execution remains unverified
 until its job succeeds. Neither macOS 15 job establishes macOS 12 acceptance.
@@ -177,8 +214,10 @@ The ad-hoc-signed app also passed actual C# invoke-button input in secondary and
 child WebViews and a native menu selection/checked-state check. These checks
 establish integration evidence, not complete Tauri conformance.
 Broader keyboard/mouse interaction, all menu roles, multiple monitors, Developer ID certificates,
-notarization, package-only clean-machine installation and Intel execution need
-separate acceptance. Website data-store enumeration/removal is implemented through
+package-only clean-machine installation and Intel execution need separate acceptance.
+Expansion of distribution notarization is excluded from project work scope, not
+a deferred acceptance task. Existing ad-hoc/identity signing does not establish
+notarized distribution. Website data-store enumeration/removal is implemented through
 Wry's asynchronous WKWebsiteDataStore APIs on macOS 14 and later. Older systems
 receive an explicit unsupported error before either unavailable selector is called.
 The creation-time `dataStoreIdentifier` follows the pinned Wry behavior: macOS 14+
@@ -187,7 +226,23 @@ incognito WebViews use a nonpersistent store. Close every WebView using an ident
 before removing its store; an Apple removal failure is returned as a command error.
 WebKit may release a closed WebView's store asynchronously, so a caller can still
 receive an in-use error immediately after closing it.
+Guest removal failures use the pinned Tauri string
+`runtime error: failed to remove data store`. The C# SDK retains the more specific
+`data store is currently opened` message for the same native failure. Availability,
+validation and cancellation failures are not rewritten.
 Windows/Linux retain the upstream empty-list/no-op app API behavior.
+The paired guest app fixture `app.website-data-store-sdk-lifecycle` checks two
+random test-owned identifiers: exact enumeration bytes, isolation, persistence
+after closing, rejection while active, incognito precedence, deletion and empty
+recreation. Its test-only command creates windows through each host's SDK; it
+does not establish public JavaScript creation-option parity. Cleanup never
+deletes ambient enumerated stores. macOS below 14 skips the pinned upstream's
+unavailable identifier selectors; the NetWiv SDK smoke separately asserts its
+availability errors. The paired managed/NativeAOT fixture passed on physical
+macOS arm64. NetWiv's separate unchanged-guest `dataStoreIdentifier` option
+regression also passed managed and NativeAOT execution. The pinned public creation option ignores the identifier; see
+[the observed difference](pinned-upstream-behavior.md#website-data-store-creation-and-removal).
+Intel and minimum-OS execution remain unverified.
 Per-window `skipTaskbar=true` is rejected on
 macOS; use `AppApi.SetDockVisibilityAsync` for the application-wide Dock entry.
 The Autostart and DeepLink OS-registration plugins remain Windows/Linux-only.
@@ -265,7 +320,9 @@ test-owned WebViews are destroyed. Keep the display awake during the ordinary
 monitor-geometry smoke; a sleeping display can report no active monitors.
 For the pinned Rust toolchain's macOS 27
 [Mach-O strip alignment issue](https://github.com/rust-lang/rust/issues/157750),
-use `CARGO_PROFILE_RELEASE_STRIP=none` for the affected native build.
+pass `--config 'profile.release.build-override.strip="none"'` to Cargo for
+the affected native build. This disables stripping of build dependencies without
+changing the committed release profile.
 Intel and macOS 12/13 execution remain unverified.
 
 ---

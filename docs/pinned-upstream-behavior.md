@@ -5,6 +5,46 @@ The unchanged guest API and the native backend API must be tested separately
 when the pinned pair disagrees with itself. A fulfilled guest promise alone
 does not prove that a native property changed.
 
+## Website data-store creation and removal
+
+The pinned `tauri-runtime 2.11.3` conversion from `WindowConfig` to
+`WebviewAttributes` does not copy `data_store_identifier`; the attributes default
+it to `None`. Both guest `Webview` and `WebviewWindow` creation commands use this
+conversion. On physical macOS arm64, the unchanged guest `dataStoreIdentifier`
+option therefore used the default store: a fresh identifier did not enumerate,
+and its synthetic storage marker persisted into a second random-identifier run.
+The Rust SDK's explicit `.data_store_identifier(...)` builder forwards it to Wry.
+
+NetWiv deliberately forwards the public option on macOS 14+ rather than inheriting
+that omission. Before macOS 14 it follows Wry's default-store fallback; incognito
+still takes precedence and selects a nonpersistent store. The impact is storage
+isolation where pinned guest-created Tauri windows shared the default store.
+Consumers wanting default storage can omit the identifier; consumers requiring
+an identified store on the pinned reference can use its Rust builder. No NetWiv
+API migration is required. The independent NetWiv public-option regression is
+separate from Tauri compatibility coverage.
+
+`app.website-data-store-sdk-lifecycle` creates its stores through test-only SDK
+commands on both hosts, then uses unchanged public app/window guest APIs to verify
+enumeration bytes, active deletion rejection, isolated persistence after close,
+incognito precedence, deletion and empty recreation. Managed and NativeAOT
+comparisons passed on physical macOS arm64. This is app API and lifecycle evidence,
+not a public creation-option parity pass. Intel and minimum-OS execution remain
+unverified.
+
+The pinned runtime also collapses Wry removal errors into
+`runtime error: failed to remove data store`. NetWiv maps only the exact native
+in-use error to this string for guest callers. Its C# SDK retains
+`data store is currently opened` for existing retry callers. Validation,
+availability, cancellation, structured and unrelated failures are preserved.
+
+Sources: pinned `crates/tauri-runtime/src/webview.rs`, `WebviewAttributes::from`
+(lines 447-505) and `WebviewAttributes::new` (lines 509-528);
+`crates/tauri/src/webview/plugin.rs`, both creation commands;
+`crates/tauri-runtime-wry/src/lib.rs`, `RemoveDataStore` and the identifier builder
+(lines 3361-3365 and 5112-5114); `crates/tauri-runtime/src/lib.rs`,
+`FailedToRemoveDataStore`; `crates/tauri/src/error.rs`, `Error::Runtime`.
+
 ## Window effects and frame bridge availability
 
 The `window.effects-validation` fixture compares both public `setEffects`
@@ -13,6 +53,23 @@ wrappers and invalid constructor effects with tauri 2.11.5. The pinned
 even on Linux, where applying effects is a no-op. Windows selects the first
 supported effect in the supplied list. An accepted request does not guarantee
 that the current Windows version/theme can display that visual effect.
+
+On macOS, NetWiv replaces its previous vibrancy view before applying a supported
+material. Repeated `setEffects` calls therefore keep one effect view, and
+`clearEffects` removes it. Empty effect lists and lists containing only
+non-macOS materials leave the current effect unchanged. This deliberately
+differs from the pinned Tauri 2.11.5 [macOS effect adapter](https://github.com/tauri-apps/tauri/blob/7cd71369c00978a3783b6ae3e9972358abbe4ae6/crates/tauri/src/vibrancy/macos.rs),
+which adds a view on each supported application, and its
+[null-effect dispatch](https://github.com/tauri-apps/tauri/blob/7cd71369c00978a3783b6ae3e9972358abbe4ae6/crates/tauri/src/vibrancy/mod.rs),
+which only clears Windows effects. Replacement avoids accumulating native views
+and retaining an old material after a clear. Keeping the accumulated views was
+rejected because it makes subsequent effect changes and removal unreliable.
+Callers can keep using the same guest and C# APIs; code depending on stacked
+vibrancy views must use its own native composition instead.
+The [focused AppKit probe](../tests/NetWiv.Desktop.Smoke/MacOsEffectsProbe.cs)
+checks view count, material/state and close/recreate behavior. This difference
+is not a Tauri compatibility pass or a resolution of the documented AppKit
+SIGTRAP; see [macOS validation limits](macos.md#window-effects).
 
 The `security.frame-origins` fixture uses unchanged public guest functions in
 local, trusted remote, untrusted remote and opaque sandbox documents. WebView2
@@ -56,6 +113,17 @@ result. The Windows fallback must not be counted as proof of a correct detached
 checked-state implementation. Linux is compared independently.
 
 Source: `muda-0.19.3/src/platform_impl/windows/mod.rs`, `MenuChild::is_checked`.
+
+NetWiv's native adapter now uses muda 0.20.0 with tray-icon 0.25.1 to adopt
+the upstream macOS 27 tray left-click fix. This version preserves the saved
+checked state after detachment on Windows. The raw `checkedDetached` result
+therefore deliberately differs from the pinned reference; matching the
+reference's enabled-state fallback is not a compatibility goal. Applications
+may continue to query `isChecked()` after removal without a migration.
+Unsupported predefined items also render as disabled entries on Windows/GTK3;
+the [native dependency notes](../native/netwiv-native/README.md#menu-and-tray-dependency-update)
+list affected kinds and the omission alternative. These deliberate differences
+must be reported separately from passing differential comparisons.
 
 ## Background colors
 
@@ -234,8 +302,9 @@ conformance report.
 
 macOS applies simple fullscreen, title-bar styles, shadows and vibrancy through
 Tao/window-vibrancy. App visibility and Dock visibility are application-wide.
-`skipTaskbar=true` for an individual window and website data-store
-identifier enumeration/removal return explicit unsupported errors. The monitor
+`skipTaskbar=true` for an individual window returns an explicit unsupported error.
+Website data-store identifier enumeration/removal is implemented asynchronously
+on macOS 14+; earlier macOS versions receive an availability error. The monitor
 work area converts NSScreen's visible frame to top-left physical coordinates;
 multi-monitor and mixed-DPI acceptance remain open. The AppKit menu tests run in
 the real main-thread smoke host; the ignored Windows/Linux Rust desktop-menu

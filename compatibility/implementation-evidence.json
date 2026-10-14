@@ -431,13 +431,23 @@
       "apis": [
         "app.getBundleType",
         "app.supportsMultipleWindows",
-        "app.fetchDataStoreIdentifiers",
-        "app.removeDataStore",
         "app.show",
         "app.hide",
         "app.setDockVisibility"
       ],
-      "limits": "Unbundled desktop values and valid arguments only; Apple platform behavior is outside this milestone."
+      "limits": "Unbundled desktop values and valid arguments only; calls do not establish macOS visibility or focus interaction."
+    },
+    {
+      "fixture": "app.website-data-store-sdk-lifecycle",
+      "sources": [
+        "src/NetWiv.Core/BuiltIn/ApplicationCommands.cs",
+        "native/netwiv-native/src/macos.rs"
+      ],
+      "apis": [
+        "app.fetchDataStoreIdentifiers",
+        "app.removeDataStore"
+      ],
+      "limits": "Unchanged public app enumeration/removal with SDK-created test stores; macOS 14+ lifecycle and non-Apple empty/no-op behavior. Does not establish parity of the public dataStoreIdentifier creation option; pinned Tauri drops that option during conversion."
     },
     {
       "fixture": "invoke.json",
@@ -833,9 +843,9 @@
     }
   ],
   "knownGaps": [
-    "Isolation behavior beyond the separate 17-public-case differential suite and two NetWiv-private security regressions.",
+    "Isolation behavior beyond the separate 21-public-case differential suite and three NetWiv-private security regressions.",
     "Dynamic file-asset scope and malformed input cases beyond the translated scope tests and scoped file/HTTP-range fixture.",
-    "URLPattern combinations beyond the 363-pattern / 3364-decision pinned oracle matrix; frame behavior beyond the standard protocol fixture, including isolation child frames and forced fallback transport.",
+    "URLPattern combinations beyond the 363-pattern / 3364-decision pinned oracle matrix; frame behavior beyond the standard protocol fixture and the separate isolation/fallback checks, including additional trusted and untrusted remote iframe combinations.",
     "All API arguments, errors, permissions, lifecycle and platform branches beyond the listed fixtures.",
     "Complete integrated GUI and installed-package acceptance, and matched performance measurements."
   ]

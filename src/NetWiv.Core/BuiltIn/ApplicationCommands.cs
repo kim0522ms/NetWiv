@@ -29,7 +29,12 @@ internal static class ApplicationCommands
             if (uuid.ValueKind != JsonValueKind.Array || uuid.GetArrayLength() != 16)
                 throw new InvokeException("Data store identifiers must contain exactly sixteen bytes.");
             foreach (var item in uuid.EnumerateArray()) _ = item.GetByte();
-            return await app.InvokeRuntimeDirectAsync("plugin:app|remove_data_store", args, context, token);
+            try { return await app.InvokeRuntimeDirectAsync("plugin:app|remove_data_store", args, context, token); }
+            catch (InvokeException error) when (!context.IsTrusted && error.Message == "data store is currently opened")
+            {
+                // The pinned Tauri runtime collapses this Wry error for guest callers.
+                throw new InvokeException("runtime error: failed to remove data store", error);
+            }
         });
     }
 

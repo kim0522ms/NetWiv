@@ -91,7 +91,11 @@ outside the release matrix.
 
 An intermittent AppKit `NSViewUpdateVibrancyForSubtree` SIGTRAP was observed
 in an earlier .NET 8 feasibility run. Later successful runs do not establish
-its root cause or a native crash fix.
+its root cause or a native crash fix. The separate macOS effect-view
+accumulation defect is addressed by replacing the prior view before applying
+a new supported effect. The [focused lifecycle probe](macos.md#window-effects)
+checks native view count and material/state through close/recreation; that
+scope must not be reported as resolution of the earlier SIGTRAP.
 
 ---
 

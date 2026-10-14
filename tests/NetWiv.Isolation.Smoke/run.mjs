@@ -1,40 +1,71 @@
-import { createHash } from 'node:crypto';
-import { execFileSync, spawn } from 'node:child_process';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compare } from './compare.mjs';
+import { spawnOwnedHost, stopOwnedTree } from '../conformance/scripts/run-host.mjs';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const [referenceExe, candidateExe, directory] = process.argv.slice(2);
-if (!referenceExe || !candidateExe || !directory) throw new Error('usage: run.mjs <reference executable> <NativeAOT candidate executable> <output directory>');
-const output = path.resolve(directory);
-await mkdir(output, { recursive: true });
-async function sourceFingerprint() {
-  const files = execFileSync('git', ['-c', `safe.directory=${root.replaceAll('\\', '/')}`, 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], { cwd: root })
-    .toString('utf8').split('\0').filter(Boolean);
-  const hash = createHash('sha256');
-  for (const file of [...new Set(files)].sort()) {
-    const bytes = await readFile(path.join(root, file));
-    hash.update(file.replaceAll('\\', '/')); hash.update('\0');
-    hash.update(bytes.includes(0) ? bytes : bytes.toString('utf8').replaceAll('\r\n', '\n')); hash.update('\0');
-  }
-  return hash.digest('hex');
+export function runHost(command, host, timeoutMs = 70000, closeTimeoutMs = 2000) {
+  return new Promise((resolve, reject) => {
+    const child = spawnOwnedHost(command, {
+      stdio: ['ignore', 'pipe', 'inherit'], detached: process.platform !== 'win32'
+    });
+    let pending = '', cases, failure, cleanupTimer, settled = false;
+    const finish = (error, exitCode) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer); clearTimeout(cleanupTimer);
+      if (error) reject(error);
+      else if (!Array.isArray(cases) || !cases.length) reject(Error(`${host}: missing functional assertion result`));
+      else resolve({ exitCode, cases });
+    };
+    const stop = error => {
+      if (failure || settled) return;
+      failure = error;
+      stopOwnedTree(child);
+      clearTimeout(cleanupTimer);
+      cleanupTimer = setTimeout(() => {
+        child.stdout.destroy();
+        stopOwnedTree(child);
+        finish(failure);
+      }, closeTimeoutMs);
+    };
+    const timer = setTimeout(() => stop(Error(`${host}: isolation host timed out`)), timeoutMs);
+    const line = value => {
+      if (value.startsWith('NETWIV_HOST_SPAWN_ERROR ')) { stop(Error(value)); return; }
+      if (!value.startsWith('ISOLATION_RESULT ')) { if (value) console.log(value); return; }
+      try {
+        if (cases !== undefined) throw Error(`${host}: duplicate result`);
+        cases = JSON.parse(value.slice('ISOLATION_RESULT '.length));
+      } catch (error) { stop(error); }
+    };
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', text => {
+      pending += text;
+      let newline;
+      while ((newline = pending.indexOf('\n')) !== -1) {
+        line(pending.slice(0, newline).trimEnd());
+        pending = pending.slice(newline + 1);
+      }
+    });
+    child.once('error', error => finish(error));
+    child.once('exit', () => {
+      if (!failure && !settled) cleanupTimer = setTimeout(() =>
+        stop(Error(`${host}: stdout remained open after host exit`)), closeTimeoutMs);
+    });
+    child.once('close', exitCode => {
+      if (pending) line(pending.trimEnd());
+      finish(failure ?? (exitCode !== 0 ? Error(`${host}: isolation host exited with ${exitCode}`) : null), exitCode);
+    });
+  });
 }
-const sourceSha256 = await sourceFingerprint();
-const runs = {};
-for (const [host, executable] of [['reference', referenceExe], ['netwiv', candidateExe]]) {
-  const report = path.join(output, host + '.json');
-  await writeFile(report, ''); // A stale report cannot satisfy this run.
-  const child = spawn(path.resolve(executable), [], { stdio: 'inherit', env: { ...process.env, NETWIV_ISOLATION_REPORT: report } });
-  const timer = setTimeout(() => child.kill(), 70000);
-  let exitCode;
-  try { exitCode = await new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', resolve); }); }
-  finally { clearTimeout(timer); }
-  runs[host] = { exitCode, cases: JSON.parse(await readFile(report, 'utf8')) };
+
+async function main() {
+  const [referenceExe, candidateExe, ...extra] = process.argv.slice(2);
+  if (!referenceExe || !candidateExe || extra.length) throw Error('usage: run.mjs <reference executable> <candidate executable>');
+  const reference = await runHost([path.resolve(referenceExe)], 'reference');
+  const candidate = await runHost([path.resolve(candidateExe)], 'netwiv');
+  const comparison = compare(reference.cases, candidate.cases);
+  console.log(JSON.stringify(comparison, null, 2));
+  process.exitCode = comparison.passed ? 0 : 1;
 }
-const comparison = compare(runs.reference.cases, runs.netwiv.cases);
-if (sourceSha256 !== await sourceFingerprint()) throw new Error('Source changed during execution; rebuild and rerun a stable pair.');
-if (Object.values(runs).some(run => run.exitCode !== 0)) comparison.passed = false;
-console.log(JSON.stringify(comparison, null, 2));
-process.exitCode = comparison.passed ? 0 : 1;
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();

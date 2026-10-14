@@ -10,8 +10,8 @@ using NetWiv.Runtime;
 internal static class Program
 {
     private static readonly CancellationTokenSource Finished = new();
-    private static readonly TaskCompletionSource PendingStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private static readonly TaskCompletionSource PendingFinished = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private static TaskCompletionSource PendingStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private static TaskCompletionSource PendingFinished = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private static int _blocked;
 
     [STAThread]
@@ -51,17 +51,22 @@ internal static class Program
         return "old";
     }
     [Command] public static Task WaitPendingStarted() => PendingStarted.Task;
-    [Command] public static Task WaitPending() => PendingFinished.Task;
+    [Command] public static async Task WaitPending()
+    {
+        await PendingFinished.Task;
+        PendingStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        PendingFinished = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
     [Command] public static void Complete(AppHandle app, JsonElement results)
     {
-        var success = results.GetArrayLength() == 19;
+        var success = results.GetArrayLength() == 24;
         foreach (var result in results.EnumerateArray())
         {
             var passed = result.GetProperty("passed").GetBoolean();
             success &= passed;
             Console.WriteLine($"{(passed ? "PASS" : "FAIL")} {result.GetProperty("name").GetString()}{(passed ? "" : ": " + result.GetProperty("error").GetString())}");
         }
-        if (Environment.GetEnvironmentVariable("NETWIV_ISOLATION_REPORT") is { } report) File.WriteAllText(report, results.GetRawText());
+        Console.WriteLine("ISOLATION_RESULT " + results.GetRawText());
         Finished.Cancel();
         app.Exit(success ? 0 : 1);
     }

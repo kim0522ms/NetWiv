@@ -161,6 +161,9 @@ pub(crate) fn set_effects(
             .map_err(|e| e.to_string());
     };
     if let Some(effect) = config.effects.into_iter().find_map(material) {
+        // apply_vibrancy adds a new view; it does not replace the previous one.
+        // Keep one effect per window so a later clear removes the entire effect.
+        window_vibrancy::clear_vibrancy(window).map_err(|e| e.to_string())?;
         let state = config.state.map(|state| match state {
             WindowEffectState::FollowsWindowActiveState => State::FollowsWindowActiveState,
             WindowEffectState::Active => State::Active,

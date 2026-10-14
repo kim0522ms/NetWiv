@@ -16,41 +16,28 @@ The generator downloads immutable upstream inputs, verifies both npm SHA-512 int
 
 An upstream upgrade is one reviewable lock-file change followed by regeneration and the differential conformance suite. A matching major or minor version alone is not evidence of compatibility.
 
-## Per-API evidence
+## Per-API implementation and fixture mapping
 
 The [API status table](../docs/api-status.md) is a reviewed implementation
-snapshot with platform limits and extension candidates. Its implementation
-statuses are separate from the fixture coverage report below.
+snapshot with platform limits and extension candidates.
+`implementation-evidence.json` maps implementations to specific frontend
+fixtures. These source mappings are not execution results or compatibility
+passes. The generated API inventory includes declarations, constructors,
+properties and methods; its count is not a count of runtime commands. Root
+barrel re-exports are excluded when counting unique identifiers.
 
-`implementation-evidence.json` maps reviewed implementations to specific frontend
-fixtures. Generate the full declaration/member inventory with:
+Run the [paired conformance checks](../tests/conformance/README.md) to compare
+the pinned guest's observable results. The runner evaluates functional
+assertions in memory and does not retain validation reports or collect source,
+executable or environment fingerprints. Summarize the checks actually run and
+their limits in the PR. A matched fixture covers only its tested behaviors and
+inputs, not the entire associated API.
 
-```sh
-node compatibility/scripts/report-api-coverage.mjs artifacts/compatibility/api-report.json
-```
-
-To attach validated differential results, append reference and NetWiv JSONL paths:
-
-```sh
-node compatibility/scripts/report-api-coverage.mjs artifacts/compatibility/api-report.json tests/conformance/results/reference-windows.jsonl tests/conformance/results/wry-windows.jsonl
-```
-
-The report runs the strict comparator first, preserves run provenance, and
-separates source evidence, matched fixtures and GUI status. It includes types,
-constructors, properties and methods; its count is not a count of runtime
-commands. Root barrel re-exports are excluded to avoid duplicating modules.
-Unreviewed entries remain visible even if an implementation exists. Matched
-fixtures establish only the behaviors and inputs described in those fixtures,
-not complete compatibility of the associated API. Reports describe their
-recorded build/run snapshot, not later untested source edits.
-
-Platform evidence is independent. Adding macOS runtime paths does not turn
-Windows/Linux fixture mappings or source inventories into macOS passes. Record
-macOS reference/candidate runs with the same architecture, pinned guest and
-source snapshot; see [macOS conformance instructions](../tests/conformance/README.md#macos-runs).
-The current Apple Silicon NativeAOT/GUI smoke is integration evidence, and Intel
-and complete macOS differential acceptance remain open. Keep generated upstream
-manifests unchanged when documenting these limits.
+Platform verification is independent. Source mappings and Windows/Linux
+results do not establish macOS conformance. The Apple Silicon NativeAOT smoke
+checks integration; Intel and complete macOS differential acceptance remain
+unverified. Keep generated upstream manifests unchanged when documenting
+these limits.
 
 ---
 

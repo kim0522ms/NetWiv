@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build-frontend.mjs",
-    "compare": "node scripts/compare-results.mjs results/reference.jsonl results/netwiv.jsonl",
+    "compare": "node scripts/run-host.mjs",
     "test": "node --test scripts/*.test.mjs",
     "verify": "node scripts/verify-fixtures.mjs && node --test scripts/*.test.mjs"
   },

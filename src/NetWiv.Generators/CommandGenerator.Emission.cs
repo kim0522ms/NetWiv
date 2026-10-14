@@ -311,7 +311,8 @@ public sealed partial class CommandGenerator
         else
         {
             var expression = new StringBuilder("global::System.Text.Json.JsonSerializer.SerializeToElement(result, JsonTypeInfo<")
-                .Append(command.Return.ValueType!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                .Append(command.Return.ValueType!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat.WithMiscellaneousOptions(
+                    SymbolDisplayFormat.FullyQualifiedFormat.MiscellaneousOptions | SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier)))
                 .Append(">())")
                 .ToString();
             RenderReturn(builder, command.Return.IsAwaitable, expression);

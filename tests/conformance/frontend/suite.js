@@ -10,6 +10,7 @@ import { TrayIcon } from '@tauri-apps/api/tray'
 import { WebviewWindow, getAllWebviewWindows } from '@tauri-apps/api/webviewWindow'
 import { Webview, getCurrentWebview, getAllWebviews } from '@tauri-apps/api/webview'
 import { Window, getCurrentWindow, getAllWindows } from '@tauri-apps/api/window'
+import { websiteDataStoreContract } from './data-store.js'
 
 const report = document.querySelector('#report')
 const results = []
@@ -85,7 +86,10 @@ async function record(result) {
 async function test(name, operation) {
   if (selectedCases !== null && !selectedCases.includes(name)) return
   try { await record({ type: 'case', name, status: 'pass', value: normalize(await operation()) }) }
-  catch (error) { await record({ type: 'case', name, status: 'fail', error: String(error) }) }
+  catch (error) {
+    if (error?.platformSkip) await record({ type: 'case', name, status: 'skip', reason: error.platformSkip })
+    else await record({ type: 'case', name, status: 'fail', error: String(error) })
+  }
 }
 
 await test('protocol.custom-handlers', async () => {
@@ -196,12 +200,21 @@ await test('app.metadata', async () => {
 await test('app.desktop-platform-contract', async () => {
   const bundleType = await getBundleType();
   const multiple = await supportsMultipleWindows();
-  const stores = await fetchDataStoreIdentifiers();
-  await removeDataStore(Array.from({length:16}, (_, index) => index));
   await show(); await hide(); await setDockVisibility(true);
-  assert(bundleType === null && multiple === true && stores.length === 0, 'unexpected non-Apple unbundled app defaults');
-  return {bundleType,multiple,stores};
+  assert(bundleType === null && multiple === true, 'unexpected unbundled desktop app defaults');
+  return {bundleType,multiple};
 })
+await test('app.website-data-store-sdk-lifecycle', async () => {
+  return websiteDataStoreContract(await invoke('conformance_platform'), {
+    fetchDataStoreIdentifiers, removeDataStore, WebviewWindow, listen, untilAsync,
+    createWindow: async options => {
+      await invoke('create_data_store_fixture', { uuid: options.dataStoreIdentifier, url: options.url, incognito: options.incognito });
+      const child = await WebviewWindow.getByLabel('conformance-child');
+      assert(child !== null, 'SDK fixture did not create its window');
+      return child;
+    }
+  });
+});
 await test('dpi.conversion-and-ipc', async () => {
   const logical = new LogicalSize(101, 51);
   const physical = logical.toPhysical(1.5);

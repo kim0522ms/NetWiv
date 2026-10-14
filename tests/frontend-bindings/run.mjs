@@ -4,6 +4,7 @@ import { copyFile, mkdir, readFile, readdir, stat, utimes, writeFile } from 'nod
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkInitializedApp } from './initialized-app.mjs';
+import { configurePolymorphism, polymorphismCalls } from './polymorphism.mjs';
 
 // Every run starts with an empty consumer and a private template/NuGet cache.
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -131,6 +132,7 @@ try {
           if (!rejected) throw new Error('Extension data bypassed known property validation');
         }
         await commands.smoke_done({ result: 'PASS:`));
+  const polymorphic = await configurePolymorphism(consumer);
   await npm(['ci', '--no-audit', '--no-fund']);
   await npm(['run', 'build']);
   const jsFile = path.join(consumer, 'src/generated/commands.js');
@@ -139,6 +141,7 @@ try {
   assert.ok(js.includes('invoke("greet", args, options)'));
   assert.ok(dts.includes('"message": string') && dts.includes('"count": number'));
   await copyFile(path.join(here, 'calls.ts'), path.join(consumer, 'calls.ts'));
+  await writeFile(path.join(consumer, 'calls.ts'), (await readFile(path.join(consumer, 'calls.ts'), 'utf8')) + polymorphismCalls);
   await writeFile(path.join(consumer, 'tsconfig.json'), JSON.stringify({ compilerOptions: {
     strict: true, noEmit: true, module: 'ESNext', target: 'ES2022', moduleResolution: 'Bundler', skipLibCheck: false }, files: ['calls.ts'] }));
   await run(process.execPath, [path.join(here, 'node_modules/typescript/bin/tsc'), '-p', path.join(consumer, 'tsconfig.json')]);
@@ -156,10 +159,12 @@ try {
   assert.ok(!(await readFile(jsFile, 'utf8')).includes('invoke("greet"'));
   await writeFile(sourcePath, source.replaceAll('[Command]', ''));
   await writeFile(wirePath, wireSource.replaceAll('[Command]', ''));
+  await writeFile(polymorphic.file, polymorphic.source.replaceAll('[Command]', ''));
   await npm(['run', 'bindings']);
   assert.ok(!(await readFile(dtsFile, 'utf8')).includes('Promise<'));
   await writeFile(sourcePath, source);
   await writeFile(wirePath, wireSource);
+  await writeFile(polymorphic.file, polymorphic.source);
   await npm(['run', 'build']);
   const publish = path.join(consumer, 'publish', rid);
   const published = await run(dotnet, ['publish', 'src-netwiv', '-c', 'Release', '-r', rid,

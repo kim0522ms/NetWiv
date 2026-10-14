@@ -191,7 +191,8 @@ change. JavaScript command names, argument keys and JSON wire shapes are unchang
   values require TypeScript narrowing. Object-valued dictionaries, required
   extension members, constructor-bound extension data and custom converters
   remain explicit diagnostics. These are pending mappings, not language exclusions.
-- Unmapped converters, polymorphism, naming/serialization options and other
+- Explicit tagged JSON polymorphism produces unions as described below.
+  Unmapped converters, polymorphic combinations, naming/serialization options and other
   unsupported types produce DTOXGEN009 rather than a false type or `any`.
   These are pending implementation areas, not language-impossibility exclusions
   or claims of completed generator coverage. Custom JSON contexts/resolvers and
@@ -201,6 +202,83 @@ change. JavaScript command names, argument keys and JSON wire shapes are unchang
   mapping extension points remain in progress.
   The template's automated C# edit/restart evidence is recorded in
   [React development](react-development.md).
+
+### Tagged JSON polymorphism
+
+An abstract class or interface annotated with `[JsonPolymorphic]` and one or
+more `[JsonDerivedType(typeof(Variant), discriminator)]` attributes maps to a
+discriminated union. Roots and variants must use JSON object contracts;
+variants must be sealed concrete classes assignable to the root.
+Discriminators may be strings or 32-bit integers, including negative
+integers. The default property name is `$type`; `TypeDiscriminatorPropertyName`
+sets its exact JSON name independently of the context's naming policy.
+
+```csharp
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+[JsonDerivedType(typeof(TextItem), "text")]
+[JsonDerivedType(typeof(CountItem), 7)]
+public abstract class Item { public string? Note { get; set; } }
+public sealed class TextItem : Item { public required string Text { get; set; } }
+public sealed class CountItem : Item { public required int Count { get; set; } }
+```
+
+With a camel-case JSON context, the generated root keeps its stable DTO name:
+
+```ts
+export type ItemInput = (TextItemInput & { "kind": "text" })
+  | (CountItemInput & { "kind": 7 });
+export type ItemOutput = (TextItemOutput & { "kind": "text" })
+  | (CountItemOutput & { "kind": 7 });
+```
+
+Variant interfaces retain inherited properties, required input members,
+directional ignores and nullable members. Nullable roots also admit `null`;
+recursive roots, collection elements and nested properties use the same union.
+Each referenced command retains its producer's JSON context and discriminator
+contract. The JSON context must supply source-generated metadata for the root
+and its variants; `[JsonSerializable(typeof(Item))]` lets System.Text.Json
+discover the declared derived types. No runtime type discovery is used.
+
+Core validates the selected variant's source-generated metadata before command
+deserialization, including required fields, non-nullable properties and numeric
+shape/range rules. System.Text.Json still validates discriminator syntax,
+unknown tags and metadata ordering. Construct input objects with the discriminator
+as their first field under the supported context defaults:
+
+```ts
+await commands.echo({ value: { kind: "text", text: "hello" } });
+```
+
+TypeScript cannot enforce object property order. A type-correct object with its
+discriminator after ordinary properties can still be rejected by the serializer.
+Generated command results
+serialize through the declared root metadata, so the discriminator and variant
+properties appear on the actual wire.
+
+Roots or variants implementing `IEnumerable` (including collection/dictionary
+subclasses) or `IAsyncEnumerable<T>` remain `DTOXGEN009` in both directions.
+System.Text.Json uses collection contracts for these types rather than their
+ordinary CLR properties. For example, a tagged `List<int>` subclass uses
+`{"$type":"items","$values":[1,2]}`. Async collection output requires
+asynchronous JSON serialization, and the current System.Text.Json async
+collection converter rejects polymorphic discriminator metadata. This
+object-union mapping does not support those contracts; wrap a supported
+synchronous collection in a property of an ordinary object variant instead.
+
+Concrete roots, untagged variants, duplicate tags/types, nonsealed or abstract
+variants, nested polymorphic variant declarations, extension data on variants,
+and discriminator/member collisions remain `DTOXGEN009`. The collision check is
+deliberately conservative: it also checks ignored/private instance members and
+fields excluded by `IncludeFields`, and rejects ignored extension data declarations.
+These combinations may work with System.Text.Json alone but are outside this
+initial mapping; choose a discriminator name distinct from those members.
+Reserved metadata
+names `$id`, `$ref` and `$values` cannot be discriminators in this mapping.
+`IgnoreUnrecognizedTypeDiscriminators = true` and fallback
+`UnknownDerivedTypeHandling` modes also remain unsupported. Use the default
+strict behavior (or explicitly `false` and `FailSerialization`) for this bounded
+mapping. Arbitrary user converters remain unsupported; complete polymorphic
+serializer parity is not claimed.
 
 ### Numeric serialization policies
 

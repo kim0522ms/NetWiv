@@ -55,6 +55,7 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("IPC and command diagnostics use the configured logger factory", LoggingTests.CommandPipeline),
     ("log plugin forwards webview records to the configured logger factory", LoggingTests.WebviewRecordsUseLoggerFactory),
     ("instance commands plugin scope and permissions", NetWiv.Tests.InstanceCommandScenarios.PluginInstanceCommandsKeepTheirScopeAndPermissions),
+    ("instance commands native callback context", NetWiv.Tests.InstanceCommandScenarios.NativeCallbackDoesNotCaptureCallerContext),
     ("instance commands Lifetimes", NetWiv.Tests.InstanceCommandScenarios.Lifetimes),
     ("instance commands ConstructorAndParameterShareScope", NetWiv.Tests.InstanceCommandScenarios.ConstructorAndParameterShareScope),
     ("instance commands ConcurrentAwaitAndDisposal", NetWiv.Tests.InstanceCommandScenarios.ConcurrentAwaitAndDisposal),

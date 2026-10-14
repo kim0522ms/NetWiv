@@ -46,6 +46,11 @@ consumers against the built package feed.
 External embedded fixtures are copied into the isolated consumer, preserving
 their bytes and logical names.
 
+The instance-command probe delivers simulated native callbacks without the test
+runner's synchronization context and restores the caller's context afterward.
+A regression holds caller continuations to verify that IPC replies and scope
+disposal still complete; the existing timeouts and parallel checks remain enabled.
+
 The test-tool preparation downloads checksum-pinned official minisign 0.12
 binaries for the CLI signer interoperability test on Windows/Linux x64. On macOS
 arm64/x64 it builds checksum-pinned 0.12 source using CMake, pkg-config and libsodium

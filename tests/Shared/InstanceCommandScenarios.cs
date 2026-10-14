@@ -135,6 +135,57 @@ internal static class InstanceCommandScenarios
         Check(log.Created == 2, "App command activated plugin receiver.");
     }
 
+    public static async Task NativeCallbackDoesNotCaptureCallerContext()
+    {
+        var log = new CommandLog();
+        await using var provider = Services(log).AddScoped<InstanceCommands>().BuildServiceProvider(true);
+        var runtime = new ProbeRuntime();
+        using var app = new Builder().UseRuntime(runtime).UseServiceProvider(provider).InvokeHandler("instance_wait").Build();
+        app.Run();
+        var held = new HoldingContext();
+        try
+        {
+            var caller = SynchronizationContext.Current;
+            try
+            {
+                SynchronizationContext.SetSynchronizationContext(held);
+                runtime.Send("instance_wait", "{}", "tauri://localhost");
+                runtime.Send("instance_wait", "{}", "tauri://localhost");
+                Check(ReferenceEquals(SynchronizationContext.Current, held), "Probe changed the caller's context.");
+            }
+            finally { SynchronizationContext.SetSynchronizationContext(caller); }
+            await log.BothEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            log.Release.SetResult();
+            var responses = Task.WhenAll(runtime.Next(), runtime.Next());
+            await Task.WhenAny(responses, held.Posted.Task).WaitAsync(TimeSpan.FromSeconds(10));
+            var captured = held.Posted.Task.IsCompleted;
+            // Let a broken probe finish before failing, rather than disposing
+            // the app and suppressing its delayed callbacks during cleanup.
+            held.Release.SetResult();
+            var scripts = await responses;
+            Check(scripts.All(script => script.Contains("runCallback(1,", StringComparison.Ordinal)) && log.Disposed == 2,
+                "Native callbacks did not complete after invocation scope disposal.");
+            Check(!captured, "Native callback probe captured the caller's synchronization context.");
+        }
+        finally { log.Release.TrySetResult(); held.Release.TrySetResult(); }
+    }
+
+    private sealed class HoldingContext : SynchronizationContext
+    {
+        public TaskCompletionSource Posted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public override void Post(SendOrPostCallback callback, object? state)
+        {
+            Posted.TrySetResult();
+            _ = Resume(callback, state);
+        }
+        private async Task Resume(SendOrPostCallback callback, object? state)
+        {
+            await Release.Task.ConfigureAwait(false);
+            callback(state);
+        }
+    }
+
     private static IServiceCollection Services(CommandLog log)
     {
         var services = new ServiceCollection();
@@ -223,9 +274,17 @@ internal sealed class ProbeRuntime : IDesktopRuntime
         const string marker = "__NETWIV_INVOKE_KEY__: '";
         var start = _context!.InitializationScript.IndexOf(marker, StringComparison.Ordinal) + marker.Length;
         var key = _context.InitializationScript.Substring(start, 64);
-        _context.OnMessage(new("main", new Uri(source),
-        "{\"cmd\":\"" + command + "\",\"callback\":1,\"error\":2,\"payload\":" + payload +
-        ",\"__NETWIV_INVOKE_KEY__\":\"" + key + "\"}"));
+        var caller = SynchronizationContext.Current;
+        try
+        {
+            // Native callbacks do not run on xUnit's synchronization context.
+            // Capturing it makes IPC continuations compete with Roslyn tests.
+            SynchronizationContext.SetSynchronizationContext(null);
+            _context.OnMessage(new("main", new Uri(source),
+            "{\"cmd\":\"" + command + "\",\"callback\":1,\"error\":2,\"payload\":" + payload +
+            ",\"__NETWIV_INVOKE_KEY__\":\"" + key + "\"}"));
+        }
+        finally { SynchronizationContext.SetSynchronizationContext(caller); }
     }
     public async Task<string> Next()
     {

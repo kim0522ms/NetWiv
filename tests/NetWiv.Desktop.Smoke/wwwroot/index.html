@@ -3,37 +3,55 @@
 <style>body{font:17px system-ui;background:#f7f6f1;color:#182f2a;padding:24px}button{padding:10px 18px}pre{white-space:pre-wrap}</style></head>
 <body><h1>NetWiv desktop</h1><p id="label"></p><button id="invoke">Invoke C#</button><pre id="result">Starting…</pre><button id="finish">Finish inspection</button>
 <script type="module">
-import { invoke, Channel, convertFileSrc } from './core.js';
-const label = window.__TAURI_INTERNALS__.metadata.currentWebview.label;
-document.querySelector('#label').textContent = label;
-document.querySelector('#invoke').onclick = async () => {
- document.querySelector('#result').textContent = await invoke('greet', {name: label});
+let stage = 'document initialization';
+const advance = async value => {
+ stage = value;
+ await window.__TAURI_INTERNALS__.invoke('startup_stage', {stage});
 };
-document.querySelector('#finish').onclick = () => invoke('finish_gui');
 try {
+ const label = window.__TAURI_INTERNALS__.metadata.currentWebview.label;
+ await advance('module import');
+ const { invoke, Channel, convertFileSrc } = await import('./core.js');
+ document.querySelector('#label').textContent = label;
+ document.querySelector('#invoke').onclick = async () => {
+   document.querySelector('#result').textContent = await invoke('greet', {name: label});
+ };
+ document.querySelector('#finish').onclick = () => invoke('finish_gui');
+ await advance('external command');
  const external = await invoke('plugin:generated-external|get_status', {value: {label, source: 'external'}});
  if (external.label !== label || external.source !== 'external') throw Error('External generated plugin dispatch mismatch');
+ await advance('local command');
  if (await invoke('plugin:generated-local|get_status') !== 'local') throw Error('Plugin-local command names collided');
- for (const command of ['plugin:generated-external|hidden', 'plugin:generated-local|blocked', 'get_status']) {
+ for (const [command, phase] of [['plugin:generated-external|hidden', 'denied external command'],
+   ['plugin:generated-local|blocked', 'denied local command'], ['get_status', 'unselected command']]) {
+   await advance(phase);
    let rejected = false;
    try { await invoke(command); } catch { rejected = true; }
    if (!rejected) throw Error('Unselected or denied command was exposed: ' + command);
  }
+ await advance('runtime identity');
  let versionError;
  try { await invoke('plugin:app|tauri_version'); } catch (error) { versionError = String(error); }
  if (!versionError?.includes('NetWiv does not embed the TAURI framework')) throw Error('Runtime identity was misreported: ' + versionError);
+ await advance('asset path');
  const file = await invoke('asset_path');
+ await advance('scoped asset');
  const response = await fetch(convertFileSrc(file));
  if (response.status !== 200 || await response.text() !== 'NetWiv asset') throw Error('Scoped asset response/origin mismatch');
+ await advance('JSON IPC');
  const value = await invoke('echo', {input: [label, 42, true]});
  if (JSON.stringify(value) !== JSON.stringify([label, 42, true])) throw Error('JSON IPC mismatch');
+ await advance('Channel invoke');
  const values = [];
  const channel = new Channel(); channel.onmessage = value => values.push(value);
  await invoke('stream', {channel});
+ await advance('Channel messages');
  const deadline = performance.now() + 5000;
  while (values.length < 3 && performance.now() < deadline) await new Promise(r => setTimeout(r, 10));
  if (JSON.stringify(values) !== '[0,1,2]') throw Error('Channel mismatch');
+ await advance('probe URL');
  const probe = await invoke('probe_url');
+ await advance('origin frame');
  await new Promise((resolve, reject) => {
    const frame = document.createElement('iframe'); frame.hidden = true;
    const timer = setTimeout(() => { window.removeEventListener('message', receive); frame.remove(); reject(Error('Origin probe timed out')); }, 5000);
@@ -46,6 +64,11 @@ try {
    window.addEventListener('message', receive); frame.src = probe + '/frame'; document.body.append(frame);
  });
  document.querySelector('#result').textContent = 'PASS: official API invoke, JSON and Channel';
+ await advance('ready');
  await invoke('ready', {label});
-} catch (error) { document.querySelector('#result').textContent = String(error); await invoke('failed', {error:String(error)}); }
+} catch {
+ const error = `Guest startup failed during ${stage}`;
+ document.querySelector('#result').textContent = error;
+ await window.__TAURI_INTERNALS__.invoke('failed', {error});
+}
 </script></body></html>

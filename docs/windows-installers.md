@@ -147,6 +147,10 @@ failure are not rolled back; a successful upgrade retry installs the new payload
 
 ## Verification
 
+Windows CI uses `node scripts/prepare-nsis.mjs` to download the official portable
+NSIS 3.11 archive, verify its pinned SHA-256 and compiler version, and add the
+compiler to `PATH` for subsequent steps. It does not require Chocolatey.
+
 Cross-platform CLI tests validate config failures, argument quoting and both
 installer renderers. `scripts/test-windows-installers.ps1` runs on a disposable,
 elevated Windows CI runner: real NSIS/WiX compilation, both scopes, rejection of

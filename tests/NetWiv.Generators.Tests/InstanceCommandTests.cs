@@ -5,6 +5,9 @@ namespace NetWiv.Generators.Tests;
 public sealed class InstanceCommandTests
 {
     [Fact]
+    public Task NativeCallbackDoesNotCaptureCallerContext() => NetWiv.Tests.InstanceCommandScenarios.NativeCallbackDoesNotCaptureCallerContext();
+
+    [Fact]
     public Task PluginInstanceCommandsKeepTheirScopeAndPermissions() => NetWiv.Tests.InstanceCommandScenarios.PluginInstanceCommandsKeepTheirScopeAndPermissions();
 
     [Fact]

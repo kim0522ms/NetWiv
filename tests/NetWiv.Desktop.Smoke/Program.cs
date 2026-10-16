@@ -9,6 +9,10 @@ using NetWiv.Runtime;
 internal static class Program
 {
     private static readonly ConcurrentDictionary<string, byte> Ready = new();
+    private static readonly ConcurrentDictionary<string, string> GuestStages = new(StringComparer.Ordinal)
+    {
+        ["main"] = "document initialization", ["child"] = "document initialization", ["secondary"] = "document initialization"
+    };
     private static int _scenarioStarted;
     private static int _failed;
     private static int _readyCount;
@@ -104,8 +108,19 @@ internal static class Program
             })
             .RegisterCommand("failed", (context, args, _) =>
             {
-                Fail(args.GetProperty("error").GetString()!);
+                Fail($"{context.WebviewLabel}: {args.GetProperty("error").GetString()}");
                 context.App.Exit(1);
+                return Value(JsonValue.Null);
+            })
+            .RegisterCommand("startup_stage", (context, args, _) =>
+            {
+                string stage = args.GetProperty("stage").GetString()!;
+                if (!GuestStages.ContainsKey(context.WebviewLabel) || stage is not
+                    ("module import" or "external command" or "local command" or "denied external command" or
+                    "denied local command" or "unselected command" or "runtime identity" or "asset path" or
+                    "scoped asset" or "JSON IPC" or "Channel invoke" or "Channel messages" or "probe URL" or "origin frame" or "ready"))
+                    throw new InvokeException("Unknown guest startup stage.");
+                GuestStages[context.WebviewLabel] = stage;
                 return Value(JsonValue.Null);
             })
             .RegisterCommand("ready", (context, args, cancellationToken) =>
@@ -122,7 +137,9 @@ internal static class Program
         using var app = builder.Build();
         using var watchdog = new Timer(_ =>
         {
-            Fail("Native integration timed out");
+            var pending = GuestStages.Where(guest => !Ready.ContainsKey(guest.Key))
+                .OrderBy(guest => guest.Key, StringComparer.Ordinal).Select(guest => $"{guest.Key}: {guest.Value}").ToArray();
+            Fail("Native integration timed out" + (pending.Length == 0 ? "" : $"; waiting for {string.Join(", ", pending)}"));
             // Posting Exit cannot terminate a deadlocked native UI thread.
             Environment.Exit(124);
         }, null, TimeSpan.FromMilliseconds(180000 + GuiHoldMs), Timeout.InfiniteTimeSpan);

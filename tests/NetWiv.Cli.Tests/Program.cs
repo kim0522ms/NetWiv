@@ -42,6 +42,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("macOS application and dmg packaging with real signing tools", MacOsTests.Packaging),
     ("macOS App Store configuration and Info.plist validation", MacAppStoreTests.Configuration),
     ("macOS App Store provisioning profiles and signing separation", MacAppStoreTests.ProfilesAndSigning),
+    ("macOS App Store entitlement authorization", MacAppStoreTests.EntitlementAuthorization),
     ("macOS App Store package round trip with real tools", MacAppStoreTests.Packaging),
     ("bundle target arrays accept supported formats and reject malformed entries", BundleTargetTests.ValidateTargets),
     ("consumer publish managed self-contained and bundled execution", () => FirstBuildTests.MissingDist("managed")),

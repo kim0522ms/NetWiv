@@ -184,11 +184,11 @@ internal static partial class NativeBundler
             await RequireSuccess("/usr/bin/plutil", ["-convert", "xml1", entitlements], temporary, cancellationToken);
             var app = await BuildMacAppAsync(config, publishDirectory, binary, noSign, cancellationToken, settings, entitlements);
             var directory = Path.GetDirectoryName(app)!;
-            if (!noSign)
+            if (!noSign && decodedProfile is not null)
             {
                 var prefix = Path.Combine(temporary, "certificate");
                 await RequireSuccess("/usr/bin/codesign", ["--display", "--extract-certificates", prefix, app], directory, cancellationToken);
-                MacAppStoreSettings.ValidateSigningCertificate(decodedProfile!, File.ReadAllBytes(prefix + "0"));
+                MacAppStoreSettings.ValidateSigningCertificate(decodedProfile, File.ReadAllBytes(prefix + "0"));
             }
             var package = Path.Combine(temporary, "application.pkg");
             await RequireSuccess("/usr/bin/productbuild", MacProductBuildArguments(app, package, settings.InstallerSigningIdentity), directory, cancellationToken);

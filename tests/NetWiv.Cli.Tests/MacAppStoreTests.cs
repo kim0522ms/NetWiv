@@ -50,6 +50,18 @@ internal static class MacAppStoreTests
                 ["provisioningProfile"] = "fixture.provisionprofile"
             };
             mac["appStore"] = store;
+            store.Remove("provisioningProfile");
+            Check(MacAppStoreSettings.Load(config, false).ProvisioningProfile is null);
+            foreach (var key in new[] { "keychain-access-groups", "com.apple.developer.icloud-container-identifiers", "com.apple.security.unknown-capability" })
+            {
+                var restricted = MacPropertyList.Parse(Entitlements);
+                MacPropertyList.Set(restricted.Root!.Element("dict")!, key, new XElement("array", new XElement("string", "TEAM.example")));
+                restricted.Save(Path.Combine(root, "entitlements.plist"));
+                Throws<NetWivConfigException>(() => MacAppStoreSettings.Load(config, false));
+                Throws<NetWivConfigException>(() => MacAppStoreSettings.Load(config, true));
+            }
+            File.WriteAllText(Path.Combine(root, "entitlements.plist"), Entitlements);
+            store["provisioningProfile"] = "fixture.provisionprofile";
             Throws<FileNotFoundException>(() => MacAppStoreSettings.Load(config, false));
             File.WriteAllText(Path.Combine(root, "fixture.provisionprofile"), "synthetic profile input");
             Check(MacAppStoreSettings.Load(config, false).ProvisioningProfile == Path.Combine(root, "fixture.provisionprofile"));
@@ -71,6 +83,31 @@ internal static class MacAppStoreTests
             Environment.SetEnvironmentVariable(variables[2], Path.Combine(root, "fixture.provisionprofile"));
             _ = MacAppStoreSettings.Load(config, false);
             foreach (var variable in variables) Environment.SetEnvironmentVariable(variable, null);
+
+            foreach (var version in new[] { "1", "1.2", "1.2.3.4", "1.0.0-beta.1", "1.0.0+build", "1..0", "-1.0.0", "１.0.0", " 1.0.0", "" })
+            {
+                config.Root["version"] = version;
+                Throws<NetWivConfigException>(() => NativeBundler.ValidateConfiguration(config, target, "app-store", true));
+            }
+            config.Root["version"] = "1.0.0-beta.1";
+            NativeBundler.ValidateConfiguration(config, target, "app,dmg", true);
+            config.Root["version"] = "1.2.3";
+            NativeBundler.ValidateConfiguration(config, target, "app-store", true);
+            Check(MacPropertyList.Get(NativeBundler.MacInfoPlist(config, "App", "12.0").Root!.Element("dict")!, "CFBundleVersion")!.Value == "1.2.3");
+            foreach (var build in new[] { "0", "42", "1.2", "1.2.3" })
+            {
+                mac["bundleVersion"] = build;
+                NativeBundler.ValidateConfiguration(config, target, "app-store", true);
+            }
+            foreach (var build in new[] { "1.2.3.4", "1.0.0-beta", "1+build", "1..2", "-1", "1.２", "1 ", "" })
+            {
+                mac["bundleVersion"] = build;
+                Throws<NetWivConfigException>(() => NativeBundler.ValidateConfiguration(config, target, "app-store", true));
+            }
+            mac["bundleVersion"] = "1.0.0-beta";
+            NativeBundler.ValidateConfiguration(config, target, "app,dmg", true);
+            mac.Remove("bundleVersion");
+            config.Root["version"] = "1.0.0";
 
             foreach (var malformed in new[]
             {
@@ -157,6 +194,53 @@ internal static class MacAppStoreTests
         return Task.CompletedTask;
     }
 
+    internal static Task EntitlementAuthorization()
+    {
+        var now = new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        // Each case goes through profile application, including generated identity claims.
+        var cases = new (string Key, string? Allowed, string Claimed, bool Accepted)[]
+        {
+            ("keychain-access-groups", "<array><string>PREFIX.*</string></array>", "<array><string>PREFIX.dev.netwiv.store</string><string>PREFIX.shared</string></array>", true),
+            ("keychain-access-groups", "<array><string>PREFIX.*</string></array>", "<array><string>PREFIX.allowed</string><string>OTHER.denied</string></array>", false),
+            ("keychain-access-groups", null, "<array><string>PREFIX.shared</string></array>", false),
+            ("keychain-access-groups", "<array><string>PREFIX.*</string></array>", "<array><string>PREFIX.*</string></array>", false),
+            ("keychain-access-groups", "<array><string>PREFIX.shared</string></array>", "<array><string>PREFIX.shared.extra</string></array>", false),
+            ("keychain-access-groups", "<array><string>PREFIX.*.suffix</string></array>", "<array><string>PREFIX.other.suffix</string></array>", false),
+            ("com.apple.developer.icloud-container-identifiers", "<array><string>iCloud.dev.netwiv.store</string><string>iCloud.shared</string></array>", "<array><string>iCloud.shared</string></array>", true),
+            ("com.apple.developer.icloud-container-identifiers", "<array><string>iCloud.allowed</string></array>", "<array><string>iCloud.denied</string></array>", false),
+            ("com.apple.developer.aps-environment", "<string>production</string>", "<string>production</string>", true),
+            ("com.apple.developer.aps-environment", "<string>production</string>", "<string>development</string>", false),
+            ("com.apple.developer.aps-environment", "<string>production</string>", "<array><string>production</string></array>", false),
+            ("com.apple.developer.associated-domains", "<string>*</string>", "<array><string>applinks:*.example.com</string></array>", true),
+            ("com.apple.developer.associated-domains", "<array><string>applinks:example.com</string></array>", "<array><string>applinks:other.example.com</string></array>", false),
+            ("com.apple.developer.networking.networkextension", "<array><string>packet-tunnel-provider</string></array>", "<array><string>app-proxy-provider</string></array>", false),
+            ("com.apple.developer.networking.multicast", "<true/>", "<true/>", true),
+            ("com.apple.developer.networking.multicast", "<false/>", "<true/>", false),
+            ("com.apple.developer.networking.multicast", "<true/>", "<false/>", true),
+            ("com.apple.developer.networking.multicast", "<true/>", "<string>true</string>", false),
+            ("com.apple.security.unknown-capability", null, "<true/>", false),
+            ("com.apple.developer.fixture", "<dict><key>scope</key><array><string>allowed</string></array></dict>", "<dict><key>scope</key><array><string>denied</string></array></dict>", false),
+            ("com.apple.developer.fixture", "<dict><key>scope</key><string>allowed</string><key>extra</key><true/></dict>", "<dict><key>scope</key><string>allowed</string></dict>", true)
+        };
+        foreach (var (key, allowed, claimed, accepted) in cases)
+        {
+            var profile = MacPropertyList.Parse(Profile);
+            if (allowed is not null)
+                MacPropertyList.Set(MacPropertyList.Get(profile.Root!.Element("dict")!, "Entitlements")!, key, XElement.Parse(allowed));
+            var entitlements = MacPropertyList.Parse(Entitlements);
+            MacPropertyList.Set(entitlements.Root!.Element("dict")!, key, XElement.Parse(claimed));
+            if (accepted) MacAppStoreSettings.ApplyProfile(profile, entitlements, "dev.netwiv.store", now);
+            else Throws<NetWivConfigException>(() => MacAppStoreSettings.ApplyProfile(profile, entitlements, "dev.netwiv.store", now));
+        }
+        var unrestricted = MacPropertyList.Parse(Entitlements).Root!.Element("dict")!;
+        foreach (var key in new[] { "device.camera", "files.user-selected.read-write", "cs.allow-jit" })
+            MacPropertyList.Set(unrestricted, "com.apple.security." + key, new XElement("true"));
+        MacPropertyList.Set(unrestricted, "com.apple.security.application-groups", new XElement("array", new XElement("string", "TEAM.dev.netwiv.shared")));
+        MacPropertyList.Set(unrestricted, "com.apple.security.temporary-exception.apple-events", new XElement("array", new XElement("string", "com.example.target")));
+        MacAppStoreEntitlements.Validate(unrestricted, null);
+        return Task.CompletedTask;
+    }
+
     internal static async Task Packaging()
     {
         if (!OperatingSystem.IsMacOS()) { Console.WriteLine("SKIP macOS App Store packaging tools: macOS only"); return; }
@@ -213,6 +297,9 @@ internal static class MacAppStoreTests
             Check(MacPropertyList.Get(MacPropertyList.Parse(profileEntitlements).Root!.Element("dict")!, "com.apple.application-identifier")!.Value == "PREFIX.dev.netwiv.store");
             store["signingIdentity"] = "Apple Distribution: NetWiv Missing Test Identity";
             store["installerSigningIdentity"] = "3rd Party Mac Developer Installer: NetWiv Missing Test Identity";
+            await ThrowsAsync<InvalidOperationException>(() => NativeBundler.BuildMacAppStoreAsync(config, target, publish, binary, false, CancellationToken.None));
+            store.Remove("provisioningProfile");
+            // Profile-free signing reaches codesign instead of failing configuration.
             await ThrowsAsync<InvalidOperationException>(() => NativeBundler.BuildMacAppStoreAsync(config, target, publish, binary, false, CancellationToken.None));
             Check(!Directory.GetFiles(directory, "*.pkg").Any(file => !file.EndsWith("-unsigned.pkg", StringComparison.Ordinal)));
         }

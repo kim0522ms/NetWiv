@@ -199,14 +199,29 @@ personal signing overlays, certificates, private keys or provisioning profiles.
 Paths are resolved relative to the main configuration directory, including paths
 in an overlay supplied with `--config`.
 
-Obtain a **Mac App Store Connect** provisioning profile for the configured
-`identifier` and signing certificate. The CLI decodes it with `security cms`,
+Provisioning is optional when the app only uses unrestricted entitlements, such
+as App Sandbox, Hardened Runtime settings and macOS app groups. Restricted
+capabilities (for example, keychain groups, iCloud or push notifications) require
+a **Mac App Store Connect** provisioning profile for the configured `identifier`
+and signing certificate. TestFlight requires a profile even without restricted
+entitlements; supply one explicitly for that distribution path. See Apple's
+[provisioning profile rules](https://developer.apple.com/documentation/technotes/tn3125-inside-code-signing-provisioning-profiles).
+
+When supplied, the CLI decodes the profile with `security cms`,
 checks expiration and an exact App ID match, rejects development/device profiles,
 and copies it to `Contents/embedded.provisionprofile` before signing. The profile's
 application and team identifiers are added to the signing entitlements; conflicting
 values in the application's entitlements are rejected. Other capabilities are
-not copied from the profile automatically. Configure app-specific capabilities
-in both the Apple developer account and your entitlements as required.
+not copied from the profile automatically. Every claimed restricted entitlement
+must be authorized by its profile value, including array subsets and profile
+prefix wildcards. The CLI recognizes documented unrestricted Sandbox/Hardened
+Runtime keys; unknown keys require profile authorization. Configure app-specific
+capabilities in both the Apple developer account and your entitlements as required.
+
+For `app-store`, `version` must contain exactly three numeric components, such as
+`1.2.3`. `bundle.macOS.bundleVersion` must contain one to three numeric components
+and defaults to `version`. Prerelease and build-metadata suffixes are rejected.
+These Store checks do not change version handling for `app` or `dmg`.
 
 ```sh
 netwiv build --aot --target osx-arm64 --bundles app-store
@@ -247,9 +262,10 @@ OS and icon file are rejected; use their dedicated configuration instead.
 
 `--no-sign` explicitly builds an ad-hoc-signed sandbox app and a package named
 `<product>_<version>_<architecture>-unsigned.pkg`. It requires the same sandbox
-entitlements but does not require signing identities or a profile. A supplied
-profile is still validated and embedded. This mode is for local checks, not Store
-submission. The ordinary signed output omits the `-unsigned` suffix.
+entitlements but does not require signing identities. A profile is optional only
+for unrestricted entitlements; a supplied profile is still validated and embedded.
+This mode is for local checks, not Store submission. The ordinary signed output
+omits the `-unsigned` suffix.
 
 The [NativeAOT sandbox example](../tests/NetWiv.MacOS.Sandbox.Smoke/README.md)
 checks WKWebView, unchanged upstream guest IPC, local-storage persistence across

@@ -9,6 +9,7 @@ internal sealed record MacAppStoreSettings(string SigningIdentity, string? Insta
 {
     internal static MacAppStoreSettings Load(ConfigDocument config, bool noSign)
     {
+        ValidateVersions(config);
         var node = config.Node("bundle", "macOS", "appStore");
         if (node is not null and not JsonObject) throw new NetWivConfigException("bundle.macOS.appStore must be an object.");
         if (node is JsonObject options)
@@ -27,7 +28,6 @@ internal sealed record MacAppStoreSettings(string SigningIdentity, string? Insta
                 throw new NetWivConfigException("app-store requires an Apple Distribution or 3rd Party Mac Developer Application signingIdentity; Developer ID and ad-hoc identities are not accepted.");
             if (installer is null || !installer.StartsWith("3rd Party Mac Developer Installer:", StringComparison.Ordinal))
                 throw new NetWivConfigException("app-store requires a Mac Installer Distribution certificate (3rd Party Mac Developer Installer) as installerSigningIdentity.");
-            if (string.IsNullOrWhiteSpace(profile)) throw new NetWivConfigException("app-store requires a Mac App Store Connect provisioningProfile.");
         }
         if (profile is not null)
         {
@@ -44,7 +44,25 @@ internal sealed record MacAppStoreSettings(string SigningIdentity, string? Insta
         foreach (var key in new[] { "com.apple.security.get-task-allow", "get-task-allow", "com.apple.security.inherit" })
             if (MacPropertyList.Get(dictionary, key) is { Name.LocalName: not "false" })
                 throw new NetWivConfigException($"app-store does not accept {key} on the main application.");
+        if (profile is null) MacAppStoreEntitlements.Validate(dictionary, null);
         return new(identity!, installer, profile, entitlements);
+    }
+
+    private static void ValidateVersions(ConfigDocument config)
+    {
+        var version = config.String("version") ?? throw new NetWivConfigException("version is required for bundling.");
+        var build = config.String("bundle", "macOS", "bundleVersion") ?? version;
+        if (!NumericVersion(version, 3, 3))
+            throw new NetWivConfigException("app-store requires version to contain exactly three numeric components (for example, 1.2.3), without prerelease or build metadata.");
+        if (!NumericVersion(build, 1, 3))
+            throw new NetWivConfigException("app-store requires bundle.macOS.bundleVersion to contain one to three numeric components.");
+    }
+
+    private static bool NumericVersion(string value, int minimum, int maximum)
+    {
+        var parts = value.Split('.');
+        return parts.Length >= minimum && parts.Length <= maximum && parts.All(part =>
+            part.Length > 0 && part.All(char.IsAsciiDigit));
     }
 
     // Apply only signing identity entitlements. Other capabilities remain explicit app choices.
@@ -76,6 +94,7 @@ internal sealed record MacAppStoreSettings(string SigningIdentity, string? Insta
                 throw new NetWivConfigException("Configured signing entitlements do not match the provisioning profile.");
             MacPropertyList.Set(dictionary, key, value);
         }
+        MacAppStoreEntitlements.Validate(dictionary, allowed);
     }
 
     internal static void ValidateSigningCertificate(XDocument profile, byte[] certificate)

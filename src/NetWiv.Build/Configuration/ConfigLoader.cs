@@ -210,7 +210,7 @@ public static class ConfigLoader
             throw new NetWivConfigException($"'build.beforeDevCommand.wait' must be a boolean in {source}.");
     }
 
-    private static bool KnownBundleTarget(string value) => value.ToLowerInvariant() is "all" or "deb" or "rpm" or "appimage" or "msi" or "nsis" or "dmg" or "app" or "updater";
+    private static bool KnownBundleTarget(string value) => value.ToLowerInvariant() is "all" or "deb" or "rpm" or "appimage" or "msi" or "nsis" or "dmg" or "app" or "app-store" or "updater";
     private static void ValidateAssetProtocol(JsonNode? node, string source)
     {
         if (node is not JsonObject config) throw new NetWivConfigException($"'app.security.assetProtocol' must be an object in {source}.");

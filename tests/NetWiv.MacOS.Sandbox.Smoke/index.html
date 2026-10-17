@@ -1,0 +1,20 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>NetWiv sandbox smoke</title>
+<p id="status">Running sandbox checks…</p>
+<script type="module">
+  const status = document.getElementById('status');
+  const { invoke } = await import('./core.js');
+  try {
+    if (await invoke('echo', { value: 'sandbox-ipc' }) !== 'sandbox-ipc') throw new Error('echo');
+    const phase = await invoke('phase');
+    if (phase === 'write') localStorage.setItem('netwiv-sandbox-fixture', 'persisted');
+    if (localStorage.getItem('netwiv-sandbox-fixture') !== 'persisted') throw new Error('storage');
+    if (phase === 'read') localStorage.removeItem('netwiv-sandbox-fixture');
+    status.textContent = 'PASS';
+    await invoke('complete', { success: true });
+  } catch {
+    status.textContent = 'FAIL';
+    await invoke('complete', { success: false });
+  }
+</script>

@@ -1,0 +1,16 @@
+{
+  "identifier": "dev.netwiv.sandbox-smoke",
+  "productName": "NetWiv Sandbox Smoke",
+  "version": "0.1.0",
+  "build": { "dotnetProject": "NetWiv.MacOS.Sandbox.Smoke.csproj" },
+  "bundle": {
+    "active": true,
+    "targets": ["app-store"],
+    "category": "DeveloperTool",
+    "macOS": {
+      "minimumSystemVersion": "12.0",
+      "entitlements": "entitlements.plist",
+      "infoPlist": "Info.plist"
+    }
+  }
+}

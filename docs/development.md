@@ -112,6 +112,15 @@ license tests run once in the existing Linux job, avoiding another runner setup.
 Core and CLI are executable test harnesses and must be
 run with `dotnet run`; `dotnet test` alone does not execute them.
 
+The generator suite runs instance-command runtime scenarios in a non-parallel
+xUnit collection, separately from CPU-heavy Roslyn compilations. IPC dispatch
+and asynchronous scope disposal need ThreadPool workers. Keeping them separate
+avoids competition with compiler workloads for those workers during the existing
+10-second callback deadline. Compiler collections remain parallel, and the
+runtime scenarios retain their explicit
+concurrent-invocation checks. The same scenarios also run in the managed and
+NativeAOT Core harnesses.
+
 Each job publishes and executes the Core suite with NativeAOT, publishes the
 NativeAOT desktop smoke host, checks incompatible native-library startup diagnostics
 and runs the automated WebView smoke scenario. Linux uses Xvfb with a nested

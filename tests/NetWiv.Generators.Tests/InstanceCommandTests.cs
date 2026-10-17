@@ -2,6 +2,13 @@ using Xunit;
 
 namespace NetWiv.Generators.Tests;
 
+[CollectionDefinition(nameof(InstanceCommandCollection), DisableParallelization = true)]
+public sealed class InstanceCommandCollection
+{
+}
+
+// Run bounded IPC waits separately from competing Roslyn compilation workloads.
+[Collection(nameof(InstanceCommandCollection))]
 public sealed class InstanceCommandTests
 {
     [Fact]

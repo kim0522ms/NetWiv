@@ -26,7 +26,12 @@ internal static class BuildCommand
         target.EnsureHostOperatingSystem();
 
         var active = config.Boolean("bundle", "active") ?? false;
-        if (!noBundle && (active || bundles is not null)) NativeBundler.ValidateConfiguration(config, target, bundles);
+        if (!noBundle && (active || bundles is not null))
+        {
+            if (!aot && NativeBundler.ParseFormats(config, target, bundles).Contains("app-store"))
+                throw new NotSupportedException("The app-store target requires NativeAOT; use netwiv build --aot.");
+            NativeBundler.ValidateConfiguration(config, target, bundles, noSign);
+        }
 
         var project = CommandConfig.Project(config);
         var features = CommandConfig.Features(config, featuresArg);

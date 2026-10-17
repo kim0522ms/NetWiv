@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PublishAot>true</PublishAot>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/NetWiv.Platform.Desktop/NetWiv.Platform.Desktop.csproj" />
+    <EmbeddedResource Include="index.html" LogicalName="netwiv.assets.index.html" />
+    <EmbeddedResource Include="../../samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api/core.js" LogicalName="netwiv.assets.core.js" />
+    <EmbeddedResource Include="../../samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api/external/tslib/tslib.es6.js" LogicalName="netwiv.assets.external/tslib/tslib.es6.js" />
+  </ItemGroup>
+</Project>

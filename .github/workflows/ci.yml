@@ -317,6 +317,23 @@ jobs:
         run: |
           ./artifacts/ci/isolation-aot/NetWiv.Isolation.Smoke
 
+      - name: macOS NativeAOT App Sandbox package
+        if: runner.os == 'macOS'
+        timeout-minutes: 8
+        run: |
+          cli="$PWD/src/NetWiv.Cli/bin/Release/net8.0/netwiv.dll"
+          cd tests/NetWiv.MacOS.Sandbox.Smoke
+          dotnet "$cli" build --aot --target '${{ matrix.rid }}' --bundles app-store --no-sign
+          scratch=$(mktemp -d)
+          trap 'rm -rf -- "$scratch"' EXIT
+          mkdir "$scratch/outside"
+          export NETWIV_SANDBOX_OUTSIDE_DIRECTORY="$scratch/outside"
+          pkgutil --expand-full target/'${{ matrix.rid }}'/release/bundle/app-store/*-unsigned.pkg "$scratch/expanded"
+          app="$scratch/expanded/dev.netwiv.sandbox-smoke.pkg/Payload/NetWiv-Sandbox-Smoke.app"
+          codesign --verify --deep --strict "$app"
+          "$app/Contents/MacOS/NetWiv.MacOS.Sandbox.Smoke" --sandbox write
+          "$app/Contents/MacOS/NetWiv.MacOS.Sandbox.Smoke" --sandbox read
+
       - name: Upload validated native libraries for packaging
         if: inputs.release-artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

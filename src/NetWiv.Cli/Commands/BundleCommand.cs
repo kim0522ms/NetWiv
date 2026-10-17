@@ -18,7 +18,7 @@ internal static class BundleCommand
         if (features is not null)
             throw new NotSupportedException("--features affects compilation and cannot be applied by `netwiv bundle`; pass it to `netwiv build`.");
         target.EnsureHostOperatingSystem();
-        NativeBundler.ValidateConfiguration(config, target, bundles);
+        NativeBundler.ValidateConfiguration(config, target, bundles, noSign);
         var project = CommandConfig.Project(config);
         var publishDirectory = Path.Combine(config.ProjectDirectory, "target", target.RequestedTarget, debug ? "debug" : "release");
         BuildCommand.EnsureBinary(config, project, publishDirectory);

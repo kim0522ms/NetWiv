@@ -9,9 +9,8 @@ namespace NetWiv.Cli;
 
 internal static partial class NativeBundler
 {
-    internal static void ValidateConfiguration(ConfigDocument config, BuildTarget target, string? requested)
+    private static void ValidateWindowsConfiguration(ConfigDocument config, BuildTarget target, IReadOnlyList<string> formats)
     {
-        var formats = ParseFormats(config, target, requested);
         var options = WindowsInstallerOptions.FromJson(config.Root);
         if (target.Platform != "windows" || formats.Count == 0) return; // Windows options may live in a shared cross-platform config.
         WindowsInstallerOptions.ValidateFileName(Product(config), "productName");

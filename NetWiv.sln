@@ -90,12 +90,18 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetWiv.Isolation.Smoke", "t
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetWiv.Plugin.CommandFixture", "tests\NetWiv.Plugin.CommandFixture\NetWiv.Plugin.CommandFixture.csproj", "{253D4BCF-3980-4BD9-A694-843C26B2F624}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetWiv.MacOS.Sandbox.Smoke", "tests\NetWiv.MacOS.Sandbox.Smoke\NetWiv.MacOS.Sandbox.Smoke.csproj", "{6DD3B4D2-EB9E-43B4-9B53-D926B368ABF5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6DD3B4D2-EB9E-43B4-9B53-D926B368ABF5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DD3B4D2-EB9E-43B4-9B53-D926B368ABF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DD3B4D2-EB9E-43B4-9B53-D926B368ABF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DD3B4D2-EB9E-43B4-9B53-D926B368ABF5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FFEE839A-0DC8-5DA7-B12D-E89BBB3C1D9E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FFEE839A-0DC8-5DA7-B12D-E89BBB3C1D9E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FFEE839A-0DC8-5DA7-B12D-E89BBB3C1D9E}.Release|Any CPU.ActiveCfg = Release|Any CPU

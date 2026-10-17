@@ -105,7 +105,7 @@ category and a configured `.icns` icon are included. Supply an `.icns` icon;
 the existing icon command does not yet generate that format.
 
 Supported `bundle.macOS` keys are `minimumSystemVersion`, `bundleVersion`,
-`signingIdentity` and `entitlements`. Other non-null macOS bundle options fail
+`signingIdentity`, `entitlements`, `infoPlist` and `appStore`. Other non-null macOS bundle options fail
 explicitly. Minimum versions below `12.0` are rejected. For example:
 
 ```json
@@ -131,9 +131,164 @@ Managed apps also require entitlements appropriate for the .NET JIT when using
 Developer ID hardened-runtime signing; only ad-hoc managed bundle execution is
 covered by the automated tests. Entitlements are applied to the executable and
 bundle. Signing errors fail the
-command. Notarization, App Store distribution, custom frameworks/Info.plist,
+command. Notarization, custom frameworks,
 DMG layout customization and trusted distribution on a clean Mac remain outside
 this implementation. DMGs contain the app and an `/Applications` link.
+
+## Mac App Store packages
+
+The explicit `app-store` bundle target creates a sandboxed NativeAOT `.app` and
+a `productbuild` `.pkg`. It is a NetWiv extension, not a Tauri configuration
+compatibility claim. It is never selected by `bundle.targets: "all"`, which
+continues to mean `app,dmg`. Store output lives separately under
+`target/<requested-target>/release/bundle/app-store/`; producing it does not
+overwrite the direct-distribution app. Build on macOS with Xcode Command Line
+Tools. Both existing macOS RIDs are accepted; local runtime verification covers
+arm64, not Intel or the minimum supported OS.
+
+### Configure and sign
+
+Create an XML entitlements file relative to the main configuration directory:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+  <key>com.apple.security.app-sandbox</key><true/>
+  <key>com.apple.security.network.client</key><true/>
+</dict></plist>
+```
+
+Both entries are required by the Store target. In the tested WKWebView setup,
+omitting network client access prevented local guest IPC from completing.
+Additional sandbox permissions remain explicit application choices. NetWiv
+does not grant broad file access, server networking or JIT permissions. Ordinary
+NetWiv capabilities still control IPC and do not replace macOS entitlements.
+
+Set `bundle.targets` to `["app-store"]` and configure:
+
+```json
+{
+  "bundle": {
+    "active": true,
+    "targets": ["app-store"],
+    "category": "Utility",
+    "macOS": {
+      "entitlements": "Entitlements.plist",
+      "infoPlist": "Info.plist",
+      "appStore": {
+        "signingIdentity": "Apple Distribution: Example Organization (TEAMID)",
+        "installerSigningIdentity": "3rd Party Mac Developer Installer: Example Organization (TEAMID)",
+        "provisioningProfile": "distribution.provisionprofile"
+      }
+    }
+  }
+}
+```
+
+The app identity may also be `3rd Party Mac Developer Application: ...`.
+Use a **Mac Installer Distribution** certificate for the package; its Keychain
+identity starts with `3rd Party Mac Developer Installer:`. Keep the corresponding
+private keys in Keychain. Developer ID identities and the ordinary
+`APPLE_SIGNING_IDENTITY` variable are not used for Store signing.
+
+Instead of storing personal signing settings in project files, supply
+`APPLE_APP_STORE_SIGNING_IDENTITY`, `APPLE_APP_STORE_INSTALLER_IDENTITY` and
+`APPLE_APP_STORE_PROVISIONING_PROFILE` from your private local environment.
+Explicit `appStore` settings take precedence over these variables. Do not commit
+personal signing overlays, certificates, private keys or provisioning profiles.
+Paths are resolved relative to the main configuration directory, including paths
+in an overlay supplied with `--config`.
+
+Provisioning is optional when the app only uses unrestricted entitlements, such
+as App Sandbox, Hardened Runtime settings and macOS app groups. Restricted
+capabilities (for example, keychain groups, iCloud or push notifications) require
+a **Mac App Store Connect** provisioning profile for the configured `identifier`
+and signing certificate. TestFlight requires a profile even without restricted
+entitlements; supply one explicitly for that distribution path. See Apple's
+[provisioning profile rules](https://developer.apple.com/documentation/technotes/tn3125-inside-code-signing-provisioning-profiles).
+
+When supplied, the CLI decodes the profile with `security cms`,
+checks expiration and an exact App ID match, rejects development/device profiles,
+and copies it to `Contents/embedded.provisionprofile` before signing. The profile's
+application and team identifiers are added to the signing entitlements; conflicting
+values in the application's entitlements are rejected. Other capabilities are
+not copied from the profile automatically. Every claimed restricted entitlement
+must be authorized by its profile value, including array subsets and profile
+prefix wildcards. The CLI recognizes documented unrestricted Sandbox/Hardened
+Runtime keys; unknown keys require profile authorization. Configure app-specific
+capabilities in both the Apple developer account and your entitlements as required.
+
+For `app-store`, `version` must contain exactly three numeric components, such as
+`1.2.3`. `bundle.macOS.bundleVersion` must contain one to three numeric components
+and defaults to `version`. Prerelease and build-metadata suffixes are rejected.
+These Store checks do not change version handling for `app` or `dmg`.
+
+```sh
+netwiv build --aot --target osx-arm64 --bundles app-store
+# Or package existing NativeAOT output, using the same target spelling:
+netwiv bundle --target osx-arm64 --bundles app-store
+```
+
+The CLI signs native dylibs, the main executable and the bundle, verifies the app
+signature with `codesign --verify --deep --strict`, checks that the signing
+certificate belongs to the supplied profile, then calls `productbuild
+--sign` with the installer identity and checks the package signature. Store
+signing does not force the hardened-runtime/timestamp options used by the
+Developer ID path. Signing failures stop packaging; there is no automatic fallback
+to ad-hoc signing. Managed/framework-dependent Store payloads are rejected;
+the existing direct-distribution targets continue to support them.
+
+### Additional Info.plist entries
+
+`bundle.macOS.infoPlist` accepts an XML plist dictionary for any macOS bundle
+target. It merges strings, booleans, arrays and nested dictionaries into the
+generated plist, including copyright and application-specific privacy messages:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+  <key>NSHumanReadableCopyright</key><string>Copyright Example Organization</string>
+  <key>NSCameraUsageDescription</key><string>Scan a document you select.</string>
+</dict></plist>
+```
+
+Include privacy keys only for features your app actually uses. Determine your
+own encryption declaration (`ITSAppUsesNonExemptEncryption`); the framework does
+not choose its value. Malformed dictionaries and duplicate keys fail validation.
+Overrides of the executable, identifier, package type, version fields, minimum
+OS and icon file are rejected; use their dedicated configuration instead.
+
+### Local verification and limits
+
+`--no-sign` explicitly builds an ad-hoc-signed sandbox app and a package named
+`<product>_<version>_<architecture>-unsigned.pkg`. It requires the same sandbox
+entitlements but does not require signing identities. A profile is optional only
+for unrestricted entitlements; a supplied profile is still validated and embedded.
+This mode is for local checks, not Store submission. The ordinary signed output
+omits the `-unsigned` suffix.
+
+The [NativeAOT sandbox example](../tests/NetWiv.MacOS.Sandbox.Smoke/README.md)
+checks WKWebView, unchanged upstream guest IPC, local-storage persistence across
+process restarts, writes through SDK data/config/cache/log paths inside the
+container, and rejection of a write outside it. Functional assertions print only
+test labels; there is no environment-report collection or upload.
+
+The CLI tests exercise plist/profile failures and signature argument separation
+on every host, and real ad-hoc signing, package extraction, signature verification
+and execution on macOS. The macOS CI job also builds the NativeAOT sandbox example
+through the CLI, extracts its package and runs both persistence phases. No test
+package or per-run report is uploaded. The example has been executed with NativeAOT on
+a physical arm64 Mac. Real distribution-certificate signing remains unverified
+without the matching certificates and profiles. These local checks do not prove
+Apple distribution validation, App Store Connect acceptance or review approval;
+none of those services is contacted by this target. Security-scoped bookmarks
+and persistent access to user-selected external files are not implemented by
+this packaging feature. App-specific plugins must be tested under their required
+sandbox permissions.
+
+For account, certificate and submission steps, consult
+[Apple's distribution signing guide](https://developer.apple.com/documentation/xcode/creating-distribution-signed-code-for-the-mac/)
+and [Tauri's App Store guide](https://tauri.app/distribute/app-store/).
 
 ## Runtime paths and macOS behavior
 

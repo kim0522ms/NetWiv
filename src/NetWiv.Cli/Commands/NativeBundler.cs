@@ -11,9 +11,17 @@ namespace NetWiv.Cli;
 internal static partial class NativeBundler
 {
     private const string WebView2Client = "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}";
+    internal static void ValidateConfiguration(ConfigDocument config, BuildTarget target, string? requested, bool noSign = false)
+    {
+        var formats = ParseFormats(config, target, requested);
+        ValidateWindowsConfiguration(config, target, formats);
+        if (target.Platform == "macos" && formats.Count > 0)
+            ValidateMacConfiguration(config, formats, noSign);
+    }
+
     public static async Task<int> BundleAsync(ConfigDocument config, BuildTarget target, string publishDirectory, string? requested, bool noSign, TextWriter output, CancellationToken cancellationToken)
     {
-        ValidateConfiguration(config, target, requested);
+        ValidateConfiguration(config, target, requested, noSign);
         var formats = ParseFormats(config, target, requested);
         var project = CommandConfig.Project(config);
         var binary = BuildCommand.EnsureBinary(config, project, publishDirectory);
@@ -30,6 +38,7 @@ internal static partial class NativeBundler
             {
                 "app" => await BuildMacAppAsync(config, publishDirectory, binary, noSign, cancellationToken),
                 "dmg" => await BuildDmgAsync(config, target, publishDirectory, binary, noSign, cancellationToken),
+                "app-store" => await BuildMacAppStoreAsync(config, target, publishDirectory, binary, noSign, cancellationToken),
                 "nsis" => await BuildNsisAsync(config, publishDirectory, binary, noSign, cancellationToken),
                 "msi" => await BuildMsiAsync(config, publishDirectory, binary, noSign, cancellationToken),
                 "deb" => await BuildDebAsync(config, publishDirectory, binary, cancellationToken),
@@ -51,7 +60,7 @@ internal static partial class NativeBundler
         else if (config.String("bundle", "targets") is { } one) values = one == "all" ? Defaults(target.Platform) : [one];
         else values = Defaults(target.Platform);
         var result = values.Select(value => value.ToLowerInvariant()).Distinct(StringComparer.Ordinal).ToArray();
-        var allowed = Defaults(target.Platform);
+        var allowed = target.Platform == "macos" ? ["app", "dmg", "app-store"] : Defaults(target.Platform);
         foreach (var value in result)
             if (!allowed.Contains(value, StringComparer.Ordinal)) throw new ArgumentException($"Bundle target '{value}' is not valid on {target.Platform}.");
         return result;

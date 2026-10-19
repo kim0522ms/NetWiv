@@ -10,7 +10,15 @@ A web layer stacked on a native shell, with a woven N on the front layer.
 | `png/` | Rendered sizes. 16 and 32 come from the small sources. |
 | `netwiv.ico` | Windows, 16–256 px, from the dark sources. |
 | `netwiv.icns` | macOS, from the dark sources, drawn on the 824/1024 icon grid. |
-| `netwiv-banner-{dark,light}.svg` | README header. Text is outlined from JetBrains Mono (OFL-1.1) and Roboto (Apache-2.0), so it does not depend on installed fonts. |
+| `netwiv-banner-{dark,light}.svg` | README header. Text is outlined so it does not depend on installed fonts. |
+
+The banner text outlines are derived from
+[JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) 2.304 (OFL-1.1) and
+[Roboto](https://github.com/googlefonts/roboto) 2.000980 (Apache-2.0). Their
+copyright notices and license locations are in
+[THIRD-PARTY-NOTICES.md](../../THIRD-PARTY-NOTICES.md), and the OFL text is in
+[licenses/JetBrainsMono-OFL.txt](../../licenses/JetBrainsMono-OFL.txt). Keep
+these notices with the banners when redistributing them.
 
 Colors: `#512BD4`, `#B9A8F5`, `#17142A`, `#F6F5FB` and `#FFFFFF`. The SVGs avoid
 transforms and `paint-order` so Linux desktop icon renderers (librsvg) draw

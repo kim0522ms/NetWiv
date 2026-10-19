@@ -16,8 +16,8 @@ licenses; this file does not relicense them.
 | Json5 source | See `src/NetWiv.Build/ThirdParty/Json5/SOURCE.md` | MIT; original `LICENSE.txt` preserved alongside source |
 | Tomlyn | https://github.com/xoofx/Tomlyn | BSD-2-Clause; NuGet package license |
 | AngleSharp 1.5.2 | https://github.com/AngleSharp/AngleSharp | MIT; `licenses/AngleSharp-MIT.txt`, included in NetWiv.Core |
-| JetBrains Mono 2.304 glyph outlines, in `assets/brand/netwiv-banner-*.svg` | https://github.com/JetBrains/JetBrainsMono | OFL-1.1; Copyright 2020 The JetBrains Mono Project Authors; `licenses/JetBrainsMono-OFL.txt` |
-| Roboto 2.000980 glyph outlines, in `assets/brand/netwiv-banner-*.svg` | https://github.com/googlefonts/roboto | Apache-2.0; font data copyright Google 2014; `LICENSE-APACHE` |
+| JetBrains Mono 2.304 glyph outlines, in `assets/brand/netwiv-banner-*.svg` and `assets/diagrams/architecture-*.svg` | https://github.com/JetBrains/JetBrainsMono | OFL-1.1; Copyright 2020 The JetBrains Mono Project Authors; `licenses/JetBrainsMono-OFL.txt` |
+| Roboto 2.000980 glyph outlines, in `assets/brand/netwiv-banner-*.svg` and `assets/diagrams/architecture-*.svg` | https://github.com/googlefonts/roboto | Apache-2.0; font data copyright Google 2014; `LICENSE-APACHE` |
 | .NET 10 JSON naming policies | https://github.com/dotnet/runtime/tree/v10.0.0/src/libraries/System.Text.Json/Common | MIT; adapted in NetWiv.Generators/JsonWireNames.cs; `licenses/dotnet-runtime-MIT.txt`, included in NetWiv.Generators |
 
 The native Cargo.lock records exact transitive dependencies and registry

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { addReferencedPolymorphism, polymorphismGuestChecks, referencedPolymorphismCalls } from './polymorphism.mjs';
@@ -64,12 +64,14 @@ public sealed class NugetPermissionPlugin : IPlugin {
   const api = path.join(consumer, 'node_modules/@tauri-apps/api');
   await copyFile(path.join(api, 'core.js'), path.join(dist, 'vendor/core.js'));
   await copyFile(path.join(api, 'external/tslib/tslib.es6.js'), path.join(dist, 'vendor/external/tslib/tslib.es6.js'));
+  await cp(path.join(consumer, 'node_modules/@netwiv/api/lib'), path.join(dist, 'vendor/netwiv'), { recursive: true });
   await writeFile(path.join(dist, 'index.html'), `<!doctype html><html><body><output id="result">Starting</output>
-<script type="importmap">{"imports":{"@tauri-apps/api/core":"./vendor/core.js"}}</script>
+<script type="importmap">{"imports":{"@tauri-apps/api/core":"./vendor/core.js","@netwiv/api/core":"./vendor/netwiv/core.js"}}</script>
 <script type="module">
 import { commands } from './commands.js';
-import { invoke, convertFileSrc } from '@tauri-apps/api/core';
+import { invoke, convertFileSrc, isNetWiv } from '@netwiv/api/core';
 try {
+  if (!isNetWiv()) throw new Error('NetWiv runtime was not detected');
   const response = await commands.greet({ name: 'init' });
   if (response !== 'Hello, init!') throw new Error(JSON.stringify(response));
   if (await commands.read_bundled() !== 'NuGet resource through NativeAOT and generated JavaScript')

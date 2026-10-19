@@ -14,6 +14,9 @@ Copy-Item -Path (Join-Path $repository 'templates/beta-app/*') -Destination $sta
 $vendor = Join-Path $starter 'wwwroot/vendor/@tauri-apps'
 New-Item -ItemType Directory -Path $vendor -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $repository 'samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api') -Destination $vendor -Recurse -Force
+$netwivVendor = Join-Path $starter 'wwwroot/vendor/@netwiv'
+New-Item -ItemType Directory -Path $netwivVendor -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $repository 'templates/frontends/shared/vendor/@netwiv/api') -Destination $netwivVendor -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $repository 'THIRD-PARTY-NOTICES.md') -Destination $destination
 Copy-Item -LiteralPath (Join-Path $repository 'NOTICE') -Destination $destination
 Copy-Item -Path (Join-Path $repository 'LICENSE-*') -Destination $destination

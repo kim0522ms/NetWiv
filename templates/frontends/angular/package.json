@@ -10,7 +10,7 @@
     "desktop:build": "dotnet tool restore && dotnet tool run netwiv -- build --no-bundle"
   },
   "dependencies": {
-    "@tauri-apps/api": "2.11.1",
+    "@netwiv/api": "file:vendor/netwiv-api",
     "@angular/common": "21.2.0",
     "@angular/compiler": "21.2.0",
     "@angular/core": "21.2.0",

@@ -9,7 +9,7 @@
   <link data-trunk rel="rust" data-wasm-opt="0">
   <style>body{font-family:system-ui;background:#171c2b;color:#e8edf8;margin:4rem auto;max-width:32rem}form{display:flex;gap:.5rem}input,button{padding:.7rem;font:inherit}input{flex:1}button{background:#72b5ff;border:0}</style>
   <script type="module">
-    import { invoke } from './vendor/@tauri-apps/api/core.js';
+    import { invoke } from './vendor/@netwiv/api/core.js';
     window.netwivGreet = name => invoke('greet', { name });
   </script>
 </head>

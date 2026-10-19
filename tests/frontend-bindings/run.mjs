@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkInitializedApp } from './initialized-app.mjs';
 import { configurePolymorphism, polymorphismCalls } from './polymorphism.mjs';
+import { packApi } from '../frontend-api/packed-package.mjs';
 
 // Every run starts with an empty consumer and a private template/NuGet cache.
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -88,10 +89,24 @@ try {
   const programPath = path.join(consumer, 'src-netwiv/Program.cs');
   assert.ok((await readFile(programPath, 'utf8')).includes('#if !DEBUG'), 'Template processing removed the C# development guard');
   await writeFile(programPath, (await readFile(programPath, 'utf8'))
-    .replace('builder.InvokeHandler("smoke_done")', 'builder.InvokeHandler("smoke_done").InvokeHandler("wire_profile").InvokeHandler("constructor_profile").InvokeHandler("number_profile").InvokeHandler("extension_profile")')
+    .replace('builder.InvokeHandler("smoke_done")', 'builder.InvokeHandler("smoke_done").InvokeHandler("wire_profile").InvokeHandler("constructor_profile").InvokeHandler("number_profile").InvokeHandler("extension_profile").Capability(new("frontend-desktop-read", ["core:window:allow-inner-size", "core:webview:allow-webview-size"], Windows: ["main"]))')
     .replace('[JsonSerializable(typeof(Greeting))]', '[JsonSerializable(typeof(Greeting))]\n[JsonSerializable(typeof(WireContract))]\n[JsonSerializable(typeof(ConstructorWire))]\n[JsonSerializable(typeof(NumberWire))]\n[JsonSerializable(typeof(ExtensibleWire))]'));
   const reactPath = path.join(consumer, 'src/App.jsx');
-  await writeFile(reactPath, (await readFile(reactPath, 'utf8')).replace("await commands.smoke_done({ result: 'PASS:", `const wire = await commands.wire_profile({ value: { displayName: 'typed', status: 'in-progress', note: null, omittedCount: 0, 'exact-name': 9, input: 17, inputOnly: 19, outputOnly: { arbitrary: true }, computed: [], ignored: { arbitrary: true } } });
+  await writeFile(reactPath, `import { getCurrentWindow } from '@netwiv/api/window';
+import { getCurrentWebview } from '@netwiv/api/webview';
+` + (await readFile(reactPath, 'utf8')).replace("await commands.smoke_done({ result: 'PASS:", `const currentWindow = getCurrentWindow();
+        const currentWebview = getCurrentWebview();
+        if (currentWebview.window.label !== currentWindow.label) throw new Error('Facade webview window identity differs');
+        for (const handle of [currentWindow, currentWebview.window]) {
+          if ('activityName' in handle || 'sceneIdentifier' in handle || handle.activityName !== undefined || handle.sceneIdentifier !== undefined)
+            throw new Error('Facade desktop handle exposes mobile methods');
+        }
+        const innerSize = currentWindow.innerSize;
+        const webviewSize = currentWebview.size;
+        for (const size of [await innerSize(), await webviewSize()]) {
+          if (!(size.width > 0 && size.height > 0)) throw new Error('Facade desktop size method returned invalid geometry');
+        }
+        const wire = await commands.wire_profile({ value: { displayName: 'typed', status: 'in-progress', note: null, omittedCount: 0, 'exact-name': 9, input: 17, inputOnly: 19, outputOnly: { arbitrary: true }, computed: [], ignored: { arbitrary: true } } });
         if (wire.displayName !== 'typed' || wire.status !== 'in-progress' || wire['exact-name'] !== 9 || 'note' in wire || 'omittedCount' in wire)
           throw new Error('Generated wire contract differs from NativeAOT serialization: ' + JSON.stringify(wire));
         if (wire.output !== 17 || wire.computed !== 42 || 'input' in wire || 'ignored' in wire)
@@ -133,11 +148,16 @@ try {
         }
         await commands.smoke_done({ result: 'PASS:`));
   const polymorphic = await configurePolymorphism(consumer);
+  const api = await packApi(run, path.join(runRoot, 'frontend-api'));
+  await copyFile(api.tarball, path.join(consumer, 'netwiv-api.tgz'));
+  await npm(['install', '--save-exact', '--no-audit', '--no-fund', './netwiv-api.tgz']);
   await npm(['ci', '--no-audit', '--no-fund']);
   await npm(['run', 'build']);
   const jsFile = path.join(consumer, 'src/generated/commands.js');
   const dtsFile = path.join(consumer, 'src/generated/commands.d.ts');
   const js = await readFile(jsFile, 'utf8'), dts = await readFile(dtsFile, 'utf8');
+  assert.ok(/from ['"]@netwiv\/api\/core['"]/.test(js) && /from ['"]@netwiv\/api\/core['"]/.test(dts),
+    'Generated commands must use the installed NetWiv frontend API');
   assert.ok(js.includes('invoke("greet", args, options)'));
   assert.ok(dts.includes('"message": string') && dts.includes('"count": number'));
   await copyFile(path.join(here, 'calls.ts'), path.join(consumer, 'calls.ts'));
@@ -166,6 +186,14 @@ try {
   await writeFile(wirePath, wireSource);
   await writeFile(polymorphic.file, polymorphic.source);
   await npm(['run', 'build']);
+  const managed = path.join(consumer, 'publish', `${rid}-managed`);
+  await run(dotnet, ['publish', 'src-netwiv', '-c', 'Release', '-r', rid,
+    '-p:PublishAot=false', '-p:TreatWarningsAsErrors=true', '--disable-build-servers', '-o', managed]);
+  const managedExecutable = path.join(managed, exe);
+  const managedOutput = process.env.NETWIV_GUI_LAUNCHER
+    ? await run('bash', [process.env.NETWIV_GUI_LAUNCHER, managedExecutable, process.env.NETWIV_GUI_BACKEND ?? 'x11', '--smoke-test'], consumer, 60000)
+    : await run(managedExecutable, ['--smoke-test'], consumer, 60000);
+  assert.ok(managedOutput.includes('PASS: React form'), 'Managed native WebView did not report the React IPC result');
   const publish = path.join(consumer, 'publish', rid);
   const published = await run(dotnet, ['publish', 'src-netwiv', '-c', 'Release', '-r', rid,
     '-p:PublishAot=true', '-p:TreatWarningsAsErrors=true', '--disable-build-servers', '-o', publish]);

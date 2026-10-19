@@ -13,9 +13,16 @@ stability while considering complexity and long-term maintenance cost.
 
 ## Application by area
 
-- **Frontend compatibility:** Preserve existing public JavaScript APIs and
-  observable behavior where practical. Use the official `@tauri-apps/api`
-  package unchanged.
+- **Frontend SDK:** Own the desktop public contract through `@netwiv/api`,
+  maintained in `packages/api` in this repository. Its initial facade reuses
+  the pinned official `@tauri-apps/api` internally; frontend independence is
+  a long-term goal, not a claim about the initial package. Replace dependencies
+  incrementally while preserving the published NetWiv contract or documenting
+  a versioned migration.
+- **Frontend compatibility:** Preserve existing Tauri public JavaScript APIs
+  and observable behavior where practical through the unchanged official
+  `@tauri-apps/api` compatibility path. Test that path separately from the
+  NetWiv facade; the facade must not redefine what counts as Tauri compatibility.
 - **C# SDK:** Provide corresponding concepts and functionality through idiomatic
   .NET APIs. Reproducing Rust syntax or expression patterns is not a goal.
 - **Development tools:** Generators, NuGet, MSBuild, templates, solutions and IDE
@@ -60,6 +67,12 @@ unless the maintainer explicitly changes this scope. Unsupported APIs remain
 visible in compatibility inventories. Existing CLI signing and packaging
 support is separate. The [API status table](api-status.md) describes support and
 limits for ancillary extensions.
+
+Mobile-only APIs are excluded from the NetWiv frontend facade, including its
+public types and options. Their presence in the upstream compatibility inventory
+does not make them part of the NetWiv SDK contract. The frontend independence
+work does not include replacing Wry, Tao, Muda, Tray-icon or the native ecosystem
+toolchain. Package ownership does not require a separate repository.
 
 These principles apply to new features and changes to existing functionality.
 Changes to public APIs, supported platforms and distribution formats require

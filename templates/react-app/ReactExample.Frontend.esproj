@@ -13,11 +13,11 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectCapability Include="JSProjectSystem" />
-    <None Include="src/**/*;public/**/*;scripts/**/*;package.json;package-lock.json;index.html;vite.config.*;*config.json" />
+    <None Include="src/**/*;public/**/*;scripts/**/*;vendor/**/*;package.json;package-lock.json;index.html;vite.config.*;*config.json" />
   </ItemGroup>
   <Target Name="RestoreFrontendDependencies"
           Condition="'$(ShouldRunBuildScript)' == 'true'"
-          Inputs="$(MSBuildProjectDirectory)/package.json;$(MSBuildProjectDirectory)/package-lock.json"
+          Inputs="$(MSBuildProjectDirectory)/package.json;$(MSBuildProjectDirectory)/package-lock.json;$(MSBuildProjectDirectory)/vendor/netwiv-api/package.json"
           Outputs="$(MSBuildProjectDirectory)/node_modules/.netwiv-restore">
     <Exec Command="npm ci --no-audit --no-fund" WorkingDirectory="$(MSBuildProjectDirectory)" />
     <Touch Files="$(MSBuildProjectDirectory)/node_modules/.netwiv-restore" AlwaysCreate="true" />

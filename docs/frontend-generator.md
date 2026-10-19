@@ -46,8 +46,10 @@ import { commands } from './generated/commands.js';
 const greeting = await commands.greet({ name: 'World' });
 ```
 
-Wrappers call unchanged `@tauri-apps/api/core` invoke and pass InvokeOptions
-through. Command names and argument keys are preserved exactly. No-argument
+Wrappers call `@netwiv/api/core` invoke and pass InvokeOptions through. The
+initial desktop facade delegates to the pinned, unchanged Tauri implementation;
+see [the frontend SDK](frontend-api.md) for package setup and excluded APIs.
+Command names and argument keys are preserved exactly. No-argument
 commands accept an omitted argument object. The command registry still controls
 exposure: generation does not call InvokeHandler, grant permissions, or expose
 unregistered commands. The export includes local generated declarations and public
@@ -58,6 +60,13 @@ non-virtual, non-overridden constant expression-bodied getter so export can
 determine the wire name without executing code (`DTOXGEN011` otherwise).
 Runtime plugin registration has no such constant-name requirement.
 See [plugin commands](plugin-commands.md) for explicit runtime registration.
+
+When upgrading an existing project, install the matching `@netwiv/api` package
+before regenerating bindings. The first facade is supplied as a portable local
+package in new starters; it does not require an unpublished npm registry release.
+Previously generated bindings using the official Tauri package remain a
+compatibility path. Changing generated imports does not change command names,
+permissions or backend registration.
 
 ### Referenced command assemblies
 

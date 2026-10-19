@@ -19,10 +19,16 @@ try {
   assert.ok(packed.files.some(file => file.path === 'lib/index.d.ts'));
   assert.ok(!packed.files.some(file => /^(?:src|tests|node_modules)\/|\.tgz$|package-lock\.json$/.test(file.path)),
     'The tarball must contain the public package, without sources, tests or dependency archives');
+  const pins = JSON.parse(await readFile(path.join(root, 'compatibility/upstream-lock.json'), 'utf8'));
+  const npmLock = JSON.parse(await readFile(path.join(root, 'packages/api/package-lock.json'), 'utf8'));
+  for (const pin of [pins.api, ...Object.values(pins.plugins)]) {
+    assert.equal(manifest.devDependencies[pin.name], pin.version);
+    assert.equal(npmLock.packages[`node_modules/${pin.name}`].integrity, pin.integrity);
+  }
   const snapshot = path.join(root, 'templates/react-app/vendor/netwiv-api');
   for (const { path: file } of packed.files) {
     if (file === 'package.json') {
-      const { scripts, devDependencies, ...consumerManifest } = manifest;
+      const { scripts, devDependencies, overrides, ...consumerManifest } = manifest;
       assert.deepEqual(JSON.parse(await readFile(path.join(snapshot, file), 'utf8')), consumerManifest,
         'The template snapshot must keep the public package metadata without maintainer build dependencies');
       continue;
@@ -31,9 +37,17 @@ try {
       (await readFile(path.join(temporary, 'package', file), 'utf8')).replaceAll('\r\n', '\n'),
       `Regenerate the frontend template API snapshot: ${file}`);
   }
+  for (const { path: file } of packed.files) {
+    assert.equal((await readFile(path.join(root, 'samples/NetWiv.HostingApp/vendor/netwiv-api', file), 'utf8')).replaceAll('\r\n', '\n'),
+      (await readFile(path.join(snapshot, file), 'utf8')).replaceAll('\r\n', '\n'), `Hosting sample snapshot: ${file}`);
+    if (file.startsWith('lib/') && file.endsWith('.js')) {
+      assert.equal((await readFile(path.join(root, 'templates/frontends/shared/vendor/@netwiv/api', file.slice(4)), 'utf8')).replaceAll('\r\n', '\n'),
+        (await readFile(path.join(snapshot, file), 'utf8')).replaceAll('\r\n', '\n'), `Standalone snapshot: ${file}`);
+    }
+  }
   const standalone = await readFile(path.join(root, 'templates/frontends/shared/vendor/@netwiv/api/core.js'), 'utf8');
   assert.equal(standalone.replaceAll('\r\n', '\n'), (await readFile(path.join(temporary, 'package/lib/core.js'), 'utf8'))
-    .replaceAll('\r\n', '\n').replaceAll('@tauri-apps/api/core', '../../@tauri-apps/api/core.js'));
+    .replaceAll('\r\n', '\n'));
   const consumer = path.join(temporary, 'consumer');
   await mkdir(consumer);
   await copyFile(tarball, path.join(consumer, 'netwiv-api.tgz'));
@@ -42,19 +56,29 @@ try {
     devDependencies: { typescript: manifest.devDependencies.typescript } }));
   await npm(run, ['install', '--no-audit', '--no-fund'], consumer);
   await npm(run, ['ci', '--no-audit', '--no-fund'], consumer);
-  await copyFile(new URL('./public-types.ts', import.meta.url), path.join(consumer, 'public-types.ts'));
+  const pluginNames = Object.keys(pins.plugins);
+  const types = await readFile(new URL('./public-types.ts', import.meta.url), 'utf8');
+  await writeFile(path.join(consumer, 'public-types.ts'), types + pluginNames.map((name, index) =>
+    `\nimport * as plugin${index} from '@netwiv/api/plugins/${name}';\nvoid plugin${index};`).join(''));
+  assert.ok(!(await readdir(path.join(consumer, 'node_modules'))).includes('@tauri-apps'));
+
   for (const [module, resolution] of [['NodeNext', 'NodeNext'], ['ESNext', 'Bundler']]) {
     await run(process.execPath, [path.join(consumer, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit',
       '--module', module, '--moduleResolution', resolution, '--target', 'ES2022', 'public-types.ts'], consumer);
   }
   await writeFile(path.join(consumer, 'runtime.mjs'), `import assert from 'node:assert/strict';
 import * as api from '@netwiv/api';
-import { isNetWiv } from '@netwiv/api/core';
-assert.equal(isNetWiv(), false);
-globalThis.window = { isNetWiv: true };
-assert.equal(api.isNetWiv(), true);
+assert.equal('isNetWiv' in api, false);
+assert.equal('isNetWiv' in api.core, false);
 assert.equal('mocks' in api, false);
 assert.equal('isTauri' in api.core, false);
+for (const name of ${JSON.stringify(pluginNames)}) {
+  assert.ok(Object.keys(await import('@netwiv/api/plugins/' + name)).length > 0);
+  await assert.rejects(import('@tauri-apps/plugin-' + name), { code: 'ERR_MODULE_NOT_FOUND' });
+}
+await assert.rejects(import('@netwiv/api/plugins/updater'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
+await assert.rejects(import('@tauri-apps/api/core'), { code: 'ERR_MODULE_NOT_FOUND' });
+await assert.rejects(import('@netwiv/api/lib/upstream/core.js'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
 await assert.rejects(import('@netwiv/api/mocks'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
 await assert.rejects(import('@netwiv/api/lib/core.js'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
 `);

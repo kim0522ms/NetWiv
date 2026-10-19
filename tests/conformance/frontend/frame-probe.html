@@ -2,9 +2,9 @@
 <meta charset="UTF-8">
 <title>Origin conformance probe</title>
 <script type="module">
-  import { invoke, isTauri } from './vendor/@tauri-apps/api/core.js';
+  import { invoke } from './vendor/@tauri-apps/api/core.js';
   const id = new URL(location.href).searchParams.get('id');
-  const result = { bridge: isTauri(), echo: 'unavailable', restricted: 'unavailable' };
+  const result = { bridge: typeof window.__TAURI_INTERNALS__?.invoke === 'function', echo: 'unavailable', restricted: 'unavailable' };
   const input = { marker: 'origin-probe', source: 'tauri://localhost', origin: 'tauri://localhost' };
   for (const [field, command, args] of [['echo', 'echo_json', { input }], ['restricted', 'restricted', {}]]) {
     if (!result.bridge) continue;

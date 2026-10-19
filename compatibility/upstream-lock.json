@@ -8,7 +8,14 @@
     "commit": "7cd71369c00978a3783b6ae3e9972358abbe4ae6",
     "archive": "https://github.com/tauri-apps/tauri/archive/7cd71369c00978a3783b6ae3e9972358abbe4ae6.tar.gz",
     "archiveSha256": "ebb62a9a58aff337611bbc3b5a0764c067d57998312ea49bf799550052fff392",
-    "referenceFeatures": ["default", "tray-icon", "unstable", "image-png", "image-ico", "protocol-asset"],
+    "referenceFeatures": [
+      "default",
+      "tray-icon",
+      "unstable",
+      "image-png",
+      "image-ico",
+      "protocol-asset"
+    ],
     "referenceFeaturePurpose": "Full desktop conformance includes child Webviews, PNG/ICO image decoding and scoped file asset URLs. These explicitly enabled upstream features are part of this profile, not claims about a default Tauri build."
   },
   "api": {
@@ -42,6 +49,155 @@
       "version": "6.0.3",
       "tarball": "https://registry.npmjs.org/typescript/-/typescript-6.0.3.tgz",
       "integrity": "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="
+    }
+  },
+  "plugins": {
+    "autostart": {
+      "name": "@tauri-apps/plugin-autostart",
+      "version": "2.5.1",
+      "commit": "e7a68fa63755603b9fa12d28e077eea645551d24",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-autostart/-/plugin-autostart-2.5.1.tgz",
+      "integrity": "sha512-zS/xx7yzveCcotkA+8TqkI2lysmG2wvQXv2HGAVExITmnFfHAdj1arGsbbfs3o6EktRHf6l34pJxc3YGG2mg7w=="
+    },
+    "cli": {
+      "name": "@tauri-apps/plugin-cli",
+      "version": "2.4.1",
+      "commit": "e7a68fa63755603b9fa12d28e077eea645551d24",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-cli/-/plugin-cli-2.4.1.tgz",
+      "integrity": "sha512-8JXofQFI5cmiGolh1PlU4hzE2YJgrgB1lyaztyBYiiMCy13luVxBXaXChYPeqMkUo46J1UadxvYdjRjj0E8zaw=="
+    },
+    "clipboard-manager": {
+      "name": "@tauri-apps/plugin-clipboard-manager",
+      "version": "2.3.3",
+      "commit": "6aa2854f314481a459be1189b02c65a2450789ab",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-clipboard-manager/-/plugin-clipboard-manager-2.3.3.tgz",
+      "integrity": "sha512-KnyoTs9gj1yEgDkSPUNjOIOHjJTr5wk8IWcYMOWxYTIJCip6QwlyPW8u2X+6bd6kHM4fAdZNpxoal0gy/TwJbg=="
+    },
+    "deep-link": {
+      "name": "@tauri-apps/plugin-deep-link",
+      "version": "2.4.10",
+      "commit": "6aa2854f314481a459be1189b02c65a2450789ab",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-deep-link/-/plugin-deep-link-2.4.10.tgz",
+      "integrity": "sha512-SuXI47ORUzYuwG6c8dluLDrStTvli5bAZDRa2+VuUEzK/9TEa7FZz7UKXBQriL7+CPFXRHQsz5tSocc47tRXQQ=="
+    },
+    "dialog": {
+      "name": "@tauri-apps/plugin-dialog",
+      "version": "2.7.3",
+      "commit": "6aa2854f314481a459be1189b02c65a2450789ab",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-dialog/-/plugin-dialog-2.7.3.tgz",
+      "integrity": "sha512-CRgE+7TP4tvq9MjBU6f04NLTFIqVMLKHk3hAqlhil00ngK9ACTrXPH3oHpKMProxILodd3YjBoKbMwSI4IEcfA=="
+    },
+    "fs": {
+      "name": "@tauri-apps/plugin-fs",
+      "version": "2.5.2",
+      "commit": "6aa2854f314481a459be1189b02c65a2450789ab",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-fs/-/plugin-fs-2.5.2.tgz",
+      "integrity": "sha512-XXvMSnFiob+G1H+YHCDf+bzWVumseQuEIhzpbOJzevUfL4k0U+sTApZWJHpoLiamggnVPJm5dJ5sDsniRyWxlg=="
+    },
+    "global-shortcut": {
+      "name": "@tauri-apps/plugin-global-shortcut",
+      "version": "2.3.2",
+      "commit": "9883f396dcdc16b04b8313f9cbb6aeef04bfb694",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-global-shortcut/-/plugin-global-shortcut-2.3.2.tgz",
+      "integrity": "sha512-UReHNXrLvpEjylE4jb4oCYiy96uRykPUthoCQCmRXYrd5hs5X9DrW+qOn7GLW57EJN4tdK8bgK5twBTz2NOxzA=="
+    },
+    "http": {
+      "name": "@tauri-apps/plugin-http",
+      "version": "2.6.1",
+      "commit": "3c5d2677677dc7ebea618514af56fc951449cc1b",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-http/-/plugin-http-2.6.1.tgz",
+      "integrity": "sha512-9gtfe6eOaVKofASoMZ4Ph8E6vDYnpUTbMXrLt4FkXPzC5+O+wnGqJ9fz2koSPYcQt10bb3cx5qHkU0AU1l8tcQ=="
+    },
+    "log": {
+      "name": "@tauri-apps/plugin-log",
+      "version": "2.9.2",
+      "commit": "5baf71a47292d8490f0ba3d53f15224e55c48327",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-log/-/plugin-log-2.9.2.tgz",
+      "integrity": "sha512-QC2uTQyC+4269xawGXzVLDzIvMB2JwzZHd1lg3ltXtXqrauwikqlbNt6Tm3H++1RN0gPtcvp4cBc5bF6u/DUnw=="
+    },
+    "notification": {
+      "name": "@tauri-apps/plugin-notification",
+      "version": "2.4.0",
+      "commit": "6aa2854f314481a459be1189b02c65a2450789ab",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-notification/-/plugin-notification-2.4.0.tgz",
+      "integrity": "sha512-xlJXMcUoKOjNupzDue5wrEsa1wytf+l/2gCAPhafHyP683Y3N7J/8clUWLZ3vpnwkpT2C1zcLMMQFjjecIG2xg=="
+    },
+    "opener": {
+      "name": "@tauri-apps/plugin-opener",
+      "version": "2.5.5",
+      "commit": "6aa2854f314481a459be1189b02c65a2450789ab",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-opener/-/plugin-opener-2.5.5.tgz",
+      "integrity": "sha512-xvzGai5aQds8j8R8RsUK/lW6pGG50YgOYIPLzvkqmkwAj7dfySOD7sGtejRzvVdMmv1EQfKVEFh1MvmDp8QR0g=="
+    },
+    "os": {
+      "name": "@tauri-apps/plugin-os",
+      "version": "2.3.2",
+      "commit": "e7a68fa63755603b9fa12d28e077eea645551d24",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-os/-/plugin-os-2.3.2.tgz",
+      "integrity": "sha512-n+nXWeuSeF9wcEsSPmRnBEGrRgOy6jjkSU+UVCOV8YUGKb2erhDOxis7IqRXiRVHhY8XMKks00BJ0OAdkpf6+A=="
+    },
+    "positioner": {
+      "name": "@tauri-apps/plugin-positioner",
+      "version": "2.3.4",
+      "commit": "6aa2854f314481a459be1189b02c65a2450789ab",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-positioner/-/plugin-positioner-2.3.4.tgz",
+      "integrity": "sha512-Orl+BWL/93OuxaL8FE/5tk7RuRyGMfEQX6E2fDsErFaahHCYq/REFByRBm8oWzw7bIfWdlOY/B6CZMcYgC+crg=="
+    },
+    "process": {
+      "name": "@tauri-apps/plugin-process",
+      "version": "2.3.1",
+      "commit": "e7a68fa63755603b9fa12d28e077eea645551d24",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-process/-/plugin-process-2.3.1.tgz",
+      "integrity": "sha512-nCa4fGVaDL/B9ai03VyPOjfAHRHSBz5v6F/ObsB73r/dA3MHHhZtldaDMIc0V/pnUw9ehzr2iEG+XkSEyC0JJA=="
+    },
+    "shell": {
+      "name": "@tauri-apps/plugin-shell",
+      "version": "2.3.6",
+      "commit": "6aa2854f314481a459be1189b02c65a2450789ab",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-shell/-/plugin-shell-2.3.6.tgz",
+      "integrity": "sha512-C2AG+QmBJPK0E3gccLXfRdjTfGBC9DgwzGi/PfYa61ieAZbYvhvOss4OdSGfn/D28N3THGhJZEhf3lozOh/Uqw=="
+    },
+    "sql": {
+      "name": "@tauri-apps/plugin-sql",
+      "version": "2.4.1",
+      "commit": "6aa2854f314481a459be1189b02c65a2450789ab",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-sql/-/plugin-sql-2.4.1.tgz",
+      "integrity": "sha512-w9fImJ2XaCLFEj+kLbs8nO/Idq89mpjl//Bm37JZo8AugbaVzaW5iHTjjcozHjtLgjb0IAQjYromv0YpzDOFkA=="
+    },
+    "store": {
+      "name": "@tauri-apps/plugin-store",
+      "version": "2.4.5",
+      "commit": "3c5d2677677dc7ebea618514af56fc951449cc1b",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-store/-/plugin-store-2.4.5.tgz",
+      "integrity": "sha512-bVD9riKzf+WKYm1L8uXD1CMDTC/eaFS2Cbjcgq+39ahChtVGnyDCbzug3HpjgpZMw78yoAVMqHOAEjqJ/kD9YQ=="
+    },
+    "stronghold": {
+      "name": "@tauri-apps/plugin-stronghold",
+      "version": "2.3.2",
+      "commit": "6aa2854f314481a459be1189b02c65a2450789ab",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-stronghold/-/plugin-stronghold-2.3.2.tgz",
+      "integrity": "sha512-tl+dJCvwlY/MyO9yvu9jldrMLa03UeE087Bjmi8LKD+JmXVRX2rWMEvyekDGBRWGhvyjsOr1gUfhvfc+dXtRRQ=="
+    },
+    "upload": {
+      "name": "@tauri-apps/plugin-upload",
+      "version": "2.4.1",
+      "commit": "6aa2854f314481a459be1189b02c65a2450789ab",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-upload/-/plugin-upload-2.4.1.tgz",
+      "integrity": "sha512-YCQdFILmnBRibXipOi7A7qt8cachleHA5L8IWXVNztR+o1vRZEjPWZrrvLeytGHe4+jgW9qOnLP5rZAf0pMxZA=="
+    },
+    "websocket": {
+      "name": "@tauri-apps/plugin-websocket",
+      "version": "2.4.3",
+      "commit": "6aa2854f314481a459be1189b02c65a2450789ab",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-websocket/-/plugin-websocket-2.4.3.tgz",
+      "integrity": "sha512-c85ykljg6AzY6Zw4KpYsEBaLirjPIs6m8xxC6hZcdwAchckaBU368US+oSsa5B43PjSLukjwD5vOOqzYYnswWA=="
+    },
+    "window-state": {
+      "name": "@tauri-apps/plugin-window-state",
+      "version": "2.4.1",
+      "commit": "e7a68fa63755603b9fa12d28e077eea645551d24",
+      "tarball": "https://registry.npmjs.org/@tauri-apps/plugin-window-state/-/plugin-window-state-2.4.1.tgz",
+      "integrity": "sha512-OuvdrzyY8Q5Dbzpj+GcrnV1iCeoZbcFdzMjanZMMcAEUNy/6PH5pxZPXpaZLOR7whlzXiuzx0L9EKZbH7zpdRw=="
     }
   }
 }

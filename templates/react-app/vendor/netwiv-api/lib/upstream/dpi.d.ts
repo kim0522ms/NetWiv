@@ -1,4 +1,4 @@
-import { SERIALIZE_TO_IPC_FN } from '@tauri-apps/api/core';
+import { SERIALIZE_TO_IPC_FN } from './core.js';
 /**
  * A size represented in logical pixels.
  * Logical pixels are scaled according to the window's DPI scale.

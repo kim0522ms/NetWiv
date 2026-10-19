@@ -60,18 +60,13 @@ public sealed class NugetPermissionPlugin : IPlugin {
   config.bundle.resources = { '../message.txt': 'data/message.txt' };
   await writeFile(configFile, JSON.stringify(config));
   const dist = path.join(initialized, 'dist');
-  await mkdir(path.join(dist, 'vendor/external/tslib'), { recursive: true });
-  const api = path.join(consumer, 'node_modules/@tauri-apps/api');
-  await copyFile(path.join(api, 'core.js'), path.join(dist, 'vendor/core.js'));
-  await copyFile(path.join(api, 'external/tslib/tslib.es6.js'), path.join(dist, 'vendor/external/tslib/tslib.es6.js'));
   await cp(path.join(consumer, 'node_modules/@netwiv/api/lib'), path.join(dist, 'vendor/netwiv'), { recursive: true });
   await writeFile(path.join(dist, 'index.html'), `<!doctype html><html><body><output id="result">Starting</output>
-<script type="importmap">{"imports":{"@tauri-apps/api/core":"./vendor/core.js","@netwiv/api/core":"./vendor/netwiv/core.js"}}</script>
+<script type="importmap">{"imports":{"@netwiv/api/core":"./vendor/netwiv/core.js"}}</script>
 <script type="module">
 import { commands } from './commands.js';
-import { invoke, convertFileSrc, isNetWiv } from '@netwiv/api/core';
+import { invoke, convertFileSrc } from '@netwiv/api/core';
 try {
-  if (!isNetWiv()) throw new Error('NetWiv runtime was not detected');
   const response = await commands.greet({ name: 'init' });
   if (response !== 'Hello, init!') throw new Error(JSON.stringify(response));
   if (await commands.read_bundled() !== 'NuGet resource through NativeAOT and generated JavaScript')

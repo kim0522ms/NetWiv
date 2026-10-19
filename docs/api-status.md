@@ -5,10 +5,11 @@ The classification checks dispatch paths, platform adapters, options and test
 definitions. It does not establish full desktop acceptance or every argument/error
 combination; feature-specific execution checks and limits are noted separately.
 Plugin rows remain feature-group inventories, not method-by-method audits.
-Targets: **Windows x64 / Linux x64 / macOS arm64 and x64**, official `@tauri-apps/api@2.11.1`.
+Targets: **Windows x64 / Linux x64 / macOS arm64 and x64**. Reference inventory: `@tauri-apps/api@2.11.1`.
 This is a source-based feature inventory, not a declaration of complete TAURI® equivalence or release acceptance.
 
-New applications use [`@netwiv/api`](frontend-api.md). This table inventories
+Applications use only [`@netwiv/api`](frontend-api.md), including plugin guests.
+Direct Tauri frontend imports are no longer supported. This table inventories
 the upstream compatibility surface, not the facade's public exports. Mobile-only
 entries remain visible here as unsupported even though the facade excludes them.
 See [Linux X11/Wayland](linux.md) for runtime support and compositor limits.
@@ -81,7 +82,7 @@ All **688 identifiers** in the [pinned declaration inventory](../compatibility/g
 | Module | Total | Declaration available | Implemented | Partial | Not implemented | Intentional difference | Has fixture mapping |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | [app](#module-app) | 17 | 3 | 12 | 0 | 1 | 1 | 10 |
-| [core](#module-core) | 28 | 4 | 24 | 0 | 0 | 0 | 15 |
+| [core](#module-core) | 28 | 4 | 23 | 0 | 0 | 1 | 15 |
 | [dpi](#module-dpi) | 46 | 0 | 46 | 0 | 0 | 0 | 46 |
 | [event](#module-event) | 15 | 7 | 8 | 0 | 0 | 0 | 4 |
 | [image](#module-image) | 14 | 2 | 12 | 0 | 0 | 0 | 8 |
@@ -92,7 +93,7 @@ All **688 identifiers** in the [pinned declaration inventory](../compatibility/g
 | [webview](#module-webview) | 56 | 4 | 51 | 0 | 1 | 0 | 13 |
 | [webviewWindow](#module-webviewwindow) | 100 | 2 | 96 | 0 | 2 | 0 | 6 |
 | [window](#module-window) | 214 | 18 | 190 | 0 | 6 | 0 | 44 |
-| **Total** | **688** | **57** | **620** | **0** | **10** | **1** | **243** |
+| **Total** | **688** | **57** | **619** | **0** | **10** | **2** | **243** |
 
 ## Window-effect support
 
@@ -114,9 +115,9 @@ retaining their validation limits. This is a source classification change, not
 was identified in those 25 paths by this review; it does not rule out defects in
 unexercised arguments, platform versions or interactions.
 
-The inventory now separates **620 entries with execution paths**, **57 type or
-constant declarations**, **10 unimplemented mobile entries**, and **one intentional
-identity rejection**. These are identifier counts, not independent features.
+The inventory now separates **619 entries with execution paths**, **57 type or
+constant declarations**, **10 unimplemented mobile entries**, and **two intentional
+identity differences**. These are identifier counts, not independent features.
 The 243 fixture-mapped entries overlap those categories and are not a pass count.
 The ten mobile entries remain in the upstream inventory for completeness; they
 are excluded from the implementation backlog.
@@ -142,6 +143,7 @@ alone is insufficient: the option must reach a runtime consumer on its stated OS
 
 | Classification | APIs / scope | Implementation decision |
 | --- | --- | --- |
+| Unsupported (intentional) | `core.isTauri` | Detection helpers and window markers are retired; migrate to the NetWiv-only frontend entry point without runtime detection guards. |
 | Not implemented; excluded from project scope | `app.onBackButtonPress` (one entry) | Android back-button listener behavior is absent. The official JS wrapper does not supply a mobile runtime. |
 | Not implemented; excluded from project scope | `Window.activityName`, `Window.sceneIdentifier` and their WebviewWindow counterparts (four entries) | No native activity/scene command handlers. Do not treat successful desktop window operations as support for these mobile methods. |
 | Not implemented; excluded from project scope | `WindowOptions.activityName`, `createdByActivityName`, `requestedBySceneIdentifier` (three entries); `disableInputAccessoryView` in WindowOptions/WebviewOptions (two entries) | Mobile configuration is not applied by the desktop creation paths. These five options are excluded work, not future implementation tasks. |
@@ -231,7 +233,7 @@ Union alternatives within type aliases and every enum value are not expanded int
 | `core.InvokeArgs` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `core.InvokeOptions` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `core.InvokeOptions.headers` | Configuration member | **Implemented** | Forwards request headers to the IPC Request. | [P] | No individual mapping |
-| `core.isTauri` | Function | **Implemented** | Official JS API connected to the C# IPC bridge. | [U] [I] [P] | 2 mapped |
+| `core.isTauri` | Function | **Unsupported (intentional)** | Runtime identity detection is retired; neither `isTauri` nor `isNetWiv` is exported or injected. | [U] [I] | 2 mapped (historical) |
 | `core.PermissionState` | Type | **Declaration available** | Official npm declaration is provided. See member rows for runtime support. | [U] | No individual mapping |
 | `core.PluginListener` | Object | **Implemented** | Official JS API connected to the C# IPC bridge. Object availability does not imply every member is complete. | [U] [I] [P] | No individual mapping |
 | `core.PluginListener.channelId` | Object member | **Implemented** | Official JS API connected to the C# IPC bridge. | [U] [I] [P] | No individual mapping |

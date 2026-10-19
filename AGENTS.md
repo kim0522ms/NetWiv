@@ -35,34 +35,34 @@ agent-assisted work as well as manually written contributions.
   identifying information before publishing. Real-device evidence requirements
   do not override these privacy rules.
 
-NetWiv is a .NET 8 or later WebView desktop framework with optional NativeAOT publishing with TAURI® v2 compatibility as an important support goal.
+NetWiv is a .NET 8 or later WebView desktop framework with optional NativeAOT publishing with a NetWiv-owned desktop frontend API and privately reused TAURI® v2 implementations.
 
 The product spelling is `NetWiv`. Public C# namespaces and NuGet IDs use
 `NetWiv`, while CLI, native libraries, configuration files and npm identifiers
-use lowercase `netwiv`. The unchanged official `@tauri-apps/api` retains its
-upstream name.
+use lowercase `netwiv`. Upstream dependency identities remain unchanged inside the private facade.
 
 ## Design priorities
 
-- Follow [the design principles](docs/design-principles.md): prioritize idiomatic .NET usability and stability while supporting Tauri frontend compatibility.
+- Follow [the design principles](docs/design-principles.md): prioritize idiomatic .NET usability and stability while maintaining the public `@netwiv/api` desktop contract.
 - Prioritize idiomatic .NET usability and stability when design goals conflict; consider complexity and long-term maintenance cost.
-- Preserve existing public APIs and frontend compatibility where practical. C# APIs, tooling and internals may use independent designs.
+- Preserve the published NetWiv APIs where practical. C# APIs, tooling and internals may use independent designs.
 - Deliberate deviations are allowed when compatibility imposes disproportionate costs, not only when language differences make it impossible. Document the affected API, platform/version, rationale, alternatives, impact, validation and migration path. Do not silently introduce breaking changes.
 - Apply this policy to new or changed areas; it does not authorize wholesale rewrites or blanket relaxation of security, NativeAOT or validation requirements.
 - Report practical application readiness separately from Tauri compatibility coverage. Deliberate deviations, unfinished behavior and untested items are not compatibility passes.
 
-## Compatibility source of truth
+## Frontend contract and reference sources
 
 - `packages/api` owns the desktop-only `@netwiv/api` public contract. Initially
   it reuses the pinned official package internally; progressively removing that
   frontend dependency is the long-term direction. Exclude mobile-only APIs,
   types and options from the facade. Replacing the native ecosystem/toolchain
   is outside this frontend work scope.
-- Keep the unchanged official Tauri package as a separately tested compatibility
-  path. Do not count facade-only behavior as an upstream compatibility pass.
+- Keep pinned upstream guests only as private implementation sources and internal
+  comparison fixtures. Do not offer direct upstream imports as an application path
+  or count facade-only behavior as an upstream compatibility pass.
 - `compatibility/upstream-lock.json` pins every upstream version, commit and npm integrity value.
 - Generated compatibility files come from `node compatibility/scripts/generate-upstream-manifests.mjs`; never edit them manually.
-- Tauri compatibility claims require unchanged `@tauri-apps/api@2.11.1` guest code and matching observable behavior for the claimed scope. Document intentional NetWiv differences separately; do not rewrite generated upstream data to hide them. Direct use of private `window.__TAURI_INTERNALS__` is outside the public guarantee.
+- `@netwiv/api` is the only supported frontend entry point, including `@netwiv/api/plugins/*`. Direct upstream core/plugin imports and `isTauri`/`isNetWiv` detection are retired. Preserve the internal facade and pinned upstream sources. Upstream comparison fixtures are internal references, not a second supported frontend contract. Never rewrite generated inventories to hide differences. Private `window.__TAURI_INTERNALS__` is outside the public guarantee.
 - With no app manifest, bundled local pages may call registered application commands by default and remote pages may not. Once any app manifest exists, every custom command requires a resolved capability permission; deny permissions win over allows.
 
 ## Milestone boundary

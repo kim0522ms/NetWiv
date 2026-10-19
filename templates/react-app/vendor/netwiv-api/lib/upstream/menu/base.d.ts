@@ -1,4 +1,4 @@
-import { Resource } from '@tauri-apps/api/core';
+import { Resource } from '../core.js';
 import { CheckMenuItemOptions } from './checkMenuItem.js';
 import { IconMenuItemOptions } from './iconMenuItem.js';
 import { MenuOptions } from './menu.js';

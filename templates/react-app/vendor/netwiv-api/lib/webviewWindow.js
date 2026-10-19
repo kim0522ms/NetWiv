@@ -1,4 +1,4 @@
-import { WebviewWindow as UpstreamWebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { WebviewWindow as UpstreamWebviewWindow } from './upstream/webviewWindow.js';
 import { desktopConstructor, desktopHandle } from './desktop.js';
 export function getCurrentWebviewWindow() {
     return desktopHandle(UpstreamWebviewWindow.getCurrent());

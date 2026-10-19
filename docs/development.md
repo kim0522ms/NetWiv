@@ -141,7 +141,8 @@ node tests/frontend-api/run.mjs
 When changing shipped SDK files, rebuild the package and regenerate the template
 snapshot with `node scripts/generate-frontend-template-overlays.mjs`. Review the
 resulting snapshot together with the source; do not hand-edit generated copies.
-Unchanged official guest conformance tests remain separate from facade tests.
+Pinned upstream comparison tests remain internal references, separate from the
+public core/plugin facade tests. They do not support direct upstream imports.
 
 ## Continuous integration
 

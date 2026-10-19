@@ -105,7 +105,7 @@ internal static class NewProjectTests
                 Check(readme.Contains("not affiliated with, endorsed by, or officially approved by", StringComparison.Ordinal), "Independent template notice missing: " + template);
                 if (template is "yew" or "leptos" or "sycamore" or "dioxus")
                 {
-                    Check(File.Exists(Path.Combine(destination, "vendor/@tauri-apps/api/core.js")), "Official JS API module missing: " + template);
+                    Check(File.Exists(Path.Combine(destination, "vendor/@netwiv/api/upstream/core.js")), "Private implementation module missing: " + template);
                     Check(File.Exists(Path.Combine(destination, "vendor/@netwiv/api/core.js")), "NetWiv JS API module missing: " + template);
                     Check(File.ReadAllText(Path.Combine(destination, "index.html")).Contains("./vendor/@netwiv/api/core.js", StringComparison.Ordinal), "Rust frontend bypasses NetWiv API: " + template);
                     Check(!File.Exists(Path.Combine(destination, "package.json")), "Rust frontend unexpectedly requires npm: " + template);
@@ -113,7 +113,7 @@ internal static class NewProjectTests
                 else if (template == "blazor")
                 {
                     Check(config["build"]!["frontendDist"]!.GetValue<string>() == "../dist/wwwroot", "Blazor asset root mismatch");
-                    Check(File.Exists(Path.Combine(destination, "frontend/wwwroot/vendor/@tauri-apps/api/core.js")), "Blazor JS API module missing");
+                    Check(File.Exists(Path.Combine(destination, "frontend/wwwroot/vendor/@netwiv/api/upstream/core.js")), "Blazor JS API module missing");
                     Check(File.Exists(Path.Combine(destination, "frontend/wwwroot/vendor/@netwiv/api/core.js")), "Blazor NetWiv API module missing");
                     Check(File.ReadAllText(Path.Combine(destination, "frontend/wwwroot/netwiv.js")).Contains("./vendor/@netwiv/api/core.js", StringComparison.Ordinal), "Blazor frontend bypasses NetWiv API");
                 }
@@ -125,7 +125,7 @@ internal static class NewProjectTests
                     Check(package["dependencies"]!["@tauri-apps/api"] is null, "Frontend directly depends on the compatibility API: " + template);
                     var api = JsonNode.Parse(File.ReadAllText(Path.Combine(destination, "vendor/netwiv-api/package.json")))!;
                     Check(api["name"]!.GetValue<string>() == "@netwiv/api" && File.Exists(Path.Combine(destination, "vendor/netwiv-api/lib/core.js")), "Local NetWiv API package is incomplete: " + template);
-                    Check(api["dependencies"]!["@tauri-apps/api"]!.GetValue<string>() == "2.11.1", "Compatibility API version differs: " + template);
+                    Check(api["dependencies"] is null, "The frontend facade must be self-contained: " + template);
                     Check(!File.Exists(Path.Combine(destination, "src/App.jsx")) || template == "react" || template is "solid" or "preact", "React source leaked into " + template);
                 }
             }

@@ -1,11 +1,13 @@
 # Linux native dialog probe
 
-This standalone functional host exercises real native dialogs and unchanged
-`@tauri-apps/api@2.11.1` core guest IPC. Build the native adapter first as described
+This standalone functional host exercises real native dialogs and
+`@netwiv/api` core guest IPC. Build the native adapter first as described
 in [development](../../docs/development.md). No solution registration is needed.
 
 ```sh
-node tests/conformance/scripts/build-frontend.mjs
+npm ci --prefix packages/api
+npm run build --prefix packages/api
+node scripts/generate-frontend-template-overlays.mjs
 dotnet build tests/NetWiv.Dialog.Smoke -c Release -p:PublishAot=false
 bash scripts/run-linux-smoke-desktop.sh "$PWD/tests/NetWiv.Dialog.Smoke/bin/Release/net8.0/NetWiv.Dialog.Smoke" wayland --automatic wayland
 dotnet publish tests/NetWiv.Dialog.Smoke -c Release -r linux-x64

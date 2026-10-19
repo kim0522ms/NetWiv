@@ -7,7 +7,7 @@ fn main() {
         let entry = entry.unwrap();
         fs::write(assets.join(entry.file_name()), fs::read(entry.path()).unwrap()).unwrap();
     }
-    let vendor = directory.join("../../../samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api");
+    let vendor = directory.join("vendor/@tauri-apps/api");
     fs::write(assets.join("core.js"), fs::read(vendor.join("core.js")).unwrap()).unwrap();
     fs::write(assets.join("external/tslib/tslib.es6.js"), fs::read(vendor.join("external/tslib/tslib.es6.js")).unwrap()).unwrap();
     println!("cargo:rerun-if-changed=../frontend");

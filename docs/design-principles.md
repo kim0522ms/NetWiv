@@ -1,14 +1,14 @@
-# NetWiv design principles and TAURI® compatibility policy
+# NetWiv design principles and frontend contract
 
 These principles guide NetWiv APIs, development tools and runtime design.
-NetWiv prioritizes .NET developer experience and stability while supporting
-Tauri frontend compatibility.
+NetWiv prioritizes .NET developer experience and stability while maintaining its own
+desktop frontend contract.
 
 ## Core principles
 
 NetWiv aims to be a WebView desktop framework that feels natural in .NET.
-Tauri compatibility is an important support goal, but it does not dictate every
-implementation decision. When goals conflict, prioritize .NET usability and
+Pinned Tauri implementations inform the internal facade; the public frontend
+contract belongs to NetWiv. When goals conflict, prioritize .NET usability and
 stability while considering complexity and long-term maintenance cost.
 
 ## Application by area
@@ -19,10 +19,10 @@ stability while considering complexity and long-term maintenance cost.
   a long-term goal, not a claim about the initial package. Replace dependencies
   incrementally while preserving the published NetWiv contract or documenting
   a versioned migration.
-- **Frontend compatibility:** Preserve existing Tauri public JavaScript APIs
-  and observable behavior where practical through the unchanged official
-  `@tauri-apps/api` compatibility path. Test that path separately from the
-  NetWiv facade; the facade must not redefine what counts as Tauri compatibility.
+- **Frontend entry point:** Applications use `@netwiv/api` for core and plugins.
+  Direct upstream guest imports are retired; upstream comparison tests remain
+  internal behavioral references. Keep private implementation reuse separate from
+  the supported NetWiv contract. See [migration](frontend-api.md).
 - **C# SDK:** Provide corresponding concepts and functionality through idiomatic
   .NET APIs. Reproducing Rust syntax or expression patterns is not a goal.
 - **Development tools:** Generators, NuGet, MSBuild, templates, solutions and IDE

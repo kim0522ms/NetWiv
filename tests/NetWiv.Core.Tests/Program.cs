@@ -457,6 +457,8 @@ static Task InitializationScriptMatchesPinnedSerializer()
     Assert.Contains("if (window.top.location.origin !== window.location.origin) return;", script);
     Assert.Contains("} catch { return; }", script);
     Assert.DoesNotContain("Only Uint8Array is supported", script);
+    Assert.DoesNotContain("isTauri", script);
+    Assert.DoesNotContain("isNetWiv", script);
     return Task.CompletedTask;
 }
 

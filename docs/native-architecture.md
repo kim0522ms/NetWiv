@@ -13,10 +13,13 @@ not an additional supported production backend.
 
 ## Responsibility boundary
 
-The desktop JavaScript/TypeScript entry point is `@netwiv/api`, maintained in
-`packages/api`. Generated C# command bindings import its core module. The initial
-facade delegates to pinned official Tauri code; unchanged official guest tests
-remain the compatibility reference. See [frontend SDK](frontend-api.md).
+The single supported desktop JavaScript/TypeScript entry point is `@netwiv/api`,
+maintained in `packages/api`. Generated C# command bindings import its core module;
+plugin calls use `@netwiv/api/plugins/*`. Pinned upstream implementations are
+privately bundled behind the facade, with no upstream frontend runtime dependency
+in consumer applications. Upstream guest tests remain internal comparison fixtures.
+Direct Tauri imports and runtime identity helpers are retired. See
+[frontend SDK](frontend-api.md).
 
 | .NET | Native Rust adapter |
 | --- | --- |

@@ -9,6 +9,6 @@
     "build": "npm run bindings && vite build",
     "test": "node --test frontend/smoke.test.mjs"
   },
-  "dependencies": { "@tauri-apps/api": "2.11.1" },
+  "dependencies": { "@netwiv/api": "file:vendor/netwiv-api" },
   "devDependencies": { "vite": "8.2.2" }
 }

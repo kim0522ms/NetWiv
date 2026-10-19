@@ -2,8 +2,8 @@ import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
 import { mockIPC, mockWindows } from '@tauri-apps/api/mocks';
-import { Window as OfficialWindow } from '@tauri-apps/api/window';
-import { WebviewWindow as OfficialWebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { Window as ImplementationWindow } from '../lib/upstream/window.js';
+import { WebviewWindow as ImplementationWebviewWindow } from '../lib/upstream/webviewWindow.js';
 import { TauriEvent as OfficialEvent } from '@tauri-apps/api/event';
 import * as api from '../lib/index.js';
 
@@ -35,12 +35,11 @@ function desktop(handle) {
   }
 }
 
-test('identity is SSR safe and specific to the NetWiv marker', () => {
-  assert.equal(api.isNetWiv(), false);
-  globalThis.window = { isTauri: true };
-  assert.equal(api.isNetWiv(), false);
-  window.isNetWiv = true;
-  assert.equal(api.core.isNetWiv(), true);
+test('the public SDK has no runtime identity helpers', () => {
+  for (const module of [api, api.core]) {
+    assert.equal('isNetWiv' in module, false);
+    assert.equal('isTauri' in module, false);
+  }
 });
 
 test('window, webview and combined factories expose desktop handles', async () => {
@@ -66,8 +65,8 @@ test('window, webview and combined factories expose desktop handles', async () =
   assert.equal(await api.webviewWindow.WebviewWindow.getByLabel('missing'), null);
   const current = api.window.getCurrentWindow();
   assert.ok(current instanceof api.window.Window);
-  assert.ok(current instanceof OfficialWindow);
-  assert.equal(typeof new OfficialWindow('main', { skip: true }).activityName, 'function');
+  assert.ok(current instanceof ImplementationWindow);
+  assert.equal(typeof new ImplementationWindow('main', { skip: true }).activityName, 'function');
 });
 
 test('desktop constructors preserve commands, options, events and instance identity', async () => {
@@ -90,7 +89,7 @@ test('desktop constructors preserve commands, options, events and instance ident
     title: 'Combined', dataStoreIdentifier: Array(16).fill(0)
   });
   assert.ok(combined instanceof api.webviewWindow.WebviewWindow);
-  assert.ok(combined instanceof OfficialWebviewWindow);
+  assert.ok(combined instanceof ImplementationWebviewWindow);
   desktop(combined);
   await new Promise(resolve => setImmediate(resolve));
   assert.ok(calls.some(value => value.command === 'plugin:window|set_title' && value.args.value === 'Changed'));

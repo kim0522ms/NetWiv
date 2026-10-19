@@ -1,111 +1,106 @@
 # NetWiv desktop frontend SDK
 
-`@netwiv/api` is the NetWiv-owned desktop JavaScript/TypeScript entry point,
-maintained under `packages/api` in this monorepo. The initial facade reuses
-`@tauri-apps/api@2.11.1` internally. It is the first step toward frontend
-independence, not an independent transport implementation or a full Tauri
-compatibility claim.
+`@netwiv/api` is the single supported JavaScript/TypeScript entry point for
+NetWiv desktop core and plugin APIs. It is maintained in `packages/api` in this
+monorepo. Direct `@tauri-apps/api` and `@tauri-apps/plugin-*` use is no longer a
+supported application integration. This is a breaking frontend contract change.
+
+The internal facade remains: pinned Tauri core and plugin implementations are
+bundled privately, with plugin imports routed through the same NetWiv core.
+Applications do not install upstream npm dependencies. This change does not
+replace IPC transport or native toolchains, or expand backend plugin support.
 
 ```ts
-import { isNetWiv } from '@netwiv/api/core';
 import { getCurrentWindow } from '@netwiv/api/window';
+import { open } from '@netwiv/api/plugins/dialog';
+import { readTextFile } from '@netwiv/api/plugins/fs';
 import { commands } from './generated/commands.js';
 
-if (isNetWiv()) {
-  await getCurrentWindow().setTitle('My application');
-  await commands.greet({ name: 'World' });
-}
+await getCurrentWindow().setTitle('My application');
+const selected = await open({ multiple: false });
+if (selected) console.log(await readTextFile(selected));
+await commands.greet({ name: 'World' });
 ```
 
-`commands.greet` is an example generated from an application's registered C#
-command. The frontend package does not grant permissions or register commands.
-Backend capability checks remain authoritative. Runtime detection is a
-convenience for the UI, not a security boundary.
-The title example needs `core:window:allow-set-title` in a capability applying to
-the calling window. With an app manifest, `greet` also needs an explicitly
-resolved application-command permission; see [generated bindings](frontend-generator.md).
+The example requires the corresponding .NET plugins, capability permissions and
+filesystem scope. Generated application commands also require explicit permission
+when an app manifest exists. Installing a frontend module grants no permissions.
+See [plugins](official-plugins.md) and [generated bindings](frontend-generator.md).
 
-## Ownership and compatibility
+## Public modules
 
-NetWiv owns the public facade contract and can replace its internal dependencies
-module by module. The official Tauri package remains unchanged as a separately
-tested compatibility path. Existing applications can continue to import it;
-facade-only tests do not establish Tauri compatibility.
+Core modules: `app`, `core`, `dpi`, `event`, `image`, `menu`, `path`, `resources`,
+`tray`, `window`, `webview`, `webviewWindow`. The package root exposes these namespaces.
 
-The package lives with the C# runtime, generators and templates so a protocol or
-type change can be reviewed and tested together. Its npm identity is independent
-of repository layout. Consumers must still use supported frontend/runtime
-combinations; sharing a repository does not make independently installed
-versions interchangeable. The initial facade and the runtime revision that
-introduces `window.isNetWiv` must be used together for NetWiv detection.
+Plugin modules use `@netwiv/api/plugins/<name>`:
+`autostart`, `cli`, `clipboard-manager`, `deep-link`, `dialog`, `fs`,
+`global-shortcut`, `http`, `log`, `notification`, `opener`, `os`, `positioner`,
+`process`, `shell`, `sql`, `store`, `stronghold`, `upload`, `websocket`, `window-state`.
+SQL and WebSocket retain their default class exports. SingleInstance and Localhost
+are backend-only and have no frontend module. PersistedScope is backend-only too.
+The [API status table](api-status.md) describes each backend's existing limits;
+a module's presence does not make all upstream behavior available on every OS.
 
-New bindings import the NetWiv facade. Existing generated files need the new
-package installed before regeneration. Backend command names and wire payloads
-are unchanged in this step. `getVersion` continues to mean the application's
-version; it must not be interpreted as the NetWiv runtime version.
+Use exact subpaths without `.js`. Private implementation paths and upstream mocks
+are not exported. Consumers deliberately installing upstream code are outside the
+supported contract; the export map is not a security sandbox. Backend authorization
+remains authoritative. Internal wire names are implementation details.
 
 ## Desktop boundary
 
-Only explicit desktop module exports are public. Mobile-only functionality is
-excluded now, not scheduled as future work. This includes mobile back-button
-handlers, activity/scene identifiers and creation options, input-accessory-view
-options and named mobile suspend/resume events. These exclusions cover facade
-types and ordinary runtime access, including handles returned by factories.
+Mobile targets and the updater runtime are excluded, not deferred. Core exports
+omit mobile back-button APIs, activity/scene identifiers, input-accessory options
+and mobile suspend/resume constants. Window factories return desktop handles.
 
-Options shared by desktop and mobile remain where they support desktop behavior,
-such as macOS WebView data stores. Generic plugin listener and permission helpers
-remain usable with registered desktop plugin commands; they do not implement
-mobile permissions or make a plugin available automatically. Android-specific
-permission rationale is not part of the facade's permission-state type.
+Plugin exports omit mobile notification scheduling, actions and channels, mobile
+file-picker modes and mobile security-scoped fs helpers. Notifications expose
+`isPermissionGranted`, `requestPermission` and `sendNotification` with title,
+body, icon and sound. The facade rejects excluded notification and picker options
+at runtime as well as in TypeScript. Opener rejects the mobile `inAppBrowser`
+selector at runtime; named desktop applications remain valid strings. OS types describe the supported desktop
+platforms. macOS SDK sandbox/bookmark APIs are separate and unchanged.
 
-The updater remains excluded. Official plugin implementations are separate from
-this core facade. Unsupported upstream entries stay visible in the compatibility
-inventory; do not remove them to inflate compatibility coverage.
+Neither `isTauri` nor `isNetWiv` is exported or injected as a window marker.
+No replacement detection helper or runtime version API is introduced.
+`app.getVersion()` continues to return the application's version.
 
-The facade is not a sandbox against consumers deliberately importing the
-underlying Tauri dependency. Desktop support and authorization are enforced by
-the runtime, independently of the TypeScript API surface.
+## Installation and migration
 
-## Local package distribution
+Before registry publication, starters and the HostingApp sample carry a portable
+`file:vendor/netwiv-api` dependency. The built package contains its implementation
+and notices; no upstream runtime npm dependency or maintainer checkout is needed.
+Blazor and Rust/WASM starters use the equivalent standalone vendored modules.
 
-Before registry publication, starters use a portable `file:vendor/netwiv-api`
-dependency containing the package's shipped files. The official pinned dependency
-is restored transitively. No personal paths or dependency on the maintainer's
-checkout are needed in the generated application. This is a local distribution
-mechanism, not an assertion that the package is published on npm.
+For an existing application:
 
-For a new JS/TS app, follow the [quickstart](integration-quickstart.md) and run
-`npm ci` in the generated directory. Import desktop APIs from modules such as
-`@netwiv/api/core`, `@netwiv/api/event`, `@netwiv/api/window`,
-`@netwiv/api/webviewWindow`, `@netwiv/api/menu`, `@netwiv/api/tray` and
-`@netwiv/api/path`. The package's explicit export map is the public module
-boundary; private upstream internals and the upstream `mocks` module are not
-facade exports.
+1. Copy the complete `vendor/netwiv-api` directory from a starter generated with
+   the matching NetWiv SDK release. Install it with
+   `npm install --save-exact ./vendor/netwiv-api`.
+2. Replace supported `@tauri-apps/api/<module>` imports with
+   `@netwiv/api/<module>`, and `@tauri-apps/plugin-<name>` imports with
+   `@netwiv/api/plugins/<name>`. Remove the old frontend dependencies and update
+   the lockfile. Keep the required .NET plugin registrations and permissions.
+3. Remove `isTauri` / `isNetWiv` guards and window-marker checks. Run native calls
+   inside the NetWiv application; web-only previews must avoid those calls or use
+   application-owned mocks. Remove mobile-only usages rather than bypassing the facade.
+4. Regenerate command bindings, build, and execute the affected desktop paths.
+   Existing command names and payloads are unchanged.
 
-To migrate an existing JS/TS app before npm publication:
+The package and runtime must be used in a supported version combination. This is
+local package distribution, not a claim that an npm registry release exists.
 
-1. Generate a starter with the same NetWiv release as the app's SDK and copy its
-   complete `vendor/netwiv-api` directory, including notices, into the app.
-2. From the app directory, run `npm install --save-exact ./vendor/netwiv-api`
-   and retain the updated manifest, lockfile and vendored package together.
-3. Update application imports from supported `@tauri-apps/api/*` modules to
-   `@netwiv/api/*`, replace bridge detection with `isNetWiv`, and regenerate
-   command bindings with the matching SDK. Remove mobile-only usages rather
-   than routing them around the desktop facade.
-4. Build and run the affected frontend/backend paths. Capability permissions,
-   command registration and platform limits still apply.
+## Maintenance and validation
 
-Keep direct `@tauri-apps/api` imports where deliberately testing or retaining
-the official compatibility path. Official plugin packages such as
-`@tauri-apps/plugin-dialog` are separate and keep their existing names; this
-facade does not replace them. Blazor and Rust/WASM starters use a standalone
-NetWiv core module instead of an npm install; see [template coverage](template-coverage.md).
+Pin upstream sources and integrity in `compatibility/upstream-lock.json` and
+`packages/api/package-lock.json`. Build the SDK, then regenerate template/sample
+snapshots with `node scripts/generate-frontend-template-overlays.mjs`.
 
-The facade's package tests must install an actual npm tarball in an isolated
-consumer and check the allowed exports, desktop declarations and excluded mobile
-surface. Integration tests also exercise generated bindings through the real
-backend. A successful package build alone does not prove WebView execution,
-NativeAOT compatibility or behavior on every OS.
+Package tests install a real tarball in an isolated consumer, exercise the core
+and plugin exports, and check NodeNext/Bundler declarations and excluded APIs.
+Backend and real-WebView checks cover runtime integration separately. Upstream
+comparison fixtures remain internal behavioral references, not a supported second
+frontend entry point or a claim of full compatibility. Generated inventories retain
+unsupported entries. Package tests alone do not prove GUI or every-platform support.
 
 Replacing Wry, Tao, Muda, Tray-icon or the native ecosystem/toolchain is outside
 this frontend independence work.

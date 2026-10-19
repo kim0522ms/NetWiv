@@ -22,6 +22,7 @@ export async function packApi(run, directory) {
   assert.equal(packed.name, '@netwiv/api');
   assert.equal(path.basename(packed.filename), packed.filename);
   const manifest = JSON.parse(await readFile(path.join(packageDirectory, 'package.json'), 'utf8'));
-  assert.equal(manifest.dependencies['@tauri-apps/api'], '2.11.1');
+  assert.equal(manifest.devDependencies['@tauri-apps/api'], '2.11.1');
+  assert.equal(manifest.dependencies?.['@tauri-apps/api'], undefined);
   return { tarball: path.join(packageDirectory, packed.filename), packed, manifest };
 }

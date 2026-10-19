@@ -47,7 +47,7 @@ const greeting = await commands.greet({ name: 'World' });
 ```
 
 Wrappers call `@netwiv/api/core` invoke and pass InvokeOptions through. The
-initial desktop facade delegates to the pinned, unchanged Tauri implementation;
+desktop facade privately bundles the pinned Tauri implementation;
 see [the frontend SDK](frontend-api.md) for package setup and excluded APIs.
 Command names and argument keys are preserved exactly. No-argument
 commands accept an omitted argument object. The command registry still controls
@@ -64,9 +64,11 @@ See [plugin commands](plugin-commands.md) for explicit runtime registration.
 When upgrading an existing project, install the matching `@netwiv/api` package
 before regenerating bindings. The first facade is supplied as a portable local
 package in new starters; it does not require an unpublished npm registry release.
-Previously generated bindings using the official Tauri package remain a
-compatibility path. Changing generated imports does not change command names,
-permissions or backend registration.
+Previously generated bindings importing the Tauri package must be regenerated
+to use `@netwiv/api/core`; direct upstream imports are no longer supported. Remove
+the old frontend dependencies and runtime-detection guards as described in
+[the migration guide](frontend-api.md#installation-and-migration). Command names,
+permissions and backend registration remain unchanged.
 
 ### Referenced command assemblies
 

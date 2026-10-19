@@ -1,5 +1,5 @@
 import { getIdentifier, getName, getTauriVersion, getVersion, getBundleType, supportsMultipleWindows, fetchDataStoreIdentifiers, removeDataStore, show, hide, setDockVisibility } from '@tauri-apps/api/app'
-import { Channel, Resource, SERIALIZE_TO_IPC_FN, invoke, convertFileSrc, isTauri, transformCallback } from '@tauri-apps/api/core'
+import { Channel, Resource, SERIALIZE_TO_IPC_FN, invoke, convertFileSrc, transformCallback } from '@tauri-apps/api/core'
 import { LogicalPosition, LogicalSize, PhysicalPosition, PhysicalSize, Position, Size } from '@tauri-apps/api/dpi'
 import { emit, emitTo, listen, once } from '@tauri-apps/api/event'
 import { Image } from '@tauri-apps/api/image'
@@ -451,7 +451,6 @@ await test('channel.ordered', async () => {
   return messages
 })
 await test('core.callback-lifecycle', async () => {
-  assert(isTauri() === true, 'official isTauri did not identify the desktop runtime');
   const repeated = [], single = [];
   const repeatId = transformCallback(value => repeated.push(value));
   const onceId = transformCallback(value => single.push(value), true);

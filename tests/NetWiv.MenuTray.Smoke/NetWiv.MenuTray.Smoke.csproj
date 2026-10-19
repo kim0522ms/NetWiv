@@ -6,9 +6,9 @@
   <ItemGroup>
     <ProjectReference Include="../../src/NetWiv.Platform.Desktop/NetWiv.Platform.Desktop.csproj" />
     <EmbeddedResource Include="wwwroot/**/*" LogicalName="netwiv.assets.%(RecursiveDir)%(Filename)%(Extension)" />
-    <EmbeddedResource Include="../conformance/dist/vendor/@tauri-apps/api/**/*.js" LogicalName="netwiv.assets.vendor/@tauri-apps/api/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../../templates/frontends/shared/vendor/@netwiv/api/**/*.js" LogicalName="netwiv.assets.vendor/@netwiv/api/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
   <Target Name="RequirePinnedGuest" BeforeTargets="PrepareForBuild">
-    <Error Condition="!Exists('../conformance/dist/vendor/@tauri-apps/api/menu.js')" Text="Run node tests/conformance/scripts/build-frontend.mjs before building the menu/tray smoke." />
+    <Error Condition="!Exists('../../templates/frontends/shared/vendor/@netwiv/api/menu.js')" Text="Build packages/api and run node scripts/generate-frontend-template-overlays.mjs before building the menu/tray smoke." />
   </Target>
 </Project>

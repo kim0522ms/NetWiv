@@ -11,19 +11,10 @@ import * as tray from '@netwiv/api/tray';
 import * as window from '@netwiv/api/window';
 import * as webview from '@netwiv/api/webview';
 import * as webviewWindow from '@netwiv/api/webviewWindow';
-import type { Channel as OfficialChannel, Resource as OfficialResource } from '@tauri-apps/api/core';
-
-const detected: boolean = api.isNetWiv() && core.isNetWiv();
 const result: Promise<string> = core.invoke<string>('greet', { name: 'fixture' });
 const options: core.InvokeOptions = { headers: { 'x-fixture': 'value' } };
 const channel = new core.Channel<string>();
 channel.onmessage = value => { const message: string = value; void message; };
-declare const officialChannel: OfficialChannel<string>;
-declare const officialResource: OfficialResource;
-const migratedChannel: core.Channel<string> = officialChannel;
-const migratedResource: core.Resource = officialResource;
-const compatibleChannel: OfficialChannel<string> = channel;
-const compatibleResource: OfficialResource = migratedResource;
 const permission: core.PermissionState = 'prompt';
 const permissionCheck: Promise<{ fixture: core.PermissionState }> = core.checkPermissions('fixture');
 const listener: Promise<core.PluginListener> = core.addPluginListener('fixture', 'event', () => {});
@@ -35,7 +26,7 @@ await trayOptions.menu?.popup(undefined, window.getCurrentWindow());
 const submenu = await menu.Submenu.new({ text: 'fixture', items: [] });
 await desktopMenu.append(submenu);
 await submenu.prepend({ text: 'fixture', items: [] });
-void [detected, result, options, migratedChannel, migratedResource, compatibleChannel, compatibleResource,
+void [result, options, channel,
   permission, permissionCheck, listener, app, dpi, event, image, menu, path, resources, tray, window, webview, webviewWindow];
 
 // @ts-expect-error Android activity APIs are outside the desktop window contract.
@@ -64,3 +55,37 @@ import * as mocks from '@netwiv/api/mocks';
 // @ts-expect-error Package internals are not public import paths.
 import * as internal from '@netwiv/api/lib/core.js';
 void [mocks, internal, mobileWindow, mobileWebview, mobilePermission];
+
+// @ts-expect-error Runtime detection is no longer a public API.
+core.isNetWiv();
+// @ts-expect-error Runtime detection is not exported from the package root.
+api.isNetWiv();
+// @ts-expect-error Private implementation modules are not public entry points.
+import * as upstream from '@netwiv/api/lib/upstream/core.js';
+void upstream;
+
+import * as notification from '@netwiv/api/plugins/notification';
+import * as dialog from '@netwiv/api/plugins/dialog';
+import * as fs from '@netwiv/api/plugins/fs';
+import { platform, type Platform } from '@netwiv/api/plugins/os';
+import { load } from '@netwiv/api/plugins/store';
+import Database from '@netwiv/api/plugins/sql';
+import WebSocket from '@netwiv/api/plugins/websocket';
+const desktopPlatform: Platform = platform();
+const desktopResource: Promise<core.Resource> = load('settings.json', { autoSave: false });
+const database: Promise<Database> = Database.load('sqlite:app.db');
+const socket: Promise<WebSocket> = WebSocket.connect('ws://localhost');
+const picked: Promise<string[] | null> = dialog.open({ multiple: true });
+notification.sendNotification({ title: 'Example', body: 'Desktop' });
+// @ts-expect-error runtime identity helpers are retired
+import { isTauri } from '@netwiv/api/core';
+// @ts-expect-error mobile notification channels are outside the public API
+notification.createChannel({ id: 'mobile', name: 'Mobile' });
+// @ts-expect-error mobile notification options are excluded
+notification.sendNotification({ title: 'Example', channelId: 'mobile' });
+// @ts-expect-error mobile picker modes are excluded
+dialog.open({ title: 'Example', pickerMode: 'media' });
+// @ts-expect-error mobile security-scoped APIs are excluded
+fs.startAccessingSecurityScopedResource('file:///example');
+// @ts-expect-error mobile platforms are excluded
+const mobilePlatform: Platform = 'android';

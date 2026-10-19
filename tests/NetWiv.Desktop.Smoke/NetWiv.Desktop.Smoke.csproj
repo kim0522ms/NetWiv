@@ -14,9 +14,6 @@
     <EmbeddedResource Include="asset-config.json" LogicalName="netwiv.config.json" />
     <EmbeddedResource Include="../NetWiv.Core.Tests/fixtures/no-windows.json" LogicalName="netwiv.no-windows.json" />
     <EmbeddedResource Include="wwwroot/**/*" LogicalName="netwiv.assets.%(RecursiveDir)%(Filename)%(Extension)" />
-    <EmbeddedResource Include="../../samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api/core.js" LogicalName="netwiv.assets.core.js" />
-    <EmbeddedResource Include="../../samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api/app.js" LogicalName="netwiv.assets.app.js" />
-    <EmbeddedResource Include="../../samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api/image.js" LogicalName="netwiv.assets.image.js" />
-    <EmbeddedResource Include="../../samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api/external/tslib/tslib.es6.js" LogicalName="netwiv.assets.external/tslib/tslib.es6.js" />
+    <EmbeddedResource Include="../../templates/frontends/shared/vendor/@netwiv/api/**/*.js" LogicalName="netwiv.assets.%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

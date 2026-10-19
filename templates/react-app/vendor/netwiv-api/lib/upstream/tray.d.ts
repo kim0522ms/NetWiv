@@ -1,5 +1,5 @@
 import type { Menu, Submenu } from './menu.js';
-import { Resource } from '@tauri-apps/api/core';
+import { Resource } from './core.js';
 import { Image } from './image.js';
 import { PhysicalPosition, PhysicalSize } from './dpi.js';
 export type MouseButtonState = 'Up' | 'Down';

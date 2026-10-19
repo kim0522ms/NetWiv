@@ -1,8 +1,7 @@
 # Wayland desktop interaction probe
 
 This standalone functional probe needs a person in a logged-in GNOME Wayland
-desktop. It uses unchanged `@tauri-apps/api@2.11.1` from the integrity-checked
-conformance build and requires `DesktopRuntime.Backend == "wayland"`.
+desktop. It uses `@netwiv/api` from the generated standalone SDK snapshot and requires `DesktopRuntime.Backend == "wayland"`.
 An X11/XWayland runtime cannot pass. No solution registration is needed.
 
 Build the native adapter as described in [development](../../docs/development.md).
@@ -11,7 +10,9 @@ support. A missing tray or working IME is an incomplete check, not a pass.
 Run these commands from the repository root:
 
 ```sh
-node tests/conformance/scripts/build-frontend.mjs
+npm ci --prefix packages/api
+npm run build --prefix packages/api
+node scripts/generate-frontend-template-overlays.mjs
 node --test tests/NetWiv.Wayland.Smoke/checks.test.mjs
 # Managed consumer: build, then execute in the Wayland desktop.
 dotnet build tests/NetWiv.Wayland.Smoke -c Release -p:PublishAot=false

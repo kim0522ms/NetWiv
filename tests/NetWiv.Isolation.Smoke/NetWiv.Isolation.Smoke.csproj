@@ -9,8 +9,7 @@
     <ProjectReference Include="../../src/NetWiv.Platform.Desktop/NetWiv.Platform.Desktop.csproj" />
     <ProjectReference Include="../../src/NetWiv.Generators/NetWiv.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../src/NetWiv.Build/NetWiv.Build.csproj" ReferenceOutputAssembly="false" />
-    <EmbeddedResource Include="../../samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api/core.js" LogicalName="netwiv.assets.core.js" />
-    <EmbeddedResource Include="../../samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api/external/tslib/tslib.es6.js" LogicalName="netwiv.assets.external/tslib/tslib.es6.js" />
+    <EmbeddedResource Include="../../templates/frontends/shared/vendor/@netwiv/api/**/*.js" LogicalName="netwiv.assets.%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
   <Import Project="../../src/NetWiv.Build/buildTransitive/NetWiv.Build.targets" />
 </Project>

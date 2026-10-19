@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { isNetWiv } from '@netwiv/api/core';
 import { commands } from './generated/commands.js';
 
 const smoke = new URLSearchParams(location.search).has('smoke');
@@ -10,7 +9,6 @@ export default function App() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const form = useRef(null);
-  const desktop = isNetWiv();
 
   async function greet(event) {
     event.preventDefault();
@@ -32,8 +30,8 @@ export default function App() {
 
   // Exercises the rendered React form through the actual WebView in smoke mode.
   useEffect(() => {
-    if (smoke && desktop) form.current.requestSubmit();
-  }, [desktop]);
+    if (smoke) form.current.requestSubmit();
+  }, []);
 
   return (
     <main>
@@ -45,10 +43,10 @@ export default function App() {
           <label htmlFor="name">이름</label>
           <div className="fields">
             <input id="name" value={name} onChange={event => setName(event.target.value)} required />
-            <button disabled={pending || !desktop}>{pending ? '호출 중…' : 'C#에 인사하기'}</button>
+            <button disabled={pending}>{pending ? '호출 중…' : 'C#에 인사하기'}</button>
           </div>
         </form>
-        {!desktop && <p role="status">브라우저에서는 화면만 볼 수 있습니다. C# 호출은 NetWiv 앱 창에서 실행하세요.</p>}
+        <p role="status">C# 호출은 NetWiv 앱 창에서 실행하세요.</p>
         {error && <p role="alert" className="error">{error}</p>}
         <div className="response" aria-live="polite">
           <span className="caption">C# 응답</span>

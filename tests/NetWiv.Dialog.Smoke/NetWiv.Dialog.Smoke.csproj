@@ -8,9 +8,9 @@
     <ProjectReference Include="../../src/NetWiv.Plugin.Dialog/NetWiv.Plugin.Dialog.csproj" />
     <EmbeddedResource Include="wwwroot/**/*" LogicalName="netwiv.assets.%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="netwiv.conf.json" LogicalName="netwiv.config.json" />
-    <EmbeddedResource Include="../conformance/dist/vendor/@tauri-apps/api/**/*.js" LogicalName="netwiv.assets.vendor/@tauri-apps/api/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../../templates/frontends/shared/vendor/@netwiv/api/**/*.js" LogicalName="netwiv.assets.vendor/@netwiv/api/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
   <Target Name="RequirePinnedGuest" BeforeTargets="PrepareForBuild">
-    <Error Condition="!Exists('../conformance/dist/vendor/@tauri-apps/api/core.js')" Text="Run node tests/conformance/scripts/build-frontend.mjs before building the dialog smoke." />
+    <Error Condition="!Exists('../../templates/frontends/shared/vendor/@netwiv/api/core.js')" Text="Build packages/api and run node scripts/generate-frontend-template-overlays.mjs before building the dialog smoke." />
   </Target>
 </Project>

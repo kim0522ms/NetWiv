@@ -9,7 +9,7 @@ native/LIBSODIUM-LICENSE.txt -text
 native/license-overrides/source-proofs/*.json -text
 
 # These unchanged upstream guest modules are verified by SHA-256 in the smoke.
-samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api/app.js -text
-samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api/image.js -text
+templates/frontends/shared/vendor/@netwiv/api/upstream/app.js -text
+templates/frontends/shared/vendor/@netwiv/api/upstream/image.js -text
 # The upstream config schema is also verified by its exact SHA-256 bytes.
 compatibility/generated/tauri.config.schema.json -text

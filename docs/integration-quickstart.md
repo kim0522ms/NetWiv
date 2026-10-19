@@ -43,7 +43,8 @@ npm run desktop:dev
 
 If the global tool is already installed, use `update` instead of `install`.
 The generated JS/TS app includes `vendor/netwiv-api`; `npm ci` installs it as
-`@netwiv/api` and restores its pinned official dependency. Generated command
+`@netwiv/api` with its privately bundled implementation; it does not install
+separate Tauri core or plugin guest packages. Generated command
 bindings and new desktop frontend calls use this facade. See
 [frontend SDK usage and migration](frontend-api.md).
 

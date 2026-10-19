@@ -27,10 +27,13 @@ internal static class Program
         ? Math.Clamp(duration, 0, 600000) : 0;
     private static readonly TaskCompletionSource GuiComplete = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private static readonly ImageData SmokeIcon = CreateIcon();
+    private static string? _expectedBackend;
 
     [STAThread]
     private static int Main(string[] args)
     {
+        try { _expectedBackend = BackendExpectation.Parse(Environment.GetEnvironmentVariable("NETWIV_EXPECT_BACKEND")); }
+        catch (ArgumentException error) { Console.Error.WriteLine($"FAIL {error.Message}"); return 2; }
         if (args is ["--effects-smoke"]) return MacOsEffectsProbe.Run();
         if (args is ["--data-store-smoke"]) return MacOsDataStoreProbe.Run();
         if (args is ["--webview-options-smoke"]) return MacOsWebviewOptionsProbe.Run();
@@ -53,9 +56,9 @@ internal static class Program
             .OnTrayIconEvent((_, value) => Console.WriteLine($"TRAY {value.Type} {value.Id}"))
             .Setup(app => app.Handle.Dispatch(() =>
             {
+                VerifyBackend(runtime);
                 Interlocked.Increment(ref _readyCount);
                 Console.WriteLine("PASS application setup on native UI thread");
-                Console.WriteLine($"BACKEND {runtime.Backend}");
             }))
             .UseEmbeddedAssets()
             .UseEmbeddedConfig()
@@ -358,9 +361,10 @@ internal static class Program
 
     private static int CheckNoWindows()
     {
-        using var app = new Builder().UseRuntime(new DesktopRuntime())
+        var runtime = new DesktopRuntime();
+        using var app = new Builder().UseRuntime(runtime)
             .UseEmbeddedConfig(assembly: typeof(Program).Assembly, resourceName: "netwiv.no-windows.json")
-            .Setup(value => _ = CheckEmptyRuntime(value.Handle)).Build();
+            .Setup(value => { VerifyBackend(runtime); _ = CheckEmptyRuntime(value.Handle); }).Build();
         using var watchdog = new Timer(_ =>
         {
             Fail("windowless startup timed out");
@@ -396,7 +400,9 @@ internal static class Program
 
     private static int CheckStartupError(string expected)
     {
-        using var app = new Builder().UseRuntime(new DesktopRuntime()).Build();
+        var runtime = new DesktopRuntime();
+        using var app = new Builder().UseRuntime(runtime)
+            .Setup(value => { VerifyBackend(runtime); value.Handle.Exit(); }).Build();
         try { app.Run(); }
         catch (InvalidOperationException exception) when (exception.Message.Contains(expected, StringComparison.Ordinal))
         {
@@ -405,6 +411,12 @@ internal static class Program
         }
         Console.Error.WriteLine("FAIL expected startup failure was not reported.");
         return 1;
+    }
+
+    internal static void VerifyBackend(DesktopRuntime runtime)
+    {
+        Console.WriteLine($"BACKEND {runtime.Backend}");
+        BackendExpectation.Verify(_expectedBackend, runtime.Backend);
     }
 
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }

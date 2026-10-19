@@ -1,7 +1,35 @@
 use std::{io::Write, path::PathBuf};
 use tauri::{ipc::{Channel, Response}, Manager, State};
+use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
 mod lifetime_fixture;
+
+fn parse_expected_backend(value: Option<&str>) -> Result<Option<&str>, &'static str> {
+    match value {
+        None => Ok(None),
+        Some("x11" | "wayland" | "windows" | "macos") => Ok(value),
+        _ => Err("NETWIV_EXPECT_BACKEND must be x11, wayland, windows or macos."),
+    }
+}
+
+fn verify_backend(expected: Option<&str>, actual: &str) -> Result<(), String> {
+    if let Some(expected) = expected {
+        if expected != actual {
+            return Err(format!("Expected native backend {expected}, observed {actual}."));
+        }
+    }
+    Ok(())
+}
+
+fn backend_from_handle(handle: RawWindowHandle) -> Result<&'static str, &'static str> {
+    match handle {
+        RawWindowHandle::Wayland(_) => Ok("wayland"),
+        RawWindowHandle::Xlib(_) | RawWindowHandle::Xcb(_) => Ok("x11"),
+        RawWindowHandle::Win32(_) => Ok("windows"),
+        RawWindowHandle::AppKit(_) => Ok("macos"),
+        _ => Err("Unknown native window backend"),
+    }
+}
 
 struct AssetFixture(PathBuf);
 impl Drop for AssetFixture {
@@ -120,6 +148,10 @@ fn protocol_response(label: &str, request: tauri::http::Request<Vec<u8>>, status
 }
 
 fn main() {
+    let expected_backend = std::env::var_os("NETWIV_EXPECT_BACKEND")
+        .map(|value| value.into_string().unwrap_or_else(|_| panic!("Invalid native backend expectation")));
+    let expected_backend = parse_expected_backend(expected_backend.as_deref())
+        .expect("Invalid native backend expectation").map(str::to_owned);
     let assets = std::env::temp_dir().join("netwiv-conformance-assets").join(format!("reference-{}", std::process::id()));
     std::fs::create_dir_all(&assets).unwrap();
     std::fs::create_dir_all(assets.join("folder")).unwrap();
@@ -147,7 +179,11 @@ fn main() {
             .invoke_handler(tauri::generate_handler![read_config]).build())
         .manage(fixture)
         .invoke_handler(tauri::generate_handler![asset_fixture, echo_json, always_fails, echo_bytes, stream_numbers, custom_default_allowed, typed_request, restricted, scope_read, scope_write, conformance_record, conformance_finish, conformance_profile, conformance_cases, conformance_platform, create_data_store_fixture])
-        .setup(|app| {
+        .setup(move |app| {
+            let window = app.get_webview_window("main").ok_or("Missing main window for backend assertion")?;
+            let actual = backend_from_handle(window.window_handle()?.as_raw())?;
+            verify_backend(expected_backend.as_deref(), actual)?;
+            println!("BACKEND {actual}");
             let handle = app.handle().clone();
             std::thread::spawn(move || {
                 std::thread::sleep(std::time::Duration::from_secs(60));
@@ -157,4 +193,38 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("Tauri reference runtime failed");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{backend_from_handle, parse_expected_backend, verify_backend};
+    use raw_window_handle::{RawWindowHandle, WaylandWindowHandle, WebWindowHandle, XlibWindowHandle};
+
+    #[test]
+    fn backend_uses_native_handle_kind_and_rejects_unknown_platforms() {
+        // The classifier reads the handle kind only; it never dereferences these placeholders.
+        let wayland = WaylandWindowHandle::new(std::ptr::NonNull::dangling());
+        assert_eq!(backend_from_handle(RawWindowHandle::Wayland(wayland)), Ok("wayland"));
+        assert_eq!(backend_from_handle(RawWindowHandle::Xlib(XlibWindowHandle::new(1))), Ok("x11"));
+        assert!(backend_from_handle(RawWindowHandle::Web(WebWindowHandle::new(1))).is_err());
+    }
+
+    #[test]
+    fn backend_expectation_accepts_only_exact_known_names() {
+        assert_eq!(parse_expected_backend(None), Ok(None));
+        for name in ["x11", "wayland", "windows", "macos"] {
+            assert_eq!(parse_expected_backend(Some(name)), Ok(Some(name)));
+        }
+        for invalid in ["", "Wayland", "wayland,x11", "unknown"] {
+            assert!(parse_expected_backend(Some(invalid)).is_err());
+        }
+    }
+
+    #[test]
+    fn backend_mismatch_is_a_failure() {
+        assert!(verify_backend(None, "x11").is_ok());
+        assert!(verify_backend(Some("wayland"), "wayland").is_ok());
+        assert_eq!(verify_backend(Some("wayland"), "x11"),
+            Err("Expected native backend wayland, observed x11.".into()));
+    }
 }

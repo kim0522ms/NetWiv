@@ -23,6 +23,18 @@ internal static class Program
     [STAThread]
     private static int Main()
     {
+        var expectedBackend = Environment.GetEnvironmentVariable("NETWIV_EXPECT_BACKEND") switch
+        {
+            null => null,
+            "x11" => "x11", "wayland" => "wayland", "windows" => "windows", "macos" => "macos",
+            _ => throw new ArgumentException("NETWIV_EXPECT_BACKEND must be x11, wayland, windows or macos.")
+        };
+#if NETWIV_WRY
+        var runtime = new DesktopRuntime();
+#else
+        if (expectedBackend is not null)
+            throw new InvalidOperationException("NETWIV_EXPECT_BACKEND requires the Wry conformance host.");
+#endif
         using var assets = new AssetFixture();
 
 #if !NETWIV_EMBEDDED_CONFIG
@@ -50,7 +62,13 @@ internal static class Program
         using var watchdog = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var builder = new Builder()
 #if NETWIV_WRY
-            .UseRuntime(new DesktopRuntime())
+            .UseRuntime(runtime)
+            .Setup(_ =>
+            {
+                if (expectedBackend is not null && !string.Equals(expectedBackend, runtime.Backend, StringComparison.Ordinal))
+                    throw new InvalidOperationException($"Expected native backend {expectedBackend}, observed {runtime.Backend ?? "(missing)"}.");
+                Console.WriteLine($"BACKEND {runtime.Backend}");
+            })
 #elif WINDOWS
             .UseRuntime(new WindowsDesktopRuntime())
 #else

@@ -10,7 +10,7 @@ Package installation is described in the [quickstart](integration-quickstart.md)
 | Platform | Runtime dependencies | Scope |
 | --- | --- | --- |
 | Windows x64 | WebView2 Runtime | Wry desktop runtime and NativeAOT applications. |
-| Linux x64 | GTK3 and WebKitGTK 4.1 | Ubuntu 24.04 is the baseline environment; X11 and Wayland require separate validation. |
+| Linux x64 | GTK3 and WebKitGTK 4.1 | Ubuntu 24.04 is the baseline environment; X11 and Wayland require separate validation. Managed/NativeAOT Wayland automated smoke passed; see [scope and limits](#wayland-validation). |
 | macOS 12+ arm64 / x64 | System WKWebView and AppKit | Native runtime, CLI and app/DMG support. Apple Silicon smoke verified; Intel execution remains unverified. See [macOS](macos.md). |
 | Android, iOS | — | Excluded from project work scope; not a later milestone. |
 
@@ -38,6 +38,48 @@ The [core reclassification](api-status.md#implementation-decisions-and-validatio
 separates execution paths, declarations, mobile-only gaps and intentional
 differences. Existing macOS adapters with pending GUI checks are not classified
 as missing implementations. This does not mark those GUI checks as passed.
+
+## Wayland validation
+
+The source-built desktop smoke passed in managed and NativeAOT modes on a
+physical Ubuntu 22.04 x64 GNOME Wayland desktop using its existing logged-in
+session, compositor, D-Bus session and tray host. This does not validate the
+Ubuntu 24.04 baseline. Both runs asserted the runtime's `wayland` backend;
+a deliberate `x11` expectation failed. The automated checks exercise
+window/WebView lifecycle, IPC and assets, menu/tray resource
+operations and C# SDK calls. They establish that bounded application path;
+they do not establish complete Wayland or TAURI compatibility.
+
+Paired comparisons against the same Release Tauri reference passed all 32
+selected cases with no skips for both managed and NativeAOT NetWiv hosts.
+Both sides asserted the `wayland` backend. This is a focused selection from
+the 63-case suite, not a full conformance gate; matching outputs apply only
+to the selected cases and do not prove unsupported OS effects.
+
+The [Wayland interaction probe](../tests/NetWiv.Wayland.Smoke/README.md) provides
+manual checks for native menu/tray actions, focused keyboard input, Korean IME
+composition, window resizing/maximize/restore, focus, dragging, rendering and
+cleanup. Both managed and NativeAOT execution passed its automatic assertions
+with actual trusted input, the user's explicit visual confirmations and
+completed resource cleanup in the desktop above. Multi-monitor placement,
+fractional scaling, other IMEs/compositors and exact decorated-window geometry
+remain unverified.
+
+Pinned tao marks always-on-top/bottom and absolute window positioning as
+unsupported on Wayland; global cursor coordinates return `(0, 0)`.
+Matching setter/getter results or no-ops in `window.native-flags` do not prove
+compositor stacking effects. These operations, window-state position
+restoration and accurate global window coordinates are outside this native
+Wayland baseline. The smoke's finite-coordinate assertion does not verify
+coordinate accuracy. The current global-shortcut dependency uses an independent
+X11 connection and may use XWayland when `DISPLAY` is available; registration
+checks do not establish native Wayland global shortcuts or inactive-app input
+delivery. These limits and unsupported operations are not compatibility passes.
+See [platform behavior](pinned-upstream-behavior.md#wayland-client-side-decorations-and-resize-geometry)
+and the [reproduction commands](development.md).
+
+The existing nested X11 automated smoke also passed. That offscreen regression
+check does not establish physical X11 desktop interaction acceptance.
 
 ## Runtime identity differences
 
@@ -97,8 +139,9 @@ The following release boundaries remain open:
 - Installed-app restart, deep-link activation and all optional plugin OS flows.
 - Full interactive window, tray, input, focus and multi-monitor acceptance.
   Linux tray behavior requires an actual tray host; WSLg alone is insufficient.
-- Wayland geometry and window-state position restoration, including decorated
-  windows. See [platform behavior](pinned-upstream-behavior.md).
+- Exact Wayland decorated-window geometry. Global positioning, position
+  restoration and native global shortcuts are outside the verified baseline;
+  see [Wayland limits](#wayland-validation).
 - Performance measurements for startup, memory and application size under matched
   conditions. No performance parity or size guarantee is made.
 

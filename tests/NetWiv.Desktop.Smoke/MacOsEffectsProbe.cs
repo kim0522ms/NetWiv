@@ -11,9 +11,10 @@ internal static class MacOsEffectsProbe
     {
         if (!OperatingSystem.IsMacOS()) throw new PlatformNotSupportedException("This probe requires macOS.");
         var result = 1;
-        var builder = new Builder().UseRuntime(new DesktopRuntime()).UseEmbeddedAssets()
+        var runtime = new DesktopRuntime();
+        var builder = new Builder().UseRuntime(runtime).UseEmbeddedAssets()
             .Window("main", "NetWiv effect probe host", "quiet.html")
-            .Setup(app => _ = VerifyAndExitAsync(app.Handle));
+            .Setup(app => { Program.VerifyBackend(runtime); _ = VerifyAndExitAsync(app.Handle); });
         using var app = builder.Build();
         using var watchdog = new Timer(_ => Environment.Exit(124), null, TimeSpan.FromSeconds(90), Timeout.InfiniteTimeSpan);
         app.Run();

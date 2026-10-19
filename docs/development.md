@@ -86,6 +86,39 @@ alone is not a GUI test. See [conformance](../tests/conformance/README.md),
 [isolation](isolation.md) and [consumer verification](frontend-generator.md#verification)
 for separate validation paths.
 
+On Linux, select the display backend explicitly. For a logged-in Wayland
+desktop, run both the managed and published NativeAOT smoke hosts:
+
+```sh
+dotnet build tests/NetWiv.Desktop.Smoke -c Release -p:PublishAot=false
+bash scripts/run-linux-smoke-desktop.sh \
+  "$PWD/tests/NetWiv.Desktop.Smoke/bin/Release/net8.0/NetWiv.Desktop.Smoke" wayland
+dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r linux-x64
+bash scripts/run-linux-smoke-desktop.sh \
+  "$PWD/tests/NetWiv.Desktop.Smoke/bin/Release/net8.0/linux-x64/publish/NetWiv.Desktop.Smoke" wayland
+```
+
+The Wayland path reuses the existing `WAYLAND_DISPLAY` socket and reachable
+`DBUS_SESSION_BUS_ADDRESS`; a relative socket name also requires
+`XDG_RUNTIME_DIR`. It needs `gdbus`, `timeout` and the desktop's own tray host.
+It does not create a nested compositor, Xfce desktop or private D-Bus session,
+and does not inject renderer workarounds. It preserves `DISPLAY`, allowing
+optional plugins with independent X11 connections to use XWayland.
+Such plugin calls do not establish native Wayland support for those features.
+
+The wrapper sets `GDK_BACKEND` and `NETWIV_EXPECT_BACKEND` to the requested
+backend. The smoke asserts the actual `DesktopRuntime.Backend` at setup;
+an X11 runtime cannot pass a Wayland expectation. Direct smoke launches can
+also set `NETWIV_EXPECT_BACKEND`; invalid values fail before runtime startup.
+Use `x11` instead of `wayland` for the existing nested Xephyr/Xfce path with
+its separate D-Bus session and tray host.
+
+Automated smoke checks do not establish native input, rendering or menu/tray
+interaction acceptance. Run the separate [Wayland interaction probe](../tests/NetWiv.Wayland.Smoke/README.md)
+in both managed and NativeAOT modes for its manual checks. See
+[Wayland validation limits](implementation-status.md#wayland-validation) before
+claiming coverage.
+
 ## Continuous integration
 
 The [Build and test workflow](../.github/workflows/ci.yml) runs on pushes to

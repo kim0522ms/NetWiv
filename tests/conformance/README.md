@@ -11,7 +11,7 @@ Build both hosts from one stable checkout, then run the pair sequentially. Funct
 Reference host, from the repository root (use the platform's native executable path):
 
 ```sh
-cargo build --locked --manifest-path tests/conformance/reference/src-tauri/Cargo.toml
+cargo +1.95.0 build --locked --release --manifest-path tests/conformance/reference/src-tauri/Cargo.toml
 ```
 
 For the current fixture profile, build NetWiv through the CLI below. A direct
@@ -22,7 +22,7 @@ Direct project publishing remains useful for separate host development:
 
 ```sh
 dotnet publish tests/conformance/netwiv/NetWiv.Conformance.csproj -c Release -r linux-x64 -p:NetWivRuntime=wry -o artifacts/conformance/linux-x64
-node tests/conformance/scripts/run-host.mjs --reference tests/conformance/reference/src-tauri/target/debug/netwiv-tauri-reference --candidate artifacts/conformance/linux-x64/NetWiv.Conformance
+node tests/conformance/scripts/run-host.mjs --reference tests/conformance/reference/src-tauri/target/release/netwiv-tauri-reference --candidate artifacts/conformance/linux-x64/NetWiv.Conformance
 ```
 
 For the file-based application ACL profile, run the CLI from
@@ -88,6 +88,39 @@ The checksum-addressed upstream config schema is checked out without line-ending
 conversion, including when Windows Git uses `core.autocrlf=true`. Run
 `node tests/conformance/scripts/verify-fixtures.mjs` to verify its pinned bytes;
 regenerate compatibility data through the upstream manifest script when needed.
+
+## Wayland comparisons
+
+Use the existing logged-in Wayland desktop and session bus described in the
+[development guide](../../docs/development.md). The locked reference host also
+requires the Linux libxdo development and runtime libraries (`libxdo-dev` and
+`libxdo3` on Ubuntu), separately from the NetWiv native adapter prerequisites.
+The desktop wrapper exports
+`GDK_BACKEND=wayland` and `NETWIV_EXPECT_BACKEND=wayland` to the runner and both
+hosts. The reference classifies its actual native window handle; the Wry
+candidate checks `DesktopRuntime.Backend` after native readiness. Each host
+prints `BACKEND wayland` after its assertion succeeds and exits nonzero on a
+mismatch. Setting the environment alone does not establish the selected backend.
+
+Build both hosts from the same stable source and frontend with matching build
+profiles. The CLI candidate uses Release, so build the pinned reference in
+Release too. The ACL denial fixture checks and returns profile-specific errors;
+Debug and Release outputs differ by design and cannot compare successfully.
+
+```sh
+cargo +1.95.0 build --locked --release --manifest-path tests/conformance/reference/src-tauri/Cargo.toml
+bash scripts/run-linux-smoke-desktop.sh "$(command -v node)" wayland \
+  tests/conformance/scripts/run-host.mjs \
+  --cases window.resize-and-dpi,webview.root-auto-resize,channel.ordered,acl.manifest-command-denied \
+  --reference tests/conformance/reference/src-tauri/target/release/netwiv-tauri-reference \
+  --candidate tests/conformance/netwiv/target/x86_64-unknown-linux-gnu/release/NetWiv.Conformance
+```
+
+Adjust the executable paths for any custom output directories and repeat with
+the published NativeAOT candidate. The runner compares functional records in
+memory; no per-run report or log files are needed. A focused selection leaves
+unselected cases unverified and does not establish manual input or menu/tray
+interaction coverage.
 
 # Reference feature profile
 

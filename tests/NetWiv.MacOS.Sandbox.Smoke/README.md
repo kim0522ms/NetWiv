@@ -23,11 +23,45 @@ rmdir "$outside"
 unset NETWIV_SANDBOX_OUTSIDE_DIRECTORY
 ```
 
-Both runs must exit zero and print 13 `PASS` assertions. Run them in a logged-in
+Both runs must exit zero and print 14 `PASS` assertions. Run them in a logged-in
 macOS GUI session. The read phase removes the fixture's files and local-storage
-entry; no personal files are read. The OS-owned app container may remain.
+entry; no personal files are read. A fixed synthetic sentinel remains in the
+test-owned local storage so cleanup does not empty the database. The OS-owned
+app container may remain.
 Keep the outside directory outside the app's sandbox container. A watchdog
 fails the test if WebView execution does not complete.
+
+Each write uses a new synthetic value, also kept in the container marker for the
+read phase. A previous run's value cannot satisfy the persistence assertion.
+Before exiting, each phase waits up to ten seconds for the WebKit SQLite store
+to expose the committed write or removal through an independent read-only
+connection. The fixture reads only its own test container and synthetic key;
+it never changes the database directly or retains a validation report.
+Keeping the sentinel avoids repeatedly exercising WebKit's asynchronous deletion
+of empty databases between these consecutive process launches. That teardown
+behavior is outside this restart-persistence fixture's assertions.
+This check follows the `localstorage.sqlite3`/`ItemTable` layout exercised on
+macOS 15. An unrecognized storage layout fails the commit deadline rather than
+passing. Other OS versions still require their own execution checks.
+
+The commit barrier matters: completing `localStorage.setItem()` and reading the
+same page's cached value did not reliably survive immediate process exit in the
+original fixture. This verifies restart persistence after an observed commit;
+it does not establish immediate-exit durability or change product shutdown.
+Guest failures identify IPC, storage access, value mismatch or cleanup with fixed
+labels, without printing exceptions, stored values or paths.
+
+Focused regressions:
+
+```sh
+dotnet test tests/NetWiv.Api.Tests -c Release --filter FullyQualifiedName~LocalStoragePersistenceTests
+node --test tests/NetWiv.MacOS.Sandbox.Smoke/guest.test.mjs
+```
+
+The macOS API cases use real SQLite transactions to check pending writes,
+stale values, commit/removal, missing storage and cancellation. They are skipped
+explicitly on other platforms. The guest tests execute the actual inline script
+with controlled IPC and storage boundaries; they do not replace the packaged run.
 
 The produced `*-unsigned.pkg` can be expanded with `pkgutil --expand-full` into
 a fresh temporary directory. Check the extracted `.app` with `codesign --verify

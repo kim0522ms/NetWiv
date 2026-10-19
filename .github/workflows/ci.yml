@@ -244,6 +244,7 @@ jobs:
           node --test tests/conformance/scripts/*.test.mjs \
             tests/NetWiv.Desktop.Smoke/*.test.mjs \
             tests/NetWiv.Dialog.Smoke/*.test.mjs \
+            tests/NetWiv.MacOS.Sandbox.Smoke/*.test.mjs \
             tests/NetWiv.Isolation.Smoke/*.test.mjs \
             compatibility/scripts/upstream-test-inventory.test.mjs \
             native/license-provenance.test.mjs

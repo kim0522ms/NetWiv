@@ -272,6 +272,10 @@ checks WKWebView, unchanged upstream guest IPC, local-storage persistence across
 process restarts, writes through SDK data/config/cache/log paths inside the
 container, and rejection of a write outside it. Functional assertions print only
 test labels; there is no environment-report collection or upload.
+The fixture observes the current synthetic value's SQLite commit before exiting
+and verifies it in the next process. Same-page `localStorage` reads alone did not
+reliably survive immediate process exit; this test does not claim that durability
+guarantee. See the example's storage-layout and timeout limits.
 
 The CLI tests exercise plist/profile failures and signature argument separation
 on every host, and real ad-hoc signing, package extraction, signature verification

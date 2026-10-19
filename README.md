@@ -1,8 +1,9 @@
 <div align="center">
 
-# NetWiv
-
-**Web frontends. C# backends. Native desktop apps.**
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/brand/netwiv-banner-dark.svg">
+  <img alt="NetWiv: Web frontends. C# backends. Native desktop apps." src="assets/brand/netwiv-banner-light.svg" width="100%">
+</picture>
 
 A .NET 8+ desktop framework built on OS WebViews, with optional NativeAOT publishing.
 

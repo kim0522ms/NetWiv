@@ -7,9 +7,12 @@
 
 A .NET 8+ desktop framework built on OS WebViews, with optional NativeAOT publishing.
 
-![.NET 8+](https://img.shields.io/badge/.NET-8%2B-512BD4?style=flat-square)
-![NativeAOT](https://img.shields.io/badge/NativeAOT-0078D4?style=flat-square)
-![Windows, Linux and macOS](https://img.shields.io/badge/Windows%20%7C%20Linux%20%7C%20macOS-desktop-334155?style=flat-square)
+[![Status: early development](https://img.shields.io/badge/status-early%20development-B9A8F5?style=flat-square)](docs/implementation-status.md)
+[![Build and test](https://img.shields.io/github/actions/workflow/status/kim0522ms/NetWiv/ci.yml?branch=main&style=flat-square&label=build%20and%20test&logo=github)](https://github.com/kim0522ms/NetWiv/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/kim0522ms/NetWiv?include_prereleases&sort=semver&style=flat-square&label=release&color=512BD4)](https://github.com/kim0522ms/NetWiv/releases)
+[![License](https://img.shields.io/github/license/kim0522ms/NetWiv?style=flat-square)](LICENSE-APACHE)
+[![.NET 8+](https://img.shields.io/badge/.NET-8%2B-512BD4?style=flat-square)](docs/dotnet-compatibility.md)
+[![Website](https://img.shields.io/badge/website-netwiv.github.io-17142A?style=flat-square)](https://netwiv.github.io/)
 
 [Official website](https://netwiv.github.io/) · [Quick start](#quick-start) · [Architecture](#architecture) · [Documentation](docs/README.md) · [Status](#current-status) · [Development](#development)
 

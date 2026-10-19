@@ -17,13 +17,25 @@ function run(t, failures, appStatus) {
   const tool = (name, body) => writeFileSync(path.join(bin, name), '#!/usr/bin/env bash\nset -eu\n' + body, { mode: 0o755 })
   tool('realpath', 'printf "%s\\n" "$1"\n')
   tool('timeout', 'shift; exec "$@"\n')
-  tool('Xephyr', 'exec sleep 300\n')
+  tool('Xephyr', `mode=reset
+    for argument in "$@"; do
+      if [[ "$argument" == -noreset ]]; then mode=keep; fi
+    done
+    printf '%s\\n' "$mode" > "$FIXTURE/display-mode"
+    exec sleep 300
+  `)
   tool('xfwm4', 'exec sleep 300\n')
   tool('xfce4-panel', `if [[ "\${1:-}" == --quit ]]; then kill "$(cat "$FIXTURE/panel.pid")"; exit 0; fi
     echo $$ > "$FIXTURE/panel.pid"
     exec sleep 300
   `)
-  tool('xdpyinfo', `if [[ ! -e "$FIXTURE/display-checked" ]]; then touch "$FIXTURE/display-checked"; exit 1; fi
+  // A readiness probe is the only client before the desktop starts. Without
+  // -noreset, disconnecting that client resets Xephyr and loses the ready display.
+  tool('xdpyinfo', `[[ -e "$FIXTURE/display-mode" && ! -e "$FIXTURE/display-reset" ]] || exit 1
+    connections=0
+    [[ ! -e "$FIXTURE/display-connections" ]] || connections=$(cat "$FIXTURE/display-connections")
+    echo "$((connections + 1))" > "$FIXTURE/display-connections"
+    if [[ "$(cat "$FIXTURE/display-mode")" == reset ]]; then touch "$FIXTURE/display-reset"; fi
     exit 0
   `)
   tool('xprop', 'echo "window id # 0x123"\n')
@@ -49,7 +61,8 @@ function run(t, failures, appStatus) {
   assert.ifError(result.error)
   assert.match(result.stdout, /PASS smoke fixture/)
   assert.doesNotMatch(result.stderr, /required forced termination/)
-  return { result, configExists: existsSync(path.join(root, 'config')), attempts: Number(readFileSync(path.join(root, 'removals'), 'utf8')) }
+  return { result, configExists: existsSync(path.join(root, 'config')), attempts: Number(readFileSync(path.join(root, 'removals'), 'utf8')),
+    displayConnections: Number(readFileSync(path.join(root, 'display-connections'), 'utf8')) }
 }
 
 async function waylandFixture(t, { overrides = {}, appStatus = 0, busStatus = 0, absoluteSocket = false } = {}) {
@@ -137,6 +150,15 @@ test('Linux desktop wrapper rejects unknown backends before probing desktop tool
   assert.ifError(result.error)
   assert.equal(result.status, 2)
   assert.match(result.stderr, /usage:/)
+})
+
+test('Linux X11 wrapper keeps fresh displays ready after the last readiness client disconnects', { skip: process.platform === 'win32' }, t => {
+  for (let session = 0; session < 2; session++) {
+    const fixture = run(t, 0, 0)
+    assert.equal(fixture.result.status, 0, fixture.result.stderr)
+    assert.ok(fixture.displayConnections >= 2, 'Both readiness probes must reconnect before the desktop starts')
+    assert.equal(fixture.configExists, false)
+  }
 })
 
 for (const [label, failures, appStatus, expectedStatus, removed] of [

@@ -10,10 +10,12 @@ internal static class Program
 {
     private static readonly ConcurrentDictionary<string, TaskCompletionSource<RuntimeCommandContext>> Documents = new();
     private static readonly string[] Kinds = ["file", "files", "folder", "folders", "save", "message"];
+    private static readonly TaskCompletionSource GuestStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private static readonly TaskCompletionSource GuestSettled = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private static DesktopRuntime _runtime = null!;
     private static string _root = "", _backend = "", _phase = "startup";
-    private static bool _interactive, _denied;
-    private static int _result = 1, _verified;
+    private static bool _interactive, _denied, _guestChecked;
+    private static int _result = 1, _verified, _validated = -1;
     private static Task<JsonElement>? _shutdown;
 
     [STAThread]
@@ -34,11 +36,12 @@ internal static class Program
                 .UseEmbeddedAssets().UseEmbeddedConfig()
                 .Window("main", "NetWiv dialog probe", "index.html", 800, 600)
                 .Window("denied", "Denied dialog capability", "index.html", 400, 200, JsonValue.Parse("""{"visible":false}"""))
-                .Permission(new("allow-probe", "probe_ready", "probe_verify", "probe_finish", "probe_denied", "probe_interactive_ready"))
+                .Permission(new("allow-probe", "probe_ready", "probe_verify", "probe_ack", "probe_failure", "probe_finish", "probe_denied", "probe_interactive_ready", "probe_guest_started", "probe_guest_settled"))
                 .Capability(new("probe", ["allow-probe"], Windows: ["main", "denied", "lifecycle"]))
                 .Capability(new("dialogs", ["dialog:allow-open", "dialog:allow-save", "dialog:allow-message", "fs:allow-read-text-file"], Windows: ["main"]))
-                .Capability(new("deny-dialogs", ["dialog:allow-open", "dialog:deny-open"], Windows: ["denied"]))
                 .RegisterCommand("probe_ready", Ready)
+                .RegisterCommand("probe_guest_started", (context, _, _) => { Require(context.WebviewLabel == "main", "guest source"); GuestStarted.TrySetResult(); return Value(JsonValue.Null); })
+                .RegisterCommand("probe_guest_settled", (context, _, _) => { Require(context.WebviewLabel == "main", "guest source"); GuestSettled.TrySetResult(); return Value(JsonValue.Null); })
                 .RegisterCommand("probe_interactive_ready", (context, _, _) =>
                 {
                     Require(_interactive && context.WebviewLabel == "main", "interactive source");
@@ -51,6 +54,20 @@ internal static class Program
                     await context.App.GetWindow("denied")!.DestroyAsync(); return JsonValue.Null;
                 })
                 .RegisterCommand("probe_verify", Verify)
+                .RegisterCommand("probe_ack", (context, value, _) =>
+                {
+                    Require(_interactive && context.WebviewLabel == "main" && value.GetProperty("step").GetInt32() == _verified && _validated == _verified, "step acknowledgment");
+                    Console.WriteLine($"PASS interactive dialog step {_verified + 1}.");
+                    _verified++; _validated = -1; return Value(JsonValue.Null);
+                })
+                .RegisterCommand("probe_failure", (context, value, _) =>
+                {
+                    Require(_interactive && context.WebviewLabel == "main", "failure source");
+                    var stage = value.GetProperty("stage").GetString();
+                    Require(stage is "native-invoke" or "native-acl" or "native-parent" or "native-document" or "native-options" or "verify-invoke" or "selection-shape" or "selection-cardinality" or "selection-match" or "asset-grant" or "recursive-grant" or "fs-read" or "fs-content" or "acknowledgment", "failure stage");
+                    Console.WriteLine($"CHECK interactive dialog step {_verified + 1}: {stage}; retry available.");
+                    return Value(JsonValue.Null);
+                })
                 .RegisterCommand("probe_finish", (context, value, _) =>
                 {
                     Require(_interactive && _verified == 8 && _denied && value.GetProperty("visual").GetBoolean(), "interactive completion");
@@ -82,6 +99,7 @@ internal static class Program
         return Value(Write(writer =>
         {
             writer.WriteStartObject(); writer.WriteString("root", _root); writer.WriteBoolean("interactive", _interactive);
+            writer.WriteBoolean("guestAdmission", !_interactive && !_guestChecked && context.WebviewLabel == "main");
             writer.WriteBoolean("denied", context.WebviewLabel == "denied"); writer.WriteEndObject();
         }));
     }
@@ -90,9 +108,16 @@ internal static class Program
     {
         try
         {
-            await Document("main").Task.WaitAsync(TimeSpan.FromSeconds(10));
+            var initial = await Document("main").Task.WaitAsync(TimeSpan.FromSeconds(10));
             await WaitUntil(() => _denied);
             var window = app.GetWindow("main")!;
+            _phase = "guest dialog admission and reload";
+            await GuestStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await Responsive(app, GuestSettled.Task);
+            _guestChecked = true; Documents.TryRemove("main", out _);
+            app.GetWebview("main")!.EvaluateScript("location.reload()");
+            Require((await Document("main").Task.WaitAsync(TimeSpan.FromSeconds(10))).DocumentId != initial.DocumentId, "guest admission document reload");
+            Console.WriteLine("PASS permitted guest dialog stayed pending before source reload.");
             using (var canceled = new CancellationTokenSource())
             {
                 canceled.Cancel();
@@ -181,18 +206,25 @@ internal static class Program
     private static ValueTask<JsonElement> Verify(InvokeContext context, JsonElement args, CancellationToken token)
     {
         Require(_interactive && context.WebviewLabel == "main" && args.GetProperty("step").GetInt32() == _verified, "selection sequence");
+        _validated = -1;
         var value = args.GetProperty("selected");
         string[] names = _verified switch { 0 or 7 => ["alpha.txt"], 1 => ["alpha.txt", "beta.txt"], 2 => ["folder-one"], 3 => ["folder-one", "folder-two"], 4 => ["saved.txt"], _ => [] };
-        if (_verified == 5) Require(value.GetString() == "Accept", "message custom button result");
-        else if (_verified == 6) Require(value.ValueKind == JsonValueKind.Null, "user cancel result");
+        if (_verified == 5)
+        { if (value.ValueKind != JsonValueKind.String || value.GetString() != "Accept") return Value(JsonValue.From("selection-match")); }
+        else if (_verified == 6)
+        { if (value.ValueKind != JsonValueKind.Null) return Value(JsonValue.From("selection-match")); }
         else
         {
+            var multiple = _verified is 1 or 3;
+            if (multiple ? value.ValueKind != JsonValueKind.Array || value.EnumerateArray().Any(item => item.ValueKind != JsonValueKind.String) : value.ValueKind != JsonValueKind.String)
+                return Value(JsonValue.From("selection-shape"));
             var paths = value.ValueKind == JsonValueKind.Array ? value.EnumerateArray().Select(item => item.GetString()).ToArray() : [value.GetString()];
-            Require(paths.Length == names.Length && paths.Order().SequenceEqual(names.Select(name => Path.Combine(_root, name)).Order()), "synthetic selection/cardinality");
-            Require(paths.All(path => path is not null && context.App.AssetProtocolScope().IsAllowed(path)), "selected asset scope grant");
-            if (_verified == 2) Require(context.App.AssetProtocolScope().IsAllowed(Path.Combine(_root, "folder-one/nested/inside.txt")), "recursive asset grant");
+            if (paths.Length != names.Length) return Value(JsonValue.From("selection-cardinality"));
+            if (!paths.Order().SequenceEqual(names.Select(name => Path.Combine(_root, name)).Order())) return Value(JsonValue.From("selection-match"));
+            if (!paths.All(path => path is not null && context.App.AssetProtocolScope().IsAllowed(path))) return Value(JsonValue.From("asset-grant"));
+            if (_verified == 2 && !context.App.AssetProtocolScope().IsAllowed(Path.Combine(_root, "folder-one/nested/inside.txt"))) return Value(JsonValue.From("recursive-grant"));
         }
-        Console.WriteLine($"PASS interactive dialog step {_verified + 1}."); _verified++; return Value(JsonValue.Null);
+        _validated = _verified; return Value(JsonValue.Null);
     }
 
     private static TaskCompletionSource<RuntimeCommandContext> Document(string label) => Documents.GetOrAdd(label, _ => new(TaskCreationOptions.RunContinuationsAsynchronously));

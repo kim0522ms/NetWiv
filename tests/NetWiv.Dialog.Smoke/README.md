@@ -20,7 +20,9 @@ through the caller token, and requires a canceled task. A pre-canceled request
 must also fail before submission. Subsequent dialogs,
 parent/window destruction, source-WebView destruction, document reload and
 application shutdown exercise pending-request cleanup. Reload uses an actual
-document generation obtained from guest IPC. A watchdog fails blocked runs.
+document generation obtained from guest IPC. A permitted main-guest dialog
+must stay pending until its source reloads, checking real guest admission as
+well as trusted backend calls. A watchdog fails blocked runs.
 Do not interact with dialogs during automatic mode.
 
 Run the same managed and NativeAOT commands with `--interactive` instead of
@@ -31,7 +33,13 @@ message button, user cancel and repeated open. Select only the generated
 The sample directory appears only in the UI and is the picker default. The
 host validates selection cardinality and exact synthetic paths before the
 guest reads synthetic content; it checks selected and recursive scope grants.
-A separate denied guest checks that deny wins over allow before completion.
+A separate guest without dialog permissions checks ungranted-command denial
+before completion. Explicit deny behavior remains covered by Core ACL tests.
+Canceling an acceptance step or choosing the wrong synthetic entry leaves that
+step available to retry. Fixed stage codes distinguish native invocation,
+selection shape/cardinality, scope grants and synthetic Fs reads without
+displaying selected values or native errors. A step advances only after its
+selection, scope and content checks are acknowledged together.
 Confirm actual native appearance, responsiveness and dialog closure before
 Finish. Closing early or an incomplete check fails.
 

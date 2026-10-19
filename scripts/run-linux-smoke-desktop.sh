@@ -141,7 +141,9 @@ cat >"$config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml" <<'XML'
  <property name="plugins" type="empty"><property name="plugin-1" type="string" value="systray"/></property>
 </channel>
 XML
-Xephyr "$display" -screen 1280x800 -br -nolisten tcp >&2 &
+# Readiness probes disconnect before the desktop connects. Keep the nested
+# server alive across that last-client gap instead of resetting its display.
+Xephyr "$display" -screen 1280x800 -br -nolisten tcp -noreset >&2 &
 xephyr=$!
 trap 'result=$?; if ! stop_children "$xephyr"; then result=125; fi; if ! remove_config "$config" && [[ $result == 0 ]]; then result=125; fi; exit "$result"' EXIT
 export DISPLAY="$display"

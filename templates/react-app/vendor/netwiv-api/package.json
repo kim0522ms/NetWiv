@@ -1,0 +1,74 @@
+{
+  "name": "@netwiv/api",
+  "version": "0.1.0-dev",
+  "description": "NetWiv desktop frontend API",
+  "license": "Apache-2.0",
+  "type": "module",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    },
+    "./app": {
+      "types": "./lib/app.d.ts",
+      "import": "./lib/app.js"
+    },
+    "./core": {
+      "types": "./lib/core.d.ts",
+      "import": "./lib/core.js"
+    },
+    "./dpi": {
+      "types": "./lib/dpi.d.ts",
+      "import": "./lib/dpi.js"
+    },
+    "./event": {
+      "types": "./lib/event.d.ts",
+      "import": "./lib/event.js"
+    },
+    "./image": {
+      "types": "./lib/image.d.ts",
+      "import": "./lib/image.js"
+    },
+    "./menu": {
+      "types": "./lib/menu.d.ts",
+      "import": "./lib/menu.js"
+    },
+    "./path": {
+      "types": "./lib/path.d.ts",
+      "import": "./lib/path.js"
+    },
+    "./resources": {
+      "types": "./lib/resources.d.ts",
+      "import": "./lib/resources.js"
+    },
+    "./tray": {
+      "types": "./lib/tray.d.ts",
+      "import": "./lib/tray.js"
+    },
+    "./window": {
+      "types": "./lib/window.d.ts",
+      "import": "./lib/window.js"
+    },
+    "./webview": {
+      "types": "./lib/webview.d.ts",
+      "import": "./lib/webview.js"
+    },
+    "./webviewWindow": {
+      "types": "./lib/webviewWindow.d.ts",
+      "import": "./lib/webviewWindow.js"
+    }
+  },
+  "files": [
+    "lib",
+    "LICENSE-APACHE",
+    "NOTICE",
+    "THIRD-PARTY-NOTICES.md",
+    "LICENSE-TAURI-APACHE",
+    "LICENSE-TAURI-MIT",
+    "README.md"
+  ],
+  "dependencies": {
+    "@tauri-apps/api": "2.11.1"
+  }
+}

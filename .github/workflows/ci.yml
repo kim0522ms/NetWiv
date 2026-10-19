@@ -343,6 +343,28 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
+  frontend:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    name: Frontend API package and template consumers
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: Frontend API runtime tests
+        run: |
+          npm ci --prefix packages/api --no-audit --no-fund
+          npm test --prefix packages/api
+      - name: Packed frontend API consumer and public type boundaries
+        run: node tests/frontend-api/run.mjs
+      - name: Representative JavaScript and TypeScript template builds
+        run: node tests/template-matrix/build-frontends.mjs react react-ts vanilla vanilla-ts
+
   sdk-compatibility:
     needs: changes
     if: needs.changes.outputs.build == 'true'
@@ -395,7 +417,7 @@ jobs:
   required:
     name: CI required
     if: always()
-    needs: [changes, desktop, sdk-compatibility]
+    needs: [changes, desktop, frontend, sdk-compatibility]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -405,10 +427,11 @@ jobs:
           CHANGES_RESULT: ${{ needs.changes.result }}
           BUILD_REQUIRED: ${{ needs.changes.outputs.build }}
           DESKTOP_RESULT: ${{ needs.desktop.result }}
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
           SDK_RESULT: ${{ needs.sdk-compatibility.result }}
         run: |
           [[ "$CHANGES_RESULT" == success ]] || exit 1
-          case "$BUILD_REQUIRED:$DESKTOP_RESULT:$SDK_RESULT" in
-            true:success:success|false:skipped:skipped) exit 0 ;;
-            *) echo "Required validation did not pass: $BUILD_REQUIRED:$DESKTOP_RESULT:$SDK_RESULT"; exit 1 ;;
+          case "$BUILD_REQUIRED:$DESKTOP_RESULT:$FRONTEND_RESULT:$SDK_RESULT" in
+            true:success:success:success|false:skipped:skipped:skipped) exit 0 ;;
+            *) echo "Required validation did not pass: $BUILD_REQUIRED:$DESKTOP_RESULT:$FRONTEND_RESULT:$SDK_RESULT"; exit 1 ;;
           esac

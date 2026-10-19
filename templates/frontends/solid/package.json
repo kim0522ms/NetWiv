@@ -15,7 +15,7 @@
     "desktop:build": "dotnet tool restore && dotnet tool run netwiv -- build --no-bundle"
   },
   "dependencies": {
-    "@tauri-apps/api": "2.11.1",
+    "@netwiv/api": "file:vendor/netwiv-api",
     "solid-js": "1.9.12"
   },
   "devDependencies": {

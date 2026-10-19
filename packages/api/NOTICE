@@ -1,0 +1,21 @@
+NetWiv
+Copyright (c) 2026 kim0522ms and NetWiv contributors
+
+NetWiv contributions are licensed under the Apache License, Version 2.0.
+See LICENSE-APACHE for the license terms.
+
+NetWiv is inspired by Tauri and includes code and components from the
+Tauri ecosystem. NetWiv-specific additions and modifications are made by
+NetWiv contributors. Original upstream copyright notices are preserved:
+
+Copyright (c) 2017 - Present Tauri Apps Contributors
+Copyright 2019-2024 Tauri Programme within The Commons Conservancy.
+
+Third-party components retain their respective licenses and copyright
+notices. See THIRD-PARTY-NOTICES.md and the notices distributed with each
+component. This notice does not relicense third-party code.
+
+TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
+WRY and TAO are trademarks of The Tauri Programme within the Commons Conservancy.
+
+NetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.

@@ -1,5 +1,5 @@
 <script>
-import { isTauri } from '@tauri-apps/api/core';
+import { isNetWiv } from '@netwiv/api/core';
 import { commands } from './generated/commands.js';
 let name = $state('World');
 let message = $state('');
@@ -11,4 +11,4 @@ async function greet(event) {
 
 
 </script>
-<main><h1>NetWiv + Svelte</h1><form onsubmit={greet}><input bind:value={name} aria-label="Name" required /><button disabled={!isTauri()}>Greet</button></form><output>{message}</output></main>
+<main><h1>NetWiv + Svelte</h1><form onsubmit={greet}><input bind:value={name} aria-label="Name" required /><button disabled={!isNetWiv()}>Greet</button></form><output>{message}</output></main>

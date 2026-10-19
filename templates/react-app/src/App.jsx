@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { isTauri } from '@tauri-apps/api/core';
+import { isNetWiv } from '@netwiv/api/core';
 import { commands } from './generated/commands.js';
 
 const smoke = new URLSearchParams(location.search).has('smoke');
@@ -10,7 +10,7 @@ export default function App() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const form = useRef(null);
-  const desktop = isTauri();
+  const desktop = isNetWiv();
 
   async function greet(event) {
     event.preventDefault();

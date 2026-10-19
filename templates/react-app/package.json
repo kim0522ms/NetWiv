@@ -15,7 +15,7 @@
     "smoke": "dotnet run --project src-netwiv -- --smoke-test"
   },
   "dependencies": {
-    "@tauri-apps/api": "2.11.1",
+    "@netwiv/api": "file:vendor/netwiv-api",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

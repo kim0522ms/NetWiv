@@ -1,4 +1,7 @@
-The two vendored JavaScript modules under `vendor/@tauri-apps/api` are the
+The NetWiv core facade under `vendor/@netwiv/api` is generated from
+`packages/api/lib/core.js` by `scripts/generate-frontend-template-overlays.mjs`.
+Only its module import is adjusted for direct browser loading. The two
+vendored JavaScript modules under `vendor/@tauri-apps/api` are the
 unmodified `core.js` and `external/tslib/tslib.es6.js` modules from
 `@tauri-apps/api@2.11.1`, pinned by `compatibility/upstream-lock.json`.
 

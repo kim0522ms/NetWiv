@@ -53,6 +53,13 @@ upstream name.
 
 ## Compatibility source of truth
 
+- `packages/api` owns the desktop-only `@netwiv/api` public contract. Initially
+  it reuses the pinned official package internally; progressively removing that
+  frontend dependency is the long-term direction. Exclude mobile-only APIs,
+  types and options from the facade. Replacing the native ecosystem/toolchain
+  is outside this frontend work scope.
+- Keep the unchanged official Tauri package as a separately tested compatibility
+  path. Do not count facade-only behavior as an upstream compatibility pass.
 - `compatibility/upstream-lock.json` pins every upstream version, commit and npm integrity value.
 - Generated compatibility files come from `node compatibility/scripts/generate-upstream-manifests.mjs`; never edit them manually.
 - Tauri compatibility claims require unchanged `@tauri-apps/api@2.11.1` guest code and matching observable behavior for the claimed scope. Document intentional NetWiv differences separately; do not rewrite generated upstream data to hide them. Direct use of private `window.__TAURI_INTERNALS__` is outside the public guarantee.

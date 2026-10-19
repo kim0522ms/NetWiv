@@ -23,9 +23,10 @@ bindings. NetWiv uses **wry, tao, muda and tray-icon** behind a native adapter
 for OS WebViews, windows, menus and tray integration.
 
 NetWiv is meant for teams whose backend is already .NET, and for developers who
-want to write their desktop backend in C#. It is not a replacement for the
-TAURI® framework or the Rust language; it offers another backend language on
-top of the TAURI frontend ecosystem.
+want to write their desktop backend in C#. Its desktop frontend SDK is
+[`@netwiv/api`](docs/frontend-api.md), initially backed by the pinned Tauri API
+while moving toward frontend independence. The unchanged official TAURI®
+frontend package remains a separate compatibility path.
 
 NetWiv is developed and maintained using AI coding agents, including **Codex**
 and **Claude Code**. The project began with the maintainer's personal interest
@@ -47,6 +48,7 @@ review and revision.
 | **C# application layer** | A .NET SDK for commands, shared state, permissions and plugins. |
 | **Frontend choice** | 18 template choices, including React, Vue, Svelte and Blazor. |
 | **Generated bindings** | JavaScript calls and TypeScript declarations generated from C# commands. |
+| **Desktop frontend SDK** | `@netwiv/api` in `packages/api`, with mobile-only APIs excluded from its public facade. |
 | **Flexible deployment** | Self-contained .NET by default, installed-runtime deployment or optional NativeAOT. [Deployment modes](docs/deployment.md). |
 | **TAURI frontend support** | Compatibility work targets unchanged `@tauri-apps/api@2.11.1` and TAURI framework 2.11.5 behavior. |
 

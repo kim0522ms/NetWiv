@@ -99,6 +99,8 @@ public sealed class FrontendBindingsTests
             """);
         Assert.Empty(result.Errors);
         var bindings = Read(result.Compilation);
+        Assert.Contains("import { invoke } from '@netwiv/api/core';", bindings.JavaScript);
+        Assert.Contains("import type { Channel, InvokeOptions } from '@netwiv/api/core';", bindings.TypeScript);
         Assert.Contains("[\"account.fetch\"]: (args, options) => invoke(\"account.fetch\", args, options)", bindings.JavaScript);
         Assert.DoesNotContain("counter", bindings.TypeScript);
         Assert.DoesNotContain("Secret", bindings.TypeScript);

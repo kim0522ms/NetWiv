@@ -1,6 +1,8 @@
 # NetWiv + React
 
-React 19 + Vite 8 + 공식 `@tauri-apps/api@2.11.1` + NetWiv 예제입니다. .NET 8 이상 SDK와 Node.js 20.19+ 또는 22.12+가 필요합니다. Windows에서는 WebView2 Runtime, Linux에서는 GTK3·WebKitGTK 4.1, macOS 12 이상에서는 시스템 WKWebView/AppKit을 사용합니다. Rust는 필요하지 않습니다. 자동 프런트엔드 생성기는 이전 `0.1.0-beta.1` 패키지에 포함되지 않았으므로 새 SDK 패키지를 사용해야 합니다.
+React 19 + Vite 8 + `@netwiv/api` + NetWiv 예제입니다. .NET 8 이상 SDK와 Node.js 20.19+ 또는 22.12+가 필요합니다. Windows에서는 WebView2 Runtime, Linux에서는 GTK3·WebKitGTK 4.1, macOS 12 이상에서는 시스템 WKWebView/AppKit을 사용합니다. Rust는 필요하지 않습니다. 자동 프런트엔드 생성기는 이전 `0.1.0-beta.1` 패키지에 포함되지 않았으므로 새 SDK 패키지를 사용해야 합니다.
+
+`@netwiv/api`는 프로젝트에 포함된 `vendor/netwiv-api`에서 설치되므로 별도 npm 배포가 필요하지 않습니다. 내부 호환성 계층은 공식 `@tauri-apps/api@2.11.1`을 그대로 사용하며 `npm ci`가 고정 버전을 설치합니다. 생성된 명령 바인딩과 프런트엔드는 `@netwiv/api/core`를 사용합니다.
 
 프로젝트의 `NuGet.Config`에 NetWiv 로컬 패키지 폴더를 추가하세요. 모든 NetWiv 패키지는 `src-netwiv/ReactExample.csproj`의 `NetWivVersion`과 같은 버전이어야 합니다. 프레임워크가 제공한 템플릿 패키지에서 생성할 수도 있습니다:
 

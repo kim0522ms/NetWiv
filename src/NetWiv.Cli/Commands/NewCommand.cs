@@ -140,6 +140,7 @@ internal static class NewCommand
         }
         if (rust)
         {
+            Directory.Delete(Path.Combine(project, "vendor", "netwiv-api"), recursive: true);
             var shared = Path.Combine(AppContext.BaseDirectory, "templates", "frontends", "shared");
             foreach (var name in new[] { "index.html", "Trunk.toml" }) File.Copy(Path.Combine(shared, "rust", name), Path.Combine(project, name));
             File.Copy(Path.Combine(shared, "rust", "netwiv.rs"), Path.Combine(project, "src", "netwiv.rs"));
@@ -154,6 +155,7 @@ internal static class NewCommand
     private static async Task ApplyBlazorFrontendAsync(string project, CancellationToken token)
     {
         ClearReactFrontend(project);
+        Directory.Delete(Path.Combine(project, "vendor", "netwiv-api"), recursive: true);
         var frontend = Path.Combine(project, "frontend");
         await RunDotnet(["new", "blazorwasm", "--no-restore", "--name", "NetWivUi", "--output", frontend], project, token);
         var overlay = Path.Combine(AppContext.BaseDirectory, "templates", "frontends", "blazor");

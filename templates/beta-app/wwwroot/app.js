@@ -1,4 +1,4 @@
-import { invoke } from './vendor/@tauri-apps/api/core.js';
+import { invoke } from './vendor/@netwiv/api/core.js';
 
 const output = document.querySelector('#result');
 document.querySelector('#greeting').addEventListener('submit', async event => {
@@ -18,7 +18,7 @@ if (new URLSearchParams(location.search).has('smoke')) {
     const second = await invoke('greet', { name: 'Beta' });
     if (first.message !== 'Hello, Beta!' || first.count !== 1 || second.count !== 2)
       throw new Error(`Unexpected greeting: ${JSON.stringify([first, second])}`);
-    result = 'PASS: official JS → generated C# → JSON';
+    result = 'PASS: NetWiv JS → generated C# → JSON';
   } catch (error) { result = `FAIL: ${error}`; }
   output.textContent = result;
   await invoke('smoke_done', { result });

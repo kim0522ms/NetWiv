@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-// Functional fixture assertions execute through the unchanged guest invoke API.
+// Functional fixture assertions execute through the generated guest invoke API.
 export function polymorphismGuestChecks(route, quotedNumbers = false) {
   return `
   {

@@ -11,7 +11,7 @@ A .NET 8+ desktop framework built on OS WebViews, with optional NativeAOT publis
 ![NativeAOT](https://img.shields.io/badge/NativeAOT-0078D4?style=flat-square)
 ![Windows, Linux and macOS](https://img.shields.io/badge/Windows%20%7C%20Linux%20%7C%20macOS-desktop-334155?style=flat-square)
 
-[Quick start](#quick-start) · [Architecture](#architecture) · [Documentation](docs/README.md) · [Status](#current-status) · [Development](#development)
+[Official website](https://netwiv.github.io/) · [Quick start](#quick-start) · [Architecture](#architecture) · [Documentation](docs/README.md) · [Status](#current-status) · [Development](#development)
 
 </div>
 
@@ -176,8 +176,9 @@ implemented, planned and unimplemented behavior.
 
 ## Documentation
 
-Browse the [documentation index](docs/README.md) for getting-started guides,
-API references, and framework development documentation.
+Visit the [official NetWiv website](https://netwiv.github.io/) for a project
+overview. Browse the [documentation index](docs/README.md) for getting-started
+guides, API references, and framework development documentation.
 
 | Start here | Reference |
 | :--- | :--- |

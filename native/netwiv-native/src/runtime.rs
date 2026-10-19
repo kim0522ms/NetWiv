@@ -5,6 +5,8 @@ mod menus;
 mod protocol;
 mod options;
 mod platform;
+#[cfg(target_os = "linux")]
+mod dialogs;
 #[cfg(test)]
 mod tests;
 
@@ -117,6 +119,11 @@ impl Shared {
 }
 
 pub(crate) enum UserEvent {
+    CancelRequest { request_id: u64 },
+    #[cfg(target_os = "linux")]
+    DialogCompletion { request_id: u64, result: Result<Value, String> },
+    #[cfg(target_os = "linux")]
+    DialogDocumentChanged { webview_label: String, document_id: u64 },
     #[cfg(target_os = "macos")]
     DataStoreCompletion { request_id: u64, result: Result<Value, String> },
     AssetResponse { id: u64, response: Response<Vec<u8>> },
@@ -206,6 +213,8 @@ struct LocalRuntime {
     clipboard: Option<arboard::Clipboard>,
     global_shortcuts: crate::global_shortcut::GlobalShortcuts,
     strongholds: crate::stronghold::Strongholds,
+    #[cfg(target_os = "linux")]
+    pending_dialogs: HashMap<u64, dialogs::PendingNativeDialog>,
     exit_code: i32,
 }
 
@@ -283,6 +292,8 @@ fn run_inner(shared: Arc<Shared>, config: RunConfig) -> Result<(), String> {
         clipboard: None,
         global_shortcuts: crate::global_shortcut::GlobalShortcuts::new(),
         strongholds: crate::stronghold::Strongholds::new(),
+        #[cfg(target_os = "linux")]
+        pending_dialogs: HashMap::new(),
         exit_code: 0,
     };
     #[cfg(target_os = "macos")]
@@ -313,6 +324,8 @@ fn run_inner(shared: Arc<Shared>, config: RunConfig) -> Result<(), String> {
             runtime.shutdown(control_flow);
         }
     });
+    #[cfg(target_os = "linux")]
+    runtime.cancel_all_dialogs("native runtime stopped before dialog completed");
     runtime.close_all_documents();
     runtime.webviews.clear();
     runtime.web_contexts.clear();
@@ -365,7 +378,7 @@ impl LocalRuntime {
                     .map_err(|e| format!("invalid submission: {e}"))
                     .and_then(|submission| self.invoke(target, &submission, &binary, request_id));
                 match result {
-                    #[cfg(target_os = "macos")]
+                    #[cfg(any(target_os = "macos", target_os = "linux"))]
                     Ok(InvokeResult::Pending) => {}
                     Ok(InvokeResult::Json(value)) => {
                         self.shared.callback(
@@ -395,6 +408,24 @@ impl LocalRuntime {
                 if had_windows && self.windows.is_empty() {
                     self.shutdown(control_flow);
                 }
+                Ok(())
+            }
+            UserEvent::CancelRequest { request_id } => {
+                #[cfg(target_os = "linux")]
+                self.cancel_dialog_request(request_id);
+                // Other platforms retain their synchronous rfd behavior.
+                #[cfg(not(target_os = "linux"))]
+                let _ = request_id;
+                Ok(())
+            }
+            #[cfg(target_os = "linux")]
+            UserEvent::DialogCompletion { request_id, result } => {
+                self.complete_dialog_response(request_id, result);
+                Ok(())
+            }
+            #[cfg(target_os = "linux")]
+            UserEvent::DialogDocumentChanged { webview_label, document_id } => {
+                self.cancel_dialogs_for_document(&webview_label, document_id);
                 Ok(())
             }
             #[cfg(target_os = "macos")]
@@ -506,6 +537,8 @@ impl LocalRuntime {
     }
 
     fn remove_webview(&mut self, label: &str) -> Result<(), String> {
+        #[cfg(target_os = "linux")]
+        self.cancel_dialogs_for_webview(label);
         if let Some(view) = self.webviews.remove(label) {
             let id = view.document_id.load(Ordering::Acquire);
             let window_label = view.window_label.clone();
@@ -538,6 +571,8 @@ impl LocalRuntime {
     }
 
     fn remove_window(&mut self, label: &str) -> Result<(), String> {
+        #[cfg(target_os = "linux")]
+        self.cancel_dialogs_for_window(label);
         if let Some(mut window) = self.windows.remove(label) {
             self.event("netwiv://window-state", Some(label), window.persistence_snapshot(), "Window");
             let detached = window.menu.as_ref().or(self.app_menu.as_ref())
@@ -558,6 +593,8 @@ impl LocalRuntime {
     }
 
     fn shutdown(&mut self, control_flow: &mut ControlFlow) {
+        #[cfg(target_os = "linux")]
+        self.cancel_all_dialogs("native runtime stopped before dialog completed");
         let labels: Vec<_> = self.windows.keys().cloned().collect();
         for label in labels {
             let _ = self.remove_window(&label);
@@ -624,7 +661,7 @@ impl LocalRuntime {
 }
 
 enum InvokeResult {
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     Pending,
     Json(Value),
     #[allow(dead_code)]

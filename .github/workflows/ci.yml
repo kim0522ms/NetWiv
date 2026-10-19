@@ -243,6 +243,8 @@ jobs:
         run: |
           node --test tests/conformance/scripts/*.test.mjs \
             tests/NetWiv.Desktop.Smoke/*.test.mjs \
+            tests/NetWiv.Dialog.Smoke/*.test.mjs \
+            tests/NetWiv.MacOS.Sandbox.Smoke/*.test.mjs \
             tests/NetWiv.Isolation.Smoke/*.test.mjs \
             compatibility/scripts/upstream-test-inventory.test.mjs \
             native/license-provenance.test.mjs
@@ -297,6 +299,32 @@ jobs:
         run: |
           xvfb-run -a -s '-screen 0 1280x800x24' \
             bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke)" x11
+
+      - name: Build Linux managed dialog regression host
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        run: |
+          node tests/conformance/scripts/build-frontend.mjs
+          dotnet build tests/NetWiv.Dialog.Smoke -c Release -p:PublishAot=false
+
+      - name: Linux X11 managed dialog regression
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        run: |
+          xvfb-run -a -s '-screen 0 1280x800x24' \
+            bash scripts/run-linux-smoke-desktop.sh "$(realpath tests/NetWiv.Dialog.Smoke/bin/Release/net8.0/NetWiv.Dialog.Smoke)" x11 --automatic x11
+
+      - name: Publish Linux dialog regression host with NativeAOT
+        if: runner.os == 'Linux'
+        timeout-minutes: 10
+        run: dotnet publish tests/NetWiv.Dialog.Smoke -c Release -r linux-x64 -p:PublishAot=true -o artifacts/ci/dialog-aot
+
+      - name: Linux X11 NativeAOT dialog regression
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        run: |
+          xvfb-run -a -s '-screen 0 1280x800x24' \
+            bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/dialog-aot/NetWiv.Dialog.Smoke)" x11 --automatic x11
 
       - name: macOS NativeAOT WKWebView smoke
         if: runner.os == 'macOS'

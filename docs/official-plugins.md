@@ -158,6 +158,21 @@ if (typeof selected === 'string') {
 
 Frontend calls require capability permissions. To read and write a selected file, add `dialog:default`, `fs:allow-read-text-file`, and `fs:allow-write-text-file` to the app's capability. Paths selected by `open()` or `save()` are added to the filesystem and asset scopes for the app session. Allow other paths separately through `fs:scope` rules. Both file access and command permissions are required, and deny rules take precedence over allow rules.
 
+Linux open/save and message dialogs use GTK response callbacks on the desktop
+event thread, leaving UI dispatch and IPC available while a dialog is open.
+Closing its parent window or source WebView, navigating its source document,
+or shutting down the app closes the pending dialog and rejects its invocation.
+Managed caller cancellation also closes a pending Linux dialog and cancels the
+task. User cancellation remains a successful `null` file result or message
+button result; it does not grant file access. Windows and macOS retain their
+existing rfd implementation and do not gain pending native-dialog cancellation.
+
+This requires the matching ABI 3 native adapter; rebuild or update managed and
+native components together (see [native ABI](native-abi.md)). The
+[Linux dialog probe](../tests/NetWiv.Dialog.Smoke/README.md) separates automated
+responsiveness/lifecycle checks from interactive selection and scope checks.
+These checks do not establish complete upstream plugin equivalence.
+
 HTTP requests require an explicit allowed URL scope in the capability. Clipboard `default` grants no commands; specify permissions such as `clipboard-manager:allow-read-text` as needed.
 Shell execution requires a scope containing `name`, `cmd`, and `args` on `shell:allow-execute` or `shell:allow-spawn`. `sidecar` is not yet supported.
 

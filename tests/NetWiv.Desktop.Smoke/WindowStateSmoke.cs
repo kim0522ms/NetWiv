@@ -14,7 +14,7 @@ internal static class WindowStateSmoke
         var runtime = new DesktopRuntime();
         using var app = new Builder().UseRuntime(runtime).Metadata(new("StateSmoke", "1.0", identifier))
             .Plugin(plugin).Window("main", "Window state smoke", "about:blank", 640, 480)
-            .Setup(value => _ = Probe(value.Handle)).Build();
+            .Setup(value => { Program.VerifyBackend(runtime); _ = Probe(value.Handle); }).Build();
         using var timeout = new Timer(_ => app.Handle.Exit(124), null, TimeSpan.FromSeconds(25), Timeout.InfiniteTimeSpan);
         app.Run();
         app.Dispose();

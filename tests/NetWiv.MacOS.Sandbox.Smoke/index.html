@@ -5,16 +5,32 @@
 <script type="module">
   const status = document.getElementById('status');
   const { invoke } = await import('./core.js');
+  let stage = 'ipc-echo';
   try {
     if (await invoke('echo', { value: 'sandbox-ipc' }) !== 'sandbox-ipc') throw new Error('echo');
+    stage = 'ipc-phase';
     const phase = await invoke('phase');
-    if (phase === 'write') localStorage.setItem('netwiv-sandbox-fixture', 'persisted');
-    if (localStorage.getItem('netwiv-sandbox-fixture') !== 'persisted') throw new Error('storage');
+    stage = 'ipc-fixture';
+    const expected = await invoke('storage_value');
+    stage = 'storage-write';
+    if (phase === 'write') {
+      // Keep this test-owned database nonempty when the read phase removes its value.
+      // WebKit can delete an empty database asynchronously during process teardown.
+      localStorage.setItem('netwiv-sandbox-sentinel', 'retained');
+      localStorage.setItem('netwiv-sandbox-fixture', expected);
+    }
+    stage = 'storage-read';
+    const stored = localStorage.getItem('netwiv-sandbox-fixture');
+    stage = 'storage-mismatch';
+    if (stored !== expected) throw new Error('storage');
+    stage = 'storage-sentinel';
+    if (localStorage.getItem('netwiv-sandbox-sentinel') !== 'retained') throw new Error('sentinel');
+    stage = 'storage-remove';
     if (phase === 'read') localStorage.removeItem('netwiv-sandbox-fixture');
     status.textContent = 'PASS';
     await invoke('complete', { success: true });
   } catch {
-    status.textContent = 'FAIL';
-    await invoke('complete', { success: false });
+    status.textContent = 'FAIL ' + stage;
+    await invoke('complete', { success: false, stage });
   }
 </script>

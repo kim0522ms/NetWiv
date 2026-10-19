@@ -17,13 +17,14 @@ internal static partial class MacOsWebviewOptionsProbe
     {
         if (!OperatingSystem.IsMacOS()) throw new PlatformNotSupportedException("This probe requires macOS.");
         var result = 1;
-        using var app = new Builder().UseRuntime(new DesktopRuntime()).UseEmbeddedAssets()
+        var runtime = new DesktopRuntime();
+        using var app = new Builder().UseRuntime(runtime).UseEmbeddedAssets()
             .Window("default", "NetWiv WebView default", "webview-options.html", 480, 320)
             .Window("first-mouse-off", "NetWiv first mouse OFF", "webview-options.html", 480, 320,
                 JsonValue.Parse(Cases[1].Json))
             .Window("first-mouse-on", "NetWiv first mouse ON", "webview-options.html", 480, 320,
                 JsonValue.Parse(Cases[2].Json))
-            .Setup(value => _ = VerifyAsync(value.Handle)).Build();
+            .Setup(value => { Program.VerifyBackend(runtime); _ = VerifyAsync(value.Handle); }).Build();
         using var watchdog = new Timer(_ => Environment.Exit(124), null, TimeSpan.FromMinutes(3), Timeout.InfiniteTimeSpan);
         app.Run();
         return result;

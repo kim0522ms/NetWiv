@@ -53,9 +53,8 @@ remove_config() {
 # Keep its configuration and DBus session separate from the user's desktop.
 if [[ "${1:-}" == "--session" ]]; then
   shift
-  backend=$1
-  executable=$2
-  shift 2
+  executable=$1
+  shift
   GDK_BACKEND=x11 xfwm4 --compositor=off >&2 &
   wm=$!
   GDK_BACKEND=x11 xfce4-panel --disable-wm-check >&2 &
@@ -75,7 +74,7 @@ if [[ "${1:-}" == "--session" ]]; then
   # Only the nested desktop uses the temporary Xfce configuration. Reference
   # and candidate apps must resolve the same user directories across runs.
   export XDG_CONFIG_HOME="$NETWIV_DESKTOP_APP_CONFIG_HOME"
-  GDK_BACKEND="$backend" G_DEBUG=fatal-criticals WEBKIT_DISABLE_COMPOSITING_MODE=1 "$executable" "$@"
+  GDK_BACKEND=x11 NETWIV_EXPECT_BACKEND=x11 G_DEBUG=fatal-criticals WEBKIT_DISABLE_COMPOSITING_MODE=1 "$executable" "$@"
   exit $?
 fi
 
@@ -85,6 +84,38 @@ fi
 executable=$(realpath "$1")
 backend=$2
 shift 2
+
+if [[ $backend == wayland ]]; then
+  # Use the logged-in desktop, including its compositor, session bus and tray
+  # host. DISPLAY may still be needed by optional XWayland-backed plugins.
+  if [[ -z ${WAYLAND_DISPLAY:-} ]]; then
+    echo 'Wayland validation requires WAYLAND_DISPLAY from an existing desktop session' >&2; exit 1
+  fi
+  socket=$WAYLAND_DISPLAY
+  if [[ $socket != /* ]]; then
+    if [[ -z ${XDG_RUNTIME_DIR:-} ]]; then
+      echo 'A relative WAYLAND_DISPLAY requires XDG_RUNTIME_DIR' >&2; exit 1
+    fi
+    socket=$XDG_RUNTIME_DIR/$socket
+  fi
+  if [[ ! -S $socket ]]; then
+    echo 'The existing Wayland display socket is unavailable' >&2; exit 1
+  fi
+  if [[ -z ${DBUS_SESSION_BUS_ADDRESS:-} ]]; then
+    echo 'Wayland validation requires the existing DBUS_SESSION_BUS_ADDRESS' >&2; exit 1
+  fi
+  for tool in timeout gdbus; do
+    command -v "$tool" >/dev/null || { echo "Missing native GUI test dependency: $tool" >&2; exit 1; }
+  done
+  if ! timeout 2s gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus \
+    --method org.freedesktop.DBus.GetId >/dev/null 2>&1; then
+    echo 'The existing D-Bus session is unavailable' >&2; exit 1
+  fi
+  export GDK_BACKEND=wayland NETWIV_EXPECT_BACKEND=wayland
+  exec "$executable" "$@"
+fi
+
+export NETWIV_EXPECT_BACKEND=x11
 for tool in Xephyr xfwm4 xfce4-panel dbus-run-session xdpyinfo xprop gdbus; do
   command -v "$tool" >/dev/null || { echo "Missing native GUI test dependency: $tool" >&2; exit 1; }
 done
@@ -110,7 +141,9 @@ cat >"$config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml" <<'XML'
  <property name="plugins" type="empty"><property name="plugin-1" type="string" value="systray"/></property>
 </channel>
 XML
-Xephyr "$display" -screen 1280x800 -br -nolisten tcp >&2 &
+# Readiness probes disconnect before the desktop connects. Keep the nested
+# server alive across that last-client gap instead of resetting its display.
+Xephyr "$display" -screen 1280x800 -br -nolisten tcp -noreset >&2 &
 xephyr=$!
 trap 'result=$?; if ! stop_children "$xephyr"; then result=125; fi; if ! remove_config "$config" && [[ $result == 0 ]]; then result=125; fi; exit "$result"' EXIT
 export DISPLAY="$display"
@@ -119,4 +152,4 @@ for ((attempt=0; attempt<50; attempt++)); do
   sleep 0.1
 done
 timeout 2s xdpyinfo >/dev/null 2>&1 || { echo 'Xephyr did not start' >&2; exit 1; }
-dbus-run-session -- bash "$0" --session "$backend" "$executable" "$@"
+dbus-run-session -- bash "$0" --session "$executable" "$@"

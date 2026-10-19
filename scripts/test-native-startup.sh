@@ -18,7 +18,7 @@ for fixture in missing-library wrong-version missing-entry; do
   chmod +x "$directory/NetWiv.Desktop.Smoke"
   case "$fixture" in
     missing-library) expected='native library or an OS dependency is missing' ;;
-    wrong-version) expected='native ABI 99 does not match managed ABI 2' ;;
+    wrong-version) expected='native ABI 99 does not match managed ABI 3' ;;
     missing-entry) expected='incompatible ABI or architecture' ;;
   esac
   if [[ "$fixture" != missing-library ]]; then

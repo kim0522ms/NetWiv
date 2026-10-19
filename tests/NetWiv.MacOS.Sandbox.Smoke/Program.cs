@@ -17,16 +17,32 @@ internal static partial class Program
         string phase = args[1];
         string outside = Environment.GetEnvironmentVariable("NETWIV_SANDBOX_OUTSIDE_DIRECTORY")
             ?? throw new ArgumentException("Set a test-owned outside directory.");
-        var guest = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var guest = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var storageValue = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         var builder = new Builder().UseRuntime(new DesktopRuntime())
             .Metadata(new AppMetadata("Sandbox smoke", "0.1.0", Identifier))
             .UseEmbeddedAssets()
             .Window("main", "NetWiv sandbox smoke", "index.html", 480, 320)
             .RegisterCommand("echo", (_, args, _) => ValueTask.FromResult(args.GetProperty("value").Clone()))
             .RegisterCommand("phase", (_, _, _) => ValueTask.FromResult(JsonValue.From(phase)))
+            .RegisterCommand("storage_value", async (_, _, token) => JsonValue.From(await storageValue.Task.WaitAsync(token)))
             .RegisterCommand("complete", (_, args, _) =>
             {
-                guest.TrySetResult(args.GetProperty("success").GetBoolean());
+                // Only fixed assertion labels leave the guest; never print exception details or stored values.
+                string? failure = args.GetProperty("success").GetBoolean() ? null
+                    : args.GetProperty("stage").GetString() switch
+                    {
+                        "ipc-echo" => "IPC echo",
+                        "ipc-phase" => "IPC phase",
+                        "ipc-fixture" => "IPC fixture",
+                        "storage-write" => "local storage write",
+                        "storage-read" => "local storage read",
+                        "storage-mismatch" => "local storage persistence",
+                        "storage-sentinel" => "local storage sentinel",
+                        "storage-remove" => "local storage cleanup",
+                        _ => "guest completion"
+                    };
+                guest.TrySetResult(failure);
                 return ValueTask.FromResult(JsonValue.Null);
             })
             .Setup(app => _ = VerifyAsync(app.Handle));
@@ -73,18 +89,36 @@ internal static partial class Program
 
                 string data = Path.Combine(home, "Library", "Application Support", Identifier);
                 string marker = Path.Combine(data, "persistence-fixture.txt");
+                string expected;
                 if (phase == "write")
                 {
                     Directory.CreateDirectory(data);
-                    File.WriteAllText(marker, "sandbox-persistence");
-                    Check("container file write", File.ReadAllText(marker) == "sandbox-persistence");
+                    expected = Guid.NewGuid().ToString("N");
+                    File.WriteAllText(marker, expected);
+                    Check("container file write", File.ReadAllText(marker) == expected);
                 }
                 else
                 {
-                    Check("container file persistence", File.ReadAllText(marker) == "sandbox-persistence");
-                    File.Delete(marker);
+                    expected = File.ReadAllText(marker);
+                    Check("container file persistence", Guid.TryParseExact(expected, "N", out _));
                 }
-                Check("WKWebView IPC and local storage", await guest.Task.WaitAsync(TimeSpan.FromSeconds(40)));
+                storageValue.TrySetResult(expected);
+                var failure = await guest.Task.WaitAsync(TimeSpan.FromSeconds(40));
+                Check("WKWebView " + (failure ?? "IPC and local storage"), failure is null);
+                if (failure is null)
+                {
+                    using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    bool committed = false;
+                    try
+                    {
+                        await LocalStoragePersistence.WaitAsync(Path.Combine(home, "Library", "WebKit", "WebsiteData"),
+                            expected, phase == "write", deadline.Token);
+                        committed = true;
+                    }
+                    catch (OperationCanceledException) when (deadline.IsCancellationRequested) { }
+                    Check("local storage disk " + phase, committed);
+                    if (phase == "read" && committed) File.Delete(marker);
+                }
             }
             catch (Exception error)
             {

@@ -80,11 +80,16 @@ impl LocalRuntime {
             return crate::paths::resolve(&submission.args).map(InvokeResult::Json);
         }
         if command.starts_with("plugin:dialog|") {
+            #[cfg(target_os = "linux")]
+            return self.begin_dialog(submission, request_id);
+            #[cfg(not(target_os = "linux"))]
+            {
             let label = submission.window_label.as_deref()
                 .or_else(|| self.webviews.get(&submission.webview_label).map(|view| view.window_label.as_str()))
                 .ok_or("dialog request has no parent window")?;
             let window = self.windows.get(label).ok_or("dialog parent window was not found")?;
             return crate::dialog::invoke(command, &submission.args, &window.window).map(InvokeResult::Json);
+            }
         }
         if command.starts_with("plugin:clipboard-manager|") {
             return crate::clipboard::invoke(command, &submission.args, &mut self.clipboard, &mut self.resources)

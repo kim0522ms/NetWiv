@@ -160,6 +160,8 @@ impl LocalRuntime {
             .with_on_page_load_handler(move |event, _url| {
                 if matches!(event, PageLoadEvent::Started) {
                     let id = shared_page.next_document_id(); page_doc.store(id, Ordering::Release);
+                    #[cfg(target_os = "linux")]
+                    let _ = shared_page.enqueue(super::UserEvent::DialogDocumentChanged { webview_label: page_label.clone(), document_id: id });
                     shared_page.callback(CALLBACK_DOCUMENT, 0, &json!({"webviewLabel":page_label,"documentId":id,"closed":false}), &[]);
                 }
             });

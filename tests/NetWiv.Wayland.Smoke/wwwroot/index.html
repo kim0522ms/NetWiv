@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>Wayland interaction probe</title>
+<style>
+body{font:16px system-ui;margin:20px;line-height:1.5;color:#172033;background:#fafcff}fieldset{margin:16px 0;border:1px solid #8a99ac}label{display:block;margin:10px 0}button{font:inherit;padding:8px;margin:4px}textarea{font:20px system-ui;width:95%;max-width:680px}output{display:block;white-space:pre-wrap;padding:12px;background:#e9eff7}#drag{padding:18px;border:3px dashed #334c80;cursor:move;user-select:none}.swatches{display:flex;gap:12px;flex-wrap:wrap}.swatches span{padding:14px;border:2px solid #172033}.red{background:#ff6060}.green{background:#67df9e}.blue{background:#79baff}input[type=checkbox]{width:20px;height:20px}
+</style></head><body>
+<h1>NetWiv Wayland 실제 입력 검사</h1>
+<p>자동 검사는 실제 콜백과 상태를 확인합니다. 체크박스는 직접 관찰한 결과만 선택하세요. API 호출 성공만으로 화면 동작이 확인되지는 않습니다. 10분 안에 완료하세요.</p>
+<p>개인 정보 입력·붙여넣기는 하지 마세요. 아래 고정 문장만 사용합니다. 결과·스크린샷·환경 목록은 저장하지 않습니다.</p>
+<fieldset><legend>1. 네이티브 메뉴 / 트레이 / 키보드</legend>
+<p>창의 <b>Probe → Native menu action</b>을 선택하세요. GNOME 상단 패널의 NW 아이콘 메뉴에서 <b>Native tray action</b>을 선택하세요. 이 창을 활성화한 뒤 <b>Ctrl+Shift+K</b>를 누르세요.</p>
+<label><input type="checkbox" class="manual"> 메뉴와 트레이 아이콘이 보이며 각 메뉴를 실제로 클릭했습니다.</label>
+<p>트레이가 보이지 않으면 성공으로 처리하지 마세요. GNOME의 AppIndicator 지원이 필요할 수 있습니다.</p>
+</fieldset>
+<fieldset><legend>2. IME 입력</legend>
+<p>한국어 IME로 아래 칸에 <b>한글 입력 확인 123</b>을 직접 입력하고 조합을 확정하세요. 붙여넣기나 자동 입력은 검사에 사용할 수 없습니다.</p>
+<textarea id="sample" rows="2" autocomplete="off" spellcheck="false" aria-label="고정 IME 검사 문장"></textarea>
+<button id="reset" disabled>문장 지우고 다시 입력</button>
+<label><input type="checkbox" class="manual"> 한글 조합 중 글자와 확정된 문장이 정상이며 입력 커서가 보입니다.</label>
+</fieldset>
+<fieldset><legend>3. 창 조작 / 포커스 / 화면</legend>
+<p>창 가장자리를 직접 드래그해 크기를 바꾸세요. 제목 표시줄을 더블클릭하거나 시스템 창 메뉴로 최대화한 뒤 확인 버튼을 누르고, 복원 후 다시 확인하세요.</p>
+<button id="maximized" disabled>지금 최대화 상태 확인</button><button id="restored" disabled>지금 복원 상태 확인</button>
+<p>다른 창으로 전환했다가 돌아오세요. 제목 표시줄로 창을 옮긴 다음 아래 영역도 드래그하세요. 각 동작에서 창이 실제로 움직였는지 직접 관찰하세요.</p>
+<div id="drag" tabindex="0">이 영역을 마우스 왼쪽 버튼으로 드래그 (공식 Window.startDragging)</div>
+<label><input type="checkbox" class="manual"> 가장자리 크기 변경, 최대화/복원, 제목 표시줄 이동, 위 영역 드래그가 실제로 작동했습니다.</label>
+<div class="swatches"><span class="red">RED 빨강</span><span class="green">GREEN 초록</span><span class="blue">BLUE 파랑</span></div>
+<label><input type="checkbox" class="manual"> 포커스 전환과 크기 변경 후에도 글자·색상·버튼이 잘 보이고, 잘림/빈 화면/잔상이 없습니다.</label>
+</fieldset>
+<output id="status" role="status">Preparing official guest and native resources…</output>
+<p id="notice" role="alert"></p>
+<button id="finish" disabled>모두 확인하고 정리 후 종료</button><button id="abort" disabled>실패 / 미확인으로 종료</button>
+<script type="module" src="./probe.js"></script>
+</body></html>

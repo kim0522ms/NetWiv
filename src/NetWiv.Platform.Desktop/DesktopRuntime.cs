@@ -40,7 +40,7 @@ public sealed class DesktopRuntime : IDesktopRuntime
             try
             {
                 var abi = NativeMethods.AbiVersion();
-                if (abi != 2) throw new InvalidOperationException($"NetWiv native ABI {abi} does not match managed ABI 2. Restore matching NetWiv packages.");
+                if (abi != 3) throw new InvalidOperationException($"NetWiv native ABI {abi} does not match managed ABI 3. Restore matching NetWiv packages.");
                 handle = GCHandle.Alloc(this);
                 _native = NativeMethods.Create(&OnCallback, GCHandle.ToIntPtr(handle));
                 if (_native == 0) throw NativeError("create runtime");
@@ -136,10 +136,13 @@ public sealed class DesktopRuntime : IDesktopRuntime
         cancellationToken.ThrowIfCancellationRequested();
         if (!context.IsAuthorized) throw new InvokeException("Native commands require Core authorization.");
         byte[] json = RuntimeJson.Command(command, args, context, _context?.ResolveResource);
+        Task<RuntimeInvokeResponse> response;
+        ulong id;
         lock (_gate)
         {
             EnsureRunning();
-            ulong id = NextId();
+            cancellationToken.ThrowIfCancellationRequested();
+            id = NextId();
             var completion = new TaskCompletionSource<RuntimeInvokeResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
             _requests[id] = completion;
             try
@@ -148,9 +151,41 @@ public sealed class DesktopRuntime : IDesktopRuntime
                     Check(NativeMethods.Submit(_native, id, bytes, (nuint)json.Length, null, 0), "submit native operation");
             }
             catch { _requests.TryRemove(id, out _); throw; }
-            // Accepted UI mutations complete normally even if the caller later cancels;
-            // dropping their result could lose the resource handle created by the operation.
-            return completion.Task;
+            response = completion.Task;
+        }
+        // Only native dialogs support cancelling an admitted request. Other UI mutations
+        // retain their result even after cancellation, including created resource handles.
+        return cancellationToken.CanBeCanceled && (command is "plugin:dialog|open" or "plugin:dialog|save" or "plugin:dialog|message")
+            ? AwaitDialogResponseAsync(id, response, cancellationToken) : response;
+    }
+
+    private async Task<RuntimeInvokeResponse> AwaitDialogResponseAsync(ulong id, Task<RuntimeInvokeResponse> response, CancellationToken cancellationToken)
+    {
+        // Register and dispose outside _gate: disposal can wait for a cancellation
+        // callback that needs that lock to enqueue the native cancellation request.
+        using var registration = cancellationToken.UnsafeRegister(static state =>
+        {
+            var (runtime, requestId) = ((DesktopRuntime, ulong))state!;
+            runtime.CancelDialogRequest(requestId);
+        }, (this, id));
+        try { return await response.ConfigureAwait(false); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw new OperationCanceledException(cancellationToken);
+        }
+    }
+
+    private void CancelDialogRequest(ulong id)
+    {
+        lock (_gate)
+        {
+            if (_native == 0 || !_requests.ContainsKey(id)) return;
+            try { Check(NativeMethods.Cancel(_native, id), "cancel native dialog"); }
+            catch (Exception error)
+            {
+                // CancellationToken callbacks must not throw on the cancelling thread.
+                if (_requests.TryRemove(id, out var completion)) completion.TrySetException(error);
+            }
         }
     }
 
@@ -230,7 +265,11 @@ public sealed class DesktopRuntime : IDesktopRuntime
             case 3:
                 if (_requests.TryRemove(id, out var completion))
                 {
-                    if (!json.GetProperty("ok").GetBoolean()) completion.TrySetException(new InvokeException(json.GetProperty("error")));
+                    if (!json.GetProperty("ok").GetBoolean())
+                    {
+                        if (json.TryGetProperty("cancelled", out var cancelled) && cancelled.GetBoolean()) completion.TrySetCanceled();
+                        else completion.TrySetException(new InvokeException(json.GetProperty("error")));
+                    }
                     else if (json.TryGetProperty("isBinary", out var isBinary) && isBinary.GetBoolean())
                         completion.TrySetResult(RuntimeInvokeResponse.FromBinary(binary.ToArray()));
                     else completion.TrySetResult(RuntimeInvokeResponse.FromJson(json.GetProperty("value")));

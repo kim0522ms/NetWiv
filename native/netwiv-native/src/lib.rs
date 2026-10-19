@@ -21,4 +21,4 @@ mod tray_payload;
 
 pub use abi::*;
 
-pub const ABI_VERSION: u32 = 2;
+pub const ABI_VERSION: u32 = 3;

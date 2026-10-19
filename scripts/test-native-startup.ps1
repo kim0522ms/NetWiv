@@ -7,7 +7,7 @@ if (!(Test-Path -LiteralPath $binary)) { throw "NativeAOT smoke executable is mi
 $output = Join-Path $root ('artifacts/native-startup-win-' + [guid]::NewGuid().ToString('N'))
 $cases = @{
     'missing-library' = 'native library or an OS dependency is missing'
-    'wrong-version' = 'native ABI 99 does not match managed ABI 2'
+    'wrong-version' = 'native ABI 99 does not match managed ABI 3'
     'missing-entry' = 'incompatible ABI or architecture'
 }
 foreach ($case in $cases.GetEnumerator()) {

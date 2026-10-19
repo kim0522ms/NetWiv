@@ -21,6 +21,9 @@ internal static unsafe partial class NativeMethods
     [LibraryImport(Library, EntryPoint = "netwiv_runtime_submit")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int Submit(nint runtime, ulong requestId, byte* json, nuint length, byte* binary, nuint binaryLength);
+    [LibraryImport(Library, EntryPoint = "netwiv_runtime_cancel")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial int Cancel(nint runtime, ulong requestId);
     [LibraryImport(Library, EntryPoint = "netwiv_runtime_dispatch")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial int Dispatch(nint runtime, ulong requestId);

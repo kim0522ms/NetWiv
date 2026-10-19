@@ -1,7 +1,8 @@
 # macOS development and distribution
 
 NetWiv's Wry backend supports WKWebView/AppKit on macOS. The managed SDK,
-C ABI and unchanged `@tauri-apps/api` guest remain shared with Windows/Linux.
+C ABI and `@netwiv/api` frontend SDK remain shared with Windows/Linux. Unchanged
+`@tauri-apps/api` guests are retained for the official compatibility path.
 The deployment baseline is macOS 12.0. Consumer builds require a .NET SDK
 selected by `global.json` (8 or later). NativeAOT builds additionally need Xcode
 Command Line Tools; framework native builds also need Rust 1.95.0. Frontend
@@ -15,8 +16,9 @@ WKWebView is provided by macOS.
 
 The CLI also accepts either RID. Omitting `--target` selects the current process
 architecture. Build on the matching Mac architecture; universal binaries are not
-implemented. Apple Silicon has local execution evidence; Intel execution and
-minimum-OS acceptance still require their own machines.
+implemented. Hosted CI has passed on both architectures. Physical Apple Silicon
+execution is separately verified; physical Intel GUI and minimum-OS acceptance
+remain unverified.
 
 ## Framework source build
 
@@ -306,7 +308,7 @@ The shared Core path resolver uses these macOS roots:
 | App log | `~/Library/Logs/<identifier>` |
 | Resource directory inside `.app` | `Contents/Resources` |
 
-Use `PathApi` or the official path guest instead of assuming a Windows/Linux
+Use `PathApi` or `@netwiv/api/path` instead of assuming a Windows/Linux
 layout. Native menus use the single AppKit menu bar; the focused window's menu
 takes precedence over the app menu. App show/hide and Dock visibility affect the
 application. Title bars, shadows, vibrancy and simple fullscreen use the macOS
@@ -352,14 +354,16 @@ earlier crash. See [SDK runtime limits](dotnet-compatibility.md).
 
 The [GitHub Actions workflow](../.github/workflows/ci.yml) includes separate
 `macos-15` (arm64) and `macos-15-intel` (x64) jobs. Each builds its native adapter,
-runs managed/Rust/JavaScript tests, executes the Core suite with NativeAOT,
+runs managed/Rust tests, executes the Core suite with NativeAOT,
 checks native startup failures, and runs real WKWebView and isolation NativeAOT
 smokes. The CLI suite includes real app/DMG packaging and signing-failure tests.
 Validation results remain in ordinary CI console output; separate validation
 reports and diagnostic archives are not collected or uploaded. See the
 [CI guide](development.md#continuous-integration) for scope and prerequisites.
-A configured job is not a passing hosted run; Intel execution remains unverified
-until its job succeeds. Neither macOS 15 job establishes macOS 12 acceptance.
+Both hosted jobs passed for `v0.2.2`, including WKWebView, isolation and sandbox
+execution. The separate release package-consumer jobs also passed managed React
+execution and windowless NativeAOT checks for both RIDs. These results do not
+establish physical Intel GUI, clean-machine installation or macOS 12 acceptance.
 
 The NativeAOT desktop smoke exercises real WKWebView guest invoke/Channel, scoped
 assets, multiple windows, native menu/tray/image operations, reparenting, async
@@ -373,7 +377,7 @@ The ad-hoc-signed app also passed actual C# invoke-button input in secondary and
 child WebViews and a native menu selection/checked-state check. These checks
 establish integration evidence, not complete Tauri conformance.
 Broader keyboard/mouse interaction, all menu roles, multiple monitors, Developer ID certificates,
-package-only clean-machine installation and Intel execution need separate acceptance.
+package-only clean-machine installation and physical Intel GUI need separate acceptance.
 Expansion of distribution notarization is excluded from project work scope, not
 a deferred acceptance task. Existing ad-hoc/identity signing does not establish
 notarized distribution. Website data-store enumeration/removal is implemented through
@@ -401,7 +405,8 @@ availability errors. The paired managed/NativeAOT fixture passed on physical
 macOS arm64. NetWiv's separate unchanged-guest `dataStoreIdentifier` option
 regression also passed managed and NativeAOT execution. The pinned public creation option ignores the identifier; see
 [the observed difference](pinned-upstream-behavior.md#website-data-store-creation-and-removal).
-Intel and minimum-OS execution remain unverified.
+The paired comparison and public creation-option regression remain unverified
+on Intel and the minimum OS; the ordinary hosted smoke is a separate check.
 Per-window `skipTaskbar=true` is rejected on
 macOS; use `AppApi.SetDockVisibilityAsync` for the application-wide Dock entry.
 The Autostart and DeepLink OS-registration plugins remain Windows/Linux-only.
@@ -447,8 +452,10 @@ separate workflows.
 
 The `tests/frontend-bindings/run.mjs`, `resources.mjs` and `native-version.mjs`
 harnesses still select Windows/Linux RIDs. They must be extended before being
-used for macOS package-consumer validation. Do not treat a source-linked smoke
-result as package-only or release acceptance.
+used for those macOS scenarios. The release workflow separately validates
+package-only managed React execution and windowless NativeAOT consumers on both
+macOS RIDs. Do not treat either a source-linked smoke or a windowless consumer
+as package-only NativeAOT GUI or full release acceptance.
 
 ### Website data-store check
 
@@ -482,7 +489,8 @@ For the pinned Rust toolchain's macOS 27
 pass `--config 'profile.release.build-override.strip="none"'` to Cargo for
 the affected native build. This disables stripping of build dependencies without
 changing the committed release profile.
-Intel and macOS 12/13 execution remain unverified.
+The ordinary NativeAOT desktop smoke also runs on hosted macOS 15 arm64/x64.
+Physical Intel, paired Intel comparison and macOS 12/13 execution remain unverified.
 
 ---
 

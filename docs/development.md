@@ -9,6 +9,7 @@ Run the commands below from the repository root.
 Use .NET SDK 8.0.406 or later (including 9 and 10) and the pinned Rust toolchain for native adapter builds. Windows
 requires WebView2, the C++ build tools and Windows SDK. The Linux baseline is
 Ubuntu 24.04 with GTK3, WebKitGTK 4.1 and NativeAOT/native linker dependencies.
+See [Linux X11 and Wayland](linux.md) for session requirements and feature limits.
 macOS requires Xcode Command Line Tools and uses the system WKWebView; see the
 [macOS guide](macos.md) for arm64/x64 build and signing instructions.
 Frontend tooling must satisfy the selected template's `package.json` engines.
@@ -126,15 +127,33 @@ Then use interactive mode for file/folder selection, save, custom message
 buttons, user cancellation and session scope grants. Build the native adapter
 first: the managed runtime and native library must both use ABI 3.
 
+## Frontend SDK maintenance
+
+The `@netwiv/api` source lives in `packages/api`. Run its package tests and the
+isolated tarball/type/template-parity check from the repository root:
+
+```sh
+npm ci --prefix packages/api --no-audit --no-fund
+npm test --prefix packages/api
+node tests/frontend-api/run.mjs
+```
+
+When changing shipped SDK files, rebuild the package and regenerate the template
+snapshot with `node scripts/generate-frontend-template-overlays.mjs`. Review the
+resulting snapshot together with the source; do not hand-edit generated copies.
+Unchanged official guest conformance tests remain separate from facade tests.
+
 ## Continuous integration
 
 The [Build and test workflow](../.github/workflows/ci.yml) runs on pushes to
 `main`, pull requests and manual dispatch. Pushes limited to `docs/`, root
 `README.md` and `AGENTS.md` skip automatic runs; manual dispatch always remains
 available. Pull requests always run change classification and the `CI required`
-check. Documentation-only PRs skip the desktop matrix; other PRs require all
-four desktop jobs to succeed. Classification failures, cancelled builds and
-unexpected skips fail the required check.
+check. PRs limited to those same paths skip the build jobs. Other paths, including
+READMEs under templates or source directories, require all four desktop jobs,
+the frontend API job and the .NET 9/10 compatibility jobs to succeed.
+Classification failures, cancelled builds and unexpected skips fail the required
+check.
 
 The `main` branch has two rulesets. History protection blocks force pushes and
 deletion without any bypass actors. A separate ruleset requires a pull request
@@ -148,7 +167,8 @@ and macOS 15 Intel (`macos-15-intel`)
 jobs independently build the native adapter and the .NET solution, then run
 Rust unit tests, managed Core/CLI tests, generator/API tests and platform
 build-tool script tests. Platform-independent JavaScript harness, inventory and
-license tests run once in the existing Linux job, avoiding another runner setup.
+license tests run once in the Linux job. A separate frontend API job builds the
+facade and tests its packed consumer exports, types and template snapshot parity.
 Core and CLI are executable test harnesses and must be
 run with `dotnet run`; `dotnet test` alone does not execute them.
 

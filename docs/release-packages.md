@@ -23,7 +23,7 @@ Use the extracted `packages` directory as a local feed. For example in PowerShel
 
 ```powershell
 $feed = (Resolve-Path './packages').Path
-$version = '0.1.0-beta.1' # Replace with the downloaded version.
+$version = 'PACKAGE_VERSION' # Replace with the downloaded version.
 dotnet tool install --global NetWiv.Cli --version $version --add-source $feed
 netwiv new MyNetWivApp --template react --source $feed
 ```
@@ -32,13 +32,17 @@ Or in macOS/Linux shells:
 
 ```sh
 feed="$(pwd)/packages"
-version='0.1.0-beta.1' # Replace with the downloaded version.
+version='PACKAGE_VERSION' # Replace with the downloaded version.
 dotnet tool install --global NetWiv.Cli --version "$version" --add-source "$feed"
 export PATH="$HOME/.dotnet/tools:$PATH"
 netwiv new MyNetWivApp --template react --source "$feed"
 ```
 
 Keep the feed at that location; generated projects refer to its absolute path.
+The CLI's JS/TS starters carry a portable `vendor/netwiv-api` package. Running
+`npm ci` in the generated app installs `@netwiv/api` locally and its pinned
+official dependency from npm; a public `@netwiv/api` registry release is not
+required. See [frontend SDK distribution](frontend-api.md#local-package-distribution).
 Use `dotnet tool update` if the CLI is already installed. You still need the
 .NET 8 or later SDK, your frontend toolchain and platform WebView/NativeAOT prerequisites.
 Continue with the repository's
@@ -49,8 +53,9 @@ Continue with the repository's
 After merging the workflow and intended code, push a version tag:
 
 ```sh
-git tag v0.1.0-beta.1
-git push origin v0.1.0-beta.1
+version='NEXT_VERSION' # Replace with a new, unused semantic version.
+git tag "v$version"
+git push origin "v$version"
 ```
 
 Only `vMAJOR.MINOR.PATCH` tags with an optional prerelease suffix are accepted;

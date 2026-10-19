@@ -49,7 +49,7 @@ scoped receiver; inject its dependencies through its constructor. See
 [instance command lifetimes](hosting.md#instance-commands-and-constructor-injection).
 
 ```ts
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '@netwiv/api/core';
 const status = await invoke<string>('plugin:inventory|get_status');
 ```
 

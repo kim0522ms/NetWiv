@@ -14,6 +14,16 @@ or Xcode Command Line Tools. Ordinary consumers do not need Cargo.
 
 ## Restore and build
 
+The sample's checked-in npm manifest still declares only `@tauri-apps/api`.
+Current SDKs generate imports from `@netwiv/api/core`, so a fresh copy needs the
+frontend SDK before building. Generate a React starter with the matching NetWiv
+release and copy its complete `vendor/netwiv-api` directory into the copied
+sample, preserving notices. Then run `npm install --save-exact ./vendor/netwiv-api`
+from the sample directory and retain the updated manifest and lockfile. See
+[frontend migration](../../docs/frontend-api.md#local-package-distribution).
+Without this step, Vite cannot resolve the generated import. The verification
+helper does not provision this dependency automatically either.
+
 Use the actual matching version of `NetWiv.Hosting`, `NetWiv.Platform.Desktop`,
 `NetWiv.Build` and `NetWiv.Generators` in your package feed. A maintainer can
 create the feed with [pack-integration.ps1](../../scripts/pack-integration.ps1).
@@ -44,7 +54,8 @@ commands apply; create the empty config with
 `printf '%s\n' '<configuration><packageSources><clear /></packageSources></configuration>' > NuGet.Config`.
 `npm run build` first builds a managed assembly with
 `NetWivBindingsOnly=true` into separate binding intermediates, exports wrappers,
-and bundles the frontend with the unchanged `@tauri-apps/api@2.11.1`. Rebuild it
+and bundles the frontend through `@netwiv/api`, whose pinned compatibility
+dependency is unchanged `@tauri-apps/api@2.11.1`. Rebuild it
 after command signatures or frontend code change. A normal desktop build fails
 with an actionable message if the frontend has not been produced.
 

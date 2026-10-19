@@ -1,9 +1,10 @@
 # .NET SDK and runtime compatibility
 
-The `backport/dotnet8` branch lowers the managed package and default desktop
-application target to `net8.0`. The same packages can be referenced by `net8.0`,
-`net9.0` and `net10.0` applications. This does not change the previously published
-`0.1.0-beta.1` bundle, which still contains .NET 10-only packages.
+Current managed packages and default desktop applications target `net8.0`.
+The same packages can be referenced by `net8.0`, `net9.0` and `net10.0`
+applications. This is part of `main`, not a separate backport package line.
+Historical `0.1.0-beta.1` packages still require .NET 10; use a current matching
+package set for .NET 8/9 applications.
 
 ## Building and consuming
 

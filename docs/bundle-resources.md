@@ -28,10 +28,10 @@ Globs activate when the source contains `*`; `**` descends through directories.
 A literal mapped filename ending in `/` is still an exact filename, matching
 upstream's behavior; use a directory source or an explicit target filename.
 
-From unchanged `@tauri-apps/api`:
+From the NetWiv frontend SDK:
 
 ```ts
-import { resolveResource } from '@tauri-apps/api/path';
+import { resolveResource } from '@netwiv/api/path';
 const defaultsPath = await resolveResource('data/defaults.json');
 ```
 

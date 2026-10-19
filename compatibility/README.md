@@ -34,10 +34,14 @@ their limits in the PR. A matched fixture covers only its tested behaviors and
 inputs, not the entire associated API.
 
 Platform verification is independent. Source mappings and Windows/Linux
-results do not establish macOS conformance. The Apple Silicon NativeAOT smoke
-checks integration; Intel and complete macOS differential acceptance remain
-unverified. Keep generated upstream manifests unchanged when documenting
+results do not establish macOS conformance. Hosted arm64/x64 NativeAOT smokes
+check integration; complete macOS differential acceptance, including Intel,
+remains unverified. Keep generated upstream manifests unchanged when documenting
 these limits.
+
+These inventories describe the pinned upstream API, not the public export list
+of `@netwiv/api`. New applications use the [NetWiv desktop frontend SDK](../docs/frontend-api.md);
+its mobile exclusions do not remove unsupported entries from upstream coverage.
 
 ---
 

@@ -13,8 +13,10 @@ desktop app the same foundations as an ASP.NET Core or worker app:
 The package is opt-in. `NetWiv.Core` depends only on the dependency-injection
 and logging abstractions, and the existing `Builder` API is unchanged.
 
-For a complete package-only app, use the
-[Hosting sample](../samples/NetWiv.HostingApp/README.md). It combines constructor
+For a package-only app, use the
+[Hosting sample](../samples/NetWiv.HostingApp/README.md). Follow its frontend SDK
+preparation step: its npm manifest has not yet migrated to `@netwiv/api`, which
+current generated bindings require. The sample combines constructor
 injection, invocation-scoped application and plugin commands, options, logging,
 explicit capabilities and generated frontend bindings. Its verification helper
 separately records managed/AOT publication and real frontend IPC execution;

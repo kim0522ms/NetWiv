@@ -21,6 +21,9 @@ if (isNetWiv()) {
 command. The frontend package does not grant permissions or register commands.
 Backend capability checks remain authoritative. Runtime detection is a
 convenience for the UI, not a security boundary.
+The title example needs `core:window:allow-set-title` in a capability applying to
+the calling window. With an app manifest, `greet` also needs an explicitly
+resolved application-command permission; see [generated bindings](frontend-generator.md).
 
 ## Ownership and compatibility
 
@@ -70,6 +73,33 @@ dependency containing the package's shipped files. The official pinned dependenc
 is restored transitively. No personal paths or dependency on the maintainer's
 checkout are needed in the generated application. This is a local distribution
 mechanism, not an assertion that the package is published on npm.
+
+For a new JS/TS app, follow the [quickstart](integration-quickstart.md) and run
+`npm ci` in the generated directory. Import desktop APIs from modules such as
+`@netwiv/api/core`, `@netwiv/api/event`, `@netwiv/api/window`,
+`@netwiv/api/webviewWindow`, `@netwiv/api/menu`, `@netwiv/api/tray` and
+`@netwiv/api/path`. The package's explicit export map is the public module
+boundary; private upstream internals and the upstream `mocks` module are not
+facade exports.
+
+To migrate an existing JS/TS app before npm publication:
+
+1. Generate a starter with the same NetWiv release as the app's SDK and copy its
+   complete `vendor/netwiv-api` directory, including notices, into the app.
+2. From the app directory, run `npm install --save-exact ./vendor/netwiv-api`
+   and retain the updated manifest, lockfile and vendored package together.
+3. Update application imports from supported `@tauri-apps/api/*` modules to
+   `@netwiv/api/*`, replace bridge detection with `isNetWiv`, and regenerate
+   command bindings with the matching SDK. Remove mobile-only usages rather
+   than routing them around the desktop facade.
+4. Build and run the affected frontend/backend paths. Capability permissions,
+   command registration and platform limits still apply.
+
+Keep direct `@tauri-apps/api` imports where deliberately testing or retaining
+the official compatibility path. Official plugin packages such as
+`@tauri-apps/plugin-dialog` are separate and keep their existing names; this
+facade does not replace them. Blazor and Rust/WASM starters use a standalone
+NetWiv core module instead of an npm install; see [template coverage](template-coverage.md).
 
 The facade's package tests must install an actual npm tarball in an isolated
 consumer and check the allowed exports, desktop declarations and excluded mobile

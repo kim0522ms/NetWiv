@@ -8,6 +8,11 @@ not an additional supported production backend.
 
 ## Responsibility boundary
 
+The desktop JavaScript/TypeScript entry point is `@netwiv/api`, maintained in
+`packages/api`. Generated C# command bindings import its core module. The initial
+facade delegates to pinned official Tauri code; unchanged official guest tests
+remain the compatibility reference. See [frontend SDK](frontend-api.md).
+
 | .NET | Native Rust adapter |
 | --- | --- |
 | Public SDK, source generation, state and plugins | Window and WebView ownership |
@@ -37,6 +42,7 @@ introducing additional runtimes or resource stores:
 | `runtime/protocol.rs` | Track document origins and generations, construct the guest bridge and deliver asset responses through `Shared`. |
 | `runtime/options.rs`, `runtime/platform.rs` | Decode existing wire values and apply OS-specific window operations. |
 | `runtime/menus.rs` | Attach application/window menus, synchronize accelerators and show context menus. |
+| `runtime/dialogs.rs`, `dialog/linux.rs` | Track pending Linux dialogs, asynchronous GTK responses, cancellation and document/window/app cleanup. |
 | `resources.rs` | Own the single native RID allocator/table, route resource commands and close resources/channels. |
 | `resources/menus.rs`, `resources/trays.rs`, `resources/images.rs` | Implement each resource kind against that same table. |
 

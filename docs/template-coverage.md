@@ -33,10 +33,12 @@ netwiv new MyYewApp --template yew --source $feed
 ```
 
 Every choice generates a C# backend, `NetWiv.*` NuGet references, a `.sln`
-solution, configuration and calls based on `@tauri-apps/api`. JS/TS templates
-generate command bindings during the build. Blazor and Rust/WASM bundle two
-pinned official API ES modules as static assets and invoke the C# `greet`
-command through JS interop. See the [shared asset guide](../templates/frontends/shared/README.md)
+solution, configuration and calls through `@netwiv/api`. JS/TS templates install
+the portable `file:vendor/netwiv-api` package and generate command bindings during
+the build. Blazor and Rust/WASM bundle a standalone NetWiv core facade plus its
+pinned official API dependencies as static assets, invoking the C# `greet`
+command through JS interop. See the [frontend SDK](frontend-api.md) and
+[shared asset guide](../templates/frontends/shared/README.md)
 for source and license details.
 
 NetWiv matches the frontend **choice set**, but does not reproduce every

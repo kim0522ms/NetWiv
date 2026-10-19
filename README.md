@@ -92,50 +92,15 @@ issue, reproduce it in an app built with the official TAURI framework before rep
 
 ## Architecture
 
-The runtime stack connects your web UI to C# application code and the native
-desktop through a versioned C ABI.
+The runtime stack connects your web UI and `@netwiv/api` bindings to C#
+application code and the native desktop through a versioned C ABI. Linux uses
+GTK3/WebKitGTK 4.1 on X11 or Wayland; Windows uses WebView2 and macOS uses
+WKWebView/AppKit.
 
-```mermaid
-flowchart TB
-    subgraph frontend["Web frontend"]
-        UI["Your UI · React / Vue / Svelte / Blazor / …"]
-        Guest["Generated JS/TS bindings · @tauri-apps/api"]
-        UI <--> Guest
-    end
-
-    subgraph managed[".NET 8+ · managed or NativeAOT"]
-        Core["NetWiv.Core<br/>IPC · permissions · events · resources"]
-        App["Your C# commands · state · plugins"]
-        Adapter["NetWiv.Platform.Desktop"]
-        Core <--> App
-        Core <--> Adapter
-    end
-
-    subgraph native["Native Rust adapter"]
-        Runtime["netwiv-native<br/>wry · tao · muda · tray-icon · tauri-utils"]
-    end
-
-    subgraph platform["Operating system"]
-        Windows["Windows x64<br/>WebView2"]
-        Linux["Linux x64<br/>GTK3 · WebKitGTK 4.1"]
-        Mac["macOS arm64 / x64<br/>WKWebView · AppKit"]
-    end
-
-    Guest <-->|IPC / events| Core
-    Adapter <-->|Versioned C ABI| Runtime
-    Runtime --> Windows
-    Runtime --> Linux
-    Runtime --> Mac
-
-    classDef web fill:#eff6ff,stroke:#2563eb,color:#1e3a8a
-    classDef dotnet fill:#f5f3ff,stroke:#7c3aed,color:#4c1d95
-    classDef rust fill:#fff7ed,stroke:#ea580c,color:#7c2d12
-    classDef os fill:#f8fafc,stroke:#64748b,color:#0f172a
-    class UI,Guest web
-    class Core,App,Adapter dotnet
-    class Runtime rust
-    class Windows,Linux,Mac os
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/diagrams/architecture-dark.svg">
+  <img alt="NetWiv architecture: web frontend and generated bindings connect to the .NET SDK, then through a versioned C ABI to the native adapter and Windows, Linux or macOS." src="assets/diagrams/architecture-light.svg" width="100%">
+</picture>
 
 IPC arrows show logical communication; the native WebView adapter carries the
 messages between JavaScript and .NET. C# owns command validation and permission
@@ -151,13 +116,14 @@ a supplied package feed; replace both the feed path and `PACKAGE_VERSION`
 with actual values before running it. A fresh clone contains no prebuilt feed;
 maintainers can [create one from source](docs/development.md#create-a-local-package-feed).
 
-This backport targets `net8.0` and can be consumed by .NET 8, 9 and 10 applications.
-The existing `0.1.0-beta.1` bundle still requires .NET 10; use packages built from
-this branch for .NET 8/9. See [SDK compatibility](docs/dotnet-compatibility.md)
+Current packages target `net8.0` and can be consumed by .NET 8, 9 and 10 applications.
+See [SDK compatibility](docs/dotnet-compatibility.md)
 for SDK selection, runtime behavior and validation limits.
 
 **Windows prerequisites:** .NET 8 or later SDK, Node.js and WebView2 Runtime.
 NativeAOT release builds also need Visual Studio C++ Build Tools and Windows SDK.
+On Linux, use GTK3 and WebKitGTK 4.1 in an X11 or Wayland session; see
+the [Linux guide](docs/linux.md) for prerequisites and compositor limits.
 On macOS 12+, use .NET 8 or later and Node.js; WKWebView is provided by the OS.
 NativeAOT builds additionally require Xcode Command Line Tools. Follow the [macOS guide](docs/macos.md) and the
 [zsh quickstart](docs/integration-quickstart.md#create-the-project).
@@ -179,24 +145,31 @@ The generated project includes matching SDK references, frontend bindings and a
 local CLI manifest. `desktop:dev` handles binding generation, Vite and the app
 process, including frontend updates and C# backend restarts.
 
+`npm ci` installs `@netwiv/api` from the starter's portable `vendor/netwiv-api`
+directory and restores its pinned official Tauri dependency transitively.
+Generated bindings import `@netwiv/api/core`; use `@netwiv/api` modules for new
+frontend code. This local distribution works without an npm registry release.
+See [frontend SDK usage and migration](docs/frontend-api.md).
+
 Explore the [template matrix](docs/template-coverage.md) or the
 [project creation options](docs/project-creation.md#creation-options).
 
 ## Current status
 
 Desktop targets are **Windows x64**, **Linux x64 on Ubuntu 24.04 / WSLg**, and
-**macOS arm64/x64**. See the [macOS guide](docs/macos.md) for setup and limits.
+**macOS arm64/x64**. Linux supports X11 and native Wayland with different platform
+constraints; see the [Linux](docs/linux.md) and [macOS](docs/macos.md) guides.
 
 | Platform | WebView stack | Selected integration checks |
 | :--- | :--- | :--- |
 | Windows x64 | WebView2 | React + C# NativeAOT app; NSIS/MSI installation, execution and removal. |
-| Linux x64 | GTK3 + WebKitGTK 4.1 | React + C# NativeAOT app running under X11. |
-| macOS arm64 | WKWebView + AppKit | NativeAOT IPC, window/menu/tray and isolation smoke; local app/DMG packaging. Intel execution and trusted distribution remain unverified. |
+| Linux x64 | GTK3 + WebKitGTK 4.1 | X11 React + C# NativeAOT integration; managed/NativeAOT Wayland lifecycle, IPC, menu/tray, input and dialog checks on Ubuntu 22.04 GNOME. Physical Ubuntu 24.04 Wayland acceptance remains unverified. |
+| macOS arm64 / x64 | WKWebView + AppKit | Hosted NativeAOT integration and package-consumer checks on both architectures; selected physical Apple Silicon GUI and local app/DMG checks. Physical Intel GUI and minimum-OS acceptance remain unverified. |
 
 These are focused application checks. Real-certificate signing, WebView2-absent
-installation and full upstream conformance remain acceptance gaps. Linux X11
-checks do not establish Wayland coverage, and not every optional plugin's
-native behavior is validated. See the
+installation and full upstream conformance remain acceptance gaps. Wayland global
+positioning, stacking and native global shortcuts are outside the verified
+baseline, and not every optional plugin's native behavior is validated. See the
 [support and validation guide](docs/implementation-status.md)
 for coverage and limits, and the [per-API status table](docs/api-status.md) for
 implemented, planned and unimplemented behavior.
@@ -209,7 +182,7 @@ API references, and framework development documentation.
 | Start here | Reference |
 | :--- | :--- |
 | **Build your first app** | [Package quickstart](docs/integration-quickstart.md) · [Templates](docs/template-coverage.md) |
-| **Connect C# and the frontend** | [C# API](docs/csharp-api.md) · [Generated bindings](docs/frontend-generator.md) |
+| **Connect C# and the frontend** | [C# API](docs/csharp-api.md) · [Frontend SDK](docs/frontend-api.md) · [Generated bindings](docs/frontend-generator.md) |
 | **Add plugins** | [Plugin commands](docs/plugin-commands.md) · [Plugin configuration](docs/plugin-configuration.md) · [Plugin status](docs/official-plugins.md) |
 | **Understand support** | [API status](docs/api-status.md) · [Support and validation](docs/implementation-status.md) |
 | **Understand the design** | [Design principles](docs/design-principles.md) |

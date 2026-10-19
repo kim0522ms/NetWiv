@@ -1,8 +1,9 @@
 # NetWiv command generator
 
 The opt-in frontend JS/TypeScript exporter is described in
-[the frontend generator contract](../../docs/frontend-generator.md). It is under
-implementation and is not part of the earlier beta.1 package snapshot.
+[the frontend generator contract](../../docs/frontend-generator.md). It emits
+command wrappers and declarations importing `@netwiv/api/core`; install the
+[matching frontend SDK](../../docs/frontend-api.md) before regenerating bindings.
 
 `NetWiv.Generators` converts static and DI-resolved instance methods marked with `NetWiv.CommandAttribute`
 into direct `CommandHandler` delegates. It emits no reflection, runtime method

@@ -25,7 +25,7 @@ without calling a destroyed native responder. Handler exceptions produce HTTP 50
 Synchronous work runs on the callback thread; use asynchronous I/O or explicitly
 offload CPU work for a long operation.
 
-Use unchanged `convertFileSrc('path', 'example')` from `@tauri-apps/api/core` to
+Use `convertFileSrc('path', 'example')` from `@netwiv/api/core` to
 construct frontend URLs. Windows uses `http://example.localhost/path` by default
 (or HTTPS when configured); Linux/macOS use `example://localhost/path`. Cross-origin
 fetches still need response CORS headers and the configured page CSP must permit
@@ -38,7 +38,7 @@ manifest and capability requirements still apply. Registration replaces an earli
 handler of the same name and snapshots when `Build` runs. Custom `tauri`, `asset`
 and `ipc` handlers replace those default handlers, following upstream's precedence.
 
-The C ABI is version 2; its JSON run configuration includes
+The current [C ABI](native-abi.md) is version 3; its JSON run configuration includes
 `uriSchemeProtocols`. An older library rejects an unknown field at startup, so
 SDK and native package versions must match. The desktop fixtures `protocol.custom-handlers` and `protocol.custom-document`
 compare binary POST responses, asynchronous completion, context labels and IPC

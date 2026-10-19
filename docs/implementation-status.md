@@ -1,6 +1,6 @@
 # Support and validation
 
-NetWiv is a .NET 8 or later NativeAOT desktop framework under active development.
+NetWiv is a .NET 8 or later desktop framework with optional NativeAOT publishing.
 The source includes a working application SDK, native runtime and build tooling;
 this does not establish complete TAURI® compatibility or release acceptance.
 Package installation is described in the [quickstart](integration-quickstart.md).
@@ -10,8 +10,8 @@ Package installation is described in the [quickstart](integration-quickstart.md)
 | Platform | Runtime dependencies | Scope |
 | --- | --- | --- |
 | Windows x64 | WebView2 Runtime | Wry desktop runtime and NativeAOT applications. |
-| Linux x64 | GTK3 and WebKitGTK 4.1 | Ubuntu 24.04 is the baseline environment; X11 and Wayland require separate validation. Managed/NativeAOT Wayland automated smoke passed; see [scope and limits](#wayland-validation). |
-| macOS 12+ arm64 / x64 | System WKWebView and AppKit | Native runtime, CLI and app/DMG support. Apple Silicon smoke verified; Intel execution remains unverified. See [macOS](macos.md). |
+| Linux x64 | GTK3 and WebKitGTK 4.1 | X11 and native Wayland. Ubuntu 24.04 is the target baseline; selected managed/NativeAOT Wayland automated and interactive checks passed on Ubuntu 22.04 GNOME. See [Linux setup](linux.md) and [validation limits](#wayland-validation). |
+| macOS 12+ arm64 / x64 | System WKWebView and AppKit | Native runtime, CLI and app/DMG support. Hosted NativeAOT integration and package-consumer checks passed on both architectures; selected physical Apple Silicon GUI checks passed. Physical Intel and minimum-OS acceptance remain unverified. See [macOS](macos.md). |
 | Android, iOS | — | Excluded from project work scope; not a later milestone. |
 
 Applications use the native libraries delivered in `NetWiv.Platform.Desktop`.
@@ -24,11 +24,12 @@ toolchain. See [native architecture](native-architecture.md).
 | Area | Available behavior | Limits |
 | --- | --- | --- |
 | C# SDK | Commands, state, events, channels, windows, WebViews and managed resources. | Applications must follow cancellation, concurrency and ownership contracts. |
+| Frontend SDK | Desktop `@netwiv/api` modules, initially delegating to pinned official Tauri code. New bindings and starters use this facade. | Mobile APIs are excluded. Independent frontend transport is not implemented; unchanged official guests remain a separate compatibility path. See [frontend SDK](frontend-api.md). |
 | Frontend bindings | Generated JS calls and TS declarations from local and opted-in referenced C# commands and supported JSON metadata. | Explicit tagged polymorphic roots and sealed variants are supported; custom converters, fallback polymorphism and other advanced JSON mappings remain incomplete. Referenced producers need compatible generated metadata; arbitrary dependency discovery is not supported. |
 | Project creation | 18 frontend choices through `netwiv new`; a matching local CLI manifest and SDK references. | Template availability does not establish GUI acceptance for every frontend/toolchain combination. |
 | Development | Frontend updates and C# binding regeneration with backend restart. | Rider and Visual Studio solution loading/debugging require further interactive validation. |
 | NativeAOT | Release publication for Windows/Linux x64 and macOS arm64/x64. | Successful compilation alone does not verify a working desktop session. |
-| Plugins | Managed packages for 24 desktop plugin areas. | Individual commands, permissions and platform behavior remain partial; the updater runtime is not implemented. |
+| Plugins | Managed packages for 24 desktop plugin areas. | Individual commands, permissions and platform behavior remain partial; the updater runtime is excluded from project scope. |
 
 Use the [C# contract](csharp-api.md), [binding contract](frontend-generator.md),
 [API status table](api-status.md) and [plugin guide](official-plugins.md)
@@ -85,8 +86,12 @@ Dialog plugin acceptance is separate from the desktop-core comparison above.
 Linux uses GTK response callbacks and tracks pending dialogs across caller
 cancellation, parent/WebView destruction, navigation and app shutdown. Use the
 [dialog probe](../tests/NetWiv.Dialog.Smoke/README.md) for its automated and manual
-checks; neither core smoke nor parser tests establish native file selection or
-full upstream dialog compatibility. See [plugin behavior](official-plugins.md#select-read-and-write-a-file)
+checks. On the same Ubuntu 22.04 GNOME desktop, managed/NativeAOT interactive
+checks passed file/folder selection, save, custom message buttons, cancellation
+and scope-granted file access. Pending-request cancellation and lifecycle cleanup
+also passed on Wayland and nested X11. These checks do not establish other
+portal/compositor behavior or full upstream dialog compatibility.
+See [plugin behavior](official-plugins.md#select-read-and-write-a-file)
 and [ABI 3 migration](native-abi.md).
 
 ## Runtime identity differences
@@ -98,7 +103,7 @@ or identify itself as the TAURI core runtime. On all desktop platforms:
   and dynamically created native windows. Explicit titles, including empty
   strings, remain unchanged. Dynamic window options still reject malformed
   title values.
-- `app.getTauriVersion()` rejects with
+- The official compatibility API's `app.getTauriVersion()` rejects with
   `NetWiv does not embed the TAURI framework; its version is unavailable.`
   The `plugin:app|tauri_version` command and its permission identifiers remain
   recognized. Returning the pinned comparison version or the NetWiv package
@@ -116,6 +121,8 @@ and desktop smoke tests verify the NetWiv behavior separately. Frontend imports,
 IPC names, event names, configuration aliases and `isTauri()` bridge detection
 remain available for existing guest code; bridge detection does not identify the
 underlying framework as an official TAURI distribution.
+New applications use `isNetWiv()` from `@netwiv/api/core`; the NetWiv facade
+does not export `getTauriVersion` or `isTauri`.
 
 ## Packaging and distribution
 
@@ -131,14 +138,17 @@ Focused integration checks have exercised package-only NativeAOT React apps on
 Windows and Linux X11, and Windows NSIS/MSI installation, execution and removal.
 Apple Silicon checks additionally exercised source-built NativeAOT WKWebView and
 isolation hosts, a locally ad-hoc-signed `.app`, real C# invocation/menu input,
-and app/DMG packaging. macOS package-only installation has not been verified.
+and app/DMG packaging. Hosted release checks additionally passed package-only
+managed React execution and windowless NativeAOT consumer execution on both
+macOS architectures. Clean-machine installation and package-only NativeAOT GUI
+acceptance are separate from those checks.
 These checks do not establish acceptance for every package format or environment.
 The following release boundaries remain open:
 
 - Windows installation on a machine without WebView2, and actual-certificate
   signing verification. WebView2 automatic installation and Fixed Version
   bundling are not provided by the current installer path.
-- macOS Intel and minimum macOS 12 execution, package-only clean-machine
+- Physical macOS Intel GUI and minimum macOS 12 execution, package-only clean-machine
   installation and Developer ID signing. Universal binaries are not implemented.
   Ad-hoc execution does not prove
   Gatekeeper acceptance; see [macOS limits](macos.md#validation-and-limits).

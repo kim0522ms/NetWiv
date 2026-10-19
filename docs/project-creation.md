@@ -2,7 +2,10 @@
 
 Install `NetWiv.Cli` as a .NET tool to create applications with `netwiv new`.
 It provides [18 frontend choices corresponding to the official TAURI® selector](template-coverage.md).
-The default is React + Vite + C#. Ordinary JS/TS and Blazor C# backends require
+The default is React + Vite + C# with the `@netwiv/api` desktop frontend SDK.
+JS/TS starters include a portable vendored package, installed by `npm ci`;
+generated bindings import its core module. See [frontend SDK](frontend-api.md).
+Ordinary JS/TS and Blazor C# backends require
 neither Rust nor Cargo. Rust/WASM frontends require Cargo and Trunk.
 
 Prepare a package feed using the [quickstart](integration-quickstart.md).
@@ -26,7 +29,8 @@ If the global tools directory is missing from PATH, Windows users can run
 
 On Linux/macOS, use the same PowerShell commands with the actual package directory;
 the [quickstart](integration-quickstart.md#create-the-project) also includes zsh commands.
-Windows requires WebView2 Runtime; Linux requires GTK3 and WebKitGTK 4.1;
+Windows requires WebView2 Runtime; [Linux](linux.md) requires GTK3 and WebKitGTK 4.1
+in an X11 or Wayland desktop session;
 macOS 12+ uses system WKWebView/AppKit; NativeAOT requires Xcode Command Line Tools.
 NativeAOT publication also requires the platform's native build tools.
 

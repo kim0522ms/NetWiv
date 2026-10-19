@@ -13,6 +13,10 @@ packages. The generated `.config/dotnet-tools.json` pins the local CLI to the
 selected SDK version. Once the project exists, development uses that local tool;
 Cargo is not required for the React/C# application.
 
+`npm ci` installs the starter's vendored `@netwiv/api`. Generated commands import
+`@netwiv/api/core`; use the same SDK for other desktop frontend calls. See
+[frontend SDK distribution and migration](frontend-api.md#local-package-distribution).
+
 `desktop:dev` restores the local tool and runs `netwiv dev -- --dev`. The CLI
 executes `beforeDevCommand` (`npm run dev`), waits for Vite at
 `http://127.0.0.1:5173/`, and starts the C# application with `dotnet watch`.
@@ -33,7 +37,8 @@ preprocessor guard using the official template engine's
 ## Automated verification
 
 `tests/frontend-bindings/run.mjs` generates a fresh package-only consumer and
-checks the CLI version, TypeScript bindings and NativeAOT React IPC.
+checks the CLI version, TypeScript bindings and managed/NativeAOT React IPC
+using an installed frontend SDK tarball.
 After that succeeds, run the real development integration against its consumer:
 
 ```sh
@@ -54,10 +59,12 @@ app inherits that display. Do not run two nested desktop wrappers concurrently.
 
 On macOS, run in a logged-in desktop session with the matching `osx-arm64` or
 `osx-x64` Wry assets. Keep the generated synchronous C# entry point on the process
-main thread. The package-consumer harness above currently hardcodes Windows/Linux
-RIDs; its package-only React and restart acceptance has not been completed on
-macOS. The source-linked WKWebView smoke and macOS CLI tests provide separate
-integration evidence. See [macOS setup and validation](macos.md).
+main thread. The frontend-binding harness above currently hardcodes Windows/Linux
+RIDs, so its development restart scenario does not establish macOS acceptance.
+The separate release package-consumer harness checks managed React execution
+and windowless NativeAOT consumers on both macOS architectures. Source-linked
+WKWebView smoke is another separate integration check; see
+[macOS setup and validation](macos.md).
 
 ---
 

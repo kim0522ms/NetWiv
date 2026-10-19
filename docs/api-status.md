@@ -8,6 +8,11 @@ Plugin rows remain feature-group inventories, not method-by-method audits.
 Targets: **Windows x64 / Linux x64 / macOS arm64 and x64**, official `@tauri-apps/api@2.11.1`.
 This is a source-based feature inventory, not a declaration of complete TAURI® equivalence or release acceptance.
 
+New applications use [`@netwiv/api`](frontend-api.md). This table inventories
+the upstream compatibility surface, not the facade's public exports. Mobile-only
+entries remain visible here as unsupported even though the facade excludes them.
+See [Linux X11/Wayland](linux.md) for runtime support and compositor limits.
+
 Implementation, declaration availability and validation are separate. Counts below
 are derived from the individual core rows, not from CI results or a completion score.
 
@@ -37,7 +42,7 @@ The following feature groups cover official desktop plugins outside the core npm
 | Feature ID | Feature | Status | Scope and alternatives |
 | --- | --- | --- | --- |
 | EXT-UPDATER | Update checks, downloads and installation | **Not implemented** | Excluded from project work scope; not deferred. CLI signing support does not provide an updater runtime. |
-| EXT-DIALOG | Native open/save and message dialogs | **Partial** | `NetWiv.Plugin.Dialog` uses asynchronous GTK responses on Linux and rfd on Windows/macOS. Linux pending requests support caller cancellation and parent/WebView/document/app cleanup. See the [dialog probe](../tests/NetWiv.Dialog.Smoke/README.md) for separate automatic and interactive checks. Windows/macOS GUI selection and cancellation, portal/compositor coverage and full upstream equivalence remain unverified. |
+| EXT-DIALOG | Native open/save and message dialogs | **Partial** | `NetWiv.Plugin.Dialog` uses asynchronous GTK responses on Linux and rfd on Windows/macOS. Linux pending requests support caller cancellation and parent/WebView/document/app cleanup. Selected managed/NativeAOT file/folder/save, message and cancellation checks passed on Ubuntu 22.04 GNOME Wayland. See the [dialog probe](../tests/NetWiv.Dialog.Smoke/README.md) and [validation scope](implementation-status.md#wayland-validation). Windows/macOS GUI selection and cancellation, portal/compositor coverage and full upstream equivalence remain unverified. |
 | EXT-FS | Frontend file and directory read/write APIs | **Planned** | Main `NetWiv.Plugin.Fs` commands, scopes and binary IPC are implemented. Watching, the full file-option/metadata surface and upstream comparison remain incomplete. |
 | EXT-OS | OS information, hostname and locale | **Partial** | `NetWiv.Plugin.Os` reports macOS and its product version with process architecture. Windows x64 and Apple Silicon managed/NativeAOT payload and ACL tests passed. Unchanged official OS guest, Intel/Rosetta and minimum-macOS comparison remain unverified; see [OS information](official-plugins.md). |
 | EXT-PROCESS | Exit and restart | **Planned** | Permission, exit and restart paths are implemented in `NetWiv.Plugin.Process`. Installed-app restart validation remains incomplete. |
@@ -60,8 +65,8 @@ The following feature groups cover official desktop plugins outside the core npm
 | EXT-STRONGHOLD | Encrypted storage | **Planned** | `NetWiv.Plugin.Stronghold` forwards 11 official commands to IOTA Stronghold. Native snapshot/vault/store/procedure paths and new snapshot save/reload passed NativeAOT integration checks on Windows/Linux and Apple Silicon. The default Argon2 salt path is `snapshotPath.salt`; an existing Tauri salt path can be passed to the constructor. Existing Tauri snapshot interoperability and all procedure inputs remain unverified, so this is not marked ready for use. |
 | EXT-UPLOAD | HTTP file uploads and downloads | **Planned** | `NetWiv.Plugin.Upload` implements official `upload`/`download`, POST/PUT/PATCH, progress Channels and HTTP failure handling. Local-server checks passed. Large transfers, cancellation, TLS and upstream progress equivalence remain unverified. |
 | EXT-WEBSOCKET | WebSocket client | **Planned** | `NetWiv.Plugin.Websocket` implements official guest `connect`/`send`, text/binary/close and Channel reception. Local echo and reload cleanup checks passed. Ping/Pong and some buffer/frame options are explicitly unsupported; TLS and upstream comparison remain incomplete. |
-| EXT-WINDOW-STATE | Window-state persistence and restoration | **Partial** | Official JS commands, JSON persistence, per-flag restoration, monitor checks, automatic startup restoration and normal-shutdown persistence are implemented. Maximized-window shutdown and restoration in a new process were verified on Windows/Linux X11. macOS save/relaunch restoration, forced-exit durability, Wayland position restoration and full upstream equivalence remain unverified. |
-| EXT-MAC | macOS runtime | **Partial** | WKWebView/AppKit, NativeAOT and app/DMG support; Apple Silicon integration checked. Intel execution and full conformance are unverified. See [macOS](macos.md). |
+| EXT-WINDOW-STATE | Window-state persistence and restoration | **Partial** | Official JS commands, JSON persistence, per-flag restoration, monitor checks, automatic startup restoration and normal-shutdown persistence are implemented. Maximized-window shutdown and restoration in a new process were verified on Windows/Linux X11. macOS save/relaunch restoration, forced-exit durability and full upstream equivalence remain unverified. Wayland absolute position restoration is outside the native baseline. |
+| EXT-MAC | macOS runtime | **Partial** | WKWebView/AppKit, NativeAOT and app/DMG support; hosted integration and package-consumer checks passed on arm64/x64, with selected physical Apple Silicon GUI checks. Physical Intel GUI, minimum-OS acceptance and full conformance remain unverified. See [macOS](macos.md). |
 | EXT-MOBILE | Android and iOS runtimes | **Not implemented** | Excluded from project work scope; not deferred. |
 
 This is an implementation inventory, not a catalog of fully validated installations.

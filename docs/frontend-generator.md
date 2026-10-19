@@ -332,16 +332,17 @@ business-logic implementation.
 Export checks cover unchanged output timestamps, command rename/removal, empty
 contracts and protection against overwriting handwritten files. The package
 consumer harness in `tests/frontend-bindings/run.mjs` additionally checks
-TypeScript accepted/rejected calls, generated React-to-C# IPC in a real WebView,
-NativeAOT publication and consumption without Cargo. Its initialized-app scenario
+TypeScript accepted/rejected calls, generated React-to-C# IPC in managed and
+NativeAOT WebViews, and consumption without Cargo. Its initialized-app scenario
 packs a separate command/plugin project, consumes it through NuGet, checks strict
 TypeScript contracts, and executes generated referenced-command wrappers in both
 managed and NativeAOT WebViews. It also checks unregistered/denied plugin routes
 and removes the package to verify export invalidation.
 
 The consumer harness currently selects Windows/Linux x64 RIDs only. Do not run
-it unchanged as macOS package-consumer proof; the macOS NativeAOT smoke is a
-source-linked integration check. See [macOS validation](macos.md#validation-and-limits).
+it unchanged as macOS package-consumer proof. The release workflow separately
+checks managed React and windowless NativeAOT package consumers on macOS;
+see [macOS validation](macos.md#validation-and-limits).
 
 Run from the repository root after creating a matching SDK/CLI package feed.
 Replace `PACKAGE_VERSION` with the feed's version. `--new` selects CLI project

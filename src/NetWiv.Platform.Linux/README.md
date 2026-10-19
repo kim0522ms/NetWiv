@@ -1,4 +1,10 @@
-# NetWiv Linux runtime
+# Legacy direct Linux bindings
+
+This directory is archival source, not the production Linux backend. Current
+applications use `NetWiv.Platform.Desktop` and the Wry/Tao native adapter on X11
+or Wayland. Start with the [Linux guide](../../docs/linux.md) and
+[native architecture](../../docs/native-architecture.md). The implementation
+notes and limitations below refer only to these legacy direct bindings.
 
 This backend uses GTK 3 and WebKitGTK 4.1 directly through source-generated
 `LibraryImport` bindings. It has no Rust dependency and does not use GTK 4.

@@ -172,7 +172,7 @@ public partial class AppJsonContext : JsonSerializerContext;
 The matching frontend remains:
 
 ```js
-import { invoke } from '@tauri-apps/api/core'
+import { invoke } from '@netwiv/api/core'
 const greeting = await invoke('greet', { name: 'NetWiv' })
 ```
 

@@ -5,6 +5,9 @@ The menu types in `NetWiv` map to the public `@tauri-apps/api/menu` contract pin
 The implementation writes the upstream command names and JSON shapes directly; it does not use
 reflection-based serialization.
 
+New frontend code imports menu types from `@netwiv/api/menu`. The official
+contract above remains the compatibility reference; see [frontend SDK](frontend-api.md).
+
 ## Icon menu items
 
 `IconMenuItem` has the same common operations as `MenuItem` (`TextAsync`, `SetTextAsync`,

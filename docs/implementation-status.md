@@ -81,6 +81,14 @@ and the [reproduction commands](development.md).
 The existing nested X11 automated smoke also passed. That offscreen regression
 check does not establish physical X11 desktop interaction acceptance.
 
+Dialog plugin acceptance is separate from the desktop-core comparison above.
+Linux uses GTK response callbacks and tracks pending dialogs across caller
+cancellation, parent/WebView destruction, navigation and app shutdown. Use the
+[dialog probe](../tests/NetWiv.Dialog.Smoke/README.md) for its automated and manual
+checks; neither core smoke nor parser tests establish native file selection or
+full upstream dialog compatibility. See [plugin behavior](official-plugins.md#select-read-and-write-a-file)
+and [ABI 3 migration](native-abi.md).
+
 ## Runtime identity differences
 
 NetWiv contains ports and adaptations of TAURI source code, but does not embed

@@ -1,2 +1,2 @@
 #[no_mangle]
-pub extern "C" fn unrelated_export() -> u32 { 0 }
+pub extern "C" fn netwiv_abi_version() -> u32 { 3 }

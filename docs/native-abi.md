@@ -1,7 +1,7 @@
-# NetWiv native ABI v2
+# NetWiv native ABI v3
 
 The authoritative declarations are `native/netwiv-native/include/netwiv.h`.
-All exports use the C calling convention. ABI version is 2. Nonzero status means
+All exports use the C calling convention. ABI version is 3. Nonzero status means
 failure; `netwiv_last_error` returns a UTF-8 error owned by the caller and released
 with `netwiv_buffer_free`. No exception or panic may cross the boundary.
 
@@ -9,7 +9,7 @@ The .NET runtime creates one opaque runtime, calls run on the application's main
 STA/UI thread, and destroys it after run returns and all exported calls finish.
 On macOS this must be the process main thread; worker-thread startup returns an error.
 Run owns the event loop and every native window, webview, menu and tray object.
-Submit, dispatch, eval, respond_asset and exit copy their input and may be called
+Submit, cancel, dispatch, eval, respond_asset and exit copy their input and may be called
 from other threads while run is active. Destroy must not race these calls.
 Callbacks borrow byte spans only for their duration; managed code copies before
 returning. No native callback may occur after run returns. Only native code frees
@@ -25,7 +25,7 @@ response policy. Native code registers the `asset` scheme only when enabled.
 `isolationProtocol` registers the per-app randomized isolation scheme. Its
 opaque iframe, encryption key, CSP and decryption remain owned by Core.
 `ipcProtocolEnabled` registers the `ipc` HTTP transport and defaults to false.
-Both options are additive ABI 2 JSON fields; older native builds reject unknown
+Both options were introduced as additive ABI 2 JSON fields; older native builds reject unknown
 fields rather than silently running without the requested protocol.
 Core resolves the two
 data roots separately: the first is the OS local data root, the second includes
@@ -48,8 +48,23 @@ payload is separate from JSON. Request IDs are unique within a runtime.
 Core derives it from its invocation path, never from guest JSON. Backend menu
 and tray creation may omit a guest Channel and use the native event hooks.
 Guest creation still requires the upstream handler shape. This flag does not
-replace `isAuthorized` or grant a capability. ABI 2 prevents new managed code
-from silently pairing with older native adapters that lack this distinction.
+replace `isAuthorized` or grant a capability. This distinction was introduced in
+ABI 2; the current ABI version check also requires the cancellation export added
+in ABI 3. Rebuild and distribute matching managed and native adapters together.
+
+`netwiv_runtime_cancel(runtime, request_id)` queues cancellation of a pending Linux
+GTK dialog on the UI thread. IDs must be nonzero; unknown or completed requests
+are no-ops. A successful return only acknowledges queueing. A cancelled dialog
+completes with `{ok:false,cancelled:true,error:string}`; dismissing a dialog through
+its UI retains its ordinary result. Windows and macOS currently use synchronous
+dialogs and this cancellation event is a no-op there.
+
+The managed adapter forwards caller-token cancellation only for `plugin:dialog|open`,
+`plugin:dialog|save` and `plugin:dialog|message`, and marks their tasks cancelled
+after native cancellation is confirmed. Tokens cancelled before submission reject
+the call immediately. Other accepted UI mutations retain their results, including
+created resource handles, even if their caller later cancels. Cancellation
+registrations are disposed after completion outside the runtime lock.
 
 Callback kinds:
 
@@ -64,7 +79,9 @@ Callback kinds:
    unknown field at startup. Native IPC and protocol requests always resolve the
    current parent from the owned document registry after a successful move.
 3. Completion: `{ok:true,value:JSON,isBinary:false}` or `{ok:true,isBinary:true}`
-   with binary span, or `{ok:false,error:JSON}`. Exactly one per accepted submit.
+   with binary span, or `{ok:false,error:JSON}`. The optional `cancelled:true`
+   marker identifies acknowledged dialog cancellation and maps to a cancelled
+   managed task. Exactly one per accepted submit while the runtime remains active.
 4. Dispatch: request ID identifies a managed action to execute on the UI thread.
 5. Protocol: request ID and `{uri,method,headers,windowOrigin?,webviewLabel,windowLabel,documentId}`, with request body in the binary
    span. Managed resolver responds with

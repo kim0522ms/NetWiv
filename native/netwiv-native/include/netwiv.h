@@ -2,7 +2,7 @@
 #define NETWIV_H
 #include <stddef.h>
 #include <stdint.h>
-#define NETWIV_ABI_VERSION 2u
+#define NETWIV_ABI_VERSION 3u
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -17,6 +17,10 @@ netwiv_runtime *netwiv_runtime_create(netwiv_callback callback, void *user);
 int32_t netwiv_runtime_run(netwiv_runtime *runtime, const uint8_t *config, size_t config_len);
 int32_t netwiv_runtime_submit(netwiv_runtime *runtime, uint64_t request_id,
   const uint8_t *json, size_t json_len, const uint8_t *binary, size_t binary_len);
+/* Queues cancellation of an active Linux dialog request. Unknown/completed IDs
+   and platforms without cancellable dialogs are no-ops. No GTK calls occur on
+   the calling thread. */
+int32_t netwiv_runtime_cancel(netwiv_runtime *runtime, uint64_t request_id);
 int32_t netwiv_runtime_dispatch(netwiv_runtime *runtime, uint64_t request_id);
 int32_t netwiv_runtime_eval(netwiv_runtime *runtime, const uint8_t *label, size_t label_len,
   uint64_t document_id, const uint8_t *script, size_t script_len);

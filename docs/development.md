@@ -119,6 +119,13 @@ in both managed and NativeAOT modes for its manual checks. See
 [Wayland validation limits](implementation-status.md#wayland-validation) before
 claiming coverage.
 
+Linux dialog changes have a separate [dialog probe](../tests/NetWiv.Dialog.Smoke/README.md).
+Run its managed and NativeAOT automatic modes on both `wayland` and `x11` for
+pending-dialog responsiveness, caller cancellation and lifecycle cleanup.
+Then use interactive mode for file/folder selection, save, custom message
+buttons, user cancellation and session scope grants. Build the native adapter
+first: the managed runtime and native library must both use ABI 3.
+
 ## Continuous integration
 
 The [Build and test workflow](../.github/workflows/ci.yml) runs on pushes to

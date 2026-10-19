@@ -72,11 +72,12 @@ async function waylandFixture(t, { overrides = {}, appStatus = 0, busStatus = 0,
   // Deliberately no Xephyr, Xfce, X11 or private D-Bus session tools in PATH.
   // This executable emits no smoke/backend marker: the wrapper also hosts Node
   // launchers and upstream reference applications.
+  // macOS system Bash 3.2 needs parameter expansion to distinguish unset from empty.
   tool('application', `[[ "$GDK_BACKEND" == wayland && "$NETWIV_EXPECT_BACKEND" == wayland ]]
     [[ "$WAYLAND_DISPLAY" == "$FIXTURE_DISPLAY" && "\${XDG_RUNTIME_DIR:-}" == "$FIXTURE_RUNTIME" ]]
     [[ "$DBUS_SESSION_BUS_ADDRESS" == "$FIXTURE_BUS" && "$DISPLAY" == :fixture ]]
     [[ "$XDG_CONFIG_HOME" == fixture-config && "$XDG_SESSION_TYPE" == wayland ]]
-    [[ ! -v WEBKIT_DISABLE_COMPOSITING_MODE && ! -v G_DEBUG && ! -v LIBGL_ALWAYS_SOFTWARE ]]
+    [[ -z "\${WEBKIT_DISABLE_COMPOSITING_MODE+x}" && -z "\${G_DEBUG+x}" && -z "\${LIBGL_ALWAYS_SOFTWARE+x}" ]]
     [[ "$#" == 2 && "$1" == 'argument with spaces' && "$2" == --fixture ]]
     exit "$APP_STATUS"
   `)

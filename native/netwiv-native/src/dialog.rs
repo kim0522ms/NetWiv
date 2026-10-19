@@ -1,9 +1,21 @@
+#[cfg(not(target_os = "linux"))]
 use std::path::Path;
 
-use rfd::{FileDialog, MessageButtons, MessageDialog, MessageDialogResult, MessageLevel};
-use serde_json::{Value, json};
+use rfd::MessageButtons;
+#[cfg(not(target_os = "linux"))]
+use rfd::{FileDialog, MessageDialog, MessageDialogResult, MessageLevel};
+use serde_json::Value;
+#[cfg(not(target_os = "linux"))]
+use serde_json::json;
+#[cfg(not(target_os = "linux"))]
 use tao::window::Window;
 
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "linux")]
+pub(crate) use linux::{PendingDialog, begin};
+
+#[cfg(not(target_os = "linux"))]
 pub(crate) fn invoke(command: &str, args: &Value, window: &Window) -> Result<Value, String> {
     match command {
         "plugin:dialog|open" | "plugin:dialog|save" => file_dialog(command, args, window),
@@ -12,6 +24,7 @@ pub(crate) fn invoke(command: &str, args: &Value, window: &Window) -> Result<Val
     }
 }
 
+#[cfg(not(target_os = "linux"))]
 fn file_dialog(command: &str, args: &Value, window: &Window) -> Result<Value, String> {
     let options = args.get("options").ok_or("missing dialog options")?;
     let mut dialog = FileDialog::new().set_parent(window);
@@ -56,6 +69,7 @@ fn file_dialog(command: &str, args: &Value, window: &Window) -> Result<Value, St
     })
 }
 
+#[cfg(not(target_os = "linux"))]
 fn message_dialog(args: &Value, window: &Window) -> Result<Value, String> {
     let message = args.get("message").and_then(Value::as_str).ok_or("dialog message is missing")?;
     let mut dialog = MessageDialog::new().set_parent(window).set_description(message);

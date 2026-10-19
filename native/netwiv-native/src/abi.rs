@@ -156,6 +156,19 @@ pub unsafe extern "C" fn netwiv_runtime_submit(
 }
 
 #[unsafe(no_mangle)]
+pub unsafe extern "C" fn netwiv_runtime_cancel(
+    runtime: *mut RuntimeHandle,
+    request_id: u64,
+) -> i32 {
+    status(|| {
+        if request_id == 0 {
+            return Err("cancel request id cannot be zero".into());
+        }
+        unsafe { runtime_arc(runtime)? }.enqueue(UserEvent::CancelRequest { request_id })
+    })
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn netwiv_runtime_dispatch(
     runtime: *mut RuntimeHandle,
     request_id: u64,
@@ -272,7 +285,7 @@ mod tests {
 
     #[test]
     fn abi_version_and_handle_lifetime() {
-        assert_eq!(netwiv_abi_version(), 2);
+        assert_eq!(netwiv_abi_version(), 3);
         let handle = netwiv_runtime_create(Some(callback), ptr::null_mut());
         assert!(!handle.is_null());
         unsafe { netwiv_runtime_destroy(handle) };
@@ -296,6 +309,15 @@ mod tests {
     fn calls_before_run_are_rejected() {
         let handle = netwiv_runtime_create(Some(callback), ptr::null_mut());
         assert_ne!(unsafe { netwiv_runtime_dispatch(handle, 7) }, 0);
+        assert_ne!(unsafe { netwiv_runtime_cancel(handle, 7) }, 0);
+        unsafe { netwiv_runtime_destroy(handle) };
+    }
+
+    #[test]
+    fn cancellation_rejects_null_handle_and_zero_request_id() {
+        assert_ne!(unsafe { netwiv_runtime_cancel(ptr::null_mut(), 7) }, 0);
+        let handle = netwiv_runtime_create(Some(callback), ptr::null_mut());
+        assert_ne!(unsafe { netwiv_runtime_cancel(handle, 0) }, 0);
         unsafe { netwiv_runtime_destroy(handle) };
     }
 }

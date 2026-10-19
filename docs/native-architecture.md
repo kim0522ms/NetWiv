@@ -6,6 +6,11 @@ objects. Production templates, samples and the conformance host use
 `NetWiv.Platform.Desktop`. Legacy direct platform bindings are archival source,
 not an additional supported production backend.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/diagrams/architecture-dark.svg">
+  <img alt="NetWiv architecture: web frontend, .NET, native adapter and operating system layers" src="../assets/diagrams/architecture-light.svg" width="100%">
+</picture>
+
 ## Responsibility boundary
 
 The desktop JavaScript/TypeScript entry point is `@netwiv/api`, maintained in

@@ -86,8 +86,10 @@ failed-save recovery and validation limits.
 `NetWiv.Plugin.Fs` implements `watch` and `watchImmediate` with scoped native
 filesystem notifications and document-owned resources. Grant `fs:allow-watch`
 with path scopes and `core:resources:allow-close` for guest unwatch. Recursion,
-batching, rename boundary filtering and cleanup are implemented; exact native
-event counts/subtypes differ from Rust notify. See [filesystem watching](filesystem-watch.md).
+batching, rename boundary filtering and cleanup are implemented. A watch accepts
+at most 128 directory registrations, and Windows blocks moving or deleting
+observed directories until close. Exact native event counts/subtypes differ
+from Rust notify. See [filesystem watching](filesystem-watch.md).
 
 `NetWiv.Plugin.Os` reports `macos` for both `platform()` and `type()` on macOS,
 `unix` for `family()`, `\n` for `eol()`, and an empty executable extension. Its

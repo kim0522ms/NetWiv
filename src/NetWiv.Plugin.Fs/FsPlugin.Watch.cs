@@ -4,6 +4,7 @@ namespace NetWiv.Plugin.Fs;
 
 public sealed partial class FsPlugin
 {
+    private const int MaximumDirectories = 128;
     private readonly object _watchGate = new();
     private readonly HashSet<WatchResource> _watches = [];
     private bool _disposed;
@@ -44,6 +45,9 @@ public sealed partial class FsPlugin
             if (path.ValueKind != JsonValueKind.String) throw new InvokeException("File watch paths must be strings.");
             roots.Add(await Resolve(context, path.GetString()!, options, token));
         }
+        var uniqueRoots = roots.Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToArray();
+        if (uniqueRoots.Length > MaximumDirectories)
+            throw new InvokeException("A file watch is limited to 128 directory registrations. Use narrower roots or nonrecursive watching.");
         var scope = context.IsTrusted ? null : Scope(context);
         var watch = new WatchResource(Channel.FromJson(context, Property(args, "onEvent")),
             path => scope is null || IsAllowed(context, scope, path), delay,
@@ -51,7 +55,7 @@ public sealed partial class FsPlugin
         uint? rid = null;
         try
         {
-            foreach (var root in roots.Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal))
+            foreach (var root in uniqueRoots)
                 watch.Add(root, recursive);
             token.ThrowIfCancellationRequested();
             lock (_watchGate)
@@ -78,6 +82,7 @@ public sealed partial class FsPlugin
         private readonly object _gate = new();
         private readonly List<FileSystemWatcher> _watchers = [];
         private readonly List<WatchRoot> _roots = [];
+        private readonly List<Action> _starts = [];
         private readonly Dictionary<string, WatchEvent> _pending = new(StringComparer.Ordinal);
         private Timer? _timer;
         private long _timerEpoch;
@@ -89,102 +94,193 @@ public sealed partial class FsPlugin
             if (!directory && !File.Exists(root)) throw new FileNotFoundException("File watch path does not exist.");
             var physicalRoot = ResolveLinks(root);
             var watchDirectory = directory ? root : Path.GetDirectoryName(root)!;
-            var identity = WatchRoot.Open(watchDirectory);
-            _roots.Add(identity);
-            bool Matches(string path) => directory || string.Equals(path, root,
-                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
-            bool RootUnchanged() => identity.IsCurrent() && string.Equals(ResolveLinks(root), physicalRoot,
-                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
-            FileSystemWatcher? current = null;
+            var anchor = WatchRoot.Open(watchDirectory);
+            _roots.Add(anchor);
+            var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            var entries = new Dictionary<string, DirectoryWatch>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
             var epoch = 0;
-            var rearmTopology = directory && recursive;
-            FileSystemWatcher Create()
+            bool Matches(string path) => directory || string.Equals(path, root,
+                comparison);
+            bool RootUnchanged() => anchor.IsCurrent() && string.Equals(ResolveLinks(root), physicalRoot, comparison);
+            bool Active(DirectoryWatch entry) => entries.TryGetValue(entry.Path, out var current) &&
+                ReferenceEquals(current, entry) && RootUnchanged() && entry.Identity.IsCurrent();
+            DirectoryWatch Create(string path, WatchRoot identity)
             {
-                var watcher = new FileSystemWatcher(watchDirectory)
+                // Recursive Linux watchers can silently stop after a directory is
+                // moved out on .NET 9/10. Nonrecursive registrations also let each
+                // directory's guard reject events from a relocated subtree.
+                var watcher = new FileSystemWatcher(path)
                 {
-                    IncludeSubdirectories = directory && recursive,
+                    IncludeSubdirectories = false,
                     NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.Attributes
                 };
-                watcher.Created += (_, e) => ReceiveCurrent(watcher, "create", [e.FullPath]);
-                watcher.Deleted += (_, e) => ReceiveCurrent(watcher, "remove", [e.FullPath]);
-                watcher.Changed += (_, e) => ReceiveCurrent(watcher, "modify", [e.FullPath]);
-                watcher.Renamed += (_, e) => ReceiveCurrent(watcher, "rename", [e.OldFullPath, e.FullPath]);
+                var entry = new DirectoryWatch(path, watcher, identity);
+                watcher.Created += (_, e) => Changed(entry, "create", [e.FullPath]);
+                watcher.Deleted += (_, e) => Changed(entry, "remove", [e.FullPath]);
+                watcher.Changed += (_, e) => Changed(entry, "modify", [e.FullPath]);
+                watcher.Renamed += (_, e) => Changed(entry, "rename", [e.OldFullPath, e.FullPath]);
                 watcher.Error += (_, e) =>
                 {
-                    if (rearmTopology && e.GetException() is InternalBufferOverflowException) Rearm(watcher, null, []);
-                    else Failed(e.GetException() is InternalBufferOverflowException, () => ReferenceEquals(current, watcher));
+                    if (e.GetException() is InternalBufferOverflowException) Restart(entry);
+                    else Failed(false, () => Active(entry));
                 };
-                return watcher;
+                return entry;
             }
-            void ReceiveCurrent(FileSystemWatcher source, string kind, string[] paths)
+            bool RegisterTree(string path, int revision, bool initial = false)
             {
-                if (rearmTopology && kind is "remove" or "rename") Rearm(source, kind, paths);
-                else Receive(kind, paths, Matches, () => ReferenceEquals(current, source) && RootUnchanged());
+                int remaining;
+                lock (_gate)
+                {
+                    if (_disposed || epoch != revision || !RootUnchanged() || entries.ContainsKey(path)) return false;
+                    remaining = MaximumDirectories - _watchers.Count;
+                }
+                var required = 0;
+                void Count(string candidate, bool first = false)
+                {
+                    if (!first && File.GetAttributes(candidate).HasFlag(FileAttributes.ReparsePoint)) return;
+                    bool registered;
+                    lock (_gate) registered = entries.ContainsKey(candidate);
+                    if (!registered && ++required > remaining)
+                        throw new InvokeException("A file watch is limited to 128 directory registrations. Use narrower roots or nonrecursive watching.");
+                    if (!directory || !recursive) return;
+                    foreach (var child in Directory.EnumerateDirectories(candidate))
+                    {
+                        try { Count(child); }
+                        catch (Exception error) when (error is DirectoryNotFoundException or FileNotFoundException) { }
+                    }
+                }
+                // Reject an oversized discovery before allocating native queues,
+                // threads and ancestor handles. Registration still checks the
+                // limit atomically because the tree can change after this scan.
+                Count(path, initial);
+                return RegisterDirectory(path, revision, initial);
             }
-            void Rearm(FileSystemWatcher source, string? kind, string[] paths)
+            bool RegisterDirectory(string path, int revision, bool initial = false)
             {
-                FileSystemWatcher? replacement = null;
-                var revision = -1;
+                if (!initial && File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint)) return false;
+                lock (_gate)
+                {
+                    if (_disposed || epoch != revision || !RootUnchanged() || entries.ContainsKey(path)) return false;
+                    if (_watchers.Count >= MaximumDirectories)
+                        throw new InvokeException("A file watch is limited to 128 directory registrations. Use narrower roots or nonrecursive watching.");
+                }
+                var identity = WatchRoot.Open(path);
+                DirectoryWatch entry;
+                try { entry = Create(path, identity); }
+                catch { identity.Dispose(); throw; }
+                var installed = false;
                 try
                 {
                     lock (_gate)
                     {
-                        if (_disposed || !ReferenceEquals(current, source)) return;
-                        if (!RootUnchanged()) throw new IOException("The file watch root changed.");
-                        // Retire before scope filtering: an excluded directory can
-                        // still move native watches outside the subscribed tree.
-                        revision = ++epoch;
-                        current = null;
-                        _watchers.Remove(source);
-                        _pending.Clear(); _timerEpoch++; _timer?.Dispose(); _timer = null;
+                        if (_disposed || epoch != revision || !RootUnchanged() || entries.ContainsKey(path)) return false;
+                        if (_watchers.Count >= MaximumDirectories)
+                            throw new InvokeException("A file watch is limited to 128 directory registrations. Use narrower roots or nonrecursive watching.");
+                        entries.Add(path, entry);
+                        _watchers.Add(entry.Watcher); _roots.Add(identity);
+                        installed = true;
                     }
-                    // Native cancellation and setup can acquire their own locks.
-                    // Neither may run while a callback is waiting on _gate.
-                    source.Dispose();
-                    replacement = Create();
-                    var installed = false;
-                    lock (_gate)
+                    entry.Watcher.EnableRaisingEvents = true;
+                    if (directory && recursive)
                     {
-                        if (!_disposed && epoch == revision)
+                        foreach (var child in Directory.EnumerateDirectories(path))
                         {
-                            if (!RootUnchanged()) throw new IOException("The file watch root changed.");
-                            current = replacement;
-                            _watchers.Add(replacement);
-                            installed = true;
+                            try { RegisterDirectory(child, revision); }
+                            catch (Exception error) when (error is DirectoryNotFoundException or FileNotFoundException) { }
                         }
                     }
-                    if (!installed) { replacement.Dispose(); return; }
-                    replacement.EnableRaisingEvents = true;
-                    bool Active() => epoch == revision && ReferenceEquals(current, replacement) && RootUnchanged();
-                    // A reset invalidates the stream even if its triggering path
-                    // was denied: later authorized events may have been dropped.
-                    Failed(true, Active);
-                    if (kind is not null) Receive(kind, paths, Matches, Active);
+                    return true;
                 }
-                catch (Exception)
+                finally
                 {
-                    if (replacement is not null)
-                    {
-                        bool installed;
-                        lock (_gate) installed = _watchers.Contains(replacement);
-                        if (!installed) replacement.Dispose();
-                    }
-                    Failed(false, () => revision < 0 ? ReferenceEquals(current, source) : epoch == revision);
+                    if (!installed) { entry.Watcher.Dispose(); identity.Dispose(); }
                 }
             }
-            current = Create();
-            _watchers.Add(current);
+            DirectoryWatch[] Retire(string? path = null)
+            {
+                // Called under _gate; native cleanup happens after releasing it.
+                var removedEntries = entries.Values.Where(entry => path is null || string.Equals(entry.Path, path, comparison) ||
+                    entry.Path.StartsWith(Path.TrimEndingDirectorySeparator(path) + Path.DirectorySeparatorChar, comparison)).ToArray();
+                foreach (var entry in removedEntries)
+                {
+                    entries.Remove(entry.Path);
+                    _watchers.Remove(entry.Watcher); _roots.Remove(entry.Identity);
+                }
+                return removedEntries;
+            }
+            void Cleanup(DirectoryWatch[] retired)
+            {
+                foreach (var entry in retired) { entry.Watcher.Dispose(); entry.Identity.Dispose(); }
+            }
+            void Changed(DirectoryWatch source, string kind, string[] paths)
+            {
+                var revision = -1;
+                try
+                {
+                    DirectoryWatch[] retired = [];
+                    lock (_gate)
+                    {
+                        if (_disposed || !Active(source)) return;
+                        revision = epoch;
+                        if (directory && recursive && kind is "remove" or "rename") retired = Retire(paths[0]);
+                    }
+                    Cleanup(retired);
+                    var added = false;
+                    if (directory && recursive && kind is "create" or "rename")
+                    {
+                        var target = paths[^1];
+                        if (Directory.Exists(target)) added = RegisterTree(target, revision);
+                    }
+                    bool Current() => epoch == revision && Active(source);
+                    if (retired.Length > 0 || added) Failed(true, Current);
+                    Receive(kind, paths, Matches, Current);
+                }
+                catch (Exception error) when (error is DirectoryNotFoundException or FileNotFoundException)
+                {
+                    // A newly reported directory may already have disappeared.
+                    Failed(true, () => Active(source));
+                }
+                catch (Exception) { Failed(false, () => revision < 0 ? Active(source) : epoch == revision); }
+            }
+            void Restart(DirectoryWatch source)
+            {
+                var revision = -1;
+                try
+                {
+                    DirectoryWatch[] retired;
+                    lock (_gate)
+                    {
+                        if (_disposed || !Active(source)) return;
+                        revision = ++epoch;
+                        retired = Retire();
+                    }
+                    Cleanup(retired);
+                    if (!RegisterTree(watchDirectory, revision, initial: true))
+                        throw new IOException("File watch root changed during recovery.");
+                    Failed(true, () => epoch == revision && RootUnchanged());
+                }
+                catch (Exception) { Failed(false, () => revision < 0 ? Active(source) : epoch == revision); }
+            }
+            _starts.Add(() =>
+            {
+                // Enable each parent before enumerating descendants so a new
+                // child cannot fall permanently between enumeration and startup.
+                if (!RegisterTree(watchDirectory, epoch, initial: true))
+                    throw new InvokeException("File watch root changed before registration completed.");
+            });
         }
 
         public void Start()
         {
-            FileSystemWatcher[] watchers;
+            Action[] starts;
             lock (_gate)
             {
                 if (_disposed) throw new InvokeException("The file watch was closed before registration completed.");
-                watchers = [.. _watchers];
+                starts = [.. _starts]; _starts.Clear();
             }
-            foreach (var watcher in watchers) watcher.EnableRaisingEvents = true;
+            foreach (var start in starts) start();
+            lock (_gate)
+                if (_disposed) throw new InvokeException("The file watch was closed before registration completed.");
         }
 
         private void Receive(string kind, string[] paths, Func<string, bool> matches, Func<bool> rootUnchanged)
@@ -284,6 +380,7 @@ public sealed partial class FsPlugin
                 _timerEpoch++; _timer?.Dispose(); _timer = null; _pending.Clear();
                 watchers = [.. _watchers];
                 _watchers.Clear();
+                _starts.Clear();
                 roots = [.. _roots];
                 _roots.Clear();
             }
@@ -295,5 +392,6 @@ public sealed partial class FsPlugin
         }
 
         private sealed record WatchEvent(string Kind, string[] Paths, string? Mode, Func<bool> RootUnchanged);
+        private sealed record DirectoryWatch(string Path, FileSystemWatcher Watcher, WatchRoot Identity);
     }
 }

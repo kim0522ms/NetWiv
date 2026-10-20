@@ -55,6 +55,11 @@ internal static class FsWatchTests
             app.Handle.Resources.Close(rid); await Drain(runtime);
             rid = (await app.Handle.InvokeAsync("plugin:fs|watch", Args([root], "{\"recursive\":true}"))).GetUInt32();
             File.AppendAllText(child, "recursive"); await Until(runtime, e => Paths(e).Contains(child));
+            var added = Directory.CreateDirectory(Path.Combine(root, "added", "deep")).FullName;
+            await Until(runtime, e => e.GetProperty("attrs").TryGetProperty("rescan", out var rescan) && rescan.GetBoolean());
+            await Drain(runtime);
+            var addedFile = Path.Combine(added, "new.txt"); File.WriteAllText(addedFile, "new descendant");
+            await Until(runtime, e => Paths(e).Contains(addedFile));
             app.Handle.Resources.Close(rid); await Drain(runtime);
             rid = (await app.Handle.InvokeAsync("plugin:fs|watch", Args([new Uri(child).AbsoluteUri, other]))).GetUInt32();
             File.WriteAllText(Path.Combine(root, "unrelated.txt"), "unrelated"); await Silent(runtime);
@@ -142,6 +147,17 @@ internal static class FsWatchTests
             runtime.Context.OnDocumentChanged(new("main", 2, true));
             Assert.True(app.Handle.Resources.TryGet(rid) is null, "Webview close retained a watch resource.");
             File.AppendAllText(visible, "after close"); await Silent(runtime);
+            var nested = Directory.CreateDirectory(Path.Combine(root, "patterns")).FullName;
+            var patternRuntime = new FakeRuntime();
+            using var patternApp = new Builder().UseRuntime(patternRuntime).Plugin(new FsPlugin()).Window("main", "Main", "index.html")
+                .Capability(new("patterns", ["fs:allow-watch", "fs:scope"], Windows: ["main"],
+                    PermissionScopes: [new("fs:scope", [JsonValue.From(root), JsonValue.From(root + "/*/*.txt")], [JsonValue.From(nested)])])).Build();
+            patternApp.Run();
+            await GuestWatch(patternRuntime, Args([root], "{\"recursive\":true}"));
+            var matched = Path.Combine(nested, "allowed.txt"); File.WriteAllText(matched, "matched descendant");
+            await Until(patternRuntime, e => Paths(e).Contains(matched));
+            await Drain(patternRuntime);
+            File.WriteAllText(Path.Combine(nested, "ignored.bin"), "unmatched descendant"); await Silent(patternRuntime);
         }
         finally { Directory.Delete(root, true); }
     }
@@ -213,8 +229,6 @@ internal static class FsWatchTests
         foreach (var replace in new[] { false, true })
         foreach (var delay in new[] { 0, 250 })
         {
-            // Windows denies moving an ancestor while its child directory is watched.
-            if (moveAncestor && OperatingSystem.IsWindows()) continue;
             if (watchAncestor && moveAncestor) continue;
             var directory = Directory.CreateTempSubdirectory("netwiv-watch-move-").FullName;
             try
@@ -225,7 +239,7 @@ internal static class FsWatchTests
                 var runtime = new FakeRuntime();
                 var watched = watchAncestor ? ancestor : root;
                 using var app = Scoped(runtime, new FsPlugin(), watched, []); app.Run();
-                await GuestWatch(runtime, Args([watched], $"{{\"recursive\":true,\"delayMs\":{delay}}}"));
+                var rid = await GuestWatch(runtime, Args([watched], $"{{\"recursive\":true,\"delayMs\":{delay}}}"));
                 var control = Path.Combine(root, "control.txt"); File.WriteAllText(control, "control");
                 await Until(runtime, e => Paths(e).Contains(control)); await Drain(runtime);
                 if (delay > 0)
@@ -234,15 +248,32 @@ internal static class FsWatchTests
                     await Task.Delay(75);
                 }
                 var moved = Path.Combine(outside, "moved");
+                if (OperatingSystem.IsWindows())
+                {
+                    var rejected = false;
+                    try { Directory.Move(moveAncestor ? ancestor : root, moved); }
+                    catch (IOException) { rejected = true; }
+                    Assert.True(rejected, "Windows moved a directory held by an active watch guard.");
+                    app.Handle.Resources.Close(rid); await Drain(runtime);
+                    Directory.Move(moveAncestor ? ancestor : root, moved);
+                    File.WriteAllText(Path.Combine(moveAncestor ? Path.Combine(moved, "root") : moved, "secret-name.txt"), "hidden");
+                    await Silent(runtime);
+                    continue;
+                }
                 Directory.Move(moveAncestor ? ancestor : root, moved);
                 if (replace) Directory.CreateDirectory(root);
                 File.WriteAllText(Path.Combine(moveAncestor ? Path.Combine(moved, "root") : moved, "secret-name.txt"), "hidden");
                 await Task.Delay(450);
+                var rescans = 0;
                 while (runtime.PendingScripts > 0)
                 {
                     var value = Parse(await runtime.NextScript());
                     if (value.TryGetProperty("message", out var message))
                     {
+                        if (message.GetProperty("attrs").TryGetProperty("rescan", out _)) rescans++;
+                        if (watchAncestor)
+                            Assert.True(!message.GetProperty("attrs").TryGetProperty("error", out _),
+                                $"Descendant move terminated the watcher (replacement={replace}, delay={delay}).");
                         var leaked = Paths(message).Select(Path.GetFileName).Where(name => name == "secret-name.txt").ToArray();
                         Assert.True(leaked.Length == 0,
                             $"A moved root disclosed {string.Join(',', leaked)} (descendant={watchAncestor}, ancestor={moveAncestor}, replacement={replace}, delay={delay}).");
@@ -250,9 +281,13 @@ internal static class FsWatchTests
                 }
                 if (watchAncestor)
                 {
-                    // The root remains authorized and watching resumes after rearm.
+                    // The root remains authorized after its descendant leaves.
                     var retained = Path.Combine(ancestor, "retained.txt"); File.WriteAllText(retained, "visible");
-                    await Until(runtime, e => Paths(e).Contains(retained));
+                    try { await Until(runtime, e => Paths(e).Contains(retained)); }
+                    catch (TimeoutException error)
+                    {
+                        throw new TimeoutException($"Watch did not deliver an allowed mutation after descendant movement (replacement={replace}, delay={delay}, rescans={rescans}).", error);
+                    }
                 }
             }
             finally { Directory.Delete(directory, true); }
@@ -264,13 +299,14 @@ internal static class FsWatchTests
         var root = Directory.CreateTempSubdirectory("netwiv-watch-rearm-").FullName;
         try
         {
-            var file = Path.Combine(root, "existing.txt"); File.WriteAllText(file, "initial");
+            var nested = Directory.CreateDirectory(Path.Combine(root, "nested")).FullName;
+            var file = Path.Combine(nested, "existing.txt"); File.WriteAllText(file, "initial");
             var runtime = new FakeRuntime();
             using var app = new Builder().UseRuntime(runtime).Plugin(new FsPlugin()).Build(); app.Run();
             await app.Handle.InvokeAsync("plugin:fs|watch", Args([root], "{\"recursive\":true,\"delayMs\":300}"));
             File.AppendAllText(file, "old batch");
             await Task.Delay(200);
-            File.Move(file, Path.Combine(root, "renamed.txt"));
+            Directory.Move(nested, Path.Combine(root, "renamed"));
             await Until(runtime, e => e.GetProperty("attrs").TryGetProperty("rescan", out var value) && value.GetBoolean());
             var elapsed = Stopwatch.StartNew();
             var fresh = Path.Combine(root, "fresh.txt"); File.WriteAllText(fresh, "new batch");
@@ -296,8 +332,8 @@ internal static class FsWatchTests
             {
                 for (var i = 0; i < 60; i++)
                 {
-                    var path = Path.Combine(first, "change.txt");
-                    File.WriteAllText(path, "change"); File.Delete(path);
+                    var nested = Directory.CreateDirectory(Path.Combine(first, "change-" + i)).FullName;
+                    File.WriteAllText(Path.Combine(nested, "change.txt"), "change");
                     File.AppendAllText(control, "active");
                     await Task.Delay(2);
                 }
@@ -310,6 +346,35 @@ internal static class FsWatchTests
             File.AppendAllText(control, "after close"); await Silent(runtime);
         }
         finally { Directory.Delete(root, true); }
+    }
+
+    internal static async Task RecursiveRegistrationLimit()
+    {
+        var root = Directory.CreateTempSubdirectory("netwiv-watch-limit-").FullName;
+        var incoming = Directory.CreateTempSubdirectory("netwiv-watch-incoming-").FullName;
+        try
+        {
+            // The root plus its children require 129 native directory registrations.
+            for (var i = 0; i < 128; i++) Directory.CreateDirectory(Path.Combine(root, "child-" + i));
+            var runtime = new FakeRuntime();
+            using var app = new Builder().UseRuntime(runtime).Plugin(new FsPlugin()).Build(); app.Run();
+            await Reject(() => app.Handle.InvokeAsync("plugin:fs|watch", Args(Directory.GetDirectories(root).Prepend(root).ToArray())).AsTask());
+            await Reject(() => app.Handle.InvokeAsync("plugin:fs|watch", Args([root], "{\"recursive\":true}")).AsTask());
+            await Drain(runtime);
+            // OS descriptor/watcher quotas may reject before the framework cap.
+            // Cleanup must still allow a fresh, narrow registration.
+            Directory.Delete(root, true); Directory.CreateDirectory(root);
+            var rid = (await app.Handle.InvokeAsync("plugin:fs|watch", Args([root], "{\"recursive\":true}"))).GetUInt32();
+            // One incoming directory event discovers the entire populated tree;
+            // this does not require delivery of 128 separate native events.
+            for (var i = 0; i < 128; i++) Directory.CreateDirectory(Path.Combine(incoming, "child-" + i));
+            Directory.Move(incoming, Path.Combine(root, "incoming"));
+            await Until(runtime, e => e.GetProperty("attrs").TryGetProperty("error", out var error) && error.GetString() == "watch-failed");
+            await Drain(runtime);
+            app.Handle.Resources.Close(rid);
+            File.WriteAllText(Path.Combine(root, "after-limit.txt"), "closed"); await Silent(runtime);
+        }
+        finally { Directory.Delete(root, true); if (Directory.Exists(incoming)) Directory.Delete(incoming, true); }
     }
 
     private static App Scoped(FakeRuntime runtime, FsPlugin plugin, string root, JsonElement[] denied) =>
@@ -341,7 +406,7 @@ internal static class FsWatchTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(8));
         while (true)
         {
-            var value = Parse(await runtime.NextScript().WaitAsync(timeout.Token));
+            var value = Parse(await runtime.NextScript(TimeSpan.FromSeconds(8)).WaitAsync(timeout.Token));
             if (value.TryGetProperty("message", out var message) && predicate(message)) return message;
         }
     }

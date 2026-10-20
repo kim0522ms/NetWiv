@@ -62,10 +62,19 @@ authorized paths is dropped. A rename across the scope boundary includes only
 the authorized endpoint and uses rename mode `from` or `to`. A root whose
 resolved target has changed no longer emits events; close and register it again.
 The watcher also holds a directory handle and verifies its identity or current
-OS path before delivery. Moving a watched directory or its ancestor out of scope cannot keep
-publishing events under the old pathname, even if that pathname is replaced.
-File watches verify the containing directory. Linux requires `/proc/self/fd` for
-this check; registration fails if the directory's identity cannot be verified.
+OS path before delivery. On Linux and macOS, native movement notifications for
+the watched directory and its ancestors permanently invalidate that registration,
+including when a directory leaves and returns before a callback runs. On Windows,
+the verification handle prevents moving or deleting the watched directory until
+the watch closes. This is a deliberate difference from an ordinary
+`FileSystemWatcher`: protecting scoped notifications takes precedence over
+allowing a watched directory to move.
+For a recursive Windows watch, this restriction also applies to registered
+descendant directories. Close the watch before moving or deleting those
+directories; file creation, modification, rename and deletion remain available.
+File watches protect the containing directory. Linux requires `/proc/self/fd`
+and inotify; macOS requires vnode notifications. Registration fails if the
+directory's identity or movement cannot be verified.
 
 A frontend watcher belongs to its originating webview document. Another
 document cannot close it. Reload, navigation that replaces the document,
@@ -103,17 +112,31 @@ paths. After event loss, refresh the authorized roots; after a terminal error,
 close the resource and retry registration when appropriate. An unavailable
 callback runtime may prevent even the terminal notification from being delivered.
 
-Recursive directory watches replace the native watcher after a rename, deletion or
-native buffer overflow. Some inotify backends retain watches on directories moved
-out of the subscribed tree, and delayed batches can contain paths whose parent
-has moved. Retiring the old instance prevents their callbacks
-from disclosing names under stale path prefixes. Retired callbacks and debounce
-batches are discarded, and affected authorized activity requests a rescan. Changes
-confined to denied paths still issue a pathless rescan because the retired
-native queue may also contain authorized events. No denied names are included.
-The replacement keeps the original root identity check;
-it does not follow a relocated root. Rearming has a short notification gap, so
-applications must refresh scoped state when they receive a rescan hint.
+Recursive watches use one nonrecursive native registration per observed
+directory, each with its own movement guard. This avoids a .NET 9/10 Linux
+`FileSystemWatcher` failure that silently stops a recursive watcher when a
+descendant directory moves out. New and moved-in directories gain registrations;
+removed and moved-out subtrees lose them. Symbolic-link descendants are not
+traversed. Other descendants are registered even when their directory names do
+not match the scope: a deeper filename may still be allowed. Every delivered
+path passes the full scope check, and denied paths are never included.
+Topology changes discard pending batches and request a pathless rescan;
+native buffer overflow rebuilds registrations while preserving the original
+root guard. Retired callbacks cannot resume delivery after a directory returns
+to its old path.
+
+Each watch resource accepts at most **128 directory registrations**, shared
+across its requested roots, including registrations under denied directories.
+This bounds native handles and Linux watcher
+threads; recursive watching is not intended for unrestricted large trees.
+Initial registration exceeding the limit fails and releases its registrations.
+Later growth beyond the limit stops the watch with `watch-failed`. Operating
+system resource limits can reject a registration earlier. Prefer narrower
+roots or nonrecursive watches for large directory trees.
+
+Registration and topology updates have notification gaps, so applications must
+refresh scoped state when they receive a rescan hint. No denied names are
+included in these hints.
 
 `watchImmediate` delivers without an intentional delay. `watch` defaults to
 2000 ms through the guest. A nonnegative integer `delayMs` up to 2147483647 is
@@ -150,8 +173,9 @@ cross-webview ownership, reload/close cleanup, invalid input, cancellation and
 plugin disposal. The Linux symlink case checks escaped roots and queued events
 after an ancestor is retargeted. Root-move tests cover root/ancestor/descendant
 moves, replacement paths and newly created outside filenames, followed by
-continued delivery inside the authorized tree. Ancestor moves run on Linux/macOS
-because Windows denies that move with an active child watcher. Concurrent rearm
+continued delivery inside the authorized tree. Move-out-and-back checks run on
+Linux/macOS without an intermediate identity check. Windows verifies blocked
+directory moves and successful movement after watch disposal. Concurrent rearm
 and close across multiple roots and fresh debounce windows have regression
 coverage. These tests do not establish live WebView interaction or exact
 cross-platform event parity. Native buffer overflow and

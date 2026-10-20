@@ -123,7 +123,10 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("filesystem watch scope ownership reload and close", FsWatchTests.ScopeAndOwnership),
     ("filesystem watch validation cancellation and plugin disposal", FsWatchTests.ValidationAndDisposal),
     ("filesystem watch moved root and replacement preserve scope", FsWatchTests.MovedRootScope),
+    ("filesystem watch directory movement cannot restore an invalidated registration", FsWatchRootTests.MovementCannotBecomeCurrentAgain),
+    ("filesystem watch guards physical ancestors and releases directory handles", FsWatchRootTests.PhysicalAncestorsAndDisposal),
     ("filesystem watch recursive rearm and close across multiple roots", FsWatchTests.RearmLifetime),
+    ("filesystem watch recursive registration resource limit", FsWatchTests.RecursiveRegistrationLimit),
     ("official dialog forwards native selection and grants selected file scope", DialogPluginTests.SelectedFileScope),
     ("official dialog legacy permission aliases authorize message only", DialogPluginTests.PermissionAliases),
     ("official OS guest receives synchronous platform values and guarded hostname", OsPluginTests.GuestContract),
@@ -1157,9 +1160,9 @@ sealed class FakeRuntime : IDesktopRuntime
     public void EvaluateScript(string webviewLabel, string script) { _scripts.Enqueue(script); _scriptReady.Release(); }
     public void EvaluateScript(string webviewLabel, string script, ulong documentId) { LastScriptDocument = documentId; EvaluateScript(webviewLabel, script); }
     public void Exit(int exitCode = 0) { ExitCode = exitCode; }
-    public async Task<string> NextScript()
+    public async Task<string> NextScript(TimeSpan? timeout = null)
     {
-        if (!await _scriptReady.WaitAsync(TimeSpan.FromSeconds(2))) throw new TimeoutException("Core did not evaluate a callback.");
+        if (!await _scriptReady.WaitAsync(timeout ?? TimeSpan.FromSeconds(2))) throw new TimeoutException("Core did not evaluate a callback.");
         return _scripts.TryDequeue(out var script) ? script : throw new InvalidOperationException();
     }
 }

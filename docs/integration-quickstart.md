@@ -7,6 +7,15 @@ built from source. Release availability depends on maintainer publication;
 cloning the repository does not provide a prebuilt package feed.
 To create packages yourself, see [framework development](development.md#create-a-local-package-feed).
 Full TAURI® compatibility and release validation remain incomplete.
+For a shared Razor UI with managed Windows development and deployment,
+optional experimental NativeAOT Hybrid or WebAssembly execution, see the optional
+[NetWiv.BlazorHybrid guide](blazor-hybrid.md).
+With the package feed below, select that layout using
+`netwiv new MyBlazorApp -t blazor-hybrid --source $feed`, then run
+`dotnet run --project src-netwiv` from the new directory. Its Debug mode uses
+managed Hybrid on Windows in both Debug and Release. Choose WebAssembly with
+`--blazor-mode WebAssembly`. Experimental NativeAOT Hybrid requires
+`netwiv build --no-bundle --aot --blazor-mode Hybrid --experimental-blazor-aot`.
 
 ## Prerequisites
 

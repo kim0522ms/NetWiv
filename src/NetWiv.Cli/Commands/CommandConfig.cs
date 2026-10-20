@@ -6,6 +6,22 @@ namespace NetWiv.Cli;
 
 internal static class CommandConfig
 {
+    internal static string? BlazorMode(string? value) => value switch
+    {
+        null => null,
+        _ when value.Equals("Hybrid", StringComparison.OrdinalIgnoreCase) => "Hybrid",
+        _ when value.Equals("WebAssembly", StringComparison.OrdinalIgnoreCase) => "WebAssembly",
+        _ => throw new ArgumentException("--blazor-mode must be Hybrid or WebAssembly.")
+    };
+
+    internal static void ValidateBlazorAot(bool aot, string? mode, bool experimental)
+    {
+        if (experimental && (!aot || mode != "Hybrid"))
+            throw new ArgumentException("--experimental-blazor-aot requires --aot and explicit --blazor-mode Hybrid.");
+        if (aot && mode == "Hybrid" && !experimental)
+            throw new ArgumentException("Hybrid NativeAOT requires --experimental-blazor-aot.");
+    }
+
     public static (ConfigDocument Config, Build.Execution.BuildTarget Target) Load(CommandArguments arguments, string workingDirectory)
     {
         var overlays = arguments.TakeOptions("--config", "-c");

@@ -13,11 +13,18 @@ and `SHA256SUMS` from its assets. Verify the ZIP hash before extracting it
 on Windows use `Get-FileHash -Algorithm SHA256` and compare the hash).
 The archive contains:
 
-- `packages/`: Core, Hosting, Generators, Build, Desktop, CLI and managed plugin
+- `packages/`: Core, Hosting, optional BlazorHybrid, Generators, Build, Desktop, CLI and managed plugin
   `.nupkg` files at the same version. Desktop includes Windows x64, Linux x64 and
   macOS arm64 native libraries.
 - License texts, notices and pinned upstream dependency manifests.
 - `SOURCE.txt` with the source commit and `SHA256SUMS` for the extracted files.
+
+`NetWiv.BlazorHybrid` is an optional Windows integration supporting managed
+execution by default and explicitly opted-in experimental NativeAOT Hybrid hosting. Its shared Razor
+UI can also use WebAssembly; that build excludes the Hybrid dependency.
+Other applications do not acquire the Microsoft
+WebView renderer through the ordinary NetWiv packages. See
+[Blazor Hybrid](blazor-hybrid.md) for the mode switch and validation limits.
 
 Use the extracted `packages` directory as a local feed. For example in PowerShell:
 
@@ -66,7 +73,7 @@ Ordinary branch pushes and PRs run CI without creating a Release.
 tagged commit. Each platform builds its own native library and must pass tests
 and NativeAOT validation before exporting native inputs. A packaging job then
 collects those exact files and runs `scripts/pack-integration.ps1`, including
-Hosting and every managed plugin. The bundle validator checks package versions,
+Hosting, optional BlazorHybrid and every managed plugin. The bundle validator checks package versions,
 the expected package set, license notices and all four native payload files
 against the CI inputs. Five fresh consumer jobs reuse that single bundle:
 Linux x64 with SDK/runtime 8, 9 and 10, plus Windows x64 and macOS arm64 with

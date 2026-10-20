@@ -17,4 +17,12 @@ public sealed record RuntimeContext(
     string? IsolationProtocol = null,
     Func<AssetRequest, ValueTask<AssetResponse>>? InvokeProtocol = null,
     IReadOnlyList<string>? UriSchemeProtocols = null,
-    Func<AssetRequest, ValueTask<AssetResponse?>>? ResolveUriScheme = null);
+    Func<AssetRequest, ValueTask<AssetResponse?>>? ResolveUriScheme = null)
+{
+    /// <summary>
+    /// Applies the application's configured response headers and CSP to bundled content
+    /// supplied by a runtime integration. Apply once before returning that content;
+    /// responses from ResolveAsset already include this policy.
+    /// </summary>
+    public Func<AssetRequest, AssetResponse, AssetResponse>? ApplyAssetPolicy { get; init; }
+}

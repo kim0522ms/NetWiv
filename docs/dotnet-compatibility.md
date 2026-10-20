@@ -20,7 +20,11 @@ package set for .NET 8/9 applications.
   custom apps control their own target and runtime roll-forward policy.
 - A generated desktop backend defaults to .NET 8. To publish with the .NET 9 or
   10 NativeAOT compiler, change its `TargetFramework` to `net9.0` or `net10.0`.
-  The optional Blazor frontend uses the selected SDK's template target.
+  The `blazor` WebAssembly starter uses the selected SDK's template target.
+  The separate `blazor-hybrid` starter targets .NET 8 and pins its Microsoft
+  component packages to 8.0.32. `NetWiv.BlazorHybrid` acceptance currently covers
+  Windows x64/.NET 8; the general SDK 9/10 checks below do not establish Hybrid
+  acceptance. See [Hybrid dependency and AOT limits](blazor-hybrid.md).
 - NativeAOT applications still need no separately installed .NET runtime on an
   end user's machine. OS requirements and the native WebView adapter are
   unchanged; macOS still requires 12 or later.

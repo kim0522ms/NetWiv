@@ -43,7 +43,7 @@ separately below and do not contribute to those core counts.
 ## Desktop plugins and extensions
 
 Mobile targets and the updater runtime remain **Not implemented and excluded from project work scope**. Expansion of distribution notarization is also excluded. These are not deferred milestones; existing signing/packaging support is separate.
-The following feature groups cover official desktop plugins outside the core npm inventory. They do not enumerate every method of each plugin. Partial implementations do not count as full compatibility.
+The following feature groups cover official desktop plugins and NetWiv extensions outside the core npm inventory. They do not enumerate every method of each plugin. Partial implementations do not count as full compatibility.
 
 | Feature ID | Feature | Status | Scope and alternatives |
 | --- | --- | --- | --- |
@@ -73,6 +73,8 @@ The following feature groups cover official desktop plugins outside the core npm
 | EXT-WEBSOCKET | WebSocket client | **Planned** | `NetWiv.Plugin.Websocket` implements official guest `connect`/`send`, text/binary/close and Channel reception. Local echo and reload cleanup checks passed. Ping/Pong and some buffer/frame options are explicitly unsupported; TLS and upstream comparison remain incomplete. |
 | EXT-WINDOW-STATE | Window-state persistence and restoration | **Partial** | Official JS commands, JSON persistence, per-flag restoration, monitor checks, automatic startup restoration and normal-shutdown persistence are implemented. Maximized-window shutdown and restoration in a new process were verified on Windows/Linux X11. macOS save/relaunch restoration, forced-exit durability and full upstream equivalence remain unverified. Wayland absolute position restoration is outside the native baseline. |
 | EXT-MAC | macOS runtime | **Partial** | WKWebView/AppKit, NativeAOT and app/DMG support; hosted integration and package-consumer checks passed on arm64, with selected physical Apple Silicon GUI checks. Minimum-OS acceptance and full conformance remain unverified. See [macOS](macos.md). |
+| EXT-BLAZOR-HYBRID | Managed Razor UI hosting | **Implemented** | Optional `NetWiv.BlazorHybrid` defaults to Microsoft's managed WebView services on Windows x64 via `AddNetWivBlazorHybrid()`. Standard component and JS-invokable discovery do not require the experimental registry. Selected rendering, forms, command IPC, interop, lifecycle and managed NetCoreDbg checks passed. Rider/Visual Studio UI acceptance, Hot Reload, arbitrary component libraries and other platforms remain unverified. See [Blazor Hybrid](blazor-hybrid.md). |
+| EXT-BLAZOR-HYBRID-AOT | NativeAOT Razor UI hosting | **Experimental** | Explicit `AddNetWivBlazorHybridAot(...)` and `NetWivBlazorExperimentalAot=true` opt-in. Requires static component, generated JSON and callback registration. Focused Windows native rendering/interop/lifecycle checks pass, but routing, streams, custom events and broader component-library support are incomplete and upstream AOT warnings remain. Not a full Blazor AOT compatibility claim. See [AOT research](blazor-hybrid-aot-research.md). |
 | EXT-MOBILE | Android and iOS runtimes | **Not implemented** | Excluded from project work scope; not deferred. |
 
 This is an implementation inventory, not a catalog of fully validated installations.

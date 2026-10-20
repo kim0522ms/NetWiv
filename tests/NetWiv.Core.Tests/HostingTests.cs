@@ -12,6 +12,28 @@ using NetWiv.Runtime;
 
 internal static class HostingTests
 {
+    internal static Task RuntimeFactoryUsesConfiguredServices()
+    {
+        var builder = NetWivApplication.CreateBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
+        var runtime = new BlockingRuntime(new());
+        builder.Services.AddSingleton(runtime);
+        IServiceProvider? received = null;
+        builder.Desktop.UseRuntime(services =>
+        {
+            received = services;
+            return services.GetRequiredService<BlockingRuntime>();
+        });
+        using var app = builder.Build();
+        Assert.True(ReferenceEquals(received, app.Services), "The runtime factory did not receive the host provider.");
+
+        Assert.Throws<InvalidOperationException>(() => new Builder().UseRuntime(_ => runtime).Build());
+        using var services = new ServiceCollection().BuildServiceProvider();
+        Assert.Throws<InvalidOperationException>(() => new Builder().UseServiceProvider(services).UseRuntime(_ => null!).Build());
+        using var direct = new Builder().UseRuntime(_ => throw new Exception("Superseded factory ran.")).UseRuntime(runtime).Build();
+        using var replaced = new Builder().UseRuntime(runtime).UseServiceProvider(services).UseRuntime(_ => runtime).Build();
+        return Task.CompletedTask;
+    }
+
     internal static async Task ServicesConfigurationAndLifecycle()
     {
         var events = new ConcurrentQueue<string>();

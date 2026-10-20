@@ -1,0 +1,95 @@
+(() => {
+  const send = message => window.__NETWIV_IPC__.postMessage(message);
+  const assert = (condition, message) => { if (!condition) throw new Error(message); };
+  const input = {
+    name: "input", count: 3,
+    items: [{ text: "first", value: "9223372036854775807" }, null, { text: "last", value: "-5" }],
+    optional: null
+  };
+  let instance;
+  let disposedInstance;
+  let jsDisposedInstance;
+  let ready = false;
+  let voidCalled = false;
+  let receivedDto = false;
+  window.proof = {
+    dto(value) {
+      assert(JSON.stringify(value) === JSON.stringify(input), "Generated DTO input differs.");
+      receivedDto = true;
+      return {
+        name: "reply", count: 7,
+        items: [{ text: "nested reply", value: "-9223372036854775808" }, null],
+        optional: { text: "optional reply", value: "42" }
+      };
+    },
+    voidCall() { voidCalled = true; return window; },
+    setInstances(live, disposed, jsDisposed) {
+      instance = live; disposedInstance = disposed; jsDisposedInstance = jsDisposed;
+    },
+    ready() { ready = true; }
+  };
+
+  async function waitFor(predicate) {
+    const limit = performance.now() + 15000;
+    while (!predicate()) {
+      if (performance.now() > limit) throw new Error("Browser assertion timed out.");
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+  }
+  async function checkDto(promise, prefix, count) {
+    const actual = await promise;
+    assert(actual.name === prefix + input.name && actual.count === count, "JSInvokable result mismatch.");
+    assert(actual.items[0].value === "9223372036854775807" &&
+      actual.items[1] === null && actual.optional === null, "Nested DTO/long strings changed.");
+  }
+  async function run() {
+    await waitFor(() => ready && receivedDto && document.getElementById("aot-click"));
+    assert(voidCalled && window.proof.moduleCalled, "Standard void/module interop failed.");
+    document.getElementById("aot-click").click();
+    await waitFor(() => document.querySelector("output")?.textContent === "count:1");
+    const text = document.getElementById("text");
+    text.value = "changed";
+    text.dispatchEvent(new Event("change", { bubbles: true }));
+    const checkbox = document.getElementById("checked");
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+    const selection = document.getElementById("selection");
+    selection.value = "second";
+    selection.dispatchEvent(new Event("change", { bubbles: true }));
+    await waitFor(() => document.getElementById("bindings").textContent === "changed|True|second");
+    await waitFor(() => document.getElementById("cascade").textContent === "child:changed");
+    assert(document.getElementById("cascade").getAttribute("data-same-scope") === "True", "Child component DI scope differs.");
+
+    const assembly = "NetWiv.BlazorHybrid.Aot.Tests";
+    await checkDto(DotNet.invokeMethodAsync(assembly, "StaticTask", input), "static-task:", 13);
+    await checkDto(DotNet.invokeMethodAsync(assembly, "StaticValueTask", input), "static-value-task:", 23);
+    assert(await DotNet.invokeMethodAsync(assembly, "StaticNumber", 21) === 42, "Static ValueTask<int> failed.");
+
+    await checkDto(instance.invokeMethodAsync("InstanceTask", input), "instance:task:", 33);
+    await checkDto(instance.invokeMethodAsync("InstanceValueTask", input), "instance:value-task:", 43);
+    assert(await instance.invokeMethodAsync("InstanceNumber", 41) === 42, "Instance ValueTask<int> failed.");
+    let disposedRejected = false;
+    try { await disposedInstance.invokeMethodAsync("InstanceNumber", 1); }
+    catch { disposedRejected = true; }
+    assert(disposedRejected, ".NET-disposed callback was accepted.");
+    jsDisposedInstance.dispose();
+    let jsDisposedRejected = false;
+    try { await jsDisposedInstance.invokeMethodAsync("InstanceNumber", 1); }
+    catch { jsDisposedRejected = true; }
+    assert(jsDisposedRejected, "JS-disposed callback was accepted.");
+
+    let rejected = false;
+    try { await DotNet.invokeMethodAsync(assembly, "NotRegistered", input); }
+    catch { rejected = true; }
+    assert(rejected, "An unregistered method was accepted.");
+    document.getElementById("result").textContent = "PASS";
+    send("__aot-proof:" + JSON.stringify({ passed: true, phase: Number(sessionStorage.getItem("netwiv-aot-phase") || 0) }));
+  }
+  function failed(error) {
+    document.getElementById("result").textContent = "FAIL";
+    send("__aot-proof:" + JSON.stringify({ passed: false, error: String(error) }));
+  }
+  window.addEventListener("error", event => failed(event.error || event.message));
+  window.addEventListener("unhandledrejection", event => failed(event.reason));
+  run().catch(failed);
+})();

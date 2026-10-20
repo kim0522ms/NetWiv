@@ -11,6 +11,12 @@ NetWiv contributors. Original upstream copyright notices are preserved:
 Copyright (c) 2017 - Present Tauri Apps Contributors
 Copyright 2019-2024 Tauri Programme within The Commons Conservancy.
 
+NetWiv.BlazorHybrid adapts ASP.NET Core render-batch serialization, DOM event readers,
+navigation and WebView renderer transport code:
+Copyright (c) .NET Foundation and Contributors
+MIT license; see licenses/dotnet-runtime-MIT.txt and
+src/NetWiv.BlazorHybrid/Aot/Hosting/README.md for source origins and adaptations.
+
 Third-party components retain their respective licenses and copyright
 notices. See THIRD-PARTY-NOTICES.md and the notices distributed with each
 component. This notice does not relicense third-party code.

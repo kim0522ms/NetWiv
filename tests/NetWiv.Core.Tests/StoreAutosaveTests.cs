@@ -67,6 +67,32 @@ internal static class StoreAutosaveTests
         await Until(() => ReadText(path) == "{}");
     }
 
+    internal static async Task PollingReadRetriesMissingFile()
+    {
+        using var fixture = new Fixture();
+        var path = fixture.PathFor("poll.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var attempts = 0;
+        await Until(() =>
+        {
+            if (++attempts == 2)
+            {
+                File.WriteAllText(path, "{\"answer\":42}");
+            }
+            return Read(path, "answer") == 42;
+        });
+        Assert.Equal(2, attempts);
+
+        // Only transient file availability errors are retried, not corrupt data
+        // or unrelated I/O failures.
+        File.WriteAllText(path, "invalid JSON");
+        try { await Until(() => Read(path, "answer") == 42); throw new Exception("Invalid JSON was accepted."); }
+        catch (JsonException) { }
+        var failure = new IOException("Non-transient test failure.");
+        try { await Until(() => throw failure); throw new Exception("An I/O failure was accepted."); }
+        catch (IOException error) when (ReferenceEquals(error, failure)) { }
+    }
+
     internal static async Task ExplicitSaveCancelsTimer()
     {
         using var fixture = new Fixture();
@@ -240,6 +266,9 @@ internal static class StoreAutosaveTests
         while (true)
         {
             try { if (condition()) return; }
+            // An asynchronous publication/replacement may make the path unavailable
+            // during a poll. Persistent absence still fails at the original deadline.
+            catch (FileNotFoundException) { }
             // ReplaceFile can briefly hold the destination while the poll opens it.
             catch (IOException error) when (OperatingSystem.IsWindows() && (error.HResult & 0xffff) is 32 or 33) { }
             await Task.Delay(5, timeout.Token);

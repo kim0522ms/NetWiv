@@ -208,6 +208,14 @@ jobs:
         timeout-minutes: 5
         run: ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe
 
+      - name: Windows experimental NativeAOT Blazor Hybrid
+        if: runner.os == 'Windows'
+        timeout-minutes: 5
+        run: |
+          dotnet publish tests/NetWiv.BlazorHybrid.Aot.Tests -c Release -r win-x64 -p:PublishAot=true -o artifacts/ci/blazor-aot
+          ./artifacts/ci/blazor-aot/NetWiv.BlazorHybrid.Aot.Tests.exe
+          ./artifacts/ci/blazor-aot/NetWiv.BlazorHybrid.Aot.Tests.exe --native-webview
+
       - name: Linux X11 NativeAOT WebView smoke
         if: runner.os == 'Linux'
         timeout-minutes: 5
@@ -344,6 +352,9 @@ jobs:
       - name: API tests
         if: matrix.group == 'contracts'
         run: dotnet test tests/NetWiv.Api.Tests -c Release
+      - name: Managed Blazor Hybrid transport and lifecycle tests
+        if: runner.os == 'Windows' && matrix.group == 'contracts'
+        run: dotnet run --project tests/NetWiv.BlazorHybrid.Tests -c Release
       - name: Shared JavaScript harness and license tests
         if: runner.os == 'Linux' && matrix.group == 'contracts'
         run: |

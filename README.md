@@ -49,7 +49,7 @@ review and revision.
 | | What you work with |
 | :--- | :--- |
 | **C# application layer** | A .NET SDK for commands, shared state, permissions and plugins. |
-| **Frontend choice** | Five starters: React, Vue, Svelte and Angular with TypeScript, and Blazor. |
+| **Frontend choice** | Six starters: React, Vue, Svelte and Angular with TypeScript, Blazor WebAssembly, and optional Windows Blazor Hybrid with managed hosting and an experimental NativeAOT option. |
 | **Generated bindings** | JavaScript calls and TypeScript declarations generated from C# commands. |
 | **Desktop frontend SDK** | `@netwiv/api` in `packages/api`, with mobile-only APIs excluded from its public facade. |
 | **Flexible deployment** | Self-contained .NET by default, installed-runtime deployment or optional NativeAOT. [Deployment modes](docs/deployment.md). |
@@ -156,6 +156,9 @@ See [frontend SDK usage and migration](docs/frontend-api.md).
 
 Explore the [template matrix](docs/template-coverage.md) or the
 [project creation options](docs/project-creation.md#creation-options).
+For Razor UI development and deployment, see the optional Windows
+[Blazor Hybrid host](docs/blazor-hybrid.md). Managed Hybrid is the default; experimental NativeAOT requires explicit opt-in.
+Its shared UI can also run in WebAssembly.
 
 ## Current status
 

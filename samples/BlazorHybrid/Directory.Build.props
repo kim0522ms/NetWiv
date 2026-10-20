@@ -1,0 +1,20 @@
+<Project>
+  <Import Project="../../Directory.Build.props" />
+  <PropertyGroup>
+    <NetWivBlazorMode Condition="'$(NetWivBlazorMode)' == ''">Hybrid</NetWivBlazorMode>
+  </PropertyGroup>
+  <PropertyGroup Condition="Exists('$(MSBuildProjectDirectory)/HybridUiRegistration.cs') and '$(NetWivBindingsOnly)' != 'true'">
+    <_BlazorHostFlavor>$(NetWivBlazorMode)</_BlazorHostFlavor>
+    <_BlazorHostFlavor Condition="'$(NetWivBlazorExperimentalAot)' == 'true'">HybridExperimentalAot</_BlazorHostFlavor>
+    <BaseOutputPath Condition="'$(ArtifactsPath)' == '' and '$(UseArtifactsOutput)' != 'true'">bin/$(_BlazorHostFlavor)/</BaseOutputPath>
+    <BaseIntermediateOutputPath Condition="'$(ArtifactsPath)' == '' and '$(UseArtifactsOutput)' != 'true'">obj/$(_BlazorHostFlavor)/</BaseIntermediateOutputPath>
+    <ArtifactsProjectName>$(MSBuildProjectName)-$(_BlazorHostFlavor)</ArtifactsProjectName>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin/**;obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+  <!-- The shared UI generates its client with a separate backend build. -->
+  <PropertyGroup Condition="'$(NetWivBindingsOnly)' == 'true'">
+    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj/bindings/$(Configuration)/</MSBuildProjectExtensionsPath>
+    <IntermediateOutputPath>$(MSBuildProjectDirectory)/obj/bindings/$(Configuration)/</IntermediateOutputPath>
+    <OutputPath>$(MSBuildProjectDirectory)/bin/bindings/$(Configuration)/</OutputPath>
+  </PropertyGroup>
+</Project>

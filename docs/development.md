@@ -184,11 +184,16 @@ Each group has its own checkout, environment and build outputs. Do not execute
 multiple groups concurrently in the same checkout: tests change process-wide
 settings and build referenced projects.
 
-Linux .NET 8 covers all five starter templates and all package-manager choices.
+Linux .NET 8 covers the original five starter templates and all package-manager choices.
 Other OS/SDK jobs generate the React base template, the Angular overlay and Blazor,
 and still check every manager and the full discovery list. Unselected
 template combinations are not claimed as passes on those hosts. The full
 generator suite runs on Windows, Linux and macOS ARM, plus SDK 9/10.
+The optional `blazor-hybrid` starter has a separate CLI generation regression;
+Windows runs the `NetWiv.BlazorHybrid.Tests` managed transport and lifecycle
+harness and publishes and executes `NetWiv.BlazorHybrid.Aot.Tests`, including
+its native WebView2 mode. These checks do not establish IDE or cross-platform
+Hybrid acceptance.
 API tests run on all three supported desktop RIDs. macOS x64 is excluded from
 both ordinary CI and tag releases; it is not a supported distribution target.
 
@@ -274,14 +279,14 @@ new package version and an unused output directory:
 # Output feed: artifacts/integration/0.1.0-local.1/packages
 ```
 
-This packages Core, Hosting, Generators, Build, Platform.Desktop, CLI and the managed plugins.
+This packages Core, Hosting, optional BlazorHybrid, Generators, Build, Platform.Desktop, CLI and the managed plugins.
 It refuses an existing output directory and does
 not publish to a remote feed. Use a new version for changed contents to avoid
 NuGet cache collisions. Supply the resulting `packages` directory and version
 to application developers; a fresh clone does not contain a prebuilt feed.
 
 The direct `dotnet new` React template package is a separate delivery path.
-The integration script's CLI already includes `netwiv new` with all 18 choices.
+The integration script's CLI includes `netwiv new` with all six starter choices.
 
 ## Release validation
 

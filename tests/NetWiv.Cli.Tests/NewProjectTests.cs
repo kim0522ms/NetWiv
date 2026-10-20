@@ -4,6 +4,123 @@ using NetWiv.Cli;
 
 internal static class NewProjectTests
 {
+    internal static async Task BlazorHybrid()
+    {
+        var root = Directory.CreateTempSubdirectory("netwiv-hybrid-template-").FullName;
+        try
+        {
+            var destination = Path.Combine(root, "output with spaces");
+            var result = await Run(["new", "Example", "-t", "blazor-hybrid", "-o", destination,
+                "--identifier", "com.example.hybrid"], root);
+            Check(result.Code == 0, result.Output + result.Error);
+            var config = JsonNode.Parse(File.ReadAllText(Path.Combine(destination, "src-netwiv/netwiv.conf.json")))!;
+            Check(config["identifier"]!.GetValue<string>() == "com.example.hybrid" &&
+                config["build"]!["dotnetProject"]!.GetValue<string>() == "Example.csproj",
+                "Hybrid application metadata was not personalized.");
+            var backend = XDocument.Load(Path.Combine(destination, "src-netwiv/Example.csproj"));
+            var hybrid = backend.Descendants("PackageReference").Single(item => (string?)item.Attribute("Include") == "NetWiv.BlazorHybrid");
+            Check(hybrid.Parent!.Attribute("Condition")!.Value.Contains("NetWivBlazorMode", StringComparison.Ordinal),
+                "Hybrid dependency is unconditional.");
+            Check(backend.Descendants("PackageReference").All(item => (string?)item.Attribute("Version") == CliApp.Version),
+                "Generated NetWiv package versions differ from the CLI.");
+            Check(!backend.Descendants("Import").Any() && !backend.ToString().Contains("../../../src/", StringComparison.Ordinal),
+                "Generated application depends on framework source paths.");
+            var program = File.ReadAllText(Path.Combine(destination, "src-netwiv/Program.cs"));
+            Check(program.Contains("\"com.example.hybrid\"", StringComparison.Ordinal), "Backend identifier differs from configuration.");
+            Check(program.Contains("#if NETWIV_BLAZOR_EXPERIMENTAL_AOT", StringComparison.Ordinal) &&
+                program.Contains("AddNetWivBlazorHybrid();", StringComparison.Ordinal) &&
+                program.Contains("IUiInteropReferenceFactory, BrowserUiInteropReferenceFactory", StringComparison.Ordinal) &&
+                File.ReadAllText(Path.Combine(destination, "src-netwiv/HybridUiRegistration.cs")).StartsWith("#if NETWIV_BLAZOR_EXPERIMENTAL_AOT", StringComparison.Ordinal),
+                "Managed Hybrid is not the default registration/reference path.");
+            Check(backend.Descendants("Error").Any(item => ((string?)item.Attribute("Condition"))?.Contains("PublishAot", StringComparison.Ordinal) == true),
+                "Hybrid NativeAOT is not guarded by an explicit experimental opt-in.");
+            Check(File.ReadAllText(Path.Combine(destination, "README.md")).Contains("--experimental-blazor-aot", StringComparison.Ordinal),
+                "Experimental Hybrid NativeAOT publishing guidance is missing.");
+            var props = XDocument.Load(Path.Combine(destination, "Directory.Build.props"));
+            Check(!props.Descendants("Import").Any() && props.Descendants("NetWivBlazorMode").Single().Value == "Hybrid",
+                "Generated mode configuration is not standalone or does not default to Hybrid.");
+            var shared = XDocument.Load(Path.Combine(destination, "Shared/Shared.csproj"));
+            Check(shared.Descendants("Exec").Single().Attribute("Command")!.Value.Contains("../src-netwiv/Example.csproj", StringComparison.Ordinal),
+                "Shared client generation still points at the source sample.");
+            Check(File.Exists(Path.Combine(destination, "Shared/Assets/vendor/@netwiv/api/core.js")) &&
+                File.Exists(Path.Combine(destination, "WebAssembly/wwwroot/index.html")) &&
+                File.Exists(Path.Combine(destination, "src-netwiv/wwwroot/index.html")),
+                "A frontend mode is missing its boot assets.");
+            var solution = File.ReadAllText(Path.Combine(destination, "Example.sln"));
+            Check(solution.Contains("src-netwiv\\Example.csproj", StringComparison.Ordinal) &&
+                solution.Contains("Shared\\Shared.csproj", StringComparison.Ordinal), "Hybrid solution is incomplete.");
+            Check(!Directory.EnumerateDirectories(destination, "*", SearchOption.AllDirectories)
+                .Any(path => Path.GetFileName(path) is "bin" or "obj"), "Template copied build output.");
+            Check(result.Output.Contains("dotnet run --project src-netwiv", StringComparison.Ordinal), "Hybrid startup guidance is missing.");
+            var hostPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (configuration, mode, aot, experimental, expectedMode, expectedFlavor, succeeds) in new[]
+            {
+                ("Debug", "", false, false, "Hybrid", "Hybrid", true),
+                ("Release", "", false, false, "Hybrid", "Hybrid", true),
+                ("Release", "Hybrid", true, false, "Hybrid", "Hybrid", false),
+                ("Release", "Hybrid", true, true, "Hybrid", "HybridExperimentalAot", true),
+                ("Release", "WebAssembly", true, false, "WebAssembly", "WebAssembly", true),
+            })
+            {
+                var arguments = new List<string>
+                {
+                    "msbuild", Path.Combine(destination, "src-netwiv/Example.csproj"), "-nologo", "-t:ValidateBlazorMode",
+                    "-getProperty:NetWivBlazorMode,BaseOutputPath,BaseIntermediateOutputPath,OutputPath,MSBuildProjectExtensionsPath,ArtifactsProjectName,JsonSerializerIsReflectionEnabledByDefault",
+                    "-p:Configuration=" + configuration, "-p:PublishAot=" + aot.ToString().ToLowerInvariant(),
+                    "-p:NetWivBlazorExperimentalAot=" + experimental.ToString().ToLowerInvariant(),
+                };
+                if (mode.Length != 0) arguments.Add("-p:NetWivBlazorMode=" + mode);
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                var validation = await NetWiv.Build.Execution.ProcessRunner.RunAsync(new(
+                    Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet", arguments, destination, CaptureOutput: true), timeout.Token);
+                Check((validation.ExitCode == 0) == succeeds, "Generated mode validation did not enforce the experimental boundary: " + validation.StandardOutput + validation.StandardError);
+                if (!succeeds)
+                {
+                    Check((validation.StandardOutput + validation.StandardError).Contains("NetWivBlazorExperimentalAot=true", StringComparison.Ordinal),
+                        "AOT rejection did not explain the opt-in: " + validation.StandardOutput + validation.StandardError);
+                    continue;
+                }
+                var values = JsonNode.Parse(validation.StandardOutput)!["Properties"]!;
+                Check(values["NetWivBlazorMode"]!.GetValue<string>() == expectedMode, "MSBuild selected a different default mode.");
+                Check(values["BaseOutputPath"]!.GetValue<string>().Replace('\\', '/').Contains("/" + expectedFlavor + "/", StringComparison.Ordinal) &&
+                    values["MSBuildProjectExtensionsPath"]!.GetValue<string>().Replace('\\', '/').Contains("/" + expectedFlavor + "/", StringComparison.Ordinal) &&
+                    values["ArtifactsProjectName"]!.GetValue<string>() == "Example-" + expectedFlavor,
+                    "Generated host modes share output, restore or CLI artifacts directories.");
+                Check(aot && !experimental || (values["JsonSerializerIsReflectionEnabledByDefault"]!.GetValue<string>() == "false") == experimental,
+                    "JSON reflection was disabled outside the experimental host or left enabled inside it.");
+                if (configuration == "Release") Check(hostPaths.Add(values["BaseOutputPath"]!.GetValue<string>()), "Release host modes reused an output root.");
+                var artifactsRoot = Path.Combine(destination, "target", "msbuild-artifacts");
+                var artifactArguments = arguments.Append("-p:ArtifactsPath=" + artifactsRoot).ToArray();
+                var artifactValidation = await NetWiv.Build.Execution.ProcessRunner.RunAsync(new(
+                    Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet", artifactArguments, destination, CaptureOutput: true), timeout.Token);
+                Check(artifactValidation.ExitCode == 0, "Artifacts mode evaluation failed: " + artifactValidation.StandardOutput + artifactValidation.StandardError);
+                var artifactValues = JsonNode.Parse(artifactValidation.StandardOutput)!["Properties"]!;
+                var normalizedRoot = Path.GetFullPath(artifactsRoot) + Path.DirectorySeparatorChar;
+                foreach (var property in new[] { "BaseOutputPath", "BaseIntermediateOutputPath", "OutputPath", "MSBuildProjectExtensionsPath" })
+                {
+                    var evaluatedPath = artifactValues[property]!.GetValue<string>()
+                        .Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+                    var actualPath = Path.GetFullPath(evaluatedPath, Path.Combine(destination, "src-netwiv"));
+                    Check(actualPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase) &&
+                        actualPath.Replace('\\', '/').Contains("/Example-" + expectedFlavor + "/", StringComparison.Ordinal),
+                        "Artifacts mode did not relocate and separate the generated host's " + property + ".");
+                }
+            }
+            var bindings = await NetWiv.Build.Execution.ProcessRunner.RunAsync(new(
+                Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet",
+                ["msbuild", Path.Combine(destination, "src-netwiv/Example.csproj"), "-nologo", "-t:ValidateBlazorMode",
+                    "-p:Configuration=Release", "-p:NetWivBindingsOnly=true", "-p:NetWivBlazorMode=WebAssembly",
+                    "-p:ArtifactsPath=" + Path.Combine(destination, "target", "msbuild-artifacts"),
+                    "-getProperty:OutputPath,MSBuildProjectExtensionsPath"], destination, CaptureOutput: true));
+            Check(bindings.ExitCode == 0, "Bindings-only evaluation failed: " + bindings.StandardOutput + bindings.StandardError);
+            var bindingValues = JsonNode.Parse(bindings.StandardOutput)!["Properties"]!;
+            foreach (var property in new[] { "OutputPath", "MSBuildProjectExtensionsPath" })
+                Check(bindingValues[property]!.GetValue<string>().Replace('\\', '/').Contains("/bindings/Release/", StringComparison.Ordinal),
+                    "Artifacts mode changed the isolated bindings-only " + property + ".");
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     internal static async Task BlazorConfigurationBuilds()
     {
         var root = Directory.CreateTempSubdirectory("netwiv-blazor-build-").FullName;
@@ -282,6 +399,7 @@ internal static class NewProjectTests
                 new[] { "new", "App", "--identifier", "bad identifier" }, new[] { "new", "App", "--source", "missing" },
                 new[] { "new", "App", "--bogus" }, new[] { "new", "App", "Extra" }, new[] { "new", "App", "-o" },
                 new[] { "new", "App", "--template", "blazor", "--manager", "npm" },
+                new[] { "new", "App", "--template", "blazor-hybrid", "--manager", "npm" },
                 new[] { "new", "App", "--template", "react", "--manager", "cargo" },
                 new[] { "new", "App", "--template", "yew" }, new[] { "new", "App", "--template", "react-ts" } })
             {

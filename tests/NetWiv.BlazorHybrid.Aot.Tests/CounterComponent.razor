@@ -1,0 +1,15 @@
+@namespace NetWiv.BlazorHybrid.Aot.Tests
+@using Microsoft.AspNetCore.Components.Web
+
+<button id="aot-click" @onclick="Click">@Label</button>
+<output id="count">count:@Count</output>
+<input id="text" @bind="Text" />
+<input id="checked" type="checkbox" @bind="Checked" />
+<select id="selection" @bind="Selection">
+    <option value="first">First</option>
+    <option value="second">Second</option>
+</select>
+<output id="bindings">@Text|@Checked|@Selection</output>
+<CascadingValue Value="Text">
+    <ProbeChild Label="child" />
+</CascadingValue>

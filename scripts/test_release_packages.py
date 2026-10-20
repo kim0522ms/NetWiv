@@ -62,7 +62,8 @@ class ReleasePackagesTests(unittest.TestCase):
             archive = output / 'NetWiv-0.1.0-beta.1-packages.zip'
             with zipfile.ZipFile(archive) as package:
                 names = package.namelist()
-                self.assertEqual(7, len([name for name in names if name.endswith('.nupkg')]))
+                self.assertEqual(8, len([name for name in names if name.endswith('.nupkg')]))
+                self.assertIn('packages/NetWiv.Blazor.0.1.0-beta.1.nupkg', names)
                 self.assertIn('README.md', names)
                 self.assertIn('LICENSE-APACHE', names)
                 self.assertIn('native/dependency-lock.json', names)
@@ -85,7 +86,7 @@ class ReleasePackagesTests(unittest.TestCase):
             self.assertFalse((root / 'output').exists())
 
     def test_rejects_incomplete_or_wrong_packages(self):
-        cases = [dict(missing='NetWiv.Hosting'), dict(missing='NOTICE'),
+        cases = [dict(missing='NetWiv.Hosting'), dict(missing='NetWiv.Blazor'), dict(missing='NOTICE'),
                  dict(missing='LICENSE-APACHE'), dict(version='0.1.0-dev'),
                  dict(corrupt=True)] + [dict(missing=native) for native in release.NATIVE_FILES]
         for case in cases:

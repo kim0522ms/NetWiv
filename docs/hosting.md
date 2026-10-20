@@ -105,6 +105,10 @@ extension methods written for that interface work unchanged.
 `NetWivApplication` exposes `Services`, `Configuration`, `Environment`,
 `Lifetime`, `Logger`, the underlying `App` and its `Handle`.
 
+An optional [Blazor Hybrid host](blazor-hybrid.md) uses the same root provider
+with a separate scope for each Razor page. It is managed-only on Windows;
+this does not change the Hosting package's own NativeAOT support.
+
 ## Commands and services
 
 ### Instance commands and constructor injection
@@ -292,7 +296,8 @@ then to a no-op factory.
   the container.
 - Instance command receivers must be registered in DI by their declaring class.
   Plugin registration does not automatically register a command receiver in DI.
-- `netwiv new` templates do not use the host yet.
+- The optional `blazor-hybrid` template uses Generic Host. Other existing
+  `netwiv new` templates retain their current startup model.
 
 The package-only Hosting sample keeps plugin lifecycle registration separate
 from DI command receivers and includes an opt-in embedded frontend smoke. It

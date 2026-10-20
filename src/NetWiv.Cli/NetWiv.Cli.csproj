@@ -23,6 +23,10 @@
     <None Include="../NetWiv.Build/ThirdParty/Json5/LICENSE.txt" Pack="true" PackagePath="licenses/Json5-LICENSE.txt" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="../../samples/BlazorHybrid/**/*"
+             Exclude="../../samples/BlazorHybrid/**/bin/**;../../samples/BlazorHybrid/**/obj/**;../../samples/BlazorHybrid/**/dist/**;../../samples/BlazorHybrid/**/target/**;../../samples/BlazorHybrid/**/.vs/**"
+             Link="templates/blazor-hybrid/%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" Pack="false" />
     <Content Include="..\..\templates\**\*" Exclude="../../templates/*.md;../../templates/.impeccable/**;../../templates/**/node_modules/**;../../templates/**/bin/**;../../templates/**/obj/**;../../templates/**/dist/**;../../templates/react-app/src/generated/**" Link="templates\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Pack="false" />
   </ItemGroup>
 </Project>

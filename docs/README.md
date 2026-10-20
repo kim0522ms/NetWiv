@@ -16,8 +16,9 @@ Official website: [netwiv.github.io](https://netwiv.github.io/).
 | [Linux](linux.md) | GTK/WebKit prerequisites, X11 and native Wayland, compositor and plugin limits |
 | [macOS](macos.md) | Mac prerequisites, main-thread startup, app/DMG bundles and signing limits |
 | [Project creation](project-creation.md) | CLI options, solution structure and development/build workflows |
-| [Frontend templates](template-coverage.md) | 18 choices and their toolchain requirements |
+| [Frontend templates](template-coverage.md) | Six choices and their toolchain requirements |
 | [React development](react-development.md) | Development server, C# restarts and binding updates |
+| [Blazor Hybrid](blazor-hybrid.md) | Optional managed Windows development host, shared Razor UI and WebAssembly deployment |
 
 ## APIs and security
 

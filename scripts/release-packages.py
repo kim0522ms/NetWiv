@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 
-BASE_PACKAGES = ['NetWiv.Core', 'NetWiv.Hosting', 'NetWiv.Generators',
+BASE_PACKAGES = ['NetWiv.Core', 'NetWiv.Hosting', 'NetWiv.Blazor', 'NetWiv.Generators',
                  'NetWiv.Build', 'NetWiv.Platform.Desktop', 'NetWiv.Cli']
 NATIVE_FILES = [Path(name) for name in [
     'win-x64/netwiv_native.dll', 'win-x64/WebView2Loader.dll',
@@ -76,7 +76,8 @@ def bundle(repository, feed, destination, version, revision):
         f'NetWiv {version} — experimental package bundle. Start with a toy project.\n\n'
         f'Source commit: `{revision}`\n\n'
         'Download and extract the ZIP, then follow its README to use `packages/` as a local NuGet feed. '
-        'Contains the SDK, Hosting, CLI, managed plugins and native libraries for Windows x64, Linux x64 and macOS arm64.\n\n'
+        'Contains the SDK, Hosting, CLI, managed plugins and native libraries for Windows x64, Linux x64 and macOS arm64. '
+        'The optional Blazor Hybrid package currently supports managed Windows execution only.\n\n'
         'These packages are not published to NuGet.org. CI validates source builds on all three supported platforms '
         'and runs packaged managed GUI/IPC and NativeAOT startup checks on all three desktop RIDs '
         '(.NET 8 everywhere, plus .NET 9/10 on Linux); this is not complete release acceptance, '

@@ -4,6 +4,49 @@ using NetWiv.Cli;
 
 internal static class NewProjectTests
 {
+    internal static async Task BlazorHybrid()
+    {
+        var root = Directory.CreateTempSubdirectory("netwiv-hybrid-template-").FullName;
+        try
+        {
+            var destination = Path.Combine(root, "output with spaces");
+            var result = await Run(["new", "Example", "-t", "blazor-hybrid", "-o", destination,
+                "--identifier", "com.example.hybrid"], root);
+            Check(result.Code == 0, result.Output + result.Error);
+            var config = JsonNode.Parse(File.ReadAllText(Path.Combine(destination, "src-netwiv/netwiv.conf.json")))!;
+            Check(config["identifier"]!.GetValue<string>() == "com.example.hybrid" &&
+                config["build"]!["dotnetProject"]!.GetValue<string>() == "Example.csproj",
+                "Hybrid application metadata was not personalized.");
+            var backend = XDocument.Load(Path.Combine(destination, "src-netwiv/Example.csproj"));
+            var hybrid = backend.Descendants("PackageReference").Single(item => (string?)item.Attribute("Include") == "NetWiv.Blazor");
+            Check(hybrid.Parent!.Attribute("Condition")!.Value.Contains("NetWivBlazorMode", StringComparison.Ordinal),
+                "Hybrid dependency is unconditional.");
+            Check(backend.Descendants("PackageReference").All(item => (string?)item.Attribute("Version") == CliApp.Version),
+                "Generated NetWiv package versions differ from the CLI.");
+            Check(!backend.Descendants("Import").Any() && !backend.ToString().Contains("../../../src/", StringComparison.Ordinal),
+                "Generated application depends on framework source paths.");
+            var program = File.ReadAllText(Path.Combine(destination, "src-netwiv/Program.cs"));
+            Check(program.Contains("\"com.example.hybrid\"", StringComparison.Ordinal), "Backend identifier differs from configuration.");
+            var props = XDocument.Load(Path.Combine(destination, "Directory.Build.props"));
+            Check(!props.Descendants("Import").Any() && props.Descendants("NetWivBlazorMode").Any(item => item.Value == "WebAssembly"),
+                "Generated mode configuration is not standalone.");
+            var shared = XDocument.Load(Path.Combine(destination, "Shared/Shared.csproj"));
+            Check(shared.Descendants("Exec").Single().Attribute("Command")!.Value.Contains("../src-netwiv/Example.csproj", StringComparison.Ordinal),
+                "Shared client generation still points at the source sample.");
+            Check(File.Exists(Path.Combine(destination, "Shared/Assets/vendor/@netwiv/api/core.js")) &&
+                File.Exists(Path.Combine(destination, "WebAssembly/wwwroot/index.html")) &&
+                File.Exists(Path.Combine(destination, "src-netwiv/wwwroot/index.html")),
+                "A frontend mode is missing its boot assets.");
+            var solution = File.ReadAllText(Path.Combine(destination, "Example.sln"));
+            Check(solution.Contains("src-netwiv\\Example.csproj", StringComparison.Ordinal) &&
+                solution.Contains("Shared\\Shared.csproj", StringComparison.Ordinal), "Hybrid solution is incomplete.");
+            Check(!Directory.EnumerateDirectories(destination, "*", SearchOption.AllDirectories)
+                .Any(path => Path.GetFileName(path) is "bin" or "obj"), "Template copied build output.");
+            Check(result.Output.Contains("dotnet run --project src-netwiv", StringComparison.Ordinal), "Hybrid startup guidance is missing.");
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     internal static async Task BlazorConfigurationBuilds()
     {
         var root = Directory.CreateTempSubdirectory("netwiv-blazor-build-").FullName;
@@ -282,6 +325,7 @@ internal static class NewProjectTests
                 new[] { "new", "App", "--identifier", "bad identifier" }, new[] { "new", "App", "--source", "missing" },
                 new[] { "new", "App", "--bogus" }, new[] { "new", "App", "Extra" }, new[] { "new", "App", "-o" },
                 new[] { "new", "App", "--template", "blazor", "--manager", "npm" },
+                new[] { "new", "App", "--template", "blazor-hybrid", "--manager", "npm" },
                 new[] { "new", "App", "--template", "react", "--manager", "cargo" },
                 new[] { "new", "App", "--template", "yew" }, new[] { "new", "App", "--template", "react-ts" } })
             {

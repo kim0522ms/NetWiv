@@ -19,20 +19,21 @@ internal static class NewCommand
         {
             arguments.EnsureEmpty();
             await output.WriteLineAsync("TypeScript: " + string.Join(", ", JavaScriptTemplates.Select(name => name == "react" ? "react (default)" : name)));
-            await output.WriteLineAsync(".NET frontend: blazor");
+            await output.WriteLineAsync(".NET frontend: blazor, blazor-hybrid (Windows development; WebAssembly deployment)");
             await output.WriteLineAsync("Managers: npm, pnpm, yarn, bun, deno (TypeScript); dotnet (Blazor)");
             return 0;
         }
         var template = arguments.TakeOption("--template", "-t") ?? "react";
-        var manager = arguments.TakeOption("--manager", "-m") ?? (template == "blazor" ? "dotnet" : "npm");
+        var dotnetFrontend = template is "blazor" or "blazor-hybrid";
+        var manager = arguments.TakeOption("--manager", "-m") ?? (dotnetFrontend ? "dotnet" : "npm");
         var outputOption = arguments.TakeOption("--output", "-o");
         var identifierOption = arguments.TakeOption("--identifier");
         var sourceOption = arguments.TakeOption("--source");
         var name = arguments.TakePositional() ?? throw new ArgumentException("A project name is required. " + Usage);
         arguments.EnsureEmpty();
-        if (!JavaScriptTemplates.Contains(template, StringComparer.Ordinal) && template != "blazor")
+        if (!JavaScriptTemplates.Contains(template, StringComparer.Ordinal) && !dotnetFrontend)
             throw new ArgumentException($"Unknown template '{template}'. Run `netwiv new --list`.");
-        if (template == "blazor" ? manager != "dotnet" : manager is not ("npm" or "pnpm" or "yarn" or "bun" or "deno"))
+        if (dotnetFrontend ? manager != "dotnet" : manager is not ("npm" or "pnpm" or "yarn" or "bun" or "deno"))
             throw new ArgumentException($"Package manager '{manager}' is not supported for template '{template}'. Run `netwiv new --list`.");
         if (string.IsNullOrWhiteSpace(name) || !char.IsAsciiLetter(name[0]) || name.EndsWith('.') ||
             name.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not ('.' or '_' or '-')) ||
@@ -57,12 +58,17 @@ internal static class NewCommand
         {
             var hive = Path.Combine(staging, "hive");
             var project = Path.Combine(staging, "app");
-            await RunDotnet(["new", "install", templatePath, "--debug:custom-hive", hive], workingDirectory, token);
-            await RunDotnet(["new", "netwiv-react", "--debug:custom-hive", hive, "--name", name, "--output", project,
-                "--NetWivVersion", CliApp.Version], workingDirectory, token);
-            if (template == "blazor") await ApplyBlazorFrontendAsync(project, token);
-            else if (template != "react") ApplyFrontend(project, template);
-            ConfigureFrontend(project, template, manager);
+            if (template == "blazor-hybrid")
+                await BlazorHybridTemplate.CreateAsync(project, name, CliApp.Version, token);
+            else
+            {
+                await RunDotnet(["new", "install", templatePath, "--debug:custom-hive", hive], workingDirectory, token);
+                await RunDotnet(["new", "netwiv-react", "--debug:custom-hive", hive, "--name", name, "--output", project,
+                    "--NetWivVersion", CliApp.Version], workingDirectory, token);
+                if (template == "blazor") await ApplyBlazorFrontendAsync(project, token);
+                else if (template != "react") ApplyFrontend(project, template);
+                ConfigureFrontend(project, template, manager);
+            }
             var configPath = Path.Combine(project, "src-netwiv", "netwiv.conf.json");
             var config = JsonNode.Parse(await File.ReadAllTextAsync(configPath, token))!.AsObject();
             var originalIdentifier = config["identifier"]!.GetValue<string>();
@@ -114,6 +120,7 @@ internal static class NewCommand
         await output.WriteLineAsync(manager switch
         {
             "npm" => "  npm ci\n  npm run desktop:dev",
+            "dotnet" when template == "blazor-hybrid" => "  dotnet run --project src-netwiv",
             "dotnet" => "  dotnet tool restore\n  dotnet tool run netwiv -- dev -- --dev",
             _ => $"  {manager} install\n  {RunCommand(manager, "desktop:dev")}",
         });

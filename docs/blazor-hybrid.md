@@ -6,8 +6,10 @@ state, event dispatch and diffing; the WebView renders its DOM updates.
 Managed development provides a regular .NET debugging target for Razor handlers,
 codebehind and desktop commands in one process.
 
-The integration currently supports **Windows x64 with WebView2**. Linux and
-macOS integration is unverified and is explicitly rejected by this adapter.
+The adapter targets **Windows x64 with WebView2**, **Linux x64 with
+GTK3/WebKitGTK 4.1** on X11 or Wayland, and **macOS arm64 with WKWebView**.
+Use the platform prerequisites in [Linux](linux.md) and [macOS](macos.md).
+Platform availability and the validation boundary below are separate claims.
 The optional package reuses `Microsoft.AspNetCore.Components.WebView` 8.0.32;
 it does not implement another Razor renderer or copy the framework JavaScript.
 An optional **experimental NativeAOT host** owns the WebView transport,
@@ -48,7 +50,7 @@ rather than falling back to runtime discovery. Package consumers publishing
 NativeAOT must also set `NetWivBlazorExperimentalAot=true`.
 
 The [NativeAOT acceptance tests](../tests/NetWiv.BlazorHybrid.Aot.Tests/README.md)
-execute the product adapter, including real WebView2 rendering and document
+execute the product adapter, including native WebView rendering and document
 replacement. They do not establish compatibility with arbitrary component libraries.
 The experimental host checks that the loaded Components, Components.Web,
 JSInterop and WebView assemblies are all 8.0.32. Do not combine it with a newer
@@ -76,6 +78,11 @@ dotnet publish samples/BlazorHybrid/Desktop -c Release -r win-x64 -p:NetWivBlazo
 # Experimental: retains the limitations described below.
 dotnet publish samples/BlazorHybrid/Desktop -c Release -r win-x64 -p:NetWivBlazorExperimentalAot=true -p:PublishAot=true
 ```
+
+These publish examples use `win-x64`. Use `linux-x64` on Linux or `osx-arm64`
+on macOS and publish on the target OS, with its native compiler/linker tools
+when selecting NativeAOT. Linux execution needs a reachable X11 or Wayland
+session; `GDK_BACKEND=x11` or `GDK_BACKEND=wayland` selects the display backend.
 
 These are source-sample commands. For package consumers, use matching versions
 from the [local feed](integration-quickstart.md), including `NetWiv.BlazorHybrid` only
@@ -144,9 +151,20 @@ NetWiv's normal IPC policy.
 
 `WebviewLabel` must identify one existing initial webview. The adapter selects
 its bundled URL, leaving other webviews available for ordinary frontend use.
-`AppBaseUri` is the fixed browser-facing private Windows origin. It does not
-start an HTTP server. A component's forced navigation must remain within that
-origin.
+`AppBaseUri` is the browser-facing private origin selected for the current
+platform. Use this value when creating the Hybrid window rather than copying a
+URL from another platform. The adapter does not start an HTTP server. A
+component's forced navigation must remain within that origin.
+
+| Platform | `AppBaseUri` |
+| --- | --- |
+| Windows x64 | `http://netwiv-blazor.localhost/` |
+| Linux x64 and macOS arm64 | `netwiv-blazor://localhost/` |
+
+The Windows HTTP-shaped origin is Wry's mapping for the same private custom
+protocol. The native scheme is registered on Linux and macOS before the
+webview is created. An application must use the selected URI for navigation,
+resource URLs and origin comparisons.
 
 `HostPage` resolves relative to `AppContext.BaseDirectory`. Copy the host page
 and local assets into the build and publish outputs. Its minimum structure is:
@@ -229,6 +247,22 @@ Incoming messages must match the selected webview, actual browser origin and
 current document ID. Ordinary NetWiv messages continue through the normal IPC
 policy.
 
+The Hybrid bridge retires its transport when the host document receives
+`pagehide`. If the browser restores that document from its back/forward cache,
+`pageshow.persisted` triggers a full reload. Normal page attachment then creates
+a fresh UI scope and resets component state while backend singletons survive.
+This policy uses the reload path rather than restoring the old renderer.
+Blazor's internal routing retains the current document and scope. Core IPC
+transport restoration is a separate behavior.
+
+Linux authenticates the bridge against the current native main document before
+the adapter receives messages. Its native current custom-scheme URI supplies
+source authority, anchored to the committed origin, even when JavaScript reports
+an opaque origin. Provisional navigation retains the current document's binding
+and source snapshot so pending renderer and interop messages can complete.
+Committed replacement and close retire the binding. This transport is private;
+application commands continue to use `@netwiv/api`. See [native IPC](native-abi.md).
+
 Configured application response headers and CSP apply to the Hybrid host page
 and assets through Core's shared response policy. The existing isolation
 pattern is explicitly unsupported by this integration and is rejected before
@@ -290,7 +324,9 @@ experimental host.
 
 Keep upstream trimming and AOT diagnostics visible. The pinned component
 framework emits `IL2072` warnings for component metadata obtained through
-`object.GetType()`. The form sample also brings in `IL3050` paths in
+`object.GetType()`. Native publication also reports `IL3050` in JSInterop
+serializer and object-reference converter paths. The form sample includes
+additional `IL3050` paths in
 `BindConverter` and `System.Linq.Expressions`; normal publishing can summarize
 these as `IL2104`/`IL3053`. Use `-p:TrimmerSingleWarn=false` to inspect individual
 diagnostics.
@@ -308,7 +344,7 @@ Build and run `Debug` in `Hybrid` mode with matching source and portable PDBs.
 Open `samples/BlazorHybrid/Desktop/Desktop.csproj` as the startup application
 in Visual Studio or Rider and use a normal managed .NET launch configuration.
 Alternatively, start it with the first command above, then attach the managed
-.NET debugger to `NetWiv.BlazorHybrid.Desktop` rather than a WebView2 child
+.NET debugger to `NetWiv.BlazorHybrid.Desktop` rather than a WebView child
 process. Visual Studio provides **Debug → Attach to Process**; Rider provides
 **Run → Attach to Process**. See the
 [Visual Studio attachment guide](https://learn.microsoft.com/en-us/visualstudio/debugger/attach-to-running-processes-with-the-visual-studio-debugger).
@@ -324,8 +360,14 @@ WebView developer tools inspect JavaScript, the DOM and network requests. They
 are separate from the managed .NET debugger. WebAssembly mode executes Razor
 code in the browser and has a different debugging path. Source breakpoints,
 locals, watch expressions and stack inspection were exercised through
-NetCoreDbg in a managed Windows desktop run. Visual Studio/Rider UI acceptance,
-Hot Reload and cross-platform Hybrid acceptance remain unverified.
+NetCoreDbg in a managed Windows desktop run. Under Linux WSLg, a real DOM click
+hit a source breakpoint; stepping changed the component counter from 0 to 1,
+and both the application and debugger exited normally. Visual Studio/Rider UI
+acceptance and Hot Reload remain unverified. On macOS arm64,
+NetCoreDbg also bound a Razor source breakpoint, read the component's counter,
+stepped and resumed the application to normal exit. NetCoreDbg teardown crashed
+after the debuggee exited; successful application debugging does not resolve
+that debugger limitation.
 
 ## Validation boundary
 
@@ -334,7 +376,7 @@ and the managed adapter's page replacement, transport and asynchronous cleanup.
 `tests/NetWiv.BlazorHybrid.Aot.Tests` separately executes the product's registered
 host and typed interop with reflection JSON disabled. Its protocol tests include
 malformed messages, stale documents, bounded queues and retirement during a
-pending application callback. Its native WebView2 mode exercises actual Razor
+pending application callback. Its native WebView mode exercises actual Razor
 DOM events, interop, browser reload and disposal of both page scopes.
 
 On Windows, the default managed sample passed counter input, invalid/valid form
@@ -348,5 +390,15 @@ interactions, reload with a new UI scope and surviving backend state, and
 application close. Managed source breakpoints, locals, watch expressions,
 stack inspection and continuation were exercised with NetCoreDbg separately.
 The shared WebAssembly UI also has selected packaged NativeAOT desktop checks.
-These are selected scenarios, not full Razor-library, IDE or cross-platform
-acceptance.
+These are selected scenarios, not full Razor-library or IDE acceptance.
+
+The portable source harness covers native rendering, input events,
+DTO/object-reference interop, document replacement and async scope cleanup in
+the ordinary Microsoft managed host and experimental NativeAOT host. These
+selected scenarios passed on physical Windows x64 and macOS arm64, and on Linux
+x64 under WSLg with X11 and native Wayland. Its application-builder path also
+checks actual command IPC, protocol and postMessage transport, foreign-frame
+rejection and private-header filtering. Package-only acceptance is checked
+separately by the [release consumers](release-packages.md); source-host success
+alone does not establish it. Physical Linux, minimum-macOS, IDE debugger and
+arbitrary component-library acceptance remain separate validation boundaries.

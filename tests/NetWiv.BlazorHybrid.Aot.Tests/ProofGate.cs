@@ -9,6 +9,13 @@ internal static class ProofGate
 {
     internal const string Assembly = "NetWiv.BlazorHybrid.Aot.Tests";
 
+    internal static void AssertManagedHost()
+    {
+        Check(RuntimeFeature.IsDynamicCodeSupported && JsonSerializer.IsReflectionEnabledByDefault,
+            "The Microsoft managed host test requires PublishAot=false and JsonSerializerIsReflectionEnabledByDefault=true.");
+        Console.WriteLine("MODE Microsoft managed host; dynamic code and JSON reflection enabled");
+    }
+
     internal static void AssertRuntime(bool managed)
     {
         Check(!JsonSerializer.IsReflectionEnabledByDefault, "JSON reflection must remain disabled.");

@@ -10,7 +10,7 @@ $Destination = [IO.Path]::GetFullPath($Destination)
 
 # The external plugin remains a separate consumer assembly. Only framework
 # references become packages; the test-only fixture is never a published package.
-foreach ($name in @('NetWiv.Plugin.CommandFixture', 'NetWiv.Desktop.Smoke')) {
+foreach ($name in @('NetWiv.Plugin.CommandFixture', 'NetWiv.Desktop.Smoke', 'NetWiv.BlazorHybrid.Aot.Tests')) {
     $source = Join-Path $repository "tests/$name"
     $directory = Join-Path $Destination $name
     New-Item -ItemType Directory -Path $directory | Out-Null
@@ -45,6 +45,12 @@ foreach ($name in @('NetWiv.Plugin.CommandFixture', 'NetWiv.Desktop.Smoke')) {
             [void]$additionalPackages.AppendChild($package)
         }
         [void]$project.Project.AppendChild($additionalPackages)
+    }
+    if ($name -eq 'NetWiv.BlazorHybrid.Aot.Tests') {
+        # Keep the upstream fixture notice portable outside the source checkout.
+        $notice = $project.SelectSingleNode("//None[@Include='../../licenses/dotnet-runtime-MIT.txt']")
+        $notice.SetAttribute('Include', 'native-tests-MIT.txt')
+        Copy-Item -LiteralPath (Join-Path $repository 'licenses/dotnet-runtime-MIT.txt') -Destination (Join-Path $directory 'native-tests-MIT.txt')
     }
     # Evaluate MSBuild globs and metadata in the original project before moving
     # resources. Copy each resolved file and preserve its exact manifest name.

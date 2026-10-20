@@ -8,6 +8,8 @@ internal sealed class OriginProbe : IDisposable
     private readonly CancellationTokenSource _stop = new();
     private readonly Task _server;
     private readonly List<Task> _clients = [];
+    internal readonly TaskCompletionSource TopRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    internal readonly TaskCompletionSource InvokeStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
     internal readonly TaskCompletionSource<bool> RemoteDenied = new(TaskCreationOptions.RunContinuationsAsynchronously);
     internal string Url { get; }
 
@@ -32,6 +34,14 @@ internal sealed class OriginProbe : IDisposable
             string page = await http.GetStringAsync(server.Url);
             if (!page.Contains("netwiv-origin-probe", StringComparison.Ordinal))
                 throw new InvalidOperationException("Origin probe did not serve a request alongside an idle connection.");
+            if (server.TopRequested.Task.IsCompleted || server.InvokeStarted.Task.IsCompleted)
+                throw new InvalidOperationException("Origin probe completed a remote stage before its request.");
+            await http.GetStringAsync(server.Url + "/top");
+            await server.TopRequested.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            if (server.InvokeStarted.Task.IsCompleted)
+                throw new InvalidOperationException("Serving the remote page completed its invocation stage.");
+            await http.GetStringAsync(server.Url + "/invoking");
+            await server.InvokeStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
             await http.GetStringAsync(server.Url + "/result?denied=false");
             if (await server.RemoteDenied.Task.WaitAsync(TimeSpan.FromSeconds(5)))
                 throw new InvalidOperationException("Origin probe reported a failed denial as success.");
@@ -69,6 +79,8 @@ internal sealed class OriginProbe : IDisposable
                 string? line;
                 do { line = await reader.ReadLineAsync(_stop.Token); } while (!string.IsNullOrEmpty(line));
                 string route = request.Split(' ').ElementAtOrDefault(1) ?? "/";
+                if (route == "/top") TopRequested.TrySetResult();
+                if (route == "/invoking") InvokeStarted.TrySetResult();
                 if (route.StartsWith("/result?", StringComparison.Ordinal))
                     RemoteDenied.TrySetResult(route == "/result?denied=true");
                 string page = route.StartsWith("/top", StringComparison.Ordinal) ? TopPage : FramePage;
@@ -100,6 +112,7 @@ internal sealed class OriginProbe : IDisposable
     private const string TopPage = """
         <!doctype html><meta charset="utf-8"><h1>Remote origin check</h1><pre id="result">Testing…</pre><script>
         (async () => {
+          await fetch('/invoking');
           let denied = false;
           try { await window.__TAURI_INTERNALS__.invoke('sensitive'); }
           catch (error) { denied = String(error).includes('not allowed'); }

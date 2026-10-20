@@ -18,7 +18,7 @@ Official website: [netwiv.github.io](https://netwiv.github.io/).
 | [Project creation](project-creation.md) | CLI options, solution structure and development/build workflows |
 | [Frontend templates](template-coverage.md) | Six choices and their toolchain requirements |
 | [React development](react-development.md) | Development server, C# restarts and binding updates |
-| [Blazor Hybrid](blazor-hybrid.md) | Default managed Windows Razor hosting, experimental NativeAOT research and shared WebAssembly UI |
+| [Blazor Hybrid](blazor-hybrid.md) | Default managed desktop Razor hosting, experimental NativeAOT research and shared WebAssembly UI |
 | [Blazor Hybrid AOT future work](blazor-hybrid-aot-research.md) | Deferred research, library fork alternatives and acceptance gates |
 
 ## APIs and security

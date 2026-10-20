@@ -8,6 +8,12 @@ Command Line Tools; framework native builds also need Rust 1.95.0. Frontend
 builds require the toolchain selected by the template.
 WKWebView is provided by macOS.
 
+The optional [Blazor Hybrid host](blazor-hybrid.md) uses the same macOS arm64
+backend. `netwiv new MyApp --template blazor-hybrid` defaults to managed
+hosting; NativeAOT requires the separate experimental opt-in. Use `osx-arm64`
+for publishing. Hybrid availability does not establish macOS 12 or IDE debugger
+acceptance; see its validation boundary.
+
 | CPU | CLI target | .NET RID | Native asset |
 | --- | --- | --- | --- |
 | Apple Silicon | `aarch64-apple-darwin` | `osx-arm64` | `libnetwiv_native.dylib` |

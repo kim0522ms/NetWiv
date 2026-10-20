@@ -2710,6 +2710,7 @@ dependencies = [
  "tauri-utils",
  "tray-icon",
  "url",
+ "webkit2gtk",
  "window-vibrancy",
  "windows 0.61.3",
  "wry",

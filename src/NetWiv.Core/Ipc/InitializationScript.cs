@@ -51,7 +51,7 @@ internal static class InitializationScript
                 headers.set('Tauri-Callback', message.callback);
                 headers.set('Tauri-Error', message.error);
                 headers.set('Tauri-Invoke-Key', '{{invokeKey}}');
-                fetch(window.__TAURI_INTERNALS__.convertFileSrc(message.cmd, 'ipc'), {
+                (bridge.fetchIpc || fetch)(window.__TAURI_INTERNALS__.convertFileSrc(message.cmd, 'ipc'), {
                   method: 'POST', body: binary ? payload : JSON.stringify(payload, ipcReplacer), headers
                 }).then(async response => {
                   const callback = response.headers.get('Tauri-Response') === 'ok' ? message.callback : message.error;

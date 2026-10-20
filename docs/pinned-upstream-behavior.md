@@ -75,9 +75,20 @@ The `security.frame-origins` fixture uses unchanged public guest functions in
 local, trusted remote, untrusted remote and opaque sandbox documents. WebView2
 injects the bridge into child frames; each request is authorized using its
 browser-provided Origin. WebKitGTK exposes the pinned TAURI® bridge only in the
-main frame, on both X11 and Wayland. NetWiv follows this platform distinction.
+main frame, on both X11 and Wayland. NetWiv preserves this platform distinction.
 Tauri's manager marks its initialization scripts main-frame-only; wry 0.55.1
 documents that WebView2 ignores that flag and always injects into subframes.
+
+NetWiv additionally authenticates Linux bridge traffic with a capability bound
+to the current native main document. WebKitGTK's raw message callback does not
+identify the sending frame, so native code validates that binding before using
+the native current main-frame URI as source authority, anchored to the committed
+document origin. Provisional navigation retains the authenticated current document's
+binding and source snapshot; a committed replacement rotates the binding and
+close invalidates it. Raw `window.ipc` calls are rejected; supported
+`@netwiv/api` calls use the private authenticated bridge. Windows iframe
+availability and its native per-frame Origin checks are unchanged. See the
+[native transport contract](native-abi.md) for lifecycle and ABI details.
 
 The comparison includes successful local/trusted-window controls, denial of a
 separate restricted command, and spoofed origin fields in guest JSON. It is a

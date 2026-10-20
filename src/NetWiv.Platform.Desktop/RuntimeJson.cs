@@ -9,7 +9,8 @@ internal static class RuntimeJson
     {
         writer.WriteStartObject();
         writer.WriteString("initializationScript", context.InitializationScript);
-        writer.WriteBoolean("ipcProtocolEnabled", context.InvokeProtocol is not null);
+        writer.WriteBoolean("ipcProtocolEnabled", context.InvokeProtocol is not null &&
+            context.UriSchemeProtocols?.Contains("ipc", StringComparer.Ordinal) != true);
         writer.WriteBoolean("trackWebviewParents", true);
         writer.WriteString("localDataDirectory", context.LocalDataDirectory);
         writer.WriteString("appLocalDataDirectory", context.AppLocalDataDirectory);

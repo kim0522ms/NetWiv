@@ -7,9 +7,17 @@ internal static class Program
     {
         try
         {
-            ProofGate.AssertRuntime(args.Contains("--managed", StringComparer.Ordinal));
+            if (args.Contains("--hostless-ipc", StringComparer.Ordinal)) return HostlessIpcProof.Run();
+            if (args.Contains("--registered-ipc", StringComparer.Ordinal)) return RegisteredIpcProof.Run();
+            if (args.Contains("--transport-navigation", StringComparer.Ordinal)) return TransportNavigationProof.Run();
+            var managedHost = args.Contains("--managed-host", StringComparer.Ordinal);
+            var managed = managedHost || args.Contains("--managed", StringComparer.Ordinal);
+            if (managedHost && !args.Contains("--native-webview", StringComparer.Ordinal))
+                throw new ArgumentException("--managed-host requires --native-webview.");
+            if (managedHost) ProofGate.AssertManagedHost();
+            else ProofGate.AssertRuntime(managed);
             return args.Contains("--native-webview", StringComparer.Ordinal)
-                ? WindowsNativeProof.Run(args.Contains("--managed", StringComparer.Ordinal))
+                ? NativeWebViewProof.Run(managed, managedHost, args.Contains("--back-forward", StringComparer.Ordinal))
                 : ProtocolProof.RunAsync().GetAwaiter().GetResult();
         }
         catch (Exception error)

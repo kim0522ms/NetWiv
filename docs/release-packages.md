@@ -19,7 +19,7 @@ The archive contains:
 - License texts, notices and pinned upstream dependency manifests.
 - `SOURCE.txt` with the source commit and `SHA256SUMS` for the extracted files.
 
-`NetWiv.BlazorHybrid` is an optional Windows integration supporting managed
+`NetWiv.BlazorHybrid` is an optional Windows x64, Linux x64 and macOS arm64 integration supporting managed
 execution by default and explicitly opted-in experimental NativeAOT Hybrid hosting. Its shared Razor
 UI can also use WebAssembly; that build excludes the Hybrid dependency.
 Other applications do not acquire the Microsoft
@@ -87,6 +87,11 @@ windowless startup and configuration binding. The .NET 8 baseline jobs additiona
 publish and execute the default managed self-contained React app, checking its
 bundled runtime policy and GUI/IPC behavior. The macOS job also bundles and
 executes the managed `.app` in both deployment modes through the GUI/IPC smoke flow.
+The three .NET 8 baseline jobs also generate and publish a managed
+`blazor-hybrid` starter, then execute a package-only Hybrid fixture in the
+ordinary Microsoft managed host and experimental NativeAOT host. The fixture
+checks native DOM events, interop, reload and page-scope cleanup. Linux runs
+these checks in a nested X11 desktop; native Wayland needs separate validation.
 All five must pass before the draft Release job runs.
 See [SDK compatibility](dotnet-compatibility.md).
 

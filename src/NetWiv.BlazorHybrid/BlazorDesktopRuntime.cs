@@ -8,7 +8,7 @@ using NetWiv.Runtime;
 namespace NetWiv.BlazorHybrid;
 
 /// <summary>Hosts Blazor components using an existing NetWiv desktop runtime.</summary>
-/// <remarks>The supplied service provider remains owned by the caller. This adapter supports Windows execution.</remarks>
+/// <remarks>The supplied service provider remains owned by the caller. Managed hosting supports Windows, Linux and macOS.</remarks>
 public sealed class BlazorDesktopRuntime : IDesktopRuntime
 {
     internal const string Protocol = "netwiv-blazor";
@@ -46,8 +46,8 @@ public sealed class BlazorDesktopRuntime : IDesktopRuntime
     public void Run(RuntimeContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        if (!OperatingSystem.IsWindows())
-            throw new PlatformNotSupportedException("NetWiv Blazor Hybrid currently supports Windows execution.");
+        if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
+            throw new PlatformNotSupportedException("NetWiv Blazor Hybrid supports Windows, Linux and macOS execution.");
         if (context.IsolationProtocol is not null)
             throw new NotSupportedException("NetWiv Blazor Hybrid does not support the isolation security pattern.");
         lock (_gate)
@@ -131,10 +131,7 @@ public sealed class BlazorDesktopRuntime : IDesktopRuntime
         return result;
     }
 
-    private string CreateInitializationScript() =>
-        "if(window.__NETWIV_IPC__?.webviewLabel===" + JsonSerializer.Serialize(_options.WebviewLabel, BlazorJsonContext.Default.String) +
-        "&&location.origin===" + JsonSerializer.Serialize(_options.AppBaseUri.GetLeftPart(UriPartial.Authority), BlazorJsonContext.Default.String) +
-        "){" + BlazorBridge.Script + "}";
+    private string CreateInitializationScript() => BlazorBridge.GetInitializationScript(_options.WebviewLabel, _options.AppBaseUri);
 
     private Session? GetSession(ulong documentId)
     {
@@ -217,8 +214,9 @@ public sealed class BlazorDesktopRuntime : IDesktopRuntime
         Func<AssetRequest, ValueTask<AssetResponse?>>? fallback, Func<AssetRequest, AssetResponse, AssetResponse>? policy)
     {
         var uri = request.Uri;
-        if (uri.Scheme == Protocol && uri.Host == "localhost")
-            uri = new Uri(_options.AppBaseUri, uri.PathAndQuery.TrimStart('/'));
+        if (BlazorAppOrigin.Matches(uri, BlazorAppOrigin.Native))
+            // Concatenation preserves root paths beginning with // and escaped path/query bytes.
+            uri = new Uri(_options.AppBaseUri.GetLeftPart(UriPartial.Authority) + uri.PathAndQuery);
         if (!IsAppUri(uri)) return fallback is null ? null : await fallback(request);
         if (request.WebviewLabel != _options.WebviewLabel) return new AssetResponse(403, "text/plain", "Forbidden"u8.ToArray());
         var session = GetSession(request.DocumentId);
@@ -233,9 +231,7 @@ public sealed class BlazorDesktopRuntime : IDesktopRuntime
         });
     }
 
-    private bool IsAppUri(Uri uri) =>
-        uri.Scheme == _options.AppBaseUri.Scheme && uri.IdnHost == _options.AppBaseUri.IdnHost &&
-        uri.Port == _options.AppBaseUri.Port && string.IsNullOrEmpty(uri.UserInfo);
+    private bool IsAppUri(Uri uri) => BlazorAppOrigin.Matches(uri, _options.AppBaseUri);
 
     private bool IsCurrent(Session session)
     {

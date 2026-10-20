@@ -17,6 +17,7 @@ impl Shared {
         origin: String,
         window_label: String,
         document_id: Arc<AtomicU64>,
+        #[cfg(target_os = "linux")] ipc: Arc<std::sync::Mutex<super::ipc::DocumentIpc>>,
     ) -> Result<(), String> {
         self.webview_origins
             .lock()
@@ -27,6 +28,8 @@ impl Shared {
                     origin,
                     window_label,
                     document_id,
+                    #[cfg(target_os = "linux")]
+                    ipc,
                 },
             );
         Ok(())
@@ -34,7 +37,12 @@ impl Shared {
 
     pub(super) fn remove_webview_origin(&self, label: &str) {
         if let Ok(mut origins) = self.webview_origins.lock() {
-            origins.remove(label);
+            if let Some(document) = origins.remove(label) {
+                #[cfg(target_os = "linux")]
+                if let Ok(mut ipc) = document.ipc.lock() { ipc.invalidate(); }
+                #[cfg(not(target_os = "linux"))]
+                let _ = document;
+            }
         }
     }
 
@@ -58,11 +66,56 @@ impl Shared {
         Ok(())
     }
 
+    #[cfg(target_os = "linux")]
+    pub(super) fn request_ipc_asset(
+        &self,
+        webview_id: &str,
+        mut request: http::Request<Vec<u8>>,
+        responder: RequestAsyncResponder,
+    ) {
+        let authorized = self.webview_origins.lock().ok().and_then(|documents| {
+            let document = documents.get(webview_id)?;
+            let ipc = document.ipc.lock().ok()?;
+            let (epoch, source) = ipc.protocol_source(&request)?;
+            Some((epoch, source, document.origin.clone(), document.window_label.clone()))
+        });
+        // Browser preflights carry header names, not capability values.
+        // Handle them here; they never enter the managed command path.
+        if request.method() == http::Method::OPTIONS {
+            responder.respond(Response::builder().status(204)
+                .header("access-control-allow-origin", "*")
+                .header("access-control-allow-methods", "POST, OPTIONS")
+                .header("access-control-allow-headers", "*")
+                .body(Vec::new()).expect("static preflight is valid"));
+            return;
+        }
+        let Some((epoch, source, origin, window)) = authorized else {
+            responder.respond(Response::builder().status(403)
+                .body(Vec::new()).expect("static rejection is valid"));
+            return;
+        };
+        let Ok(source) = HeaderValue::try_from(source) else { return; };
+        request.headers_mut().insert(http::header::ORIGIN, source);
+        request.headers_mut().remove("netwiv-document-capability");
+        request.headers_mut().remove("netwiv-document-id");
+        self.dispatch_asset(webview_id, request, responder, Some((origin, window, epoch)));
+    }
+
     pub(super) fn request_asset(
         &self,
         webview_id: &str,
         request: http::Request<Vec<u8>>,
         responder: RequestAsyncResponder,
+    ) {
+        self.dispatch_asset(webview_id, request, responder, None);
+    }
+
+    fn dispatch_asset(
+        &self,
+        webview_id: &str,
+        request: http::Request<Vec<u8>>,
+        responder: RequestAsyncResponder,
+        provenance: Option<(String, String, u64)>,
     ) {
         let id = self.next_asset.fetch_add(1, Ordering::Relaxed);
         let headers: serde_json::Map<String, Value> = request
@@ -80,7 +133,7 @@ impl Shared {
         } else {
             return;
         }
-        let (window_origin, window_label, document_id) = self
+        let (window_origin, window_label, document_id) = provenance.unwrap_or_else(|| self
             .webview_origins
             .lock()
             .ok()
@@ -93,10 +146,11 @@ impl Shared {
                     )
                 })
             })
-            .unwrap_or_else(|| ("null".to_string(), String::new(), 0));
+            .unwrap_or_else(|| ("null".to_string(), String::new(), 0)));
         let payload = json!({"uri": request.uri().to_string(), "method": request.method().as_str(), "headers": headers, "windowOrigin": window_origin, "webviewLabel":webview_id, "windowLabel":window_label, "documentId":document_id});
         self.callback(CALLBACK_ASSET, id, &payload, request.body());
     }
+
 
     pub(crate) fn respond_asset(
         &self,
@@ -180,13 +234,21 @@ pub(super) fn bridge_script(
     } else {
         "linux"
     };
-    format!(
-        "(()=>{{const bridge=Object.freeze({{os:{},windowLabel:{},webviewLabel:{},protocolScheme:{},protocolIpc:{protocol_ipc},postMessage(message){{window.ipc.postMessage(typeof message==='string'?message:JSON.stringify(message));}}}});Object.defineProperty(globalThis,'__NETWIV_IPC__',{{value:bridge,configurable:false,writable:false}});}})();",
+    let transport = if cfg!(target_os = "linux") {
+        "postMessage:window.__NETWIV_DOCUMENT_TRANSPORT__.send,fetchIpc:window.__NETWIV_DOCUMENT_TRANSPORT__.fetchIpc"
+    } else {
+        "postMessage(message){window.ipc.postMessage(typeof message==='string'?message:JSON.stringify(message));}"
+    };
+    let bridge = format!(
+        "(()=>{{const bridge=Object.freeze({{os:{},windowLabel:{},webviewLabel:{},protocolScheme:{},protocolIpc:{protocol_ipc},{transport}}});Object.defineProperty(globalThis,'__NETWIV_IPC__',{{value:bridge,configurable:false,writable:false}});}})();",
         serde_json::to_string(os).unwrap(),
         serde_json::to_string(window).unwrap(),
         serde_json::to_string(webview).unwrap(),
         serde_json::to_string(if use_https_scheme { "https" } else { "http" }).unwrap()
-    )
+    );
+    #[cfg(target_os = "linux")]
+    let bridge = format!("{}({protocol_ipc});\n{bridge}", super::ipc::BOOTSTRAP);
+    bridge
 }
 
 pub(super) fn webview_origin(initial_url: &str, use_https_scheme: bool) -> String {

@@ -56,8 +56,8 @@ internal static class AotAssetTests
         return Task.CompletedTask;
     }
 
-    private static AssetRequest Request(string path, string origin = "http://netwiv-blazor.localhost/") =>
-        new(new Uri(new Uri(origin), path), "GET", new Dictionary<string, string>());
+    private static AssetRequest Request(string path, string? origin = null) =>
+        new(new Uri(origin is null ? new BlazorWebViewOptions().AppBaseUri : new Uri(origin), path), "GET", new Dictionary<string, string>());
 
     private sealed class BorrowedFiles(IFileProvider provider) : IFileProvider, IDisposable
     {

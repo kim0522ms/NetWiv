@@ -33,6 +33,7 @@ wry = { version = "=0.55.1", default-features = false, features = ["protocol", "
 [target.'cfg(target_os = "linux")'.dependencies]
 arboard = { version = "=3.6.1", features = ["wayland-data-control"] }
 gtk = "=0.18.2"
+webkit2gtk = "=2.0.2"
 rfd = { version = "=0.16.0", default-features = false, features = ["gtk3"] }
 muda = { version = "=0.20.0", default-features = false, features = ["gtk3"] }
 tao = { version = "=0.36.0", default-features = false, features = ["rwh_06", "x11", "dbus"] }

@@ -6,6 +6,8 @@ mod protocol;
 mod options;
 mod platform;
 #[cfg(target_os = "linux")]
+mod ipc;
+#[cfg(target_os = "linux")]
 mod dialogs;
 #[cfg(test)]
 mod tests;
@@ -64,6 +66,8 @@ struct ProtocolDocument {
     origin: String,
     window_label: String,
     document_id: Arc<AtomicU64>,
+    #[cfg(target_os = "linux")]
+    ipc: Arc<Mutex<ipc::DocumentIpc>>,
 }
 
 impl Shared {
@@ -119,6 +123,12 @@ impl Shared {
 }
 
 pub(crate) enum UserEvent {
+    #[cfg(target_os = "linux")]
+    ActivateIpc { label: String, document_id: u64 },
+    #[cfg(target_os = "linux")]
+    ResumeIpc { label: String, document_id: u64, navigation: u64 },
+    #[cfg(target_os = "linux")]
+    IpcNonce { label: String, document_id: u64, navigation: u64, failed_navigation: bool, nonce: String },
     CancelRequest { request_id: u64 },
     #[cfg(target_os = "linux")]
     DialogCompletion { request_id: u64, result: Result<Value, String> },
@@ -368,6 +378,12 @@ impl LocalRuntime {
         control_flow: &mut ControlFlow,
     ) -> Result<(), String> {
         match event {
+            #[cfg(target_os = "linux")]
+            UserEvent::ActivateIpc { label, document_id } => self.query_ipc_nonce(&label, document_id, None),
+            #[cfg(target_os = "linux")]
+            UserEvent::ResumeIpc { label, document_id, navigation } => self.query_ipc_nonce(&label, document_id, Some(navigation)),
+            #[cfg(target_os = "linux")]
+            UserEvent::IpcNonce { label, document_id, navigation, failed_navigation, nonce } => self.activate_ipc(&label, document_id, navigation, failed_navigation, &nonce),
             UserEvent::Submit {
                 request_id,
                 json,

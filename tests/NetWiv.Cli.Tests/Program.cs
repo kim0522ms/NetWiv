@@ -1,4 +1,4 @@
-using NetWiv.Build.Configuration;
+﻿using NetWiv.Build.Configuration;
 using NetWiv.Build.Execution;
 using NetWiv.Build.Packaging;
 using NetWiv.Cli;
@@ -158,11 +158,37 @@ var tests = new (string Name, Func<Task> Run)[]
     ("AOT dev reloads permissions and overlays and cleans up children", () => DevReloadTests.Run(true))
 };
 
+// Each group runs in a separate CI checkout/process: tests mutate environment
+// variables, current directories and referenced project outputs.
+var lifecycleNames = new HashSet<string>(StringComparer.Ordinal)
+{
+    "consumer publish managed self-contained and bundled execution",
+    "consumer publish framework-dependent and bundled execution",
+    "consumer publish NativeAOT embeds absent frontend output",
+    "managed dev without watching overrides features and rejects invalid names",
+    "managed dev reloads permissions and overlays and cleans up children",
+    "AOT dev reloads permissions and overlays and cleans up children"
+};
+if (lifecycleNames.Except(tests.Select(test => test.Name)).Any())
+    throw new InvalidOperationException("A lifecycle test was renamed without updating its CI group.");
 var failures = 0;
-var selected = args.Length == 0 ? tests : args.Length == 2 && args[0] is "--filter" or "--exclude"
-    ? tests.Where(test => test.Name.Contains(args[1], StringComparison.OrdinalIgnoreCase) == (args[0] == "--filter")).ToArray()
-    : throw new ArgumentException("Usage: NetWiv.Cli.Tests [--filter text | --exclude text]");
+var selected = args switch
+{
+    [] => tests,
+    ["--filter", var text] => tests.Where(test => test.Name.Contains(text, StringComparison.OrdinalIgnoreCase)).ToArray(),
+    ["--exclude", var text] => tests.Where(test => !test.Name.Contains(text, StringComparison.OrdinalIgnoreCase)).ToArray(),
+    ["--group", "contracts", "--exclude", var text] => tests.Where(test => !lifecycleNames.Contains(test.Name) && !test.Name.Contains(text, StringComparison.OrdinalIgnoreCase)).ToArray(),
+    ["--group" or "--list", "contracts"] => tests.Where(test => !lifecycleNames.Contains(test.Name)).ToArray(),
+    ["--group" or "--list", "lifecycle"] => tests.Where(test => lifecycleNames.Contains(test.Name)).ToArray(),
+    ["--list", "all"] => tests,
+    _ => throw new ArgumentException("Usage: NetWiv.Cli.Tests [--filter text | --exclude text | --group contracts|lifecycle [--exclude text (contracts only)] | --list all|contracts|lifecycle]")
+};
 if (selected.Length == 0) throw new ArgumentException("The test filter matched no cases.");
+if (args is ["--list", _])
+{
+    Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(selected.Select(test => test.Name)));
+    return 0;
+}
 foreach (var test in selected)
 {
     Console.WriteLine($"RUN {test.Name}");

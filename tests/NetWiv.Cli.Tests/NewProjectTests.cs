@@ -86,9 +86,16 @@ internal static class NewProjectTests
             };
             var listed = await Run(["new", "--list"], root);
             Check(listed.Code == 0, listed.Error);
-            foreach (var (template, evidence) in cases)
-            {
+            foreach (var (template, _) in cases)
                 Check(listed.Output.Contains(template, StringComparison.Ordinal), "The upstream template is missing from --list: " + template);
+            var matrix = Environment.GetEnvironmentVariable("NETWIV_TEST_TEMPLATE_MATRIX") ?? "full";
+            if (matrix is not ("full" or "representative")) throw new InvalidOperationException("Unknown template test matrix: " + matrix);
+            // Linux's baseline job covers every overlay. Other OS/SDK jobs still
+            // exercise JS, TS, Rust and Blazor generation and every manager below.
+            var selected = matrix == "full" ? cases : cases.Where(item => item.Name is "react" or "vanilla-ts" or "yew" or "blazor").ToArray();
+            Console.WriteLine($"Template matrix: {matrix} ({selected.Length}/{cases.Length} templates; all managers)");
+            foreach (var (template, evidence) in selected)
+            {
                 var destination = Path.Combine(root, template);
                 var result = await Run(["new", "Example", "--template", template, "--output", destination], root);
                 Check(result.Code == 0, result.Error);

@@ -151,8 +151,9 @@ The [Build and test workflow](../.github/workflows/ci.yml) runs on pushes to
 `README.md` and `AGENTS.md` skip automatic runs; manual dispatch always remains
 available. Pull requests always run change classification and the `CI required`
 check. PRs limited to those same paths skip the build jobs. Other paths, including
-READMEs under templates or source directories, require all four desktop jobs,
-the frontend API job and the .NET 9/10 compatibility jobs to succeed.
+READMEs under templates or source directories, require the desktop matrix, CLI
+groups, Windows installer job, frontend API job and .NET 9/10 compatibility jobs
+to succeed.
 Classification failures, cancelled builds and unexpected skips fail the required
 check.
 
@@ -164,14 +165,38 @@ requirements. Review approval is optional so a single maintainer can merge their
 own PRs.
 
 Windows Server 2025 x64, Ubuntu 24.04 x64, macOS 15 Apple Silicon (`macos-15`)
-and macOS 15 Intel (`macos-15-intel`)
-jobs independently build the native adapter and the .NET solution, then run
-Rust unit tests, managed Core/CLI tests, generator/API tests and platform
-build-tool script tests. Platform-independent JavaScript harness, inventory and
-license tests run once in the Linux job. A separate frontend API job builds the
-facade and tests its packed consumer exports, types and template snapshot parity.
-Core and CLI are executable test harnesses and must be
-run with `dotnet run`; `dotnet test` alone does not execute them.
+and macOS 15 Intel (`macos-15-intel`) retain independent native and NativeAOT
+execution. CI separates work that does not depend on the native build:
+
+| Job | Required coverage |
+| --- | --- |
+| Desktop, four RIDs | Rust build/tests, managed and AOT Core tests, native startup diagnostics and real WebView smoke; platform-specific dialog, isolation and sandbox scenarios |
+| CLI contracts, four RIDs | Configuration, hooks, templates, permissions, signing/packaging contracts, API and platform script tests |
+| CLI lifecycle, four RIDs | Real consumer publishing in managed/framework-dependent/AOT modes, mode-switch cleanup and managed/AOT development restarts |
+| Windows installers | Actual NSIS/MSI installation, upgrade and removal in both installation scopes on a dedicated runner |
+| Frontend | SDK runtime tests, isolated packed consumer types/exports and template builds |
+| SDK 9/10, Linux | Managed Core/CLI/API/generator coverage and executed NativeAOT Core tests |
+
+The CLI groups partition the complete test registry: every test belongs to
+exactly one group. `scripts/check-cli-groups.mjs` checks that their union equals
+the full registry, that they do not overlap and that unknown groups fail.
+Each group has its own checkout, environment and build outputs. Do not execute
+multiple groups concurrently in the same checkout: tests change process-wide
+settings and build referenced projects.
+
+Linux .NET 8 covers all 18 template overlays and all package-manager choices.
+Other OS/SDK jobs generate representative JavaScript, TypeScript, Rust and Blazor
+templates and still check every manager and the full discovery list. Unselected
+template combinations are not claimed as passes on those hosts. The full
+generator suite runs on Windows, Linux and macOS ARM, plus SDK 9/10; Intel macOS
+retains the generator file-output checks, while its native and AOT tests remain
+complete. API tests still run on all four desktop RIDs.
+
+The complete solution is compiled on Linux. Other desktop jobs build their
+required project graphs rather than unrelated samples and test projects.
+Platform-independent JavaScript harness, inventory and license tests run once
+in the Linux contracts job. Core and CLI are executable test harnesses and must
+be run with `dotnet run`; `dotnet test` alone does not execute them.
 
 The generator suite runs instance-command runtime scenarios in a non-parallel
 xUnit collection, separately from CPU-heavy Roslyn compilations. IPC dispatch
@@ -182,16 +207,15 @@ runtime scenarios retain their explicit
 concurrent-invocation checks. The same scenarios also run in the managed and
 NativeAOT Core harnesses.
 
-Each job publishes and executes the Core suite with NativeAOT, publishes the
+Each desktop job publishes and executes the Core suite with NativeAOT, publishes the
 NativeAOT desktop smoke host, checks incompatible native-library startup diagnostics
 and runs the automated WebView smoke scenario. Linux uses Xvfb with a nested
 X11/Xfce desktop and tray host. Both macOS jobs additionally run windowless
-startup and NativeAOT isolation IPC checks. A separate five-minute packaging
-step in each macOS job creates and executes an ad-hoc-signed Mach-O app fixture,
-validates its plist/resources, builds
-and verifies a DMG, rebuilds the app with the DMG's `/Applications` shortcut
-present, and checks signing failures using real macOS tools. This case is
-excluded from the remaining CLI step, so it runs exactly once. CLI logs include
+startup and NativeAOT isolation IPC checks. The macOS contracts groups retain
+a separate five-minute app/DMG step, excluded from their remaining tests. It
+creates and executes an ad-hoc-signed Mach-O app fixture, validate its plist/resources, build and verify a DMG, rebuild the app
+with the DMG's `/Applications` shortcut present, and check signing failures
+using real macOS tools. These cases run once per architecture. CLI logs include
 each test's start and elapsed time to make stalled cases identifiable.
 
 The desktop guest smoke handles initial module-load failures through the
@@ -199,14 +223,36 @@ preinstalled bridge. Its watchdog names each guest still waiting and its last
 functional startup stage; these fixed labels are assertion state, not retained
 reports. The full scenario and its 180-second deadline remain unchanged.
 
-Managed test steps reuse the solution build with `--no-build`. NativeAOT
+Core and CLI harnesses reuse their preceding builds with `--no-build`. NativeAOT
 publishes remain separate because they compile different executable targets;
-managed and NativeAOT execution both provide required coverage. Native and
-NuGet caches are separated by runner image and RID, with restore prefixes that
-reuse available dependencies after lock/project changes; normal build/restore
-commands still validate them. NuGet keys also include the pinned .NET SDK.
+managed and NativeAOT execution both provide required coverage. Native caches
+remain separated by runner image and RID. All managed validation
+jobs share the setup action and NuGet caches keyed by OS, architecture, exact SDK
+and project inputs, with restore prefixes for dependency reuse. Normal
+build/restore commands still validate their inputs.
 CI uses command exit codes and test assertions to determine success. It does not
 collect or upload separate validation reports or diagnostic archives.
+
+For a local comparison, use the same SDK version, native binaries, execution
+mode and dependency-cache state before and after the change. Start with clean
+project build outputs in isolated checkouts. Run each required command and check
+its exit status; measure elapsed time in the shell. CLI group commands are:
+
+```sh
+dotnet build tests/NetWiv.Cli.Tests -c Release
+node scripts/check-cli-groups.mjs
+dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build -- --group contracts
+dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build -- --group lifecycle
+```
+
+By default local template tests cover the full matrix. Set
+`NETWIV_TEST_TEMPLATE_MATRIX=representative` only when reproducing that CI scope;
+unknown values fail. Use separate checkouts to measure concurrent groups.
+Report the measured command scope, cold/warm cache distinction and excluded
+steps. A local parallel replay is not GitHub runner throughput or queue time.
+Do not run the Windows installer acceptance script on a normal working machine;
+it temporarily changes system runtime registration. No benchmark reports,
+environment inventories or measurement helpers belong in the repository or CI.
 
 The existing desktop-only ignored Rust test and optional external MIME corpus
 remain explicitly skipped in their suite output. Passing CI does not establish

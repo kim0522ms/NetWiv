@@ -138,6 +138,7 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("official store guest shares handles and persists JSON on explicit save", StorePluginTests.Persistence),
     ("store autosave validates options and supports default and immediate saves", StoreAutosaveTests.Options),
     ("store autosave debounces every supported mutation", StoreAutosaveTests.DebounceAndMutations),
+    ("store autosave polling retries missing files without hiding invalid data", StoreAutosaveTests.PollingReadRetriesMissingFile),
     ("store autosave explicit save cancels pending writes", StoreAutosaveTests.ExplicitSaveCancelsTimer),
     ("store autosave reload cancels pending writes and shutdown flush", StoreAutosaveTests.ReloadCancelsPendingWrites),
     ("store autosave failed reload preserves pending writes and shutdown flush", StoreAutosaveTests.FailedReloadKeepsPendingWrites),

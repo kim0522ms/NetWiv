@@ -75,6 +75,10 @@ internal static class NewCommand
                 .Replace(JsonValue.Create(originalIdentifier)!.ToJsonString(), JsonValue.Create(identifier)!.ToJsonString(), StringComparison.Ordinal)
                 .Replace("\"NetWiv + React\"", JsonValue.Create(name)!.ToJsonString(), StringComparison.Ordinal);
             await File.WriteAllTextAsync(programPath, program, token);
+            // The starter screen shows the app name as a literal; project names need no escaping.
+            foreach (var screen in new[] { "src/App.tsx", "src/App.vue", "src/App.svelte", "src/app.ts", "frontend/Pages/Home.razor" }
+                .Select(file => Path.Combine(project, file)).Where(File.Exists))
+                await File.WriteAllTextAsync(screen, (await File.ReadAllTextAsync(screen, token)).Replace("NetWiv app", name, StringComparison.Ordinal), token);
             var npmName = name.ToLowerInvariant();
             foreach (var file in new[] { "package.json", "package-lock.json" }.Where(file => File.Exists(Path.Combine(project, file))))
             {

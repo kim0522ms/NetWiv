@@ -11,7 +11,7 @@
     </header>
     <main class="split">
         <section class="call" aria-labelledby="heading">
-            <h1 id="heading">@(Bridge ? "Your window is running. Call the C# backend." : "This page is outside the NetWiv window.")</h1>
+            <h1 id="heading">Your frontend is ready. Call the C# backend.</h1>
             <form class="ask" @onsubmit="Greet" @onsubmit:preventDefault="true">
                 <label for="name">Name</label>
                 <div class="row">
@@ -24,7 +24,7 @@
                 @if (State == CallState.Failed)
                 {
                     <p class="message">C# did not answer</p>
-                    <p class="detail">@(Bridge ? "The greet command failed in C#. Greet is in src-netwiv/Program.cs." : "Start the app with netwiv dev so this page runs inside the NetWiv window.")<code>@Error</code></p>
+                    <p class="detail">In a browser tab, start the app with netwiv dev instead. In the window, the error below comes from Greet in src-netwiv/Program.cs.<code>@Error</code></p>
                 }
                 else
                 {
@@ -49,8 +49,7 @@
     private enum CallState { Idle, Calling, Answered, Failed }
 
     private IJSObjectReference? NetWiv;
-    private string AppName = "NetWiv app";
-    private bool Bridge = true;
+    private const string AppName = "NetWiv app";
     private string Name = "Blazor";
     private CallState State = CallState.Idle;
     private string Message = "No call yet";
@@ -64,17 +63,15 @@
         CallState.Calling => "Calling C#",
         CallState.Answered => $"Answered in {Ms} ms",
         CallState.Failed => "No answer",
-        _ => Bridge ? "Ready" : "Not in a NetWiv window",
+        _ => "No calls yet",
     };
-    private string StatusState => State == CallState.Idle && !Bridge ? "offline" : State.ToString().ToLowerInvariant();
+    private string StatusState => State.ToString().ToLowerInvariant();
     private string AnswerState => State == CallState.Calling ? (Count is null ? "idle" : "answered") : State.ToString().ToLowerInvariant();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
         NetWiv = await JS.InvokeAsync<IJSObjectReference>("import", "./netwiv.js");
-        try { AppName = await NetWiv.InvokeAsync<string>("name"); }
-        catch (JSException) { Bridge = false; }
         // Smoke tests open the window with ?smoke=1 and expect one automatic call.
         Smoke = new Uri(Navigation.Uri).Query.Contains("smoke", StringComparison.Ordinal);
         if (Smoke) await Greet();

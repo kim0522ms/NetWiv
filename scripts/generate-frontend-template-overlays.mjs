@@ -128,7 +128,7 @@ html, body { margin: 0; min-height: 100%; }
 .status::before { content: ""; width: 8px; height: 8px; background: var(--hair); }
 .status[data-state="calling"]::before { background: var(--mark-back); }
 .status[data-state="answered"]::before { background: var(--signal); }
-.status[data-state="failed"]::before, .status[data-state="offline"]::before { background: var(--muted); }
+.status[data-state="failed"]::before { background: var(--muted); }
 
 .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .call, .map { padding: clamp(28px, 6vh, 48px) clamp(20px, 4vw, 40px); }
@@ -168,7 +168,8 @@ h1 {
 }
 .answer[data-state="idle"] .message { color: var(--field-muted); font-weight: 500; }
 .landed { animation: land 360ms var(--ease); }
-@keyframes land { from { opacity: 0.35; transform: translateY(6px); filter: blur(2px); } }
+/* Only movement: if the WebView pauses animations, the text still reads. */
+@keyframes land { from { transform: translateY(6px); } }
 .count {
   display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
   margin: 0; padding-top: 12px; border-top: 1px solid var(--field-hair); font-size: 14px;
@@ -201,8 +202,7 @@ const mark = `<svg class="mark" viewBox="76 88 348 348" aria-hidden="true"><rect
 
 const copy = {
   app: 'NetWiv app',
-  heading: 'Your window is running. Call the C# backend.',
-  offlineHeading: 'This page is outside the NetWiv window.',
+  heading: 'Your frontend is ready. Call the C# backend.',
   label: 'Name',
   button: 'Call greet',
   calling: 'Calling…',
@@ -210,13 +210,11 @@ const copy = {
   pending: 'Waiting for C#…',
   count: 'Calls counted in C#',
   failed: 'C# did not answer',
-  hint: 'Start the app with netwiv dev so this page runs inside the NetWiv window.',
-  commandHint: 'The greet command failed in C#. Greet is in src-netwiv/Program.cs.',
+  hint: 'In a browser tab, start the app with netwiv dev instead. In the window, the error below comes from Greet in src-netwiv/Program.cs.',
   mapHeading: 'Make it yours',
 };
 const status = {
-  ready: 'Ready',
-  offline: 'Not in a NetWiv window',
+  ready: 'No calls yet',
   calling: 'Calling C#',
   answered: 'Answered in {ms} ms',
   failed: 'No answer',
@@ -236,6 +234,7 @@ const route = 'commands.greet → Commands.Greet';
 const pass = framework => `PASS: ${framework} form → generated C# → JSON`;
 const answered = expression => status.answered.replace('{ms}', expression);
 
+// `netwiv new` replaces the app name literal with the project name (see NewCommand.cs).
 // The file map is static markup, identical in every framework.
 const fileMap = (framework, indent) => files[framework].map(([name, text], i, all) =>
   `${indent}<li>${i === all.length - 1 ? `<strong>${name}</strong>` : `<code>${name}</code>`}<span>${text}</span></li>`).join('\n');
@@ -320,15 +319,13 @@ import './style.css';
 
 createRoot(document.getElementById('app')!).render(<App />);`,
   'src/App.tsx': `import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { getName } from '@netwiv/api/app';
 import { commands } from './generated/commands.js';
 
 type CallState = 'idle' | 'calling' | 'answered' | 'failed';
 const smoke = new URLSearchParams(location.search).has('smoke');
+const appName = '${copy.app}';
 
 export default function App() {
-  const [appName, setAppName] = useState('${copy.app}');
-  const [bridge, setBridge] = useState(true);
   const [name, setName] = useState('React');
   const [state, setState] = useState<CallState>('idle');
   const [message, setMessage] = useState('${copy.idle}');
@@ -338,7 +335,6 @@ export default function App() {
   const form = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    getName().then(setAppName, () => setBridge(false));
     // Smoke tests open the window with ?smoke=1 and expect one automatic call.
     if (smoke) form.current?.requestSubmit();
   }, []);
@@ -368,17 +364,17 @@ export default function App() {
   const statusText = state === 'calling' ? '${status.calling}'
     : state === 'answered' ? \`${answered('${ms}')}\`
     : state === 'failed' ? '${status.failed}'
-    : bridge ? '${status.ready}' : '${status.offline}';
+    : '${status.ready}';
 
   return (
     <div className="starter">
       <header className="bar">
         <span className="brand">${mark.replaceAll('class=', 'className=')}<span>{appName}</span></span>
-        <span className="status" data-state={state === 'idle' && !bridge ? 'offline' : state} aria-live="polite">{statusText}</span>
+        <span className="status" data-state={state} aria-live="polite">{statusText}</span>
       </header>
       <main className="split">
         <section className="call" aria-labelledby="heading">
-          <h1 id="heading">{bridge ? '${copy.heading}' : '${copy.offlineHeading}'}</h1>
+          <h1 id="heading">${copy.heading}</h1>
           <form className="ask" ref={form} onSubmit={greet}>
             <label htmlFor="name">${copy.label}</label>
             <div className="row">
@@ -391,7 +387,7 @@ export default function App() {
             {state === 'failed' ? (
               <>
                 <p className="message">${copy.failed}</p>
-                <p className="detail">{bridge ? '${copy.commandHint}' : '${copy.hint}'}<code>{error}</code></p>
+                <p className="detail">${copy.hint}<code>{error}</code></p>
               </>
             ) : (
               <>
@@ -431,14 +427,12 @@ import './style.css';
 createApp(App).mount('#app');`,
   'src/App.vue': `<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { getName } from '@netwiv/api/app';
 import { commands } from './generated/commands.js';
 
 type CallState = 'idle' | 'calling' | 'answered' | 'failed';
 const smoke = new URLSearchParams(location.search).has('smoke');
 
-const appName = ref('${copy.app}');
-const bridge = ref(true);
+const appName = '${copy.app}';
 const name = ref('Vue');
 const state = ref<CallState>('idle');
 const message = ref('${copy.idle}');
@@ -448,7 +442,6 @@ const error = ref('');
 const form = ref<HTMLFormElement>();
 
 onMounted(() => {
-  getName().then(value => (appName.value = value), () => (bridge.value = false));
   // Smoke tests open the window with ?smoke=1 and expect one automatic call.
   if (smoke) form.value?.requestSubmit();
 });
@@ -478,8 +471,7 @@ const statusText = computed(() =>
   state.value === 'calling' ? '${status.calling}'
     : state.value === 'answered' ? \`${answered('${ms.value}')}\`
     : state.value === 'failed' ? '${status.failed}'
-    : bridge.value ? '${status.ready}' : '${status.offline}');
-const statusState = computed(() => (state.value === 'idle' && !bridge.value ? 'offline' : state.value));
+    : '${status.ready}');
 const answerState = computed(() => (state.value === 'calling' ? (count.value === null ? 'idle' : 'answered') : state.value));
 </script>
 
@@ -487,11 +479,11 @@ const answerState = computed(() => (state.value === 'calling' ? (count.value ===
   <div class="starter">
     <header class="bar">
       <span class="brand">${mark}<span>{{ appName }}</span></span>
-      <span class="status" :data-state="statusState" aria-live="polite">{{ statusText }}</span>
+      <span class="status" :data-state="state" aria-live="polite">{{ statusText }}</span>
     </header>
     <main class="split">
       <section class="call" aria-labelledby="heading">
-        <h1 id="heading">{{ bridge ? '${copy.heading}' : '${copy.offlineHeading}' }}</h1>
+        <h1 id="heading">${copy.heading}</h1>
         <form ref="form" class="ask" @submit.prevent="greet">
           <label for="name">${copy.label}</label>
           <div class="row">
@@ -503,7 +495,7 @@ const answerState = computed(() => (state.value === 'calling' ? (count.value ===
           <p class="route">${route}</p>
           <template v-if="state === 'failed'">
             <p class="message">${copy.failed}</p>
-            <p class="detail">{{ bridge ? '${copy.commandHint}' : '${copy.hint}' }}<code>{{ error }}</code></p>
+            <p class="detail">${copy.hint}<code>{{ error }}</code></p>
           </template>
           <template v-else>
             <p :key="count ?? 0" :class="['message', { landed: count !== null }]">{{ state === 'calling' && count === null ? '${copy.pending}' : message }}</p>
@@ -538,14 +530,12 @@ import './style.css';
 mount(App, { target: document.getElementById('app')! });`,
   'src/App.svelte': `<script lang="ts">
 import { onMount } from 'svelte';
-import { getName } from '@netwiv/api/app';
 import { commands } from './generated/commands.js';
 
 type CallState = 'idle' | 'calling' | 'answered' | 'failed';
 const smoke = new URLSearchParams(location.search).has('smoke');
 
-let appName = $state('${copy.app}');
-let bridge = $state(true);
+const appName = '${copy.app}';
 let name = $state('Svelte');
 let callState = $state<CallState>('idle');
 let message = $state('${copy.idle}');
@@ -555,7 +545,6 @@ let error = $state('');
 let form = $state<HTMLFormElement>();
 
 onMount(() => {
-  getName().then(value => (appName = value), () => (bridge = false));
   // Smoke tests open the window with ?smoke=1 and expect one automatic call.
   if (smoke) form?.requestSubmit();
 });
@@ -585,19 +574,18 @@ async function greet(event: SubmitEvent) {
 const statusText = $derived(callState === 'calling' ? '${status.calling}'
   : callState === 'answered' ? \`${answered('${ms}')}\`
   : callState === 'failed' ? '${status.failed}'
-  : bridge ? '${status.ready}' : '${status.offline}');
-const statusState = $derived(callState === 'idle' && !bridge ? 'offline' : callState);
+  : '${status.ready}');
 const answerState = $derived(callState === 'calling' ? (count === null ? 'idle' : 'answered') : callState);
 </script>
 
 <div class="starter">
   <header class="bar">
     <span class="brand">${mark}<span>{appName}</span></span>
-    <span class="status" data-state={statusState} aria-live="polite">{statusText}</span>
+    <span class="status" data-state={callState} aria-live="polite">{statusText}</span>
   </header>
   <main class="split">
     <section class="call" aria-labelledby="heading">
-      <h1 id="heading">{bridge ? '${copy.heading}' : '${copy.offlineHeading}'}</h1>
+      <h1 id="heading">${copy.heading}</h1>
       <form class="ask" bind:this={form} onsubmit={greet}>
         <label for="name">${copy.label}</label>
         <div class="row">
@@ -609,7 +597,7 @@ const answerState = $derived(callState === 'calling' ? (count === null ? 'idle' 
         <p class="route">${route}</p>
         {#if callState === 'failed'}
           <p class="message">${copy.failed}</p>
-          <p class="detail">{bridge ? '${copy.commandHint}' : '${copy.hint}'}<code>{error}</code></p>
+          <p class="detail">${copy.hint}<code>{error}</code></p>
         {:else}
           {#key count}
             <p class="message" class:landed={count !== null}>{callState === 'calling' && count === null ? '${copy.pending}' : message}</p>
@@ -681,7 +669,6 @@ bootstrapApplication(App).catch(console.error);`,
   'src/style.css': style,
   'src/app.ts': `import { Component, ElementRef, computed, signal, viewChild, type AfterViewInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { getName } from '@netwiv/api/app';
 import { commands } from './generated/commands.js';
 
 type CallState = 'idle' | 'calling' | 'answered' | 'failed';
@@ -693,12 +680,12 @@ const smoke = new URLSearchParams(location.search).has('smoke');
   template: \`
     <div class="starter">
       <header class="bar">
-        <span class="brand">${mark}<span>{{ appName() }}</span></span>
-        <span class="status" [attr.data-state]="statusState()" aria-live="polite">{{ statusText() }}</span>
+        <span class="brand">${mark}<span>{{ appName }}</span></span>
+        <span class="status" [attr.data-state]="state()" aria-live="polite">{{ statusText() }}</span>
       </header>
       <main class="split">
         <section class="call" aria-labelledby="heading">
-          <h1 id="heading">{{ bridge() ? '${copy.heading}' : '${copy.offlineHeading}' }}</h1>
+          <h1 id="heading">${copy.heading}</h1>
           <form #form class="ask" (ngSubmit)="greet()">
             <label for="name">${copy.label}</label>
             <div class="row">
@@ -710,7 +697,7 @@ const smoke = new URLSearchParams(location.search).has('smoke');
             <p class="route">${route}</p>
             @if (state() === 'failed') {
               <p class="message">${copy.failed}</p>
-              <p class="detail">{{ bridge() ? '${copy.commandHint}' : '${copy.hint}' }}<code>{{ error() }}</code></p>
+              <p class="detail">${copy.hint}<code>{{ error() }}</code></p>
             } @else {
               @for (n of [count()]; track n) {
                 <p class="message" [class.landed]="n !== null">{{ state() === 'calling' && n === null ? '${copy.pending}' : message() }}</p>
@@ -729,8 +716,7 @@ ${fileMap('angular', '            ')}
     </div>\`,
 })
 export class App implements AfterViewInit {
-  readonly appName = signal('${copy.app}');
-  readonly bridge = signal(true);
+  readonly appName = '${copy.app}';
   name = 'Angular';
   readonly state = signal<CallState>('idle');
   readonly message = signal('${copy.idle}');
@@ -744,13 +730,11 @@ export class App implements AfterViewInit {
     return state === 'calling' ? '${status.calling}'
       : state === 'answered' ? \`${answered('${this.ms()}')}\`
       : state === 'failed' ? '${status.failed}'
-      : this.bridge() ? '${status.ready}' : '${status.offline}';
+      : '${status.ready}';
   });
-  readonly statusState = computed(() => (this.state() === 'idle' && !this.bridge() ? 'offline' : this.state()));
   readonly answerState = computed(() => (this.state() === 'calling' ? (this.count() === null ? 'idle' : 'answered') : this.state()));
 
   ngAfterViewInit() {
-    getName().then(value => this.appName.set(value), () => this.bridge.set(false));
     // Smoke tests open the window with ?smoke=1 and expect one automatic call.
     if (smoke) this.form().nativeElement.requestSubmit();
   }
@@ -797,9 +781,7 @@ h1:focus { outline: none; }
 `,
   'wwwroot/netwiv.js': `// Connects Blazor to the C# backend through @netwiv/api. Pages/Home.razor imports this module.
 import { invoke } from './vendor/@netwiv/api/core.js';
-import { getName } from './vendor/@netwiv/api/app.js';
 
-export const name = () => getName();
 export const greet = name => invoke('greet', { name });
 export const smokeDone = result => invoke('smoke_done', { result });`,
   'Pages/Home.razor': `@page "/"
@@ -815,7 +797,7 @@ export const smokeDone = result => invoke('smoke_done', { result });`,
     </header>
     <main class="split">
         <section class="call" aria-labelledby="heading">
-            <h1 id="heading">@(Bridge ? "${copy.heading}" : "${copy.offlineHeading}")</h1>
+            <h1 id="heading">${copy.heading}</h1>
             <form class="ask" @onsubmit="Greet" @onsubmit:preventDefault="true">
                 <label for="name">${copy.label}</label>
                 <div class="row">
@@ -828,7 +810,7 @@ export const smokeDone = result => invoke('smoke_done', { result });`,
                 @if (State == CallState.Failed)
                 {
                     <p class="message">${copy.failed}</p>
-                    <p class="detail">@(Bridge ? "${copy.commandHint}" : "${copy.hint}")<code>@Error</code></p>
+                    <p class="detail">${copy.hint}<code>@Error</code></p>
                 }
                 else
                 {
@@ -850,8 +832,7 @@ ${fileMap('blazor', '                ').replaceAll('@', '@@')}
     private enum CallState { Idle, Calling, Answered, Failed }
 
     private IJSObjectReference? NetWiv;
-    private string AppName = "${copy.app}";
-    private bool Bridge = true;
+    private const string AppName = "${copy.app}";
     private string Name = "Blazor";
     private CallState State = CallState.Idle;
     private string Message = "${copy.idle}";
@@ -865,17 +846,15 @@ ${fileMap('blazor', '                ').replaceAll('@', '@@')}
         CallState.Calling => "${status.calling}",
         CallState.Answered => $"${answered('{Ms}')}",
         CallState.Failed => "${status.failed}",
-        _ => Bridge ? "${status.ready}" : "${status.offline}",
+        _ => "${status.ready}",
     };
-    private string StatusState => State == CallState.Idle && !Bridge ? "offline" : State.ToString().ToLowerInvariant();
+    private string StatusState => State.ToString().ToLowerInvariant();
     private string AnswerState => State == CallState.Calling ? (Count is null ? "idle" : "answered") : State.ToString().ToLowerInvariant();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
         NetWiv = await JS.InvokeAsync<IJSObjectReference>("import", "./netwiv.js");
-        try { AppName = await NetWiv.InvokeAsync<string>("name"); }
-        catch (JSException) { Bridge = false; }
         // Smoke tests open the window with ?smoke=1 and expect one automatic call.
         Smoke = new Uri(Navigation.Uri).Query.Contains("smoke", StringComparison.Ordinal);
         if (Smoke) await Greet();

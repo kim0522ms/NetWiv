@@ -95,6 +95,9 @@ internal static class NewProjectTests
                 var result = await Run(["new", "Example", "--template", template, "--output", destination], root);
                 Check(result.Code == 0, result.Error);
                 Check(File.Exists(Path.Combine(destination, evidence)), "Missing frontend for " + template);
+                var screen = File.ReadAllText(Path.Combine(destination, evidence));
+                Check(screen.Contains("Example", StringComparison.Ordinal) && !screen.Contains("NetWiv app", StringComparison.Ordinal), "Starter screen does not show the project name: " + template);
+                Check(!screen.Contains("getName", StringComparison.Ordinal), "Starter screen calls an API that needs a capability: " + template);
                 var config = JsonNode.Parse(File.ReadAllText(Path.Combine(destination, "src-netwiv/netwiv.conf.json")))!;
                 Check(config["build"]!["dotnetProject"]!.GetValue<string>() == "Example.csproj", "Backend project mismatch: " + template);
                 Check(File.Exists(Path.Combine(destination, "Example.sln")), "Solution missing: " + template);

@@ -60,11 +60,11 @@ internal static class StoreAutosaveTests
         Assert.Equal(3, Read(path, "answer"));
 
         await fixture.Command("delete", rid, ",\"key\":\"answer\"");
-        await Until(() => File.ReadAllText(path) == "{}");
+        await Until(() => ReadText(path) == "{}");
         await fixture.Command("reset", rid);
         await Until(() => Read(path, "answer") == 1);
         await fixture.Command("clear", rid);
-        await Until(() => File.ReadAllText(path) == "{}");
+        await Until(() => ReadText(path) == "{}");
     }
 
     internal static async Task ExplicitSaveCancelsTimer()
@@ -128,7 +128,7 @@ internal static class StoreAutosaveTests
             catch (InvokeException) { }
             Assert.Equal(42, (await fixture.Command("get", rid, ",\"key\":\"answer\""))[0].GetInt32());
             if (shutdown) fixture.App.Dispose();
-            else await Until(() => File.ReadAllText(path).StartsWith('{'));
+            else await Until(() => ReadText(path).StartsWith('{'));
             Assert.Equal(42, Read(path, "answer"));
         }
     }
@@ -230,14 +230,28 @@ internal static class StoreAutosaveTests
 
     private static int Read(string path, string key)
     {
-        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        using var document = JsonDocument.Parse(ReadText(path));
         return document.RootElement.TryGetProperty(key, out var value) ? value.GetInt32() : int.MinValue;
     }
 
     private static async Task Until(Func<bool> condition)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        while (!condition()) await Task.Delay(5, timeout.Token);
+        while (true)
+        {
+            try { if (condition()) return; }
+            // ReplaceFile can briefly hold the destination while the poll opens it.
+            catch (IOException error) when (OperatingSystem.IsWindows() && (error.HResult & 0xffff) is 32 or 33) { }
+            await Task.Delay(5, timeout.Token);
+        }
+    }
+
+    private static string ReadText(string path)
+    {
+        // Polling must allow the autosave writer to atomically replace the file.
+        using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var reader = new StreamReader(file);
+        return reader.ReadToEnd();
     }
 
     private sealed class Fixture : IDisposable

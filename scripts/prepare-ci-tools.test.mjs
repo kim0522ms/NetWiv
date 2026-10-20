@@ -17,6 +17,7 @@ function fixture(t, script) {
   cpSync(path.join(root, 'scripts', script), path.join(directory, 'scripts', script))
   writeFileSync(path.join(directory, 'preload.mjs'), `
     import cp from 'node:child_process'
+    import timers from 'node:timers/promises'
     import { appendFileSync, readFileSync } from 'node:fs'
     import { syncBuiltinESMExports } from 'node:module'
     if (process.env.TEST_PLATFORM) {
@@ -31,8 +32,20 @@ function fixture(t, script) {
       }
       syncBuiltinESMExports()
     }
+    timers.setTimeout = async delay => appendFileSync('delays.log', delay + '\\n')
+    syncBuiltinESMExports()
+    const failures = JSON.parse(process.env.TEST_FETCH_FAILURES || '[]')
     globalThis.fetch = async url => {
       appendFileSync('downloads.log', url + '\\n')
+      const failure = failures.shift()
+      if (failure === 'timeout') throw new TypeError('fetch failed', { cause: { code: 'UND_ERR_CONNECT_TIMEOUT' } })
+      if (failure === 'refused') throw new TypeError('fetch failed', { cause: { code: 'ECONNREFUSED' } })
+      if (failure === 'tls') throw new TypeError('fetch failed', { cause: { code: 'CERT_HAS_EXPIRED' } })
+      if (failure === 'body') return {
+        ok: true,
+        arrayBuffer: async () => { throw new TypeError('terminated', { cause: { code: 'UND_ERR_SOCKET' } }) },
+      }
+      if (typeof failure === 'number') return new Response('download unavailable', { status: failure })
       return new Response(readFileSync('download.bin'), { status: Number(process.env.TEST_STATUS || 200) })
     }
   `)
@@ -145,6 +158,47 @@ test('NSIS prepares the pinned compiler and exports its directory', t => {
   assert.deepEqual(commands.at(-1)[1], ['/VERSION'])
   assert.equal(readFileSync(pathFile, 'utf8'), `${path.join(realpathSync(f.directory), 'artifacts/tools/nsis-3.11/nsis-3.11')}\n`)
 })
+
+for (const failures of [['timeout', 503], ['refused'], ['body'], [408], [429]]) {
+  test(`NSIS retries transient download failures: ${failures.join(', ')}`, t => {
+    const f = fixture(t, 'prepare-nsis.mjs')
+    const source = readFileSync(path.join(root, 'scripts/prepare-nsis.mjs'), 'utf8')
+    const bytes = 'verified NSIS archive fixture'
+    f.write('scripts/prepare-nsis.mjs', source.replace(/(const expected = ')[a-f0-9]+(')/, `$1${hash(bytes)}$2`))
+    f.write('download.bin', bytes)
+    const result = f.run([], { TEST_PLATFORM: 'win32', TEST_ARCH: 'x64', TEST_FETCH_FAILURES: JSON.stringify(failures) })
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stdout, /Verified NSIS v3\.11/)
+    assert.equal(readFileSync(path.join(f.directory, 'downloads.log'), 'utf8').trim().split('\n').length, failures.length + 1)
+    assert.deepEqual(readFileSync(path.join(f.directory, 'delays.log'), 'utf8').trim().split('\n').map(Number),
+      failures.map((_, index) => (index + 1) * 1000))
+  })
+}
+
+for (const [label, failures, attempts, tamper] of [
+  ['persistent connection timeout', ['timeout', 'timeout', 'timeout'], 3, false],
+  ['persistent connection refusal', ['refused', 'refused', 'refused'], 3, false],
+  ['persistent HTTP 503', [503, 503, 503], 3, false],
+  ['HTTP 404', [404], 1, false],
+  ['TLS verification failure', ['tls'], 1, false],
+  ['corrupt archive after retry', ['timeout'], 2, true],
+]) {
+  test(`NSIS fails closed for ${label}`, t => {
+    const f = fixture(t, 'prepare-nsis.mjs')
+    const source = readFileSync(path.join(root, 'scripts/prepare-nsis.mjs'), 'utf8')
+    const bytes = 'verified NSIS archive fixture'
+    f.write('scripts/prepare-nsis.mjs', source.replace(/(const expected = ')[a-f0-9]+(')/, `$1${hash(bytes)}$2`))
+    f.write('download.bin', tamper ? 'corrupt archive' : bytes)
+    const pathFile = path.join(f.directory, 'github-path')
+    const result = f.run([], { TEST_PLATFORM: 'win32', TEST_ARCH: 'x64', GITHUB_PATH: pathFile,
+      TEST_FETCH_FAILURES: JSON.stringify(failures) })
+    assert.notEqual(result.status, 0)
+    assert.equal(readFileSync(path.join(f.directory, 'downloads.log'), 'utf8').trim().split('\n').length, attempts)
+    assert.throws(() => readFileSync(pathFile), { code: 'ENOENT' })
+    assert.throws(() => readFileSync(path.join(f.directory, 'commands.jsonl')), { code: 'ENOENT' })
+    if (tamper) assert.match(result.stderr, /SHA-256 mismatch/)
+  })
+}
 
 for (const [label, env, expected, commandCount] of [
   ['unsupported host', { TEST_PLATFORM: 'linux' }, /supports Windows x64/, 0],

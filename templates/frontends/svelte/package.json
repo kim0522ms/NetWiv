@@ -10,7 +10,7 @@
     "bindings": "node scripts/generate-bindings.mjs",
     "predev": "node scripts/generate-bindings.mjs",
     "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
-    "build": "node scripts/generate-bindings.mjs && vite build",
+    "build": "node scripts/generate-bindings.mjs && svelte-check --tsconfig ./tsconfig.json && vite build",
     "desktop:dev": "dotnet tool restore && dotnet tool run netwiv -- dev -- --dev",
     "desktop:build": "dotnet tool restore && dotnet tool run netwiv -- build --no-bundle"
   },
@@ -20,6 +20,8 @@
   },
   "devDependencies": {
     "vite": "8.2.2",
-    "@sveltejs/vite-plugin-svelte": "7.1.2"
+    "typescript": "6.0.3",
+    "@sveltejs/vite-plugin-svelte": "7.1.2",
+    "svelte-check": "4.6.0"
   }
 }

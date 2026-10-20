@@ -8,7 +8,6 @@
       "DOM"
     ],
     "strict": true,
-    "experimentalDecorators": true,
     "skipLibCheck": true
   }
 }

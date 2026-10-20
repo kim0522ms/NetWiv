@@ -411,8 +411,8 @@ jobs:
           npm test --prefix packages/api
       - name: Packed frontend API consumer and public type boundaries
         run: node tests/frontend-api/run.mjs
-      - name: Representative JavaScript and TypeScript template builds
-        run: node tests/template-matrix/build-frontends.mjs react react-ts vanilla vanilla-ts
+      - name: TypeScript template builds
+        run: node tests/template-matrix/build-frontends.mjs react vue svelte angular
 
   sdk-compatibility:
     needs: changes

@@ -52,7 +52,7 @@ public static class Commands
     public static void SmokeDone(string result, AppHandle app)
     {
         Console.WriteLine(result);
-        app.Dispatch(() => app.Exit(result == "PASS: React form → generated C# → JSON" ? 0 : 1));
+        app.Dispatch(() => app.Exit(result.StartsWith("PASS: ", StringComparison.Ordinal) ? 0 : 1));
     }
 }
 

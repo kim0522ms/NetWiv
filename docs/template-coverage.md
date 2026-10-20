@@ -1,63 +1,77 @@
-# NetWiv frontend templates
+# NetWiv starter templates
 
-`netwiv new --list` provides 18 frontend choices corresponding to the official
-`create-tauri-app` **4.7.3** selector. The reference is
-[`create-tauri-app-v4.7.3`](https://github.com/tauri-apps/create-tauri-app/tree/create-tauri-app-v4.7.3)
-(`e19fd21a802b995cae8d15e54b89772308af7efa`). TAURI®'s `tauri init` and the frontend
-selector `create-tauri-app` are separate tools. NetWiv provides these workflows
-through `netwiv init` and `netwiv new`.
+`netwiv new` creates an application from one of five starters. Each one has the
+same C# backend and the same first screen, written in its own framework.
 
-| Frontend | `--template` | Default tooling |
-| --- | --- | --- |
-| Vanilla JS / TS | `vanilla`, `vanilla-ts` | npm |
-| Vue JS / TS | `vue`, `vue-ts` | npm |
-| Svelte JS / TS | `svelte`, `svelte-ts` | npm |
-| React JS / TS | `react`, `react-ts` | npm |
-| Solid JS / TS | `solid`, `solid-ts` | npm |
-| Angular TS | `angular` | npm |
-| Preact JS / TS | `preact`, `preact-ts` | npm |
-| Yew, Leptos, Sycamore, Dioxus | `yew`, `leptos`, `sycamore`, `dioxus` | Cargo + Trunk |
-| Blazor WebAssembly | `blazor` | Selected .NET SDK (8, 9 or 10) |
+| Frontend | `--template` | Tooling | Screen source |
+| --- | --- | --- | --- |
+| React + TypeScript | `react` (default) | Vite, npm | `src/App.tsx` |
+| Vue + TypeScript | `vue` | Vite, npm | `src/App.vue` |
+| Svelte + TypeScript | `svelte` | Vite, npm | `src/App.svelte` |
+| Angular | `angular` | Angular CLI, npm | `src/app.ts` |
+| Blazor WebAssembly | `blazor` | Selected .NET SDK (8, 9 or 10) | `frontend/Pages/Home.razor` |
 
-JS/TS templates accept `--manager npm|pnpm|yarn|bun|deno`. Rust/WASM accepts only
-`cargo`, and Blazor only `dotnet`. Default npm templates include lockfiles;
-other package managers create their own lockfiles on first installation.
+The TypeScript starters accept `--manager npm|pnpm|yarn|bun|deno`; Blazor accepts
+only `dotnet`. Default npm projects include lockfiles; other package managers
+create their own lockfiles on first installation. No starter requires Rust or
+Cargo.
 
 Install the CLI and prepare `$feed` using the [quickstart](integration-quickstart.md),
 then select a template:
 
 ```powershell
-netwiv new MyVueApp --template vue-ts --source $feed
+netwiv new MyVueApp --template vue --source $feed
 netwiv new MyBlazorApp --template blazor --source $feed
-netwiv new MyYewApp --template yew --source $feed
 ```
 
-Every choice generates a C# backend, `NetWiv.*` NuGet references, a `.sln`
-solution, configuration and calls through `@netwiv/api`. JS/TS templates install
-the portable `file:vendor/netwiv-api` package and generate command bindings during
-the build. Blazor and Rust/WASM bundle standalone NetWiv modules with their
-private implementation as static assets, invoking the C# `greet`
-command through JS interop. See the [frontend SDK](frontend-api.md) and
-[shared asset guide](../templates/frontends/shared/README.md)
-for source and license details.
+Every starter generates a C# backend, `NetWiv.*` NuGet references, a `.sln`
+solution, configuration and calls through `@netwiv/api`. TypeScript starters
+install the portable `file:vendor/netwiv-api` package and generate typed command
+bindings during the build. Blazor bundles the standalone NetWiv modules as static
+assets and calls the C# `greet` command through a JavaScript module,
+`frontend/wwwroot/netwiv.js`. See the [frontend SDK](frontend-api.md) and the
+[shared asset guide](../templates/frontends/shared/README.md) for source and
+license details.
 
-NetWiv matches the frontend **choice set**, but does not reproduce every
-upstream tool or version. Svelte uses Vite and Svelte instead of SvelteKit;
-Dioxus uses Trunk instead of `dx`. Angular uses 21.2, compatible with Node 24.14,
-rather than the reference selector's Angular 22. Ordinary JS/TS and Blazor .NET
-backends do not require Cargo. Rust/WASM frontends require the
-`wasm32-unknown-unknown` target and Trunk.
+## The starter screen
 
-The same template choices target Windows x64, Linux x64 and macOS arm64
-through Wry. macOS applications require a main-thread `App.Run()` and matching
-native RID assets; see [macOS](macos.md). Availability of a template does not mean
-its frontend/toolchain has completed macOS package-only or GUI acceptance.
+The first screen calls the C# `greet` command, shows its answer and the call
+count kept in C# state, and lists the files to edit next. It follows the system
+light or dark appearance and uses only system fonts and inline assets, so it works
+offline from the app's embedded files. Opened in a plain browser tab through the
+dev server, it reports that C# is unreachable instead of failing silently.
 
-Scaffolding, frontend builds, NativeAOT execution and GUI interaction are separate
-validation stages. Actual GUI validation is not complete for every frontend and
-package-manager combination. Read [support and validation](implementation-status.md).
+All five screens are generated from one source,
+`scripts/generate-frontend-template-overlays.mjs`; change the design there and
+regenerate rather than editing one framework by hand. The design is recorded in
+[`templates/DESIGN.md`](../templates/DESIGN.md).
+
+Smoke tests start the app with `--smoke-test`, which opens the window with
+`?smoke=1`. Every starter then submits its form once and reports
+`PASS: <framework> form → generated C# → JSON` through the `smoke_done` command.
+
+## Platforms and validation
+
+The same starters target Windows x64, Linux x64 and macOS arm64 through Wry.
+macOS applications require a main-thread `App.Run()` and matching native RID
+assets; see [macOS](macos.md).
+
+CI generates every starter on Linux and builds and type-checks the four
+TypeScript frontends. The React starter also runs the GUI/IPC smoke test and the
+package-consumer checks. The Blazor frontend is generated but not compiled in CI.
+GUI acceptance on every platform is not complete for any starter.
+Read [support and validation](implementation-status.md).
+
 The separate `NetWiv.Templates` package for direct `dotnet new` use provides only
-React; all 18 choices are included in `NetWiv.Cli` through `netwiv new`.
+React; all five starters are included in `NetWiv.Cli` through `netwiv new`.
+
+## Retired templates
+
+Releases after 0.2.3 removed the JavaScript variants (`vanilla`, `vue`, `svelte`,
+`react` as JavaScript, `solid`, `preact`), the separate `-ts` names, and the
+Rust/WASM frontends (`yew`, `leptos`, `sycamore`, `dioxus`). The template names
+now mean the TypeScript starters above. Existing projects are unaffected; they
+are ordinary Vite, Angular or Blazor projects and keep building as they are.
 
 ---
 

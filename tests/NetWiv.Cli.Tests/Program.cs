@@ -61,7 +61,7 @@ var tests = new (string Name, Func<Task> Run)[]
     }),
     ("new project creates a personalized package-only React application", NewProjectTests.CreateReact),
     ("new project defaults keep matching SDK and CLI versions", NewProjectTests.Defaults),
-    ("new project covers the upstream UI template matrix and manager choices", NewProjectTests.TemplateMatrix),
+    ("new project covers every starter template and manager choice", NewProjectTests.TemplateMatrix),
     ("new project rejects invalid arguments before writing files", NewProjectTests.InvalidInput),
     ("new project preserves existing files and honors cancellation", NewProjectTests.PreserveAndCancel),
     ("new project help list and shell completions are discoverable", NewProjectTests.Discovery),

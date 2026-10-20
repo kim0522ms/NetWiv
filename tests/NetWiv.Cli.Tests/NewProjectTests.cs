@@ -74,25 +74,20 @@ internal static class NewProjectTests
         {
             var cases = new (string Name, string Evidence)[]
             {
-                ("vanilla", "src/main.js"), ("vanilla-ts", "src/main.ts"),
-                ("vue", "src/App.vue"), ("vue-ts", "src/App.vue"),
-                ("svelte", "src/App.svelte"), ("svelte-ts", "src/App.svelte"),
-                ("react", "src/App.jsx"), ("react-ts", "src/App.tsx"),
-                ("solid", "src/App.jsx"), ("solid-ts", "src/App.tsx"),
-                ("angular", "angular.json"), ("preact", "src/App.jsx"), ("preact-ts", "src/App.tsx"),
-                ("yew", "src/main.rs"), ("leptos", "src/main.rs"),
-                ("sycamore", "src/main.rs"), ("dioxus", "src/main.rs"),
-                ("blazor", "frontend/NetWivUi.csproj"),
+                ("react", "src/App.tsx"), ("vue", "src/App.vue"), ("svelte", "src/App.svelte"),
+                ("angular", "src/app.ts"), ("blazor", "frontend/Pages/Home.razor"),
             };
             var listed = await Run(["new", "--list"], root);
             Check(listed.Code == 0, listed.Error);
             foreach (var (template, _) in cases)
-                Check(listed.Output.Contains(template, StringComparison.Ordinal), "The upstream template is missing from --list: " + template);
+                Check(listed.Output.Contains(template, StringComparison.Ordinal), "The template is missing from --list: " + template);
+            foreach (var removed in new[] { "vanilla", "solid", "preact", "yew", "leptos", "sycamore", "dioxus", "-ts" })
+                Check(!listed.Output.Contains(removed, StringComparison.Ordinal), "A retired template is still listed: " + removed);
             var matrix = Environment.GetEnvironmentVariable("NETWIV_TEST_TEMPLATE_MATRIX") ?? "full";
             if (matrix is not ("full" or "representative")) throw new InvalidOperationException("Unknown template test matrix: " + matrix);
             // Linux's baseline job covers every overlay. Other OS/SDK jobs still
-            // exercise JS, TS, Rust and Blazor generation and every manager below.
-            var selected = matrix == "full" ? cases : cases.Where(item => item.Name is "react" or "vanilla-ts" or "yew" or "blazor").ToArray();
+            // exercise the base template, an overlay, Blazor and every manager below.
+            var selected = matrix == "full" ? cases : cases.Where(item => item.Name is "react" or "angular" or "blazor").ToArray();
             Console.WriteLine($"Template matrix: {matrix} ({selected.Length}/{cases.Length} templates; all managers)");
             foreach (var (template, evidence) in selected)
             {
@@ -110,19 +105,15 @@ internal static class NewProjectTests
                 var readme = File.ReadAllText(Path.Combine(destination, "README.md"));
                 Check(readme.Contains("TAURI®", StringComparison.Ordinal) && readme.Contains("The Tauri Programme within the Commons Conservancy", StringComparison.Ordinal), "Trademark notice missing: " + template);
                 Check(readme.Contains("not affiliated with, endorsed by, or officially approved by", StringComparison.Ordinal), "Independent template notice missing: " + template);
-                if (template is "yew" or "leptos" or "sycamore" or "dioxus")
-                {
-                    Check(File.Exists(Path.Combine(destination, "vendor/@netwiv/api/upstream/core.js")), "Private implementation module missing: " + template);
-                    Check(File.Exists(Path.Combine(destination, "vendor/@netwiv/api/core.js")), "NetWiv JS API module missing: " + template);
-                    Check(File.ReadAllText(Path.Combine(destination, "index.html")).Contains("./vendor/@netwiv/api/core.js", StringComparison.Ordinal), "Rust frontend bypasses NetWiv API: " + template);
-                    Check(!File.Exists(Path.Combine(destination, "package.json")), "Rust frontend unexpectedly requires npm: " + template);
-                }
-                else if (template == "blazor")
+                if (template == "blazor")
                 {
                     Check(config["build"]!["frontendDist"]!.GetValue<string>() == "../dist/wwwroot", "Blazor asset root mismatch");
                     Check(File.Exists(Path.Combine(destination, "frontend/wwwroot/vendor/@netwiv/api/upstream/core.js")), "Blazor JS API module missing");
                     Check(File.Exists(Path.Combine(destination, "frontend/wwwroot/vendor/@netwiv/api/core.js")), "Blazor NetWiv API module missing");
                     Check(File.ReadAllText(Path.Combine(destination, "frontend/wwwroot/netwiv.js")).Contains("./vendor/@netwiv/api/core.js", StringComparison.Ordinal), "Blazor frontend bypasses NetWiv API");
+                    foreach (var sample in new[] { "frontend/Pages/Counter.razor", "frontend/Pages/Weather.razor", "frontend/Layout/NavMenu.razor", "frontend/wwwroot/lib", "frontend/wwwroot/sample-data", "vendor", "scripts" })
+                        Check(!File.Exists(Path.Combine(destination, sample)) && !Directory.Exists(Path.Combine(destination, sample)), "Blazor sample or leftover remains: " + sample);
+                    Check(!File.ReadAllText(Path.Combine(destination, "frontend/wwwroot/index.html")).Contains("bootstrap", StringComparison.Ordinal), "Blazor still links Bootstrap");
                 }
                 else
                 {
@@ -133,10 +124,11 @@ internal static class NewProjectTests
                     var api = JsonNode.Parse(File.ReadAllText(Path.Combine(destination, "vendor/netwiv-api/package.json")))!;
                     Check(api["name"]!.GetValue<string>() == "@netwiv/api" && File.Exists(Path.Combine(destination, "vendor/netwiv-api/lib/core.js")), "Local NetWiv API package is incomplete: " + template);
                     Check(api["dependencies"] is null, "The frontend facade must be self-contained: " + template);
-                    Check(!File.Exists(Path.Combine(destination, "src/App.jsx")) || template == "react" || template is "solid" or "preact", "React source leaked into " + template);
+                    Check(!File.Exists(Path.Combine(destination, "src/App.tsx")) || template == "react", "React source leaked into " + template);
+                    Check(File.Exists(Path.Combine(destination, template == "angular" ? "tsconfig.app.json" : "tsconfig.json")), "TypeScript configuration missing: " + template);
                 }
             }
-            foreach (var (manager, template) in new[] { ("pnpm", "vue"), ("yarn", "svelte"), ("bun", "react"), ("deno", "vanilla") })
+            foreach (var (manager, template) in new[] { ("pnpm", "vue"), ("yarn", "svelte"), ("bun", "react"), ("deno", "angular") })
             {
                 var destination = Path.Combine(root, manager);
                 var result = await Run(["new", "Example", "-t", template, "-m", manager, "-o", destination], root);
@@ -163,7 +155,8 @@ internal static class NewProjectTests
                 new[] { "new", "App", "--identifier", "bad identifier" }, new[] { "new", "App", "--source", "missing" },
                 new[] { "new", "App", "--bogus" }, new[] { "new", "App", "Extra" }, new[] { "new", "App", "-o" },
                 new[] { "new", "App", "--template", "blazor", "--manager", "npm" },
-                new[] { "new", "App", "--template", "yew", "--manager", "pnpm" } })
+                new[] { "new", "App", "--template", "react", "--manager", "cargo" },
+                new[] { "new", "App", "--template", "yew" }, new[] { "new", "App", "--template", "react-ts" } })
             {
                 var (code, _, error) = await Run(args, root);
                 Check(code == 1 && error.Length > 0, "Invalid arguments succeeded: " + string.Join(' ', args));

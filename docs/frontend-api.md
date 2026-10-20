@@ -69,7 +69,7 @@ No replacement detection helper or runtime version API is introduced.
 Before registry publication, starters and the HostingApp sample carry a portable
 `file:vendor/netwiv-api` dependency. The built package contains its implementation
 and notices; no upstream runtime npm dependency or maintainer checkout is needed.
-Blazor and Rust/WASM starters use the equivalent standalone vendored modules.
+The Blazor starter uses the equivalent standalone vendored modules.
 
 For an existing application:
 

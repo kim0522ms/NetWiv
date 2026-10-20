@@ -19,8 +19,8 @@ for (const name of templates) {
     if (name !== 'react') await cp(path.join(root, 'templates/react-app/vendor'), path.join(temporary, 'vendor'), { recursive: true });
     const generated = path.join(temporary, 'src/generated');
     await mkdir(generated, { recursive: true });
-    await writeFile(path.join(generated, 'commands.js'), 'import { invoke } from "@netwiv/api/core";\nexport const commands = { greet: args => invoke("greet", args) };\n');
-    await writeFile(path.join(generated, 'commands.d.ts'), 'export type Greeting = { message: string; count: number };\nexport declare const commands: { greet(args: { name: string }): Promise<Greeting> };\n');
+    await writeFile(path.join(generated, 'commands.js'), 'import { invoke } from "@netwiv/api/core";\nexport const commands = { greet: args => invoke("greet", args), smoke_done: args => invoke("smoke_done", args) };\n');
+    await writeFile(path.join(generated, 'commands.d.ts'), 'export type Greeting = { message: string; count: number };\nexport declare const commands: { greet(args: { name: string }): Promise<Greeting>; smoke_done(args: { result: string }): Promise<void> };\n');
     const packagePath = path.join(temporary, 'package.json');
     const manifest = JSON.parse(await readFile(packagePath, 'utf8'));
     assert.equal(manifest.dependencies['@netwiv/api'], 'file:vendor/netwiv-api');

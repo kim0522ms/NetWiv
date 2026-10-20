@@ -15,9 +15,8 @@ Package installation is described in the [quickstart](integration-quickstart.md)
 | Android, iOS | — | Excluded from project work scope; not a later milestone. |
 
 Applications use the native libraries delivered in `NetWiv.Platform.Desktop`.
-Ordinary JS/TS and Blazor app development does not require Cargo. Native library
-builds are a framework-maintainer task; Rust/WASM frontends need their own Rust
-toolchain. See [native architecture](native-architecture.md).
+App development does not require Cargo. Native library builds are a
+framework-maintainer task. See [native architecture](native-architecture.md).
 
 ## Application development
 
@@ -26,7 +25,7 @@ toolchain. See [native architecture](native-architecture.md).
 | C# SDK | Commands, state, events, channels, windows, WebViews and managed resources. | Applications must follow cancellation, concurrency and ownership contracts. |
 | Frontend SDK | Desktop `@netwiv/api` modules, initially delegating to pinned official Tauri code. New bindings and starters use this facade. | Mobile APIs are excluded. Independent frontend transport is not implemented; direct upstream guests are no longer a supported entry point; plugin guests use `/plugins/*`. See [frontend SDK](frontend-api.md). |
 | Frontend bindings | Generated JS calls and TS declarations from local and opted-in referenced C# commands and supported JSON metadata. | Explicit tagged polymorphic roots and sealed variants are supported; custom converters, fallback polymorphism and other advanced JSON mappings remain incomplete. Referenced producers need compatible generated metadata; arbitrary dependency discovery is not supported. |
-| Project creation | 18 frontend choices through `netwiv new`; a matching local CLI manifest and SDK references. | Template availability does not establish GUI acceptance for every frontend/toolchain combination. |
+| Project creation | Five starters through `netwiv new`: React, Vue, Svelte and Angular with TypeScript, and Blazor; a matching local CLI manifest and SDK references. | Template availability does not establish GUI acceptance for every frontend/toolchain combination. |
 | Development | Frontend updates and C# binding regeneration with backend restart. | Rider and Visual Studio solution loading/debugging require further interactive validation. |
 | NativeAOT | Release publication for Windows/Linux x64 and macOS arm64. | Successful compilation alone does not verify a working desktop session. |
 | Plugins | Managed packages for 24 desktop plugin areas. | Individual commands, permissions and platform behavior remain partial; the updater runtime is excluded from project scope. |

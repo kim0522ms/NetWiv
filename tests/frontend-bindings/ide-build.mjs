@@ -44,9 +44,9 @@ try {
   await run(path.join(tool, process.platform === 'win32' ? 'netwiv.exe' : 'netwiv'), ['new', 'IdeApp', '--output', app, '--source', path.resolve(feedArg)], root);
   for (const directory of ['dist', 'node_modules', 'src/generated'])
     await assert.rejects(stat(path.join(app, directory)), { code: 'ENOENT' });
-  const reactPath = path.join(app, 'src/App.jsx');
+  const reactPath = path.join(app, 'src/App.tsx');
   const htmlPath = path.join(app, 'index.html');
-  const react = (await readFile(reactPath, 'utf8')).replace('if (smoke) {', 'if (smoke) {\n        if (document.querySelector(\'meta[name="ide-check"]\')?.content !== "first") throw new Error("Stale embedded assets");');
+  const react = '// @ts-nocheck\n' + (await readFile(reactPath, 'utf8')).replace('if (smoke) {', 'if (smoke) {\n        if (document.querySelector(\'meta[name="ide-check"]\')?.content !== "first") throw new Error("Stale embedded assets");');
   const html = (await readFile(htmlPath, 'utf8')).replace('</head>', '<meta name="ide-check" content="first"></head>');
   await writeFile(reactPath, react);
   await writeFile(htmlPath, html);
@@ -66,7 +66,7 @@ try {
   singleFrontendBuild(await run(dotnet, ['build', 'IdeApp.Frontend.esproj', '-warnaserror']));
   const items = JSON.parse(await run(dotnet, ['msbuild', 'IdeApp.Frontend.esproj', '-getItem:None']));
   const files = items.Items.None.map(item => item.Identity.replaceAll('\\', '/'));
-  assert.ok(files.includes('src/App.jsx') && files.includes('package.json'));
+  assert.ok(files.includes('src/App.tsx') && files.includes('package.json'));
   assert.ok(!files.some(file => file.startsWith('src-netwiv/') || file.startsWith('node_modules/') || file.startsWith('dist/')));
   await writeFile(reactPath, 'this is deliberately invalid JSX !!!');
   await run(dotnet, ['msbuild', 'src-netwiv/IdeApp.csproj', '-t:BuildReactFrontend', '-p:DesignTimeBuild=true']);

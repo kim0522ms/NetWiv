@@ -8,8 +8,8 @@ internal static class NewCommand
 {
     private const string TemplateNotice = "\n---\n\nTAURI® is a trademark of The Tauri Programme within the Commons Conservancy.\n\nNetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.\n";
     private const string Usage = "Usage: netwiv new NAME [-t|--template TEMPLATE] [-m|--manager MANAGER] [-o|--output DIRECTORY] [--identifier ID] [--source NUGET_SOURCE]\n       netwiv new --list\nDefault template: react. Run `netwiv new --list` for all choices.";
-    private static readonly string[] JavaScriptTemplates = ["vanilla", "vanilla-ts", "vue", "vue-ts", "svelte", "svelte-ts", "react", "react-ts", "solid", "solid-ts", "angular", "preact", "preact-ts"];
-    private static readonly string[] RustTemplates = ["yew", "leptos", "sycamore", "dioxus"];
+    // TypeScript starters. React is the base template; the others replace its frontend.
+    private static readonly string[] JavaScriptTemplates = ["react", "vue", "svelte", "angular"];
 
     public static async Task<int> RunAsync(string[] args, TextWriter output, string workingDirectory, CancellationToken token)
     {
@@ -18,22 +18,21 @@ internal static class NewCommand
         if (arguments.TakeFlag("--list"))
         {
             arguments.EnsureEmpty();
-            await output.WriteLineAsync("JavaScript/TypeScript: " + string.Join(", ", JavaScriptTemplates.Select(name => name == "react" ? "react (default)" : name)));
-            await output.WriteLineAsync("Rust/WASM frontends: " + string.Join(", ", RustTemplates));
+            await output.WriteLineAsync("TypeScript: " + string.Join(", ", JavaScriptTemplates.Select(name => name == "react" ? "react (default)" : name)));
             await output.WriteLineAsync(".NET frontend: blazor");
-            await output.WriteLineAsync("Managers: npm, pnpm, yarn, bun, deno (JS/TS); cargo (Rust/WASM); dotnet (Blazor)");
+            await output.WriteLineAsync("Managers: npm, pnpm, yarn, bun, deno (TypeScript); dotnet (Blazor)");
             return 0;
         }
         var template = arguments.TakeOption("--template", "-t") ?? "react";
-        var manager = arguments.TakeOption("--manager", "-m") ?? (RustTemplates.Contains(template, StringComparer.Ordinal) ? "cargo" : template == "blazor" ? "dotnet" : "npm");
+        var manager = arguments.TakeOption("--manager", "-m") ?? (template == "blazor" ? "dotnet" : "npm");
         var outputOption = arguments.TakeOption("--output", "-o");
         var identifierOption = arguments.TakeOption("--identifier");
         var sourceOption = arguments.TakeOption("--source");
         var name = arguments.TakePositional() ?? throw new ArgumentException("A project name is required. " + Usage);
         arguments.EnsureEmpty();
-        if (!JavaScriptTemplates.Contains(template, StringComparer.Ordinal) && !RustTemplates.Contains(template, StringComparer.Ordinal) && template != "blazor")
+        if (!JavaScriptTemplates.Contains(template, StringComparer.Ordinal) && template != "blazor")
             throw new ArgumentException($"Unknown template '{template}'. Run `netwiv new --list`.");
-        if (RustTemplates.Contains(template, StringComparer.Ordinal) ? manager != "cargo" : template == "blazor" ? manager != "dotnet" : manager is not ("npm" or "pnpm" or "yarn" or "bun" or "deno"))
+        if (template == "blazor" ? manager != "dotnet" : manager is not ("npm" or "pnpm" or "yarn" or "bun" or "deno"))
             throw new ArgumentException($"Package manager '{manager}' is not supported for template '{template}'. Run `netwiv new --list`.");
         if (string.IsNullOrWhiteSpace(name) || !char.IsAsciiLetter(name[0]) || name.EndsWith('.') ||
             name.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not ('.' or '_' or '-')) ||
@@ -111,7 +110,6 @@ internal static class NewCommand
         await output.WriteLineAsync(manager switch
         {
             "npm" => "  npm ci\n  npm run desktop:dev",
-            "cargo" => "  rustup target add wasm32-unknown-unknown\n  cargo install trunk --locked\n  dotnet tool restore\n  dotnet tool run netwiv -- dev -- --dev",
             "dotnet" => "  dotnet tool restore\n  dotnet tool run netwiv -- dev -- --dev",
             _ => $"  {manager} install\n  {RunCommand(manager, "desktop:dev")}",
         });
@@ -129,8 +127,7 @@ internal static class NewCommand
     private static void ApplyFrontend(string project, string template)
     {
         var overlay = Path.Combine(AppContext.BaseDirectory, "templates", "frontends", template);
-        var rust = RustTemplates.Contains(template, StringComparer.Ordinal);
-        if (!File.Exists(Path.Combine(overlay, rust ? "Cargo.toml" : "package.json"))) throw new DirectoryNotFoundException($"The {template} frontend template is missing from this NetWiv CLI installation.");
+        if (!File.Exists(Path.Combine(overlay, "package.json"))) throw new DirectoryNotFoundException($"The {template} frontend template is missing from this NetWiv CLI installation.");
         ClearReactFrontend(project);
         foreach (var source in Directory.EnumerateFiles(overlay, "*", SearchOption.AllDirectories))
         {
@@ -138,42 +135,41 @@ internal static class NewCommand
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
             File.Copy(source, destination);
         }
-        if (rust)
-        {
-            Directory.Delete(Path.Combine(project, "vendor", "netwiv-api"), recursive: true);
-            var shared = Path.Combine(AppContext.BaseDirectory, "templates", "frontends", "shared");
-            foreach (var name in new[] { "index.html", "Trunk.toml" }) File.Copy(Path.Combine(shared, "rust", name), Path.Combine(project, name));
-            File.Copy(Path.Combine(shared, "rust", "netwiv.rs"), Path.Combine(project, "src", "netwiv.rs"));
-            CopyDirectory(Path.Combine(shared, "vendor"), Path.Combine(project, "vendor"));
-            File.Delete(Path.Combine(project, "scripts", "generate-bindings.mjs"));
-        }
-        File.WriteAllText(Path.Combine(project, "README.md"), (rust
-            ? $"# NetWiv + {template}\n\nThe C# backend needs no Cargo. This optional Rust/WASM frontend needs `rustup target add wasm32-unknown-unknown` and `cargo install trunk --locked`. Run `dotnet tool restore` then `dotnet tool run netwiv -- dev -- --dev`.\n"
-            : $"# NetWiv + {template}\n\nRun `npm ci` and `npm run desktop:dev`. Edit `src-netwiv/Program.cs` for C# commands and `src` for the frontend.\n") + TemplateNotice);
+        File.WriteAllText(Path.Combine(project, "README.md"), $"# NetWiv + {template}\n\nRun `npm ci` and `npm run desktop:dev`. Edit `src-netwiv/Program.cs` for C# commands and `src` for the frontend.\n" + TemplateNotice);
     }
 
     private static async Task ApplyBlazorFrontendAsync(string project, CancellationToken token)
     {
         ClearReactFrontend(project);
-        Directory.Delete(Path.Combine(project, "vendor", "netwiv-api"), recursive: true);
         var frontend = Path.Combine(project, "frontend");
         await RunDotnet(["new", "blazorwasm", "--no-restore", "--name", "NetWivUi", "--output", frontend], project, token);
+        // Keep only the starter screen: drop the Blazor template's sample pages, navigation and Bootstrap.
+        foreach (var sample in new[] { "Pages/Counter.razor", "Pages/Weather.razor", "Layout/NavMenu.razor", "Layout/NavMenu.razor.css", "Layout/MainLayout.razor.css" })
+            File.Delete(Path.Combine(frontend, sample));
+        foreach (var sample in new[] { "wwwroot/sample-data", "wwwroot/lib" })
+            if (Directory.Exists(Path.Combine(frontend, sample))) Directory.Delete(Path.Combine(frontend, sample), recursive: true);
         var overlay = Path.Combine(AppContext.BaseDirectory, "templates", "frontends", "blazor");
-        File.Copy(Path.Combine(overlay, "Pages", "Home.razor"), Path.Combine(frontend, "Pages", "Home.razor"), overwrite: true);
-        File.Copy(Path.Combine(overlay, "netwiv.js"), Path.Combine(frontend, "wwwroot", "netwiv.js"));
+        foreach (var source in Directory.EnumerateFiles(overlay, "*", SearchOption.AllDirectories))
+        {
+            var destination = Path.Combine(frontend, Path.GetRelativePath(overlay, source));
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            File.Copy(source, destination, overwrite: true);
+        }
         CopyDirectory(Path.Combine(AppContext.BaseDirectory, "templates", "frontends", "shared", "vendor"), Path.Combine(frontend, "wwwroot", "vendor"));
         var indexPath = Path.Combine(frontend, "wwwroot", "index.html");
-        var index = File.ReadAllText(indexPath).Replace("<base href=\"/\" />", "<base href=\"./\" />", StringComparison.Ordinal)
-            .Replace("</body>", "<script type=\"module\" src=\"netwiv.js\"></script>\n</body>", StringComparison.Ordinal);
+        // Bootstrap is gone, and with no scoped .razor.css files left there is no NetWivUi.styles.css bundle.
+        var index = File.ReadAllText(indexPath).Replace("<base href=\"/\" />", "<base href=\"./\" />", StringComparison.Ordinal);
+        index = string.Join('\n', index.Split('\n').Where(line => !line.Contains("lib/bootstrap/", StringComparison.Ordinal) && !line.Contains("NetWivUi.styles.css", StringComparison.Ordinal)));
         File.WriteAllText(indexPath, index);
-        File.Delete(Path.Combine(project, "scripts", "generate-bindings.mjs"));
+        Directory.Delete(Path.Combine(project, "scripts"), recursive: true);
+        Directory.Delete(Path.Combine(project, "vendor"), recursive: true);
         File.WriteAllText(Path.Combine(project, "README.md"), "# NetWiv + Blazor\n\nThe frontend is a Blazor WebAssembly project targeting the selected .NET SDK in `frontend/`. Run `dotnet tool restore` then `dotnet tool run netwiv -- dev -- --dev`. The desktop backend is in `src-netwiv/`.\n" + TemplateNotice);
     }
 
     private static void ClearReactFrontend(string project)
     {
         Directory.Delete(Path.Combine(project, "src"), recursive: true);
-        foreach (var name in new[] { "index.html", "vite.config.js", "package.json", "package-lock.json" }) File.Delete(Path.Combine(project, name));
+        foreach (var name in new[] { "index.html", "vite.config.js", "tsconfig.json", "package.json", "package-lock.json" }) File.Delete(Path.Combine(project, name));
     }
 
     private static void CopyDirectory(string source, string destination)
@@ -189,27 +185,24 @@ internal static class NewCommand
     private static void ConfigureFrontend(string project, string template, string manager)
     {
         if (manager == "npm") return;
-        if (manager is "cargo" or "dotnet")
+        if (manager == "dotnet")
         {
-            var command = manager == "cargo" ? "trunk serve --address 127.0.0.1 --port 5173" : "dotnet watch --project frontend/NetWivUi.csproj run --urls http://127.0.0.1:5173";
-            var build = manager == "cargo" ? "trunk build --release" : "dotnet publish frontend/NetWivUi.csproj -c Release -o dist";
+            const string command = "dotnet watch --project frontend/NetWivUi.csproj run --urls http://127.0.0.1:5173";
+            const string build = "dotnet publish frontend/NetWivUi.csproj -c Release -o dist";
             var frontProject = Directory.EnumerateFiles(project, "*.Frontend.esproj").Single();
             var document = XDocument.Load(frontProject);
             document.Descendants("StartupCommand").Single().Value = command;
             document.Descendants("BuildCommand").Single().Value = build;
-            document.Descendants("BuildOutputFolder").Single().Value = manager == "dotnet" ? "$(MSBuildProjectDirectory)/dist/wwwroot" : "$(MSBuildProjectDirectory)/dist";
+            document.Descendants("BuildOutputFolder").Single().Value = "$(MSBuildProjectDirectory)/dist/wwwroot";
             document.Descendants("Target").Single(target => (string?)target.Attribute("Name") == "RestoreFrontendDependencies").Remove();
             document.Descendants("Target").Single(target => (string?)target.Attribute("Name") == "BuildFrontendAssets").Attribute("DependsOnTargets")?.Remove();
             document.Save(frontProject);
             var appConfigPath = Path.Combine(project, "src-netwiv", "netwiv.conf.json");
             var appConfig = JsonNode.Parse(File.ReadAllText(appConfigPath))!.AsObject();
             appConfig["build"]!["beforeDevCommand"] = command;
-            if (manager == "dotnet")
-            {
-                appConfig["build"]!["frontendDist"] = "../dist/wwwroot";
-                var backendProject = Directory.EnumerateFiles(Path.Combine(project, "src-netwiv"), "*.csproj").Single();
-                File.WriteAllText(backendProject, File.ReadAllText(backendProject).Replace("/../dist</NetWivFrontendDist>", "/../dist/wwwroot</NetWivFrontendDist>", StringComparison.Ordinal));
-            }
+            appConfig["build"]!["frontendDist"] = "../dist/wwwroot";
+            var backendProject = Directory.EnumerateFiles(Path.Combine(project, "src-netwiv"), "*.csproj").Single();
+            File.WriteAllText(backendProject, File.ReadAllText(backendProject).Replace("/../dist</NetWivFrontendDist>", "/../dist/wwwroot</NetWivFrontendDist>", StringComparison.Ordinal));
             File.WriteAllText(appConfigPath, appConfig.ToJsonString());
             return;
         }
@@ -219,7 +212,8 @@ internal static class NewCommand
         if (manifest["scripts"] is JsonObject scripts)
         {
             if (scripts["predev"]?.GetValue<string>() == "npm run bindings") scripts["predev"] = "node scripts/generate-bindings.mjs";
-            if (scripts["build"]?.GetValue<string>() == "npm run bindings && vite build") scripts["build"] = "node scripts/generate-bindings.mjs && vite build";
+            if (scripts["build"]?.GetValue<string>() is { } build && build.StartsWith("npm run bindings && ", StringComparison.Ordinal))
+                scripts["build"] = "node scripts/generate-bindings.mjs && " + build["npm run bindings && ".Length..];
             if (manager == "deno")
             {
                 foreach (var key in new[] { "bindings", "predev", "dev", "build" })

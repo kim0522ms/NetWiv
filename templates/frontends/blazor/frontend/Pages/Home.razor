@@ -1,6 +1,7 @@
 @page "/"
 @page "/index.html"
-@inject IJSRuntime JS
+@using System.Diagnostics
+@inject NetWiv.Generated.NetWivCommands Commands
 @inject NavigationManager Navigation
 
 <PageTitle>@AppName</PageTitle>
@@ -20,7 +21,7 @@
                 </div>
             </form>
             <div class="answer" data-state="@AnswerState" aria-live="polite">
-                <p class="route">commands.greet → Commands.Greet</p>
+                <p class="route">NetWivCommands.GreetAsync → Commands.Greet</p>
                 @if (State == CallState.Failed)
                 {
                     <p class="message">C# did not answer</p>
@@ -38,7 +39,7 @@
             <ul class="files">
                 <li><code>frontend/Pages/Home.razor</code><span>This screen. Replace it with your interface.</span></li>
                 <li><code>src-netwiv/Program.cs</code><span>Commands, state and the window. Greet is defined here.</span></li>
-                <li><code>frontend/wwwroot/netwiv.js</code><span>Connects Blazor to your C# commands through @@netwiv/api.</span></li>
+                <li><code>contracts/Contracts.cs</code><span>Types this screen and the app share. Calls to C# are typed from them.</span></li>
                 <li><strong>netwiv.github.io</strong><span>Guides and the API reference.</span></li>
             </ul>
         </aside>
@@ -48,7 +49,6 @@
 @code {
     private enum CallState { Idle, Calling, Answered, Failed }
 
-    private IJSObjectReference? NetWiv;
     private const string AppName = "NetWiv app";
     private string Name = "Blazor";
     private CallState State = CallState.Idle;
@@ -71,22 +71,22 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-        NetWiv = await JS.InvokeAsync<IJSObjectReference>("import", "./netwiv.js");
         // Smoke tests open the window with ?smoke=1 and expect one automatic call.
         Smoke = new Uri(Navigation.Uri).Query.Contains("smoke", StringComparison.Ordinal);
-        if (Smoke) await Greet();
+        if (!Smoke) return;
+        await Greet();
         StateHasChanged();
     }
 
     private async Task Greet()
     {
-        if (NetWiv is null) return;
         State = CallState.Calling;
-        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+        var started = Stopwatch.GetTimestamp();
         try
         {
-            var result = await NetWiv.InvokeAsync<Greeting>("greet", Name);
-            Ms = (long)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+            // Generated from Commands.Greet: renaming the method or its parameters breaks this build.
+            var result = await Commands.GreetAsync(Name);
+            Ms = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
             Message = result.Message;
             Count = result.Count;
             State = CallState.Answered;
@@ -94,16 +94,14 @@
             {
                 if (result.Message != "Hello, Blazor!" || result.Count != 1)
                     throw new InvalidOperationException($"Unexpected C# response: {result}");
-                await NetWiv.InvokeVoidAsync("smokeDone", "PASS: Blazor form → generated C# → JSON");
+                await Commands.SmokeDoneAsync("PASS: Blazor form → generated C# → JSON");
             }
         }
-        catch (Exception error) when (error is JSException or InvalidOperationException)
+        catch (Exception error) when (error is JSException or InvalidOperationException or NotSupportedException)
         {
             Error = error.Message;
             State = CallState.Failed;
-            if (Smoke) await NetWiv.InvokeVoidAsync("smokeDone", $"FAIL: {error.Message}");
+            if (Smoke) await Commands.SmokeDoneAsync($"FAIL: {error.Message}");
         }
     }
-
-    private sealed record Greeting(string Message, int Count);
 }

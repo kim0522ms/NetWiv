@@ -27,9 +27,12 @@ netwiv new MyBlazorApp --template blazor --source $feed
 Every starter generates a C# backend, `NetWiv.*` NuGet references, a `.sln`
 solution, configuration and calls through `@netwiv/api`. TypeScript starters
 install the portable `file:vendor/netwiv-api` package and generate typed command
-bindings during the build. Blazor bundles the standalone NetWiv modules as static
-assets and calls the C# `greet` command through a JavaScript module,
-`frontend/wwwroot/netwiv.js`. See the [frontend SDK](frontend-api.md) and the
+bindings during the build. Blazor adds a `contracts/` project that the app and the
+frontend share, and calls C# through `NetWivCommands`, a typed client each app build
+generates from the `[Command]` methods (see
+[typed C# client](frontend-generator.md#typed-c-client-for-net-frontends)). It bundles
+the standalone NetWiv modules as static assets; `frontend/wwwroot/netwiv.js` forwards
+the client's calls to them. See the [frontend SDK](frontend-api.md) and the
 [shared asset guide](../templates/frontends/shared/README.md) for source and
 license details.
 

@@ -1,7 +1,7 @@
 # Generated frontend bindings
 
 `NetWiv.Generators` produces JavaScript calls and TypeScript declarations from
-C# command signatures. See the [quickstart](integration-quickstart.md) for
+C# command signatures, and a typed C# client for .NET frontends such as Blazor. See the [quickstart](integration-quickstart.md) for
 package setup and the support boundaries below before exposing custom DTOs.
 
 ## Build workflow
@@ -69,6 +69,51 @@ to use `@netwiv/api/core`; direct upstream imports are no longer supported. Remo
 the old frontend dependencies and runtime-detection guards as described in
 [the migration guide](frontend-api.md#installation-and-migration). Command names,
 permissions and backend registration remain unchanged.
+
+### Typed C# client for .NET frontends
+
+A .NET frontend such as Blazor WebAssembly can call the same commands through
+generated C# methods instead of command-name strings. Set a second output
+directory in the C# app project:
+
+```xml
+<NetWivCSharpBindingsDirectory>../frontend/Generated</NetWivCSharpBindingsDirectory>
+```
+
+Each build then writes `NetWivCommands.g.cs` (namespace `NetWiv.Generated`) next
+to the frontend. Register it and call the commands with their C# types:
+
+```csharp
+builder.Services.AddScoped<NetWiv.Generated.NetWivCommands>();
+
+// In a component: @inject NetWiv.Generated.NetWivCommands Commands
+Greeting greeting = await Commands.GreetAsync("World");
+```
+
+The client does not redeclare DTOs. It uses the app's own parameter and result
+types and its `CommandJsonContext`, so both sides serialize with the same
+options. That requires those types and the JSON context to live in a library
+that both the app and the frontend reference, such as the Blazor starter's
+`contracts/` project. A command whose types are declared in the app itself, or
+in a NetWiv package, gets no method; the generated file lists it with the reason.
+Only commands declared in the app are included, not commands from referenced
+plugin assemblies.
+
+Method names are the C# method name plus `Async`; two methods with the same name
+fall back to the external command name. Each method takes an optional
+`CancellationToken`. Arguments are serialized with the shared JSON context and
+sent through the frontend's `wwwroot/netwiv.js` module, whose `invokeJson`
+function forwards them to `@netwiv/api/core`. A failed call surfaces as a
+`JSException`. Renaming a command, a parameter or a DTO member in C# changes the
+generated method or type, so the frontend build fails instead of the call failing
+at run time. Exposure rules are unchanged: the client does not register commands
+or grant permissions.
+
+The Blazor starter imports `frontend/NetWiv.targets`, which refreshes the client
+before the frontend compiles whenever the app's C# sources are newer, using a
+bindings-only app build. `src-netwiv/Directory.Build.props` gives that build its
+own `obj/bindings` and `bin/bindings` folders so it does not mix with the normal
+or NativeAOT build.
 
 ### Referenced command assemblies
 

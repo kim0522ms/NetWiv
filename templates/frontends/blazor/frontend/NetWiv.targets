@@ -1,0 +1,19 @@
+<Project>
+  <!-- The types shared with the desktop app, and the typed client generated from its commands. -->
+  <ItemGroup>
+    <ProjectReference Include="../contracts/Contracts.csproj" />
+    <_NetWivApp Include="$(MSBuildProjectDirectory)/../src-netwiv/*.csproj" />
+    <_NetWivCommandSources Include="$(MSBuildProjectDirectory)/../src-netwiv/**/*.cs;$(MSBuildProjectDirectory)/../contracts/**/*.cs"
+                           Exclude="$(MSBuildProjectDirectory)/../src-netwiv/obj/**;$(MSBuildProjectDirectory)/../src-netwiv/bin/**;$(MSBuildProjectDirectory)/../contracts/obj/**;$(MSBuildProjectDirectory)/../contracts/bin/**" />
+  </ItemGroup>
+  <!-- Every app build rewrites Generated/NetWivCommands.g.cs. When the C# sources are newer,
+       refresh it with a bindings-only app build before this project compiles. -->
+  <Target Name="NetWivGenerateCommands" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true'"
+          Inputs="@(_NetWivCommandSources)" Outputs="Generated/NetWivCommands.g.cs">
+    <Exec Command="dotnet build &quot;@(_NetWivApp->'%(FullPath)')&quot; -p:NetWivBindingsOnly=true -p:PublishAot=false --disable-build-servers -nologo -v:q" />
+    <Touch Files="Generated/NetWivCommands.g.cs" />
+    <ItemGroup>
+      <Compile Include="Generated/NetWivCommands.g.cs" Exclude="@(Compile)" />
+    </ItemGroup>
+  </Target>
+</Project>

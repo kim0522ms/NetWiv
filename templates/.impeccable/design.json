@@ -11,8 +11,8 @@
         "frontends/vue/src/App.vue",
         "frontends/svelte/src/App.svelte",
         "frontends/angular/src/app.ts",
-        "frontends/blazor/Pages/Home.razor",
-        "frontends/blazor/wwwroot/css/app.css"
+        "frontends/blazor/frontend/Pages/Home.razor",
+        "frontends/blazor/frontend/wwwroot/css/app.css"
       ],
       "note": "All five frameworks are regenerated from the generator; the outputs are never edited by hand."
     },

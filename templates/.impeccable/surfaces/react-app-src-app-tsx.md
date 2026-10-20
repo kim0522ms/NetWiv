@@ -2,7 +2,7 @@
 version: 1
 slug: "react-app-src-app-tsx"
 primary_target: "react-app/src/App.tsx"
-related_targets: ["frontends/vue/src/App.vue","frontends/svelte/src/App.svelte","frontends/angular/src/app.ts","frontends/blazor/Pages/Home.razor"]
+related_targets: ["frontends/vue/src/App.vue","frontends/svelte/src/App.svelte","frontends/angular/src/app.ts","frontends/blazor/frontend/Pages/Home.razor"]
 ---
 
 ## Scope

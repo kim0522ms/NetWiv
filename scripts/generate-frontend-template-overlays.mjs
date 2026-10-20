@@ -228,7 +228,7 @@ const files = {
   vue: [['src/App.vue', screen], backend, bindings, docs],
   svelte: [['src/App.svelte', screen], backend, bindings, docs],
   angular: [['src/app.ts', screen], backend, bindings, docs],
-  blazor: [['frontend/Pages/Home.razor', screen], backend, ['frontend/wwwroot/netwiv.js', 'Connects Blazor to your C# commands through @netwiv/api.'], docs],
+  blazor: [['frontend/Pages/Home.razor', screen], backend, ['contracts/Contracts.cs', 'Types this screen and the app share. Calls to C# are typed from them.'], docs],
 };
 const route = 'commands.greet → Commands.Greet';
 const pass = framework => `PASS: ${framework} form → generated C# → JSON`;
@@ -763,14 +763,66 @@ export class App implements AfterViewInit {
 });
 
 // ---------------------------------------------------------------------------
-// Blazor: `netwiv new --template blazor` runs `dotnet new blazorwasm`, removes
-// its sample pages and copies these files over the project (see NewCommand.cs).
+// Blazor: `netwiv new --template blazor` runs `dotnet new blazorwasm`, removes its sample
+// pages and copies this overlay over the project root (see NewCommand.cs). The screen calls
+// C# through NetWivCommands, a typed client the app build generates from its [Command]
+// methods into frontend/Generated; the types both sides share live in contracts/.
 // The window opens index.html, so Home answers that route as well as "/".
 
+const blazorRoute = 'NetWivCommands.GreetAsync → Commands.Greet';
+await rm(path.join(root, 'blazor'), { recursive: true, force: true });
 await save(path.join(root, 'blazor'), {
-  'Layout/MainLayout.razor': `@inherits LayoutComponentBase
+  'contracts/Contracts.csproj': `<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Types the desktop app and the Blazor frontend share. Both reference this project. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+</Project>`,
+  'contracts/Contracts.cs': `using System.Text.Json.Serialization;
+
+// The app (src-netwiv) and the frontend serialize with the same types and options, so a
+// renamed property or command changes both builds instead of silently breaking the wire.
+public sealed record Greeting(string Message, int Count);
+
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(string))]
+[JsonSerializable(typeof(Greeting))]
+public partial class AppJsonContext : JsonSerializerContext;`,
+  'src-netwiv/Directory.Build.props': `<Project>
+  <!-- The frontend asks for a bindings-only app build to refresh its typed client. Give that
+       build its own folders so it never mixes with the app's normal or NativeAOT build. -->
+  <!-- obj/ stays the base folder, so neither build compiles the other's generated sources. -->
+  <PropertyGroup Condition="'$(NetWivBindingsOnly)' == 'true'">
+    <MSBuildProjectExtensionsPath>$(MSBuildThisFileDirectory)obj/bindings/</MSBuildProjectExtensionsPath>
+    <IntermediateOutputPath>$(MSBuildThisFileDirectory)obj/bindings/</IntermediateOutputPath>
+    <OutputPath>$(MSBuildThisFileDirectory)bin/bindings/</OutputPath>
+  </PropertyGroup>
+</Project>`,
+  'frontend/NetWiv.targets': `<Project>
+  <!-- The types shared with the desktop app, and the typed client generated from its commands. -->
+  <ItemGroup>
+    <ProjectReference Include="../contracts/Contracts.csproj" />
+    <_NetWivApp Include="$(MSBuildProjectDirectory)/../src-netwiv/*.csproj" />
+    <_NetWivCommandSources Include="$(MSBuildProjectDirectory)/../src-netwiv/**/*.cs;$(MSBuildProjectDirectory)/../contracts/**/*.cs"
+                           Exclude="$(MSBuildProjectDirectory)/../src-netwiv/obj/**;$(MSBuildProjectDirectory)/../src-netwiv/bin/**;$(MSBuildProjectDirectory)/../contracts/obj/**;$(MSBuildProjectDirectory)/../contracts/bin/**" />
+  </ItemGroup>
+  <!-- Every app build rewrites Generated/NetWivCommands.g.cs. When the C# sources are newer,
+       refresh it with a bindings-only app build before this project compiles. -->
+  <Target Name="NetWivGenerateCommands" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true'"
+          Inputs="@(_NetWivCommandSources)" Outputs="Generated/NetWivCommands.g.cs">
+    <Exec Command="dotnet build &quot;@(_NetWivApp->'%(FullPath)')&quot; -p:NetWivBindingsOnly=true -p:PublishAot=false --disable-build-servers -nologo -v:q" />
+    <Touch Files="Generated/NetWivCommands.g.cs" />
+    <ItemGroup>
+      <Compile Include="Generated/NetWivCommands.g.cs" Exclude="@(Compile)" />
+    </ItemGroup>
+  </Target>
+</Project>`,
+  'frontend/Layout/MainLayout.razor': `@inherits LayoutComponentBase
 @Body`,
-  'wwwroot/css/app.css': style + `
+  'frontend/wwwroot/css/app.css': style + `
 /* Blazor's own loading and error elements. */
 #app > .loading-progress, #app > .loading-progress-text { display: none; }
 #blazor-error-ui { display: none; position: fixed; inset: auto 0 0 0; padding: 12px 20px; background: var(--stop); color: var(--stop-ink); font-size: 14px; }
@@ -779,14 +831,15 @@ await save(path.join(root, 'blazor'), {
 /* Blazor focuses the heading after navigation; that focus is for screen readers. */
 h1:focus { outline: none; }
 `,
-  'wwwroot/netwiv.js': `// Connects Blazor to the C# backend through @netwiv/api. Pages/Home.razor imports this module.
+  'frontend/wwwroot/netwiv.js': `// The generated C# client (Generated/NetWivCommands.g.cs) calls C# commands through this
+// module, which forwards them to @netwiv/api as JSON.
 import { invoke } from './vendor/@netwiv/api/core.js';
 
-export const greet = name => invoke('greet', { name });
-export const smokeDone = result => invoke('smoke_done', { result });`,
-  'Pages/Home.razor': `@page "/"
+export const invokeJson = async (command, args) => JSON.stringify((await invoke(command, JSON.parse(args))) ?? null);`,
+  'frontend/Pages/Home.razor': `@page "/"
 @page "/index.html"
-@inject IJSRuntime JS
+@using System.Diagnostics
+@inject NetWiv.Generated.NetWivCommands Commands
 @inject NavigationManager Navigation
 
 <PageTitle>@AppName</PageTitle>
@@ -806,7 +859,7 @@ export const smokeDone = result => invoke('smoke_done', { result });`,
                 </div>
             </form>
             <div class="answer" data-state="@AnswerState" aria-live="polite">
-                <p class="route">${route}</p>
+                <p class="route">${blazorRoute}</p>
                 @if (State == CallState.Failed)
                 {
                     <p class="message">${copy.failed}</p>
@@ -831,7 +884,6 @@ ${fileMap('blazor', '                ').replaceAll('@', '@@')}
 @code {
     private enum CallState { Idle, Calling, Answered, Failed }
 
-    private IJSObjectReference? NetWiv;
     private const string AppName = "${copy.app}";
     private string Name = "Blazor";
     private CallState State = CallState.Idle;
@@ -854,22 +906,22 @@ ${fileMap('blazor', '                ').replaceAll('@', '@@')}
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-        NetWiv = await JS.InvokeAsync<IJSObjectReference>("import", "./netwiv.js");
         // Smoke tests open the window with ?smoke=1 and expect one automatic call.
         Smoke = new Uri(Navigation.Uri).Query.Contains("smoke", StringComparison.Ordinal);
-        if (Smoke) await Greet();
+        if (!Smoke) return;
+        await Greet();
         StateHasChanged();
     }
 
     private async Task Greet()
     {
-        if (NetWiv is null) return;
         State = CallState.Calling;
-        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+        var started = Stopwatch.GetTimestamp();
         try
         {
-            var result = await NetWiv.InvokeAsync<Greeting>("greet", Name);
-            Ms = (long)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+            // Generated from Commands.Greet: renaming the method or its parameters breaks this build.
+            var result = await Commands.GreetAsync(Name);
+            Ms = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
             Message = result.Message;
             Count = result.Count;
             State = CallState.Answered;
@@ -877,18 +929,16 @@ ${fileMap('blazor', '                ').replaceAll('@', '@@')}
             {
                 if (result.Message != "Hello, Blazor!" || result.Count != 1)
                     throw new InvalidOperationException($"Unexpected C# response: {result}");
-                await NetWiv.InvokeVoidAsync("smokeDone", "${pass('Blazor')}");
+                await Commands.SmokeDoneAsync("${pass('Blazor')}");
             }
         }
-        catch (Exception error) when (error is JSException or InvalidOperationException)
+        catch (Exception error) when (error is JSException or InvalidOperationException or NotSupportedException)
         {
             Error = error.Message;
             State = CallState.Failed;
-            if (Smoke) await NetWiv.InvokeVoidAsync("smokeDone", $"FAIL: {error.Message}");
+            if (Smoke) await Commands.SmokeDoneAsync($"FAIL: {error.Message}");
         }
     }
-
-    private sealed record Greeting(string Message, int Count);
 }`,
 });
 

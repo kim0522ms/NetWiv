@@ -151,7 +151,7 @@ public sealed partial class CommandGenerator : IIncrementalGenerator
                         context.ReportDiagnostic(Diagnostic.Create(DuplicateName, command.Method.Locations.FirstOrDefault(), group.Key));
                 return;
             }
-            FrontendBindingEmitter.Emit(context, jsonContext, frontend);
+            FrontendBindingEmitter.Emit(context, jsonContext, frontend, compilation.Assembly);
         }
     }
 }

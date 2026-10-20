@@ -7,7 +7,7 @@ this sample does not connect to hardware or claim vendor SDK compatibility.
 
 The app targets .NET 8 and can be built with .NET SDK 8/9/10. Node must satisfy
 `package.json` (20.19+ or 22.12+). Use a logged-in desktop with WebView2 on Windows
-x64, GTK3/WebKitGTK 4.1 on Ubuntu 24.04 x64, or WKWebView on macOS 12+ arm64/x64.
+x64, GTK3/WebKitGTK 4.1 on Ubuntu 24.04 x64, or WKWebView on macOS 12+ arm64.
 NativeAOT additionally needs the target platform's native compiler/linker:
 Visual Studio C++ build tools/Windows SDK, Linux clang/zlib development files,
 or Xcode Command Line Tools. Ordinary consumers do not need Cargo.
@@ -44,7 +44,7 @@ dotnet run --project src-netwiv -c Release -r win-x64 --no-build
 ```
 
 On Linux/macOS use `export NETWIV_PACKAGE_VERSION=...`, and replace `win-x64`
-with `linux-x64`, `osx-arm64` or `osx-x64` for your actual host. The same dotnet/npm
+with `linux-x64` or `osx-arm64` for your actual host. The same dotnet/npm
 commands apply; create the empty config with
 `printf '%s\n' '<configuration><packageSources><clear /></packageSources></configuration>' > NuGet.Config`.
 `npm run build` first builds a managed assembly with

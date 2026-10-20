@@ -47,8 +47,8 @@ an installed runtime or `--aot` for NativeAOT. See [deployment modes](deployment
 
 On macOS, `netwiv build --bundles app,dmg --no-sign` publishes managed .NET for the
 current architecture and creates an ad-hoc-signed `.app` and a `.dmg`. Explicit
-targets are `osx-arm64` and `osx-x64` (or their Apple target triples). Build on the
-matching Mac. Bundles use system WKWebView; there is no separate WebView runtime
+supported targets are `osx-arm64` and `aarch64-apple-darwin`. Build on
+Apple Silicon. Bundles use system WKWebView; there is no separate WebView runtime
 installer. See [macOS](macos.md) for configuration overlays, output paths,
 Developer ID signing configuration and unimplemented notarization.
 

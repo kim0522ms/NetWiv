@@ -100,9 +100,6 @@ jobs:
           - os: macos-15
             rid: osx-arm64
             major: 8
-          - os: macos-15-intel
-            rid: osx-x64
-            major: 8
     env:
       RELEASE_VERSION: ${{ needs.version.outputs.version }}
       DOTNET_NOLOGO: '1'

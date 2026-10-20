@@ -20,10 +20,11 @@ public sealed record BuildTarget(string RequestedTarget, string RuntimeIdentifie
             "x86_64-pc-windows-msvc" or "win-x64" => new(target, "win-x64", "windows", "x86_64"),
             "x86_64-unknown-linux-gnu" or "linux-x64" => new(target, "linux-x64", "linux", "x86_64"),
             "aarch64-apple-darwin" or "osx-arm64" => new(target, "osx-arm64", "macos", "aarch64"),
+            // Source-only escape hatch; no official native package or CI coverage.
             "x86_64-apple-darwin" or "osx-x64" => new(target, "osx-x64", "macos", "x86_64"),
             "aarch64-pc-windows-msvc" or "win-arm64" => throw Unsupported(target),
             "aarch64-unknown-linux-gnu" or "linux-arm64" => throw Unsupported(target),
-            _ => throw new ArgumentException($"Unknown target '{target}'. Supported first-release targets: x86_64-pc-windows-msvc, win-x64, x86_64-unknown-linux-gnu, linux-x64, aarch64-apple-darwin, osx-arm64, x86_64-apple-darwin, osx-x64.")
+            _ => throw new ArgumentException($"Unknown target '{target}'. Supported package targets: x86_64-pc-windows-msvc, win-x64, x86_64-unknown-linux-gnu, linux-x64, aarch64-apple-darwin, osx-arm64.")
         };
     }
 

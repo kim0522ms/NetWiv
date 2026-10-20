@@ -11,7 +11,7 @@ Package installation is described in the [quickstart](integration-quickstart.md)
 | --- | --- | --- |
 | Windows x64 | WebView2 Runtime | Wry desktop runtime and NativeAOT applications. |
 | Linux x64 | GTK3 and WebKitGTK 4.1 | X11 and native Wayland. Ubuntu 24.04 is the target baseline; selected managed/NativeAOT Wayland automated and interactive checks passed on Ubuntu 22.04 GNOME. See [Linux setup](linux.md) and [validation limits](#wayland-validation). |
-| macOS 12+ arm64 / x64 | System WKWebView and AppKit | Native runtime, CLI and app/DMG support. Hosted NativeAOT integration and package-consumer checks passed on both architectures; selected physical Apple Silicon GUI checks passed. Physical Intel and minimum-OS acceptance remain unverified. See [macOS](macos.md). |
+| macOS 12+ arm64 | System WKWebView and AppKit | Native runtime, CLI and app/DMG support. Hosted NativeAOT integration and package-consumer checks passed on arm64; selected physical Apple Silicon GUI checks passed. Minimum-OS acceptance remains unverified. See [macOS](macos.md). |
 | Android, iOS | — | Excluded from project work scope; not a later milestone. |
 
 Applications use the native libraries delivered in `NetWiv.Platform.Desktop`.
@@ -28,7 +28,7 @@ toolchain. See [native architecture](native-architecture.md).
 | Frontend bindings | Generated JS calls and TS declarations from local and opted-in referenced C# commands and supported JSON metadata. | Explicit tagged polymorphic roots and sealed variants are supported; custom converters, fallback polymorphism and other advanced JSON mappings remain incomplete. Referenced producers need compatible generated metadata; arbitrary dependency discovery is not supported. |
 | Project creation | 18 frontend choices through `netwiv new`; a matching local CLI manifest and SDK references. | Template availability does not establish GUI acceptance for every frontend/toolchain combination. |
 | Development | Frontend updates and C# binding regeneration with backend restart. | Rider and Visual Studio solution loading/debugging require further interactive validation. |
-| NativeAOT | Release publication for Windows/Linux x64 and macOS arm64/x64. | Successful compilation alone does not verify a working desktop session. |
+| NativeAOT | Release publication for Windows/Linux x64 and macOS arm64. | Successful compilation alone does not verify a working desktop session. |
 | Plugins | Managed packages for 24 desktop plugin areas. | Individual commands, permissions and platform behavior remain partial; the updater runtime is excluded from project scope. |
 
 Use the [C# contract](csharp-api.md), [binding contract](frontend-generator.md),
@@ -147,7 +147,7 @@ The following release boundaries remain open:
 - Windows installation on a machine without WebView2, and actual-certificate
   signing verification. WebView2 automatic installation and Fixed Version
   bundling are not provided by the current installer path.
-- Physical macOS Intel GUI and minimum macOS 12 execution, package-only clean-machine
+- Minimum macOS 12 arm64 execution, package-only clean-machine
   installation and Developer ID signing. Universal binaries are not implemented.
   Ad-hoc execution does not prove
   Gatekeeper acceptance; see [macOS limits](macos.md#validation-and-limits).

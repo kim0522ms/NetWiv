@@ -34,8 +34,8 @@ their limits in the PR. A matched fixture covers only its tested behaviors and
 inputs, not the entire associated API.
 
 Platform verification is independent. Source mappings and Windows/Linux
-results do not establish macOS conformance. Hosted arm64/x64 NativeAOT smokes
-check integration; complete macOS differential acceptance, including Intel,
+results do not establish macOS conformance. Hosted arm64 NativeAOT smokes
+check integration; complete macOS arm64 differential acceptance
 remains unverified. Keep generated upstream manifests unchanged when documenting
 these limits.
 

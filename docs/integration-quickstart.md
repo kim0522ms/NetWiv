@@ -116,8 +116,7 @@ dotnet publish src-netwiv -c Release -r win-x64 --self-contained true -p:Publish
 
 Distribute the **complete publish directory**, including the executable and
 native DLL/SO/dylib files. On Linux, publish for `linux-x64` and use that output's executable.
-On macOS, publish for `osx-arm64` (Apple Silicon) or `osx-x64` (Intel) on a
-matching Mac. Keep the generated synchronous `Main` entry point: AppKit's event
+On macOS, publish for `osx-arm64` on Apple Silicon. Keep the generated synchronous `Main` entry point: AppKit's event
 loop must run on the process main thread.
 
 For a macOS app bundle and disk image, use the CLI from the project root:
@@ -127,8 +126,7 @@ dotnet tool restore
 dotnet tool run netwiv -- build --target osx-arm64 --bundles app,dmg --no-sign
 ```
 
-The outputs are under `target/osx-arm64/release/bundle/`. Use
-`osx-x64` on Intel. `--no-sign` still renews the required ad-hoc executable
+The outputs are under `target/osx-arm64/release/bundle/`. `--no-sign` still renews the required ad-hoc executable
 signature; it does not provide Developer ID trust. Read the
 [signing and distribution limits](macos.md#bundles-and-signing) before distribution.
 

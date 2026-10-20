@@ -14,8 +14,8 @@ on Windows use `Get-FileHash -Algorithm SHA256` and compare the hash).
 The archive contains:
 
 - `packages/`: Core, Hosting, Generators, Build, Desktop, CLI and managed plugin
-  `.nupkg` files at the same version. Desktop includes Windows x64, Linux x64,
-  macOS arm64 and macOS x64 native libraries.
+  `.nupkg` files at the same version. Desktop includes Windows x64, Linux x64 and
+  macOS arm64 native libraries.
 - License texts, notices and pinned upstream dependency manifests.
 - `SOURCE.txt` with the source commit and `SHA256SUMS` for the extracted files.
 
@@ -62,14 +62,14 @@ Only `vMAJOR.MINOR.PATCH` tags with an optional prerelease suffix are accepted;
 build metadata and leading zeroes in numeric identifiers are rejected.
 Ordinary branch pushes and PRs run CI without creating a Release.
 
-`.github/workflows/release.yml` reuses the existing four-platform CI at the
+`.github/workflows/release.yml` reuses the existing three-platform CI at the
 tagged commit. Each platform builds its own native library and must pass tests
 and NativeAOT validation before exporting native inputs. A packaging job then
 collects those exact files and runs `scripts/pack-integration.ps1`, including
 Hosting and every managed plugin. The bundle validator checks package versions,
-the expected package set, license notices and all five native payload files
-against the CI inputs. Six fresh consumer jobs reuse that single bundle:
-Linux x64 with SDK/runtime 8, 9 and 10, plus Windows x64 and macOS arm64/x64 with
+the expected package set, license notices and all four native payload files
+against the CI inputs. Five fresh consumer jobs reuse that single bundle:
+Linux x64 with SDK/runtime 8, 9 and 10, plus Windows x64 and macOS arm64 with
 SDK/runtime 8. Each has only its selected SDK/runtime major visible in a private
 installation. They
 install the packaged CLI, publish and run a generated .NET 8 React app with
@@ -78,9 +78,9 @@ GUI/IPC smoke flow, and verify its actual runtime major. Each job also publishes
 a desktop smoke consumer with NativeAOT for its own target framework and executes
 windowless startup and configuration binding. The .NET 8 baseline jobs additionally
 publish and execute the default managed self-contained React app, checking its
-bundled runtime policy and GUI/IPC behavior. Both macOS jobs also bundle and
-execute the managed `.app` in both deployment modes through the GUI/IPC smoke flow.
-All six must pass before the draft Release job runs.
+bundled runtime policy and GUI/IPC behavior. The macOS job also bundles and
+executes the managed `.app` in both deployment modes through the GUI/IPC smoke flow.
+All five must pass before the draft Release job runs.
 See [SDK compatibility](dotnet-compatibility.md).
 
 The final job creates a **draft Release**, attaches the ZIP and its SHA-256
@@ -95,7 +95,7 @@ Release in this public repository is public. Tags, source code, Actions logs
 and workflow artifacts in a public repository are not a private distribution
 channel; a draft only delays publication of the Release page/assets.
 
-Source and package-consumer CI cover all four desktop RIDs. These hosted smoke
+Source and package-consumer CI cover all three supported desktop RIDs. These hosted smoke
 checks do not establish physical-device acceptance, Windows/macOS package
 consumers on .NET 9/10, the macOS 12 minimum OS, or full installer lifecycle
 acceptance on every supported platform. Adding a job does not prove it passed;

@@ -11,13 +11,21 @@ WKWebView is provided by macOS.
 | CPU | CLI target | .NET RID | Native asset |
 | --- | --- | --- | --- |
 | Apple Silicon | `aarch64-apple-darwin` | `osx-arm64` | `libnetwiv_native.dylib` |
-| Intel | `x86_64-apple-darwin` | `osx-x64` | `libnetwiv_native.dylib` |
 
-The CLI also accepts either RID. Omitting `--target` selects the current process
-architecture. Build on the matching Mac architecture; universal binaries are not
-implemented. Hosted CI has passed on both architectures. Physical Apple Silicon
-execution is separately verified; physical Intel GUI and minimum-OS acceptance
-remain unverified.
+The CLI also accepts `osx-arm64`. Omitting `--target` selects the current process
+architecture. Official macOS support and native packages are Apple Silicon only;
+universal binaries are not implemented. Physical Apple Silicon execution is
+separately verified; minimum-OS acceptance remains unverified.
+
+macOS x64 is no longer an official support, CI or release target. New packages
+do not contain `runtimes/osx-x64/native` assets. Existing Intel users must either
+move to arm64 or maintain their own source build; no fixes or validation are
+promised for Intel. Source target aliases (`osx-x64`, `x86_64-apple-darwin`) and
+the native host build path remain available for that unsupported use. Build the
+native backend locally and use project references to the SDK, then publish with
+`-r osx-x64`; official package-only consumers cannot supply that backend.
+This architecture retirement does not change the macOS 12 deployment minimum
+for the supported arm64 target.
 
 ## Framework source build
 
@@ -35,14 +43,14 @@ tests/NetWiv.Desktop.Smoke/bin/Release/net8.0/osx-arm64/publish/NetWiv.Desktop.S
 bash scripts/test-native-startup.sh "$PWD/tests/NetWiv.Desktop.Smoke/bin/Release/net8.0/osx-arm64/publish"
 ```
 
-Use `osx-x64` on Intel. The native build script selects the host architecture,
+The native build script selects the host architecture,
 uses the pinned Cargo lock and writes `artifacts/native/<RID>`. Its default
 `MACOSX_DEPLOYMENT_TARGET` is `12.0`. It sets the dylib install name to
 `@rpath/libnetwiv_native.dylib` and applies an ad-hoc signature.
 Stronghold uses the same signature-verified libsodium source archive as Linux;
 see the [native guide](../native/netwiv-native/README.md) and dependency lock.
 
-NuGet packing requires native assets for **all four** supported RIDs. Build them
+NuGet packing requires native assets for **all three** supported RIDs. Build them
 on their matching hosts and collect them under `artifacts/native` before
 `scripts/pack-integration.ps1`. Packing fails when an asset is missing; it never
 substitutes another architecture. Ordinary application consumers need the matching
@@ -144,8 +152,7 @@ compatibility claim. It is never selected by `bundle.targets: "all"`, which
 continues to mean `app,dmg`. Store output lives separately under
 `target/<requested-target>/release/bundle/app-store/`; producing it does not
 overwrite the direct-distribution app. Build on macOS with Xcode Command Line
-Tools. Both existing macOS RIDs are accepted; local runtime verification covers
-arm64, not Intel or the minimum supported OS.
+Tools on arm64. Local runtime verification does not establish minimum-OS acceptance.
 
 ### Configure and sign
 
@@ -332,7 +339,7 @@ dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r osx-arm64
 caffeinate -d -u -t 95 tests/NetWiv.Desktop.Smoke/bin/Release/net8.0/osx-arm64/publish/NetWiv.Desktop.Smoke --effects-smoke
 ```
 
-Use `osx-x64` on Intel. The probe reads its own AppKit content-view subviews on
+The probe reads its own AppKit content-view subviews on
 the UI thread and asserts one effect after replacement, none after clearing,
 and the last requested native material/state. It exercises creation with and
 without an implicit WKWebView, explicit child creation, radius arguments,
@@ -351,18 +358,18 @@ earlier crash. See [SDK runtime limits](dotnet-compatibility.md).
 
 ## Validation and limits
 
-The [GitHub Actions workflow](../.github/workflows/ci.yml) includes separate
-`macos-15` (arm64) and `macos-15-intel` (x64) jobs. Each builds its native adapter,
+The [GitHub Actions workflow](../.github/workflows/ci.yml) uses `macos-15`
+(arm64) for macOS. The desktop job builds its native adapter,
 runs managed/Rust tests, executes the Core suite with NativeAOT,
 checks native startup failures, and runs real WKWebView and isolation NativeAOT
 smokes. The CLI suite includes real app/DMG packaging and signing-failure tests.
 Validation results remain in ordinary CI console output; separate validation
 reports and diagnostic archives are not collected or uploaded. See the
 [CI guide](development.md#continuous-integration) for scope and prerequisites.
-Both hosted jobs passed for `v0.2.2`, including WKWebView, isolation and sandbox
-execution. The separate release package-consumer jobs also passed managed React
-execution and windowless NativeAOT checks for both RIDs. These results do not
-establish physical Intel GUI, clean-machine installation or macOS 12 acceptance.
+The arm64 hosted job passed for `v0.2.2`, including WKWebView, isolation and
+sandbox execution. The arm64 release package-consumer job also passed managed
+React execution and windowless NativeAOT checks. These results do not
+establish clean-machine installation or macOS 12 acceptance.
 
 The NativeAOT desktop smoke exercises real WKWebView guest invoke/Channel, scoped
 assets, multiple windows, native menu/tray/image operations, reparenting, async
@@ -376,7 +383,7 @@ The ad-hoc-signed app also passed actual C# invoke-button input in secondary and
 child WebViews and a native menu selection/checked-state check. These checks
 establish integration evidence, not complete Tauri conformance.
 Broader keyboard/mouse interaction, all menu roles, multiple monitors, Developer ID certificates,
-package-only clean-machine installation and physical Intel GUI need separate acceptance.
+and package-only clean-machine installation need separate acceptance.
 Expansion of distribution notarization is excluded from project work scope, not
 a deferred acceptance task. Existing ad-hoc/identity signing does not establish
 notarized distribution. Website data-store enumeration/removal is implemented through
@@ -405,7 +412,7 @@ macOS arm64. NetWiv's separate unchanged-guest `dataStoreIdentifier` option
 regression also passed managed and NativeAOT execution. The pinned public creation option ignores the identifier; see
 [the observed difference](pinned-upstream-behavior.md#website-data-store-creation-and-removal).
 The paired comparison and public creation-option regression remain unverified
-on Intel and the minimum OS; the ordinary hosted smoke is a separate check.
+on the minimum OS; the ordinary hosted smoke is a separate check.
 Per-window `skipTaskbar=true` is rejected on
 macOS; use `AppApi.SetDockVisibilityAsync` for the application-wide Dock entry.
 The Autostart and DeepLink OS-registration plugins remain Windows/Linux-only.
@@ -488,8 +495,8 @@ For the pinned Rust toolchain's macOS 27
 pass `--config 'profile.release.build-override.strip="none"'` to Cargo for
 the affected native build. This disables stripping of build dependencies without
 changing the committed release profile.
-The ordinary NativeAOT desktop smoke also runs on hosted macOS 15 arm64/x64.
-Physical Intel, paired Intel comparison and macOS 12/13 execution remain unverified.
+The ordinary NativeAOT desktop smoke also runs on hosted macOS 15 arm64.
+macOS 12/13 execution remains unverified.
 
 ---
 

@@ -29,7 +29,7 @@ commands on both hosts, then uses unchanged public app/window guest APIs to veri
 enumeration bytes, active deletion rejection, isolated persistence after close,
 incognito precedence, deletion and empty recreation. Managed and NativeAOT
 comparisons passed on physical macOS arm64. This is app API and lifecycle evidence,
-not a public creation-option parity pass. Intel and minimum-OS execution remain
+not a public creation-option parity pass. Minimum-OS execution remains
 unverified.
 
 The pinned runtime also collapses Wry removal errors into

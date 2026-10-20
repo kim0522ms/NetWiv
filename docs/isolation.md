@@ -98,7 +98,7 @@ dotnet publish tests/NetWiv.Isolation.Smoke -c Release -r osx-arm64
 tests/NetWiv.Isolation.Smoke/bin/Release/net8.0/osx-arm64/publish/NetWiv.Isolation.Smoke
 ```
 
-Use `osx-x64` on Intel. Physical Apple Silicon and hosted arm64/x64 runs passed
+Physical Apple Silicon and hosted arm64 runs passed
 the NetWiv encrypted IPC, Channel, forged/opaque-frame, reload and fallback smoke.
 These NetWiv-only runs are not the paired Tauri differential suite above;
 macOS reference comparison remains open. Do not apply WebKitGTK frame/CORS observations to

@@ -102,7 +102,7 @@ package versions; older native libraries may reject newer run-config fields even
 within the same ABI version.
 
 Desktop targets include Windows x64 with WebView2, Linux x64 with GTK3 and
-WebKitGTK 4.1, and macOS arm64/x64 with WKWebView/AppKit. See [macOS](macos.md)
+WebKitGTK 4.1, and macOS arm64 with WKWebView/AppKit. See [macOS](macos.md)
 for the distinction between implementation and completed validation. [Framework development](development.md) describes native builds
 and package creation. [Support and validation](implementation-status.md) lists
 remaining acceptance boundaries; native library reuse is not a full Tauri

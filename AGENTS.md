@@ -67,7 +67,8 @@ use lowercase `netwiv`. Upstream dependency identities remain unchanged inside t
 
 ## Milestone boundary
 
-- Desktop baseline: Windows x64 with WebView2, Linux x64 on Ubuntu 24.04/WSLg with GTK3/WebKitGTK 4.1, and macOS 12+ arm64/x64 with WKWebView/AppKit. Linux supports X11 and native Wayland; selected physical Wayland checks cover Ubuntu 22.04 GNOME, not physical Ubuntu 24.04 acceptance. macOS hosted NativeAOT checks passed on both architectures; physical Apple Silicon has selected GUI evidence, while physical Intel and minimum-OS acceptance remain unverified. See [Linux](docs/linux.md) and [macOS support](docs/macos.md).
+- Desktop baseline: Windows x64 with WebView2, Linux x64 on Ubuntu 24.04/WSLg with GTK3/WebKitGTK 4.1, and macOS 12+ arm64 with WKWebView/AppKit. Linux supports X11 and native Wayland; selected physical Wayland checks cover Ubuntu 22.04 GNOME, not physical Ubuntu 24.04 acceptance. macOS hosted NativeAOT checks passed on arm64; physical Apple Silicon has selected GUI evidence, while minimum-OS acceptance remains unverified. See [Linux](docs/linux.md) and [macOS support](docs/macos.md).
+- macOS x64 is excluded from official support, CI and release packages. Retain source-build escape hatches only; do not schedule Intel acceptance or restore distribution without an explicit scope change.
 - New frontend code, generated bindings and starters use `@netwiv/api`. Its current facade delegates to pinned official Tauri code; unchanged official guests remain the separate compatibility reference. See [frontend SDK](docs/frontend-api.md). Do not replace upstream imports in compatibility tests to make them facade tests.
 - Desktop core includes app, core, DPI, events, image, menu, path, resources, tray, window, webview and webview-window behavior.
 - The plugin host is in scope; official plugin implementations and Tauri v1 migration are separate milestones.

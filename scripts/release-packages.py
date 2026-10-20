@@ -10,8 +10,7 @@ BASE_PACKAGES = ['NetWiv.Core', 'NetWiv.Hosting', 'NetWiv.Generators',
                  'NetWiv.Build', 'NetWiv.Platform.Desktop', 'NetWiv.Cli']
 NATIVE_FILES = [Path(name) for name in [
     'win-x64/netwiv_native.dll', 'win-x64/WebView2Loader.dll',
-    'linux-x64/libnetwiv_native.so', 'osx-arm64/libnetwiv_native.dylib',
-    'osx-x64/libnetwiv_native.dylib']]
+    'linux-x64/libnetwiv_native.so', 'osx-arm64/libnetwiv_native.dylib']]
 
 
 def version_from_tag(tag):
@@ -51,6 +50,10 @@ def bundle(repository, feed, destination, version, revision):
                 if notice not in package.namelist() or not package.read(notice):
                     raise ValueError(f'{file.name}: missing {notice}.')
             if identity == 'NetWiv.Platform.Desktop':
+                expected_native = {f'runtimes/{native.parent.as_posix()}/native/{native.name}' for native in NATIVE_FILES}
+                actual_native = {name for name in package.namelist() if name.startswith('runtimes/') and '/native/' in name and not name.endswith('/')}
+                if actual_native - expected_native:
+                    raise ValueError(f'{file.name}: unexpected native assets outside the supported package set.')
                 for native in NATIVE_FILES:
                     name = f'runtimes/{native.parent.as_posix()}/native/{native.name}'
                     source = repository / 'artifacts/native' / native
@@ -73,9 +76,9 @@ def bundle(repository, feed, destination, version, revision):
         f'NetWiv {version} — experimental package bundle. Start with a toy project.\n\n'
         f'Source commit: `{revision}`\n\n'
         'Download and extract the ZIP, then follow its README to use `packages/` as a local NuGet feed. '
-        'Contains the SDK, Hosting, CLI, managed plugins and native libraries for Windows x64, Linux x64, macOS arm64 and macOS x64.\n\n'
-        'These packages are not published to NuGet.org. CI validates source builds on all four platforms '
-        'and runs packaged managed GUI/IPC and NativeAOT startup checks on all four desktop RIDs '
+        'Contains the SDK, Hosting, CLI, managed plugins and native libraries for Windows x64, Linux x64 and macOS arm64.\n\n'
+        'These packages are not published to NuGet.org. CI validates source builds on all three supported platforms '
+        'and runs packaged managed GUI/IPC and NativeAOT startup checks on all three desktop RIDs '
         '(.NET 8 everywhere, plus .NET 9/10 on Linux); this is not complete release acceptance, '
         'installer lifecycle validation, Developer ID signing or notarization.\n\n'
         'NetWiv is an independent project. See NOTICE and THIRD-PARTY-NOTICES.md in the bundle for upstream attribution.\n',

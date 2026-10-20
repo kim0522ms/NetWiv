@@ -13,7 +13,7 @@ dotnet publish tests/NetWiv.MenuTray.Smoke -c Release -r osx-arm64
 caffeinate -d -u -t 600 tests/NetWiv.MenuTray.Smoke/bin/Release/net8.0/osx-arm64/publish/NetWiv.MenuTray.Smoke
 ```
 
-Use `osx-x64` for Intel. Run both managed and published NativeAOT executables;
+Run both managed and published NativeAOT executables;
 publishing alone is not an execution check. No solution registration is required.
 
 The probe's checkbox confirmations are manual assertions. A successful role
@@ -55,6 +55,6 @@ roles, rendering or input. Failures exit nonzero; a ten-minute watchdog exits 12
 automatically verify AppKit Search, system window entries, About rendering or
 template appearance: these need honest manual confirmation. It also does not
 establish every predefined menu item, system icon, double/middle click, theme
-change, per-window menu precedence, Intel or minimum-OS acceptance. Describe
+change, per-window menu precedence or minimum-OS acceptance. Describe
 only the interactions actually completed in the PR; do not retain per-run
 reports or environment inventories in the repository.

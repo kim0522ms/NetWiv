@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { runInNewContext } from 'node:vm';
 
 const script = readFileSync(new URL('./ipc.js', import.meta.url), 'utf8');
-function document(seed = 1) {
+function document(seed = 1, protocolIpc = true) {
   const posts = [];
   const requests = [];
   const listeners = {};
@@ -14,7 +14,7 @@ function document(seed = 1) {
     fetch: (url, options) => { requests.push({ url, options }); return Promise.resolve('response'); }
   };
   window.top = window;
-  runInNewContext(script, { window, crypto: { getRandomValues: value => value.fill(seed++) } });
+  runInNewContext(`${script}(${protocolIpc});`, { window, crypto: { getRandomValues: value => value.fill(seed++) } });
   return { window, posts, requests, listeners, nonce: window.__NETWIV_IPC_NONCE__() };
 }
 
@@ -70,4 +70,13 @@ test('protocol capability stays on the private IPC authority and cannot follow r
   assert.equal(page.requests[0].options.redirect, 'error');
   assert.equal(page.requests[0].options.headers.get('NetWiv-Document-Capability'), 'secret');
   assert.equal(headers.get('NetWiv-Document-Capability'), null);
+});
+
+test('a claimed IPC scheme cannot expose capability headers through the private fetch helper', async () => {
+  const page = document(1, false);
+  page.window.__NETWIV_ACTIVATE_IPC__(page.nonce, 1, 'secret');
+  await assert.rejects(page.window.__NETWIV_DOCUMENT_TRANSPORT__.fetchIpc('ipc://localhost/resource', {}));
+  assert.equal(page.requests.length, 0);
+  page.window.__NETWIV_DOCUMENT_TRANSPORT__.send('command');
+  assert.equal(page.posts.length, 1);
 });

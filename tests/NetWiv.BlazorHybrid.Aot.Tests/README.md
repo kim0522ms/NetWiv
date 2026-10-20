@@ -62,6 +62,12 @@ context: each document must obtain a fresh native grant and retain the correct
 source URI. This is separate from Hybrid's reload policy. CI and package checks
 run it after the managed native browser assertions, without another publish.
 
+`--registered-ipc` runs on all three platforms in managed or NativeAOT
+executables. It loads a document through an application-registered `ipc` scheme,
+checks custom GET/POST handling and message-based Core commands, and verifies
+that unhandled requests cannot fall through to built-in command dispatch.
+Private transport headers must not reach the custom handler.
+
 ## Assertions
 
 - Compiled Razor components, explicit component registration, injected scoped

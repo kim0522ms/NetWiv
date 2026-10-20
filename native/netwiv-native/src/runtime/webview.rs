@@ -88,11 +88,12 @@ impl LocalRuntime {
         } else {
             None
         };
+        let builtin_ipc = self.ipc_protocol_enabled && !self.uri_scheme_protocols.iter().any(|scheme| scheme == "ipc");
         let bridge = bridge_script(
             &window.label,
             &config.label,
             use_https_scheme,
-            self.ipc_protocol_enabled,
+            builtin_ipc,
         );
         let shared_ipc = self.shared.clone();
         let ipc_label = config.label.clone();
@@ -139,11 +140,7 @@ impl LocalRuntime {
             && (!cfg!(target_os = "linux") || !context.asset_protocol_registered);
         let register_isolation_protocol = self.isolation_protocol.is_some()
             && (!cfg!(target_os = "linux") || !context.isolation_protocol_registered);
-        let register_ipc_protocol = self.ipc_protocol_enabled
-            && !self
-                .uri_scheme_protocols
-                .iter()
-                .any(|scheme| scheme == "ipc")
+        let register_ipc_protocol = builtin_ipc
             && (!cfg!(target_os = "linux") || !context.ipc_protocol_registered);
         let register_uri_scheme_protocols =
             !cfg!(target_os = "linux") || !context.uri_scheme_protocols_registered;
@@ -197,13 +194,14 @@ impl LocalRuntime {
         if register_uri_scheme_protocols {
             for scheme in &self.uri_scheme_protocols {
                 let shared = self.shared.clone();
-                #[cfg(target_os = "linux")]
                 let is_ipc = scheme == "ipc";
                 builder = builder.with_asynchronous_custom_protocol(
                     scheme.clone(),
-                    move |webview_id, request, responder| {
-                        #[cfg(target_os = "linux")]
-                        if is_ipc { shared.request_ipc_asset(webview_id, request, responder); return; }
+                    move |webview_id, mut request, responder| {
+                        if is_ipc {
+                            request.headers_mut().remove("netwiv-document-capability");
+                            request.headers_mut().remove("netwiv-document-id");
+                        }
                         shared.request_asset(webview_id, request, responder)
                     },
                 );

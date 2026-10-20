@@ -7,6 +7,7 @@ internal static class Program
     {
         try
         {
+            if (args.Contains("--registered-ipc", StringComparer.Ordinal)) return RegisteredIpcProof.Run();
             if (args.Contains("--transport-navigation", StringComparer.Ordinal)) return TransportNavigationProof.Run();
             var managedHost = args.Contains("--managed-host", StringComparer.Ordinal);
             var managed = managedHost || args.Contains("--managed", StringComparer.Ordinal);

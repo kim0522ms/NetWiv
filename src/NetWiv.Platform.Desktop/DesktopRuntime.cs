@@ -315,7 +315,8 @@ public sealed class DesktopRuntime : IDesktopRuntime
         try
         {
             response = (context.ResolveUriScheme is null ? null : await context.ResolveUriScheme(request)) ??
-                (request.Uri.Scheme == "ipc" && context.InvokeProtocol is not null
+                (request.Uri.Scheme == "ipc" && context.InvokeProtocol is not null &&
+                    context.UriSchemeProtocols?.Contains("ipc", StringComparer.Ordinal) != true
                 ? await context.InvokeProtocol(request)
                 : context.ResolveAsset(request) ?? new AssetResponse(404, "text/plain", "Not found"u8.ToArray()));
         }

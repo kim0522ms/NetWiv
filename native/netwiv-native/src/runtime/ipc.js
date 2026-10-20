@@ -1,4 +1,4 @@
-(() => {
+(protocolIpc => {
   if (window.top !== window) return;
   const post = window.webkit.messageHandlers.ipc.postMessage.bind(window.webkit.messageHandlers.ipc);
   const nativeFetch = window.fetch.bind(window);
@@ -24,6 +24,10 @@
     else pending.push(deliver);
   };
   const fetchIpc = (url, options) => new Promise((resolve, reject) => {
+    if (!protocolIpc) {
+      reject(new TypeError('The private IPC protocol transport is unavailable.'));
+      return;
+    }
     const target = new NativeURL(url);
     if (target.protocol !== 'ipc:' || target.hostname !== 'localhost' || target.port || target.username || target.password) {
       reject(new TypeError('The private IPC transport requires ipc://localhost.'));
@@ -53,4 +57,4 @@
     }
   });
   Object.defineProperty(window, '__NETWIV_DOCUMENT_TRANSPORT__', { value: Object.freeze({ send, fetchIpc }) });
-})();
+})

@@ -247,7 +247,7 @@ pub(super) fn bridge_script(
         serde_json::to_string(if use_https_scheme { "https" } else { "http" }).unwrap()
     );
     #[cfg(target_os = "linux")]
-    let bridge = format!("{}\n{bridge}", super::ipc::BOOTSTRAP);
+    let bridge = format!("{}({protocol_ipc});\n{bridge}", super::ipc::BOOTSTRAP);
     bridge
 }
 

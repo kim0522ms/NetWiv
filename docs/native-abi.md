@@ -162,6 +162,12 @@ permissions before loading finishes.
 Raw `window.ipc` messages on Linux are outside this authenticated path and are
 rejected. Applications continue to use `@netwiv/api`; `__NETWIV_IPC__`, transport
 envelopes and authentication handshakes are private implementation details.
+An application may register `ipc` as a custom URI scheme. That registration
+owns its document and asset requests on every platform; Core commands use the
+message transport instead of the built-in HTTP transport. An unhandled custom
+request falls back to asset resolution, never to built-in command dispatch.
+Private document capability headers are removed before custom handlers run,
+and Linux's credential-bearing fetch helper is disabled for that registration.
 Windows per-frame sender authorization and macOS native sender checks retain
 their existing behavior. This hardening does not change ABI 3's external
 callback or protocol payload format.

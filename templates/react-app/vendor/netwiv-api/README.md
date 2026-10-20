@@ -4,6 +4,12 @@ The single supported NetWiv desktop frontend API, including plugin guests.
 Pinned Tauri implementations remain private inside the package; applications
 need no `@tauri-apps/api` or `@tauri-apps/plugin-*` dependencies.
 
+For generated Blazor clients, `core.invokeJson(command, argsJson, options?)`
+transports JSON text without converting numbers to JavaScript `number`. Input
+must encode an object; the result is JSON text. Binary responses are unsupported.
+This requires a matching NetWiv runtime. Ordinary `invoke` and `JSON.parse`
+retain JavaScript's numeric precision limits.
+
 ```ts
 import { invoke } from '@netwiv/api/core';
 import { getCurrentWindow } from '@netwiv/api/window';

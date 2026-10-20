@@ -11,7 +11,7 @@ const advance = async value => {
 try {
  const label = window.__TAURI_INTERNALS__.metadata.currentWebview.label;
  await advance('module import');
- const { invoke, Channel, convertFileSrc } = await import('./core.js');
+ const { invoke, invokeJson, Channel, convertFileSrc } = await import('./core.js');
  document.querySelector('#label').textContent = label;
  document.querySelector('#invoke').onclick = async () => {
    document.querySelector('#result').textContent = await invoke('greet', {name: label});
@@ -44,6 +44,8 @@ try {
  await advance('JSON IPC');
  const value = await invoke('echo', {input: [label, 42, true]});
  if (JSON.stringify(value) !== JSON.stringify([label, 42, true])) throw Error('JSON IPC mismatch');
+ const exact = '{"integer":9223372036854775807,"decimal":0.1234567890123456789012345678,"nested":[9007199254740993,null]}';
+ if (await invokeJson('echo', '{"input":' + exact + '}') !== exact) throw Error('JSON text IPC lost numeric precision');
  await advance('Channel invoke');
  const values = [];
  const channel = new Channel(); channel.onmessage = value => values.push(value);

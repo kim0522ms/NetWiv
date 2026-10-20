@@ -171,7 +171,7 @@ internal static class NewCommand
         Directory.Delete(Path.Combine(project, "scripts"), recursive: true);
         Directory.Delete(Path.Combine(project, "vendor"), recursive: true);
         File.WriteAllText(Path.Combine(project, "README.md"), "# NetWiv + Blazor\n\nThe frontend is a Blazor WebAssembly project targeting the selected .NET SDK in `frontend/`. Run `dotnet tool restore` then `dotnet tool run netwiv -- dev -- --dev`. The desktop backend is in `src-netwiv/`.\n\n" +
-            "Types the app and the frontend share live in `contracts/`. Each app build generates `frontend/Generated/NetWivCommands.g.cs`, a typed C# client for the `[Command]` methods whose parameters and results use those shared types; inject `NetWivCommands` and call, for example, `GreetAsync(name)`.\n" + TemplateNotice);
+            "Types the app and the frontend share live in `contracts/`. Each app build generates `frontend/obj/netwiv/<Configuration>/NetWivCommands.g.cs`, a typed C# client for the `[Command]` methods whose parameters and results use those shared types; inject `NetWivCommands` and call, for example, `GreetAsync(name)`.\n" + TemplateNotice);
     }
 
     // Moves the starter's DTO and JSON context into contracts/, which the app and the frontend
@@ -195,7 +195,7 @@ internal static class NewCommand
         var backendPath = Directory.EnumerateFiles(Path.Combine(project, "src-netwiv"), "*.csproj").Single();
         var backend = XDocument.Load(backendPath);
         var bindings = backend.Descendants("NetWivFrontendBindingsDirectory").Single();
-        bindings.ReplaceWith(new XElement("NetWivCSharpBindingsDirectory", "../frontend/Generated"));
+        bindings.ReplaceWith(new XElement("NetWivCSharpBindingsDirectory", "../frontend/obj/netwiv/$(Configuration)"));
         backend.Root!.Add(new XElement("ItemGroup", new XElement("ProjectReference", new XAttribute("Include", "../contracts/Contracts.csproj"))));
         backend.Save(backendPath);
 
@@ -235,7 +235,7 @@ internal static class NewCommand
         if (manager == "dotnet")
         {
             const string command = "dotnet watch --project frontend/NetWivUi.csproj run --urls http://127.0.0.1:5173";
-            const string build = "dotnet publish frontend/NetWivUi.csproj -c Release -o dist";
+            const string build = "dotnet publish frontend/NetWivUi.csproj -c \"$(Configuration)\" -o dist";
             var frontProject = Directory.EnumerateFiles(project, "*.Frontend.esproj").Single();
             var document = XDocument.Load(frontProject);
             document.Descendants("StartupCommand").Single().Value = command;

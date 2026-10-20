@@ -4,6 +4,92 @@ using NetWiv.Cli;
 
 internal static class NewProjectTests
 {
+    internal static async Task BlazorConfigurationBuilds()
+    {
+        var root = Directory.CreateTempSubdirectory("netwiv-blazor-build-").FullName;
+        try
+        {
+            var app = Path.Combine(root, "app");
+            var created = await Run(["new", "Example", "-t", "blazor", "-o", app], root);
+            Check(created.Code == 0, created.Error);
+            var backend = Path.Combine(app, "src-netwiv/Example.csproj");
+            var bindingDirectory = XDocument.Load(backend).Descendants("NetWivCSharpBindingsDirectory").Single().Value;
+            Check(bindingDirectory == "../frontend/obj/netwiv/$(Configuration)", "Generated clients share an output across configurations.");
+            var frontendBuild = XDocument.Load(Path.Combine(app, "Example.Frontend.esproj")).Descendants("BuildCommand").Single().Value;
+            Check(frontendBuild.Contains("-c \"$(Configuration)\"", StringComparison.Ordinal), "App build does not pass its configuration to the frontend publish.");
+            Check(File.ReadAllLines(Path.Combine(app, ".gitignore")).Contains("**/obj/"), "Generated client directory is not ignored.");
+            // Exercise the actual template targets with a deterministic exporter. Generator
+            // semantics are tested separately; this fixture isolates MSBuild scheduling,
+            // incremental Compile items and concurrent configuration output ownership.
+            File.WriteAllText(backend, $$"""
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup>
+                    <TargetFramework>net8.0</TargetFramework>
+                    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+                    <NetWivCSharpBindingsDirectory>{{bindingDirectory}}</NetWivCSharpBindingsDirectory>
+                  </PropertyGroup>
+                  <Target Name="ExportClient" AfterTargets="CoreCompile">
+                    <MakeDir Directories="$(NetWivCSharpBindingsDirectory)" />
+                    <WriteLinesToFile File="$(NetWivCSharpBindingsDirectory)/NetWivCommands.g.cs"
+                      Lines="public class $(Configuration)Client { }" Overwrite="true" WriteOnlyWhenDifferent="true" />
+                  </Target>
+                </Project>
+                """);
+            File.WriteAllText(Path.Combine(app, "contracts/Contracts.csproj"), """
+                <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup>
+                <TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+                </PropertyGroup></Project>
+                """);
+            File.WriteAllText(Path.Combine(app, "frontend/NetWivUi.csproj"), """
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+                  <ItemGroup><Compile Include="Consumer.cs" /></ItemGroup>
+                  <Import Project="NetWiv.targets" />
+                </Project>
+                """);
+            File.WriteAllText(Path.Combine(app, "frontend/Consumer.cs"), """
+                #if DEBUG
+                public class Consumer : DebugClient { }
+                #else
+                public class Consumer : ReleaseClient { }
+                #endif
+                """);
+            var runner = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet";
+            async Task Build(string configuration, string project = "frontend/NetWivUi.csproj", bool bindingsOnly = false)
+            {
+                var start = new System.Diagnostics.ProcessStartInfo(runner)
+                {
+                    WorkingDirectory = app, UseShellExecute = false, CreateNoWindow = true,
+                    RedirectStandardOutput = true, RedirectStandardError = true
+                };
+                foreach (var argument in new[] { "build", project, "-c", configuration, "--disable-build-servers", "-v:q", "-nologo" })
+                    start.ArgumentList.Add(argument);
+                if (bindingsOnly) start.ArgumentList.Add("-p:NetWivBindingsOnly=true");
+                using var process = System.Diagnostics.Process.Start(start)!;
+                var output = process.StandardOutput.ReadToEndAsync();
+                var error = process.StandardError.ReadToEndAsync();
+                using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+                try { await process.WaitForExitAsync(timeout.Token); }
+                catch { process.Kill(entireProcessTree: true); await process.WaitForExitAsync(); throw; }
+                Check(process.ExitCode == 0, await output + await error);
+            }
+            await Task.WhenAll(Build("Debug"), Build("Release"));
+            // A competing backend export cannot replace the other configuration's client,
+            // even when that frontend's incremental generation target is skipped.
+            await Build("Debug", "src-netwiv/Example.csproj", true);
+            await Build("Release");
+            foreach (var configuration in new[] { "Debug", "Release" })
+            {
+                var client = Path.Combine(app, "frontend/obj/netwiv", configuration, "NetWivCommands.g.cs");
+                Check(File.ReadAllText(client).Contains(configuration + "Client", StringComparison.Ordinal), "Wrong configuration client.");
+                File.Delete(client);
+                await Build(configuration);
+                Check(File.Exists(client), "Deleted generated client was not regenerated.");
+            }
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
     internal static async Task CreateReact()
     {
         var root = Directory.CreateTempSubdirectory("netwiv-new-test-").FullName;
@@ -123,7 +209,7 @@ internal static class NewProjectTests
                     var program = File.ReadAllText(Path.Combine(destination, "src-netwiv/Program.cs"));
                     Check(!program.Contains("record Greeting", StringComparison.Ordinal) && !program.Contains("class AppJsonContext", StringComparison.Ordinal), "Shared types were not moved out of Program.cs");
                     var backendProject = File.ReadAllText(Path.Combine(destination, "src-netwiv/Example.csproj"));
-                    Check(backendProject.Contains("<NetWivCSharpBindingsDirectory>../frontend/Generated</NetWivCSharpBindingsDirectory>", StringComparison.Ordinal) &&
+                    Check(backendProject.Contains("<NetWivCSharpBindingsDirectory>../frontend/obj/netwiv/$(Configuration)</NetWivCSharpBindingsDirectory>", StringComparison.Ordinal) &&
                         !backendProject.Contains("NetWivFrontendBindingsDirectory", StringComparison.Ordinal) && backendProject.Contains("../contracts/Contracts.csproj", StringComparison.Ordinal), "Blazor app does not export the C# client");
                     Check(File.Exists(Path.Combine(destination, "Directory.Build.props")) && !File.Exists(Path.Combine(destination, "src-netwiv/Directory.Build.props")), "Bindings-only build isolation missing");
                     Check(File.ReadAllText(Path.Combine(destination, "frontend/NetWivUi.csproj")).Contains("NetWiv.targets", StringComparison.Ordinal), "Frontend does not import NetWiv.targets");

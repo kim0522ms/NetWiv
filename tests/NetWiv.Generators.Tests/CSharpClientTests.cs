@@ -60,6 +60,42 @@ public sealed class CSharpClientTests
     [Fact]
     public void GeneratedClientCompilesInAFrontendThatReferencesOnlyTheContracts() => Compile(Client(App));
 
+    [Fact]
+    public async Task GeneratedClientKeepsNestedJsonNumbersAsTextAcrossJsInterop()
+    {
+        const string json = """{"large":9223372036854775807,"fraction":0.1234567890123456789012345678,"nested":[9007199254740993]}""";
+        var assembly = Compile(Client(EdgeApp));
+        var type = assembly.GetType("NetWiv.Generated.NetWivCommands")!;
+        var js = new JsonEchoModule();
+        var client = Activator.CreateInstance(type, js)!;
+        using var input = System.Text.Json.JsonDocument.Parse(json);
+        var result = await (Task<System.Text.Json.JsonElement>)type.GetMethod("RawAsync")!
+            .Invoke(client, [input.RootElement, CancellationToken.None])!;
+        Assert.Equal(json, result.GetRawText());
+        Assert.Equal("""{"value":""" + json + "}", js.Arguments);
+    }
+
+    private sealed class JsonEchoModule : Microsoft.JSInterop.IJSRuntime, Microsoft.JSInterop.IJSObjectReference
+    {
+        public string? Arguments { get; private set; }
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
+            InvokeAsync<TValue>(identifier, CancellationToken.None, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+        {
+            if (identifier == "import")
+            {
+                Assert.Equal("./netwiv.js", args![0]);
+                return ValueTask.FromResult((TValue)(object)this);
+            }
+            Assert.Equal("invokeJson", identifier);
+            Assert.Equal("raw", args![0]);
+            Arguments = Assert.IsType<string>(args[1]);
+            using var parsed = System.Text.Json.JsonDocument.Parse(Arguments);
+            return ValueTask.FromResult((TValue)(object)parsed.RootElement.GetProperty("value").GetRawText());
+        }
+    }
+
     // Compiles the client in a frontend that references only the contracts and JS interop, and loads it.
     private static System.Reflection.Assembly Compile(string client)
     {

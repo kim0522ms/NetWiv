@@ -77,11 +77,14 @@ generated C# methods instead of command-name strings. Set a second output
 directory in the C# app project:
 
 ```xml
-<NetWivCSharpBindingsDirectory>../frontend/Generated</NetWivCSharpBindingsDirectory>
+<NetWivCSharpBindingsDirectory>../frontend/obj/netwiv/$(Configuration)</NetWivCSharpBindingsDirectory>
 ```
 
-Each build then writes `NetWivCommands.g.cs` (namespace `NetWiv.Generated`) next
-to the frontend. Register it and call the commands with their C# types:
+Each build then writes `NetWivCommands.g.cs` (namespace `NetWiv.Generated`) under
+the frontend's configuration-specific intermediate directory. Include that file
+in the frontend's `Compile` items after generation; the starter's `NetWiv.targets`
+handles this ordering and regeneration. Register it and call the commands with
+their C# types:
 
 ```csharp
 builder.Services.AddScoped<NetWiv.Generated.NetWivCommands>();
@@ -119,11 +122,22 @@ generated method or type, so the frontend build fails instead of the call failin
 at run time. Exposure rules are unchanged: the client does not register commands
 or grant permissions.
 
-Values cross JavaScript on the way, so numbers become JavaScript numbers.
-`long`, `ulong`, `Int128` and `decimal` values beyond 2^53 or 15–17 significant
-digits lose precision, as they do for TypeScript callers. Send such values as
-strings, or give the shared context
-`NumberHandling = JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString`.
+The bridge uses `@netwiv/api/core.invokeJson`: arguments and results stay JSON
+text while crossing JavaScript, and are parsed only by C#. This preserves
+`long`, `ulong`, `Int128`, `decimal` and nested `JsonElement` numeric values
+without requiring `NumberHandling` overrides. The command and shared context
+still determine the supported C# types and serialization rules. Ordinary
+JavaScript `invoke` calls retain JavaScript's numeric limits.
+
+`invokeJson(command, argsJson, options?)` requires a JSON object as its input
+text and returns JSON text, including `"null"` for a null result. Binary responses
+are rejected; top-level typed `byte[]` commands still use JSON numeric arrays.
+The call uses the authenticated message bridge, including on hosts with protocol
+IPC, with the same capability and document lifetime checks as `invoke`. Isolation
+hooks receive the argument JSON as a string and must preserve it as text to avoid
+rounding numbers. Older runtimes fail explicitly instead of silently falling back
+to a lossy call. JavaScript callers that use `JSON.parse` on the result still have
+JavaScript's numeric limits.
 
 The Blazor starter imports `frontend/NetWiv.targets`, which refreshes the client
 before the frontend compiles whenever the app's or the contracts' C# sources or
@@ -132,7 +146,10 @@ of the same configuration. The project's root `Directory.Build.props` gives that
 build its own `obj/bindings` and `bin/bindings` folders in the app and in
 `contracts/`, so it does not share files with a normal, IDE or NativeAOT build
 running at the same time; it also imports any `Directory.Build.props` further
-up. The client file is rewritten only when its content changes.
+up. The client is written to `frontend/obj/netwiv/$(Configuration)/NetWivCommands.g.cs`
+and compiled only for that configuration. This isolates overlapping Debug and
+Release builds and keeps generated code under the existing `obj/` Git ignore.
+The client file is rewritten only when its content changes.
 
 ### Referenced command assemblies
 

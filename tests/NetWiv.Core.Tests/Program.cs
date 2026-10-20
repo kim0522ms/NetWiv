@@ -22,6 +22,8 @@ GeneratedCommandRegistry.Register("generated_selected", static registry =>
 
 var tests = new List<(string Name, Func<Task> Run)>
 {
+    ("JSON text IPC preserves numeric precision through plain and isolation transport", JsonTextIpcTests.PrecisionAndIsolation),
+    ("JSON text IPC enforces input authorization response and document boundaries", JsonTextIpcTests.Boundaries),
     ("website data-store error boundaries", DataStoreTests.ErrorBoundaries),
     ("polymorphic command input validates derived required nullable and numeric members", PolymorphicInputTests.DerivedMembers),
     ("polymorphic command input preserves discriminator rejection and explicit fallback", PolymorphicInputTests.DiscriminatorErrors),

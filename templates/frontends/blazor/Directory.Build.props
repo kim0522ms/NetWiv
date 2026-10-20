@@ -9,7 +9,7 @@
        never shares files with a normal, IDE or NativeAOT build running at the same time.
        obj/ stays the base folder, so neither build compiles the other's generated sources. -->
   <PropertyGroup Condition="'$(NetWivBindingsOnly)' == 'true'">
-    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj/bindings/</MSBuildProjectExtensionsPath>
+    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj/bindings/$(Configuration)/</MSBuildProjectExtensionsPath>
     <IntermediateOutputPath>$(MSBuildProjectDirectory)/obj/bindings/$(Configuration)/</IntermediateOutputPath>
     <OutputPath>$(MSBuildProjectDirectory)/bin/bindings/$(Configuration)/</OutputPath>
   </PropertyGroup>

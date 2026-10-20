@@ -804,7 +804,7 @@ public partial class AppJsonContext : JsonSerializerContext;`,
        never shares files with a normal, IDE or NativeAOT build running at the same time.
        obj/ stays the base folder, so neither build compiles the other's generated sources. -->
   <PropertyGroup Condition="'$(NetWivBindingsOnly)' == 'true'">
-    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj/bindings/</MSBuildProjectExtensionsPath>
+    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj/bindings/$(Configuration)/</MSBuildProjectExtensionsPath>
     <IntermediateOutputPath>$(MSBuildProjectDirectory)/obj/bindings/$(Configuration)/</IntermediateOutputPath>
     <OutputPath>$(MSBuildProjectDirectory)/bin/bindings/$(Configuration)/</OutputPath>
   </PropertyGroup>
@@ -831,9 +831,9 @@ public partial class AppJsonContext : JsonSerializerContext;`,
     </PropertyGroup>
     <MakeDir Directories="$(IntermediateOutputPath)" />
     <WriteLinesToFile File="$(_NetWivCommandSourceList)" Lines="@(_NetWivCommandSources->'%(FullPath)')" Overwrite="true" WriteOnlyWhenDifferent="true" />
-    <Delete Files="$(_NetWivCommandsStamp)" Condition="!Exists('Generated/NetWivCommands.g.cs')" />
+    <Delete Files="$(_NetWivCommandsStamp)" Condition="!Exists('obj/netwiv/$(Configuration)/NetWivCommands.g.cs')" />
   </Target>
-  <!-- Every app build rewrites Generated/NetWivCommands.g.cs when its commands change. When the
+  <!-- Every app build rewrites obj/netwiv/$(Configuration)/NetWivCommands.g.cs when its commands change. When the
        C# sources changed since the last check, refresh it with a bindings-only app build of the
        same configuration before this project compiles. The stamp records the check, so an edit
        that leaves the commands as they were does not recompile the frontend. -->
@@ -842,7 +842,7 @@ public partial class AppJsonContext : JsonSerializerContext;`,
     <Exec Command="&quot;$(_NetWivDotnet)&quot; build &quot;@(_NetWivApp->'%(FullPath)')&quot; -c &quot;$(Configuration)&quot; -p:NetWivBindingsOnly=true -p:PublishAot=false --disable-build-servers -nologo -v:q" />
     <Touch Files="$(_NetWivCommandsStamp)" AlwaysCreate="true" />
     <ItemGroup>
-      <Compile Include="Generated/NetWivCommands.g.cs" Exclude="@(Compile)" />
+      <Compile Include="obj/netwiv/$(Configuration)/NetWivCommands.g.cs" Exclude="@(Compile)" />
     </ItemGroup>
   </Target>
 </Project>`,
@@ -857,11 +857,9 @@ public partial class AppJsonContext : JsonSerializerContext;`,
 /* Blazor focuses the heading after navigation; that focus is for screen readers. */
 h1:focus { outline: none; }
 `,
-  'frontend/wwwroot/netwiv.js': `// The generated C# client (Generated/NetWivCommands.g.cs) calls C# commands through this
+  'frontend/wwwroot/netwiv.js': `// The generated C# client (obj/netwiv/$(Configuration)/NetWivCommands.g.cs) calls C# commands through this
 // module, which forwards them to @netwiv/api as JSON.
-import { invoke } from './vendor/@netwiv/api/core.js';
-
-export const invokeJson = async (command, args) => JSON.stringify((await invoke(command, JSON.parse(args))) ?? null);`,
+export { invokeJson } from './vendor/@netwiv/api/core.js';`,
   'frontend/Pages/Home.razor': `@page "/"
 @page "/index.html"
 @using System.Diagnostics

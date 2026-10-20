@@ -13,6 +13,8 @@ import * as webview from '@netwiv/api/webview';
 import * as webviewWindow from '@netwiv/api/webviewWindow';
 const result: Promise<string> = core.invoke<string>('greet', { name: 'fixture' });
 const options: core.InvokeOptions = { headers: { 'x-fixture': 'value' } };
+const jsonResult: Promise<string> = core.invokeJson('echo', '{"value":9007199254740993}', options);
+void jsonResult;
 const channel = new core.Channel<string>();
 channel.onmessage = value => { const message: string = value; void message; };
 const permission: core.PermissionState = 'prompt';

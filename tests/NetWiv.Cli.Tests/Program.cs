@@ -65,6 +65,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("new project rejects invalid arguments before writing files", NewProjectTests.InvalidInput),
     ("new project preserves existing files and honors cancellation", NewProjectTests.PreserveAndCancel),
     ("new project help list and shell completions are discoverable", NewProjectTests.Discovery),
+    ("new project Blazor builds isolate configuration clients and ignore generated code", NewProjectTests.BlazorConfigurationBuilds),
     ("owned process preserves successful and failing exit codes", ProcessOwnershipTests.ExitCodes),
     ("upstream winres::version_uses_numeric_build_metadata", WindowsFileVersionTests.NumericMetadata),
     ("upstream winres::version_ignores_non_numeric_composite_build_metadata", WindowsFileVersionTests.CompositeMetadata),

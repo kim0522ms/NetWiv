@@ -11,7 +11,7 @@ namespace NetWiv.Generators.Tests;
 public sealed class CSharpClientTests
 {
     // A shared contracts library: the DTO and the JSON context both projects reference.
-    private const string Contracts = """
+    private const string ContractsSource = """
         using System.Text.Json.Serialization;
         public sealed record Greeting(string Message, int Count);
         [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
@@ -52,13 +52,72 @@ public sealed class CSharpClientTests
     }
 
     [Fact]
-    public void GeneratedClientCompilesInAFrontendThatReferencesOnlyTheContracts()
+    public void GeneratedClientCompilesInAFrontendThatReferencesOnlyTheContracts() => Compile(Client(App));
+
+    // Compiles the client in a frontend that references only the contracts and JS interop, and loads it.
+    private static System.Reflection.Assembly Compile(string client)
     {
-        var contracts = Reference("Contracts", Contracts);
-        var frontend = CSharpCompilation.Create("Frontend", [CSharpSyntaxTree.ParseText(Client(App), new CSharpParseOptions(LanguageVersion.CSharp12))],
-            PlatformReferences().Append(contracts).Append(MetadataReference.CreateFromFile(typeof(Microsoft.JSInterop.IJSRuntime).Assembly.Location)),
+        var contracts = Contracts();
+        var frontend = CSharpCompilation.Create("Frontend" + Guid.NewGuid().ToString("N"), [CSharpSyntaxTree.ParseText(client, new CSharpParseOptions(LanguageVersion.CSharp12))],
+            PlatformReferences().Append(MetadataReference.CreateFromImage(contracts)).Append(MetadataReference.CreateFromFile(typeof(Microsoft.JSInterop.IJSRuntime).Assembly.Location)),
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
         Assert.DoesNotContain(frontend.GetDiagnostics(), diagnostic => diagnostic.Severity >= DiagnosticSeverity.Warning);
+        using var stream = new MemoryStream();
+        var emitted = frontend.Emit(stream);
+        Assert.True(emitted.Success, string.Join("\n", emitted.Diagnostics));
+        var context = new System.Runtime.Loader.AssemblyLoadContext(null, isCollectible: true);
+        context.Resolving += (_, name) => name.Name == "Contracts" ? context.LoadFromStream(new MemoryStream(contracts.ToArray())) : null;
+        return context.LoadFromStream(new MemoryStream(stream.ToArray()));
+    }
+
+    private static object? Invoke(Type type, string method, params object?[] arguments)
+        => type.GetMethod(method, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.Invoke(null, arguments);
+
+    // Codex review on PR #37: parameter names that match generated locals, the dispatcher's
+    // numeric byte[] shape, and command names that normalize to the same method name.
+    private const string EdgeApp = """
+        using System.Text.Json;
+        using NetWiv;
+        [assembly: GenerateFrontendBindings]
+        [assembly: CommandJsonContext(typeof(SharedContext))]
+        public static class Commands {
+            [Command] public static Greeting Locals(string args, int json, string cancellationToken) => throw null!;
+            [Command] public static byte[] Bytes(byte[] data, byte[]? optional) => data;
+            [Command] public static JsonElement Raw(JsonElement value) => value;
+            [Command("foo-bar")] public static void Foo() { }
+            [Command("foo_bar")] public static void FooAsync() { }
+            [Command] public static void Invoke() { }
+        }
+        """;
+
+    [Fact]
+    public void KeepsLocalsBytesAndMethodNamesApartFromCommandInputs()
+    {
+        var client = Client(EdgeApp);
+        Assert.Contains("LocalsAsync(string args, int json, string cancellationToken, global::System.Threading.CancellationToken cancellationToken2 = default)", client, StringComparison.Ordinal);
+        Assert.Contains("var args2 = new global::System.Text.Json.Nodes.JsonObject();", client, StringComparison.Ordinal);
+        Assert.Contains("var json2 = await this.InvokeAsync(\"locals\", args2, cancellationToken2);", client, StringComparison.Ordinal);
+        Assert.Contains("args[\"data\"] = global::NetWiv.Generated.NetWivCommands.ByteArrayNode(data);", client, StringComparison.Ordinal);
+        Assert.Contains("return global::NetWiv.Generated.NetWivCommands.ReadByteArray(json)!;", client, StringComparison.Ordinal);
+        Assert.Contains("args[\"value\"] = global::NetWiv.Generated.NetWivCommands.ElementNode(value);", client, StringComparison.Ordinal);
+        Assert.Contains(" FooBarAsync(", client, StringComparison.Ordinal);
+        Assert.Contains(" FooBar2Async(", client, StringComparison.Ordinal);
+        Assert.Contains(" Invoke2Async(", client, StringComparison.Ordinal);
+        Compile(client);
+    }
+
+    [Fact]
+    public void ByteArraysTravelAsNumberArraysLikeTheDispatcher()
+    {
+        var client = Compile(Client(EdgeApp));
+        var type = client.GetType("NetWiv.Generated.NetWivCommands", true)!;
+        var node = (System.Text.Json.Nodes.JsonNode?)Invoke(type, "ByteArrayNode", new byte[] { 0, 7, 255 });
+        Assert.Equal("[0,7,255]", node!.ToJsonString());
+        Assert.Null(Invoke(type, "ByteArrayNode", [null]));
+        Assert.Equal(new byte[] { 1, 2, 255 }, (byte[]?)Invoke(type, "ReadByteArray", "[1,2,255]"));
+        Assert.Null(Invoke(type, "ReadByteArray", "null"));
+        var element = (System.Text.Json.JsonElement)Invoke(type, "ReadElement", "{\"a\":[1]}")!;
+        Assert.Equal("{\"a\":[1]}", element.GetRawText());
     }
 
     [Fact]
@@ -100,7 +159,7 @@ public sealed class CSharpClientTests
     private static string Client(string app)
     {
         var compilation = CSharpCompilation.Create("DesktopApp", [CSharpSyntaxTree.ParseText(app, new CSharpParseOptions(LanguageVersion.CSharp12))],
-            PlatformReferences().Append(MetadataReference.CreateFromFile(typeof(CommandAttribute).Assembly.Location)).Append(Reference("Contracts", Contracts)),
+            PlatformReferences().Append(MetadataReference.CreateFromFile(typeof(CommandAttribute).Assembly.Location)).Append(Reference("Contracts", ContractsSource)),
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
         GeneratorDriver driver = CSharpGeneratorDriver.Create(new CommandGenerator());
         driver.RunGeneratorsAndUpdateCompilation(compilation, out var updated, out var diagnostics);
@@ -119,12 +178,17 @@ public sealed class CSharpClientTests
         => ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator).Select(path => MetadataReference.CreateFromFile(path));
 
     private static MetadataReference Reference(string name, string source)
+        => MetadataReference.CreateFromImage(Image(name, source), filePath: name + ".dll");
+
+    private static ImmutableArray<byte> Contracts() => Image("Contracts", ContractsSource);
+
+    private static ImmutableArray<byte> Image(string name, string source)
     {
         var compilation = CSharpCompilation.Create(name, [CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(LanguageVersion.CSharp12))], PlatformReferences(),
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
         using var stream = new MemoryStream();
         var emitted = compilation.Emit(stream);
         Assert.True(emitted.Success, string.Join("\n", emitted.Diagnostics));
-        return MetadataReference.CreateFromImage(ImmutableArray.CreateRange(stream.ToArray()), filePath: name + ".dll");
+        return ImmutableArray.CreateRange(stream.ToArray());
     }
 }

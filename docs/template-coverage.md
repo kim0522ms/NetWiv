@@ -72,17 +72,22 @@ Their smoke tests start the app with `--smoke-test`, which opens the window with
 The original five starters target Windows x64, Linux x64 and macOS arm64 through Wry.
 macOS applications require a main-thread `App.Run()` and matching native RID
 assets; see [macOS](macos.md).
-Hybrid execution currently supports Windows x64 only; its shared WebAssembly
-release keeps the ordinary desktop backend. Other platforms' Hybrid execution
-is explicitly unsupported, and cross-platform acceptance of that starter is
-unverified.
+Hybrid execution supports all three desktop targets: Windows x64 with WebView2,
+Linux x64 with GTK3/WebKitGTK 4.1 on X11 or Wayland, and macOS arm64 with
+WKWebView. Its shared WebAssembly deployment keeps the ordinary desktop backend.
+Hybrid NativeAOT remains experimental; see [Blazor Hybrid](blazor-hybrid.md)
+for platform prerequisites and validation limits.
 
 CI generates every starter on Linux and builds and type-checks the four
 TypeScript frontends. The React starter also runs the GUI/IPC smoke test and the
 package-consumer checks. The Blazor frontend is generated but not compiled in CI.
 GUI acceptance on every platform is not complete for any starter.
-The product Hybrid adapter has a separate Windows NativeAOT WebView2 CI check;
-local acceptance also covers a CLI-generated NuGet Hybrid consumer.
+The product Hybrid adapter has separate managed and experimental NativeAOT
+native WebView CI checks on Windows x64, Linux x64 and macOS arm64. Selected
+source-host scenarios passed on physical Windows and macOS and on Linux under
+WSLg with X11 and native Wayland; package-consumer checks are separate.
+Physical Linux, minimum-macOS and arbitrary Razor-library acceptance remain
+unverified. See the [Hybrid validation boundary](blazor-hybrid.md#validation-boundary).
 Read [support and validation](implementation-status.md).
 
 The separate `NetWiv.Templates` package for direct `dotnet new` use provides only
@@ -90,10 +95,10 @@ React; all six starters are included in `NetWiv.Cli` through `netwiv new`.
 
 ## Retired templates
 
-Releases after 0.2.3 removed the JavaScript variants (`vanilla`, `vue`, `svelte`,
+The JavaScript variants (`vanilla`, `vue`, `svelte`,
 `react` as JavaScript, `solid`, `preact`), the separate `-ts` names, and the
-Rust/WASM frontends (`yew`, `leptos`, `sycamore`, `dioxus`). The template names
-now mean the TypeScript starters above. Existing projects are unaffected; they
+Rust/WASM frontends (`yew`, `leptos`, `sycamore`, `dioxus`) are not available.
+The template names refer to the TypeScript starters above. Existing projects are unaffected; they
 are ordinary Vite, Angular or Blazor projects and keep building as they are.
 
 ---

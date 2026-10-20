@@ -32,14 +32,17 @@ agreement in approved private local storage, outside the repository. -->
 execution is not applicable and what you checked instead. Do not invent a run
 or check a box based on an agent's claim. Maintainers review exceptions. -->
 
-## AI assistance and contributor responsibility
+## AI assistance and review
 
 <!-- State tools used and their role, or "None". Explain what you personally
-reviewed and verified. Full prompts or chat transcripts are not required. -->
+reviewed and verified. Full prompts or chat transcripts are not required.
+These checklist items record internal review steps and their limits; they are
+not warranties, support commitments or an acceptance of additional liability.
+See CONTRIBUTING.md#maintainer-workflow. External PRs are not accepted. -->
 
-- [ ] I read and understand the complete diff and can explain its affected paths.
-- [ ] I take responsibility for this contribution, including AI-assisted content.
+- [ ] I reviewed the complete diff and described the affected paths and any limits of that review.
+- [ ] I reviewed AI-assisted content using the same criteria as other changes and identified any unverified parts.
 - [ ] I supplied verification evidence or an explicit non-runtime justification.
-- [ ] Tests and documentation cover the behavior changed; unverified claims are identified.
+- [ ] I described the test and documentation coverage for the changed behavior and identified gaps and unverified claims.
 - [ ] Borrowed material retains its source attribution and required notices.
 - [ ] I reviewed the outgoing body, diff and evidence for user-identifying information and omitted unnecessary environment details.

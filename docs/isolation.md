@@ -65,7 +65,7 @@ or reuse old private callback IDs after protocol and fallback requests.
 They must pass on NetWiv. Pinned
 Tauri's failures appear as observations, not counted as public conformance
 failures or passes. Direct mutation of `__TAURI_INTERNALS__` is outside the
-repository's public compatibility guarantee.
+repository's supported public API surface.
 
 The Core assertion harness separately covers isolation on/off, protocol/forced
 fallback and replacement/close combinations. Each combination starts with an

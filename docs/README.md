@@ -5,6 +5,11 @@ framework. Public documentation is maintained in English.
 
 Official website: [netwiv.github.io](https://netwiv.github.io/).
 
+Technical support classifications and validation results have the limits
+described in [Support and validation](implementation-status.md). They do not
+establish service commitments or additional warranties; see
+[license and support terms](../README.md#license).
+
 ## Build an application
 
 | Guide | Topics |

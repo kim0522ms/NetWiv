@@ -209,7 +209,7 @@ configuration stops the old backend, reports the error, and waits for a correcte
 file. The frontend server and initial development hook remain session-scoped;
 restart `netwiv dev` when changing their configuration.
 Calling private `window.__TAURI_INTERNALS__` directly is outside the
-public compatibility guarantee.
+supported public API surface.
 
 `App.AssetProtocolScope()` and `AppHandle.AssetProtocolScope()` return the live
 `FileScope` when the file asset protocol is enabled. `AllowFile`, `AllowDirectory`,

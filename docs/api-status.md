@@ -31,7 +31,7 @@ separately below and do not contribute to those core counts.
 | Unsupported (intentional) | Deliberately rejected to preserve NetWiv runtime identity; this is a documented compatibility difference, not a pending implementation or a compatibility pass. |
 | Planned | Included in the support goals, with implementation or validation work remaining. This does not mean ready for use or scheduled for a specific release. |
 | Partial | In the core inventory, part of the stated functional or platform scope is missing. Coarse plugin rows also retain their stated readiness limits; they are not method-level classifications. Core validation gaps are tracked separately. |
-| Not implemented | The feature is unavailable, including declarations that only return empty results or ignore options. Support timelines are announced separately. |
+| Not implemented | The feature is unavailable, including declarations that only return empty results or ignore options. No implementation or delivery date is promised. |
 
 - **Functions, objects, constructors, types, configuration fields and object members are distinct.** An implemented object/type does not imply every member is implemented. Options distinguish declarations from actual application.
 - APIs that provide behavior on at least one target OS identify that OS. Unimplemented Apple/mobile features remain explicitly marked. A no-op on an OS unsupported by upstream is not necessarily a NetWiv-specific compatibility defect.

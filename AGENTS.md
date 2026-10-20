@@ -1,8 +1,10 @@
 # Repository working agreement
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) for branch naming, contributor
-responsibility, real-device evidence and PR requirements. These apply to
-agent-assisted work as well as manually written contributions.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for branch naming, review criteria,
+real-device evidence and maintainer PR requirements. These apply to
+agent-assisted work as well as manually written changes. They are internal
+development criteria, not warranties, service commitments or an acceptance of
+additional liability; see [license and support terms](README.md#license).
 
 ## Privacy before publication
 
@@ -62,7 +64,7 @@ use lowercase `netwiv`. Upstream dependency identities remain unchanged inside t
   or count facade-only behavior as an upstream compatibility pass.
 - `compatibility/upstream-lock.json` pins every upstream version, commit and npm integrity value.
 - Generated compatibility files come from `node compatibility/scripts/generate-upstream-manifests.mjs`; never edit them manually.
-- `@netwiv/api` is the only supported frontend entry point, including `@netwiv/api/plugins/*`. Direct upstream core/plugin imports and `isTauri`/`isNetWiv` detection are retired. Preserve the internal facade and pinned upstream sources. Upstream comparison fixtures are internal references, not a second supported frontend contract. Never rewrite generated inventories to hide differences. Private `window.__TAURI_INTERNALS__` is outside the public guarantee.
+- `@netwiv/api` is the only supported frontend entry point, including `@netwiv/api/plugins/*`. Direct upstream core/plugin imports and `isTauri`/`isNetWiv` detection are retired. Preserve the internal facade and pinned upstream sources. Upstream comparison fixtures are internal references, not a second supported frontend contract. Never rewrite generated inventories to hide differences. Private `window.__TAURI_INTERNALS__` is outside the supported public API surface.
 - With no app manifest, bundled local pages may call registered application commands by default and remote pages may not. Once any app manifest exists, every custom command requires a resolved capability permission; deny permissions win over allows.
 
 ## Milestone boundary

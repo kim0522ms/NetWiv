@@ -5,6 +5,12 @@ The source includes a working application SDK, native runtime and build tooling;
 this does not establish complete TAURI® compatibility or release acceptance.
 Package installation is described in the [quickstart](integration-quickstart.md).
 
+“Support” here describes technical scope, not a service-level agreement or a
+commitment to provide fixes, updates or ongoing maintenance. Validation results
+apply only to the stated checks and environments; they do not certify
+defect-free operation, security or suitability for a particular application.
+See [license and support terms](../README.md#license).
+
 ## Desktop baseline
 
 | Platform | Runtime dependencies | Scope |
@@ -171,7 +177,8 @@ implemented; existing signing support does not establish notarized distribution.
 The reference versions and checksums are pinned in
 [`upstream-lock.json`](../compatibility/upstream-lock.json). Internal behavior
 comparisons use unchanged `@tauri-apps/api`; applications use the NetWiv facade
-only. Direct upstream imports and private internals have no public guarantee. Deliberate C# differences are documented separately.
+only. Direct upstream imports and private internals are outside the supported
+public API surface. Deliberate C# differences are documented separately.
 
 IPC authorization, document/resource ownership, isolation and remote URL patterns
 have implementation and focused tests. Complete coverage across arguments,

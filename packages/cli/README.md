@@ -8,7 +8,12 @@ Updater key generation and signing use the pinned minisign 0.12 sidecar in the
 same native directory. Set `NETWIV_MINISIGN_PATH` only when testing a separate
 verified minisign 0.12 executable.
 
-Licensed under Apache-2.0.
+Provided AS IS under [Apache-2.0](LICENSE-APACHE), subject to its warranty
+disclaimer and limitation of liability. Technical support descriptions and
+validation results do not offer additional warranties or a service-level
+agreement. No ongoing maintenance, security updates or response or resolution
+time is promised. Applicable legal requirements and any separate written
+agreement remain unaffected. Third-party components retain their own licenses.
 
 ## macOS
 

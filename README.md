@@ -94,7 +94,8 @@ Feature requests and other contribution proposals are not accepted.
 
 Please include a minimal reproduction and the expected and actual behavior
 when reporting a bug. See the [bug reporting guide](CONTRIBUTING.md#reporting-bugs)
-for details. A report does not guarantee a response or a fix.
+for details. Reports and replies do not establish a support or remediation
+commitment; see [license and support terms](#license).
 
 **Report NetWiv issues to [NetWiv](https://github.com/kim0522ms/NetWiv/issues), not to the TAURI project.**
 NetWiv deliberately reproduces the TAURI frontend API and many of its error
@@ -213,7 +214,7 @@ guides, API references, and framework development documentation.
 
 Framework changes are maintained by the maintainer. The
 [maintainer workflow](CONTRIBUTING.md#maintainer-workflow) documents development
-responsibilities and required validation evidence; it is not an invitation to
+review criteria and required validation evidence; it is not an invitation to
 submit external PRs.
 
 See the [framework development guide](docs/development.md) for prerequisites
@@ -268,6 +269,22 @@ Packing the framework requires native artifacts for all three supported RIDs to 
 
 NetWiv is licensed under [Apache-2.0](LICENSE-APACHE).
 Copyright © 2026 kim0522ms and NetWiv contributors.
+
+NetWiv is provided **AS IS**, subject to the warranty disclaimer and limitation
+of liability in Sections 7 and 8 of that license. This README and the project's
+development, review and validation guidance do not amend those terms or offer
+additional warranties, indemnities or liability commitments. Applicable legal
+requirements and any separate written agreement remain unaffected.
+
+“Supported,” “implemented,” “validated” and similar descriptions identify
+technical scope or observed results within the stated versions, environments
+and test cases. They are not certifications of defect-free operation, security
+or fitness for a particular purpose. Evaluate NetWiv for your own application
+and deployment environment.
+
+No service-level agreement, response or resolution time, ongoing maintenance,
+security-update schedule or future release is promised by this project.
+Roadmaps and development priorities may change or be discontinued.
 
 The TAURI framework and other third-party components retain their original licenses and
 copyright notices. See [NOTICE](NOTICE), [third-party notices](THIRD-PARTY-NOTICES.md)

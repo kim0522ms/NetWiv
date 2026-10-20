@@ -17,6 +17,9 @@ try {
    document.querySelector('#result').textContent = await invoke('greet', {name: label});
  };
  document.querySelector('#finish').onclick = () => invoke('finish_gui');
+ if ('isTauri' in window || 'isNetWiv' in window) throw Error('Retired identity marker is present');
+ const { isRegistered } = await import('./plugins/global-shortcut.js');
+ if (await isRegistered('Control+Shift+F12') !== false) throw Error('Unexpected shortcut registration');
  await advance('external command');
  const external = await invoke('plugin:generated-external|get_status', {value: {label, source: 'external'}});
  if (external.label !== label || external.source !== 'external') throw Error('External generated plugin dispatch mismatch');
@@ -63,7 +66,7 @@ try {
    };
    window.addEventListener('message', receive); frame.src = probe + '/frame'; document.body.append(frame);
  });
- document.querySelector('#result').textContent = 'PASS: official API invoke, JSON and Channel';
+ document.querySelector('#result').textContent = 'PASS: NetWiv core/plugin facade, JSON and Channel';
  await advance('ready');
  await invoke('ready', {label});
 } catch {

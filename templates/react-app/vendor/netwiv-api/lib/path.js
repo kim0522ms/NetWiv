@@ -1,5 +1,5 @@
-import { BaseDirectory as UpstreamDirectory } from '@tauri-apps/api/path';
-export { appConfigDir, appDataDir, appLocalDataDir, appCacheDir, appLogDir, audioDir, cacheDir, configDir, dataDir, desktopDir, documentDir, downloadDir, executableDir, fontDir, homeDir, localDataDir, pictureDir, publicDir, resourceDir, resolveResource, runtimeDir, templateDir, videoDir, sep, delimiter, resolve, normalize, join, dirname, extname, basename, isAbsolute, tempDir } from '@tauri-apps/api/path';
+import { BaseDirectory as UpstreamDirectory } from './upstream/path.js';
+export { appConfigDir, appDataDir, appLocalDataDir, appCacheDir, appLogDir, audioDir, cacheDir, configDir, dataDir, desktopDir, documentDir, downloadDir, executableDir, fontDir, homeDir, localDataDir, pictureDir, publicDir, resourceDir, resolveResource, runtimeDir, templateDir, videoDir, sep, delimiter, resolve, normalize, join, dirname, extname, basename, isAbsolute, tempDir } from './upstream/path.js';
 /** Explicit desktop directory list; upstream additions are reviewed separately. */
 export const BaseDirectory = Object.freeze({
     Audio: UpstreamDirectory.Audio,

@@ -1,4 +1,4 @@
-import { Resource } from '@tauri-apps/api/core';
+import { Resource } from './core.js';
 import { NativeIcon } from './menu/iconMenuItem.js';
 export interface ImageSize {
     width: number;

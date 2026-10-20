@@ -1,8 +1,7 @@
 # macOS development and distribution
 
 NetWiv's Wry backend supports WKWebView/AppKit on macOS. The managed SDK,
-C ABI and `@netwiv/api` frontend SDK remain shared with Windows/Linux. Unchanged
-`@tauri-apps/api` guests are retained for the official compatibility path.
+C ABI and `@netwiv/api` frontend SDK remain shared with Windows/Linux. Core and plugin imports use that single supported frontend entry point.
 The deployment baseline is macOS 12.0. Consumer builds require a .NET SDK
 selected by `global.json` (8 or later). NativeAOT builds additionally need Xcode
 Command Line Tools; framework native builds also need Rust 1.95.0. Frontend
@@ -270,7 +269,7 @@ This mode is for local checks, not Store submission. The ordinary signed output
 omits the `-unsigned` suffix.
 
 The [NativeAOT sandbox example](../tests/NetWiv.MacOS.Sandbox.Smoke/README.md)
-checks WKWebView, unchanged upstream guest IPC, local-storage persistence across
+checks WKWebView, NetWiv facade IPC, local-storage persistence across
 process restarts, writes through SDK data/config/cache/log paths inside the
 container, and rejection of a write outside it. Functional assertions print only
 test labels; there is no environment-report collection or upload.
@@ -461,8 +460,8 @@ as package-only NativeAOT GUI or full release acceptance.
 
 The ordinary desktop smoke includes `MacOsDataStoreProbe` on macOS. The same
 scenario runs independently with `--data-store-smoke`. On macOS 14+
-it creates a fresh random 16-byte identifier, uses unchanged
-`@tauri-apps/api@2.11.1` guest code to enumerate it, checks that removal while its
+it creates a fresh random 16-byte identifier, uses the
+`@netwiv/api/app` facade to enumerate it, checks that removal while its
 WebView is open fails without invalidating that WebView, closes and reopens it to
 check local-storage persistence, then removes it from another WebView and checks
 that recreation has no previous data. SDK enumeration checks the same identifier

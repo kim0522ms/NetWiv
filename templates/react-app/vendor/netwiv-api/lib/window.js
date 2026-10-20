@@ -1,6 +1,6 @@
-import { Window as UpstreamWindow } from '@tauri-apps/api/window';
+import { Window as UpstreamWindow } from './upstream/window.js';
 import { desktopConstructor, desktopHandle } from './desktop.js';
-export { CloseRequestedEvent, LogicalSize, PhysicalSize, LogicalPosition, PhysicalPosition, UserAttentionType, Effect, EffectState, ProgressBarStatus, currentMonitor, monitorFromPoint, primaryMonitor, availableMonitors, cursorPosition } from '@tauri-apps/api/window';
+export { CloseRequestedEvent, LogicalSize, PhysicalSize, LogicalPosition, PhysicalPosition, UserAttentionType, Effect, EffectState, ProgressBarStatus, currentMonitor, monitorFromPoint, primaryMonitor, availableMonitors, cursorPosition } from './upstream/window.js';
 export function getCurrentWindow() {
     return desktopHandle(UpstreamWindow.getCurrent());
 }

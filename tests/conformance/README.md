@@ -1,5 +1,10 @@
 # Differential desktop conformance
 
+This is an internal upstream behavior reference. It does not make direct Tauri
+frontend imports a supported application path. Public core and plugin consumers
+use `@netwiv/api`; see [migration](../../docs/frontend-api.md). Retired identity
+helpers are not part of the shared callback/origin checks.
+
 The same browser code imports the unchanged official `@tauri-apps/api@2.11.1` package and runs in the Rust TAURI® reference host and NetWiv. The build script downloads the pinned npm tarball, verifies SHA-512, and copies its JavaScript without modification.
 
 ```sh

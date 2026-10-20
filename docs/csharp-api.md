@@ -1,7 +1,8 @@
 # C# application contract
 
-NetWiv keeps the official JavaScript package unchanged. The C# namespace is
-`NetWiv`; `NetWiv.Platform.Desktop` supplies the native desktop runtime. This document
+NetWiv applications use `@netwiv/api` for frontend core and plugin calls.
+Pinned upstream implementations remain private inside the facade; direct Tauri
+frontend imports are no longer supported. The C# namespace is `NetWiv`; `NetWiv.Platform.Desktop` supplies the native desktop runtime. This document
 describes the implemented integration surface, not a claim that every TAURI®
 operation has passed conformance testing.
 

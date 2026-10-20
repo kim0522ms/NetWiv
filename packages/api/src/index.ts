@@ -10,4 +10,3 @@ export * as tray from './tray.js';
 export * as window from './window.js';
 export * as webview from './webview.js';
 export * as webviewWindow from './webviewWindow.js';
-export { isNetWiv } from './core.js';

@@ -7,7 +7,8 @@
     "runtime": { "$ref": "#/$defs/source" },
     "api": { "$ref": "#/$defs/package" },
     "cli": { "$ref": "#/$defs/package" },
-    "build": { "$ref": "#/$defs/source" }
+    "build": { "$ref": "#/$defs/source" },
+    "plugins": { "type": "object", "additionalProperties": { "$ref": "#/$defs/package" } }
   },
   "$defs": {
     "source": {

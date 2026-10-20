@@ -15,7 +15,7 @@ Cargo is not required for the React/C# application.
 
 `npm ci` installs the starter's vendored `@netwiv/api`. Generated commands import
 `@netwiv/api/core`; use the same SDK for other desktop frontend calls. See
-[frontend SDK distribution and migration](frontend-api.md#local-package-distribution).
+[frontend SDK distribution and migration](frontend-api.md#installation-and-migration).
 
 `desktop:dev` restores the local tool and runs `netwiv dev -- --dev`. The CLI
 executes `beforeDevCommand` (`npm run dev`), waits for Vite at

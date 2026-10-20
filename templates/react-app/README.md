@@ -2,7 +2,7 @@
 
 React 19 + Vite 8 + `@netwiv/api` + NetWiv 예제입니다. .NET 8 이상 SDK와 Node.js 20.19+ 또는 22.12+가 필요합니다. Windows에서는 WebView2 Runtime, Linux에서는 GTK3·WebKitGTK 4.1, macOS 12 이상에서는 시스템 WKWebView/AppKit을 사용합니다. Rust는 필요하지 않습니다.
 
-`@netwiv/api`는 프로젝트에 포함된 `vendor/netwiv-api`에서 설치되므로 별도 npm 배포가 필요하지 않습니다. 내부 호환성 계층은 공식 `@tauri-apps/api@2.11.1`을 그대로 사용하며 `npm ci`가 고정 버전을 설치합니다. 생성된 명령 바인딩과 프런트엔드는 `@netwiv/api/core`를 사용합니다.
+`@netwiv/api`는 프로젝트에 포함된 `vendor/netwiv-api`에서 설치되므로 별도 npm 배포가 필요하지 않습니다. 고정된 Tauri 구현은 패키지 내부에 포함되며, `npm ci`는 별도의 Tauri 프런트엔드 패키지를 설치하지 않습니다. 코어는 `@netwiv/api/*`, 플러그인은 `@netwiv/api/plugins/*`를 사용합니다. Tauri 패키지 직접 사용과 `isTauri`·`isNetWiv` 식별 함수 및 전역 마커 지원은 종료되었습니다. 내부 Facade와 기존 백엔드 권한 검사는 유지됩니다.
 
 프로젝트의 `NuGet.Config`에 NetWiv 로컬 패키지 폴더를 추가하세요. 모든 NetWiv 패키지는 `src-netwiv/ReactExample.csproj`의 `NetWivVersion`과 같은 버전이어야 합니다. 프레임워크가 제공한 템플릿 패키지에서 생성할 수도 있습니다:
 
@@ -46,7 +46,7 @@ npm run desktop:dev
 
 프로젝트에 고정된 `NetWiv.Cli` 도구를 복원한 뒤, NetWiv CLI가 Vite를 시작하고 준비를 기다린 후 앱을 실행합니다. React·CSS 수정은 Vite를 통해 앱 창에 반영됩니다. C# 수정은 바인딩 생성과 앱 재시작으로 반영됩니다. 개발 세션을 종료하려면 시작한 터미널에서 Ctrl+C를 누르세요. 로컬 NuGet 피드에는 SDK와 같은 버전의 `NetWiv.Cli` 패키지도 있어야 합니다.
 
-브라우저만 미리 보려면 `npm run dev`를 사용하세요. 별도 터미널의 Vite에 앱만 연결하려면 `npm run desktop:dev:backend`를 사용합니다. 일반 브라우저에서는 C# 호출 버튼이 비활성화되므로 IPC는 NetWiv 창에서 확인하세요.
+브라우저만 미리 보려면 `npm run dev`를 사용하세요. 별도 터미널의 Vite에 앱만 연결하려면 `npm run desktop:dev:backend`를 사용합니다. 일반 브라우저에는 네이티브 브리지가 없으므로 C# 호출은 실패합니다. IPC는 NetWiv 창에서 확인하세요.
 
 서버는 `127.0.0.1:5173`에 고정했습니다. 포트가 사용 중이면 Vite가 오류를 내며 임의의 다른 포트를 선택하지 않습니다. 앱은 Debug에서 `--dev`를 지정했을 때만 이 로컬 origin을 허용합니다.
 
@@ -107,7 +107,7 @@ npm run smoke
 dotnet run --project src-netwiv -p:NetWivDevelopment=true -- --dev --smoke-test
 ```
 
-실제 React 폼 제출 → 공식 invoke → 생성된 C# 명령 → JSON 응답을 검사하고 종료합니다. 일반 실행에는 검사 종료 명령을 등록하지 않습니다. 전체 TAURI® 호환성·보안·플랫폼 검증이 완료된 버전은 아니며, 베타 SDK의 기존 제한이 적용됩니다.
+실제 React 폼 제출 → `@netwiv/api/core`의 invoke → 생성된 C# 명령 → JSON 응답을 검사하고 종료합니다. 일반 실행에는 검사 종료 명령을 등록하지 않습니다. 전체 TAURI® 호환성·보안·플랫폼 검증이 완료된 버전은 아니며, 베타 SDK의 기존 제한이 적용됩니다.
 
 구성 참고: [React의 Vite 기반 앱 안내](https://react.dev/learn/build-a-react-app-from-scratch), [Vite 사용법](https://vite.dev/guide/).
 

@@ -1,11 +1,13 @@
 # macOS menu and tray interaction check
 
 This is a functional desktop test, with no saved reports or screenshots. It uses
-unchanged `@tauri-apps/api@2.11.1` from the integrity-checked conformance build.
+`@netwiv/api` from the generated standalone SDK snapshot.
 Run in an awake, logged-in macOS desktop after building the native adapter.
 
 ```sh
-node tests/conformance/scripts/build-frontend.mjs
+npm ci --prefix packages/api
+npm run build --prefix packages/api
+node scripts/generate-frontend-template-overlays.mjs
 dotnet run --project tests/NetWiv.MenuTray.Smoke -c Release -p:PublishAot=false
 dotnet publish tests/NetWiv.MenuTray.Smoke -c Release -r osx-arm64
 caffeinate -d -u -t 600 tests/NetWiv.MenuTray.Smoke/bin/Release/net8.0/osx-arm64/publish/NetWiv.MenuTray.Smoke

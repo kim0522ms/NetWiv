@@ -57,6 +57,90 @@
     "./webviewWindow": {
       "types": "./lib/webviewWindow.d.ts",
       "import": "./lib/webviewWindow.js"
+    },
+    "./plugins/autostart": {
+      "types": "./lib/plugins/autostart.d.ts",
+      "import": "./lib/plugins/autostart.js"
+    },
+    "./plugins/cli": {
+      "types": "./lib/plugins/cli.d.ts",
+      "import": "./lib/plugins/cli.js"
+    },
+    "./plugins/clipboard-manager": {
+      "types": "./lib/plugins/clipboard-manager.d.ts",
+      "import": "./lib/plugins/clipboard-manager.js"
+    },
+    "./plugins/deep-link": {
+      "types": "./lib/plugins/deep-link.d.ts",
+      "import": "./lib/plugins/deep-link.js"
+    },
+    "./plugins/dialog": {
+      "types": "./lib/plugins/dialog.d.ts",
+      "import": "./lib/plugins/dialog.js"
+    },
+    "./plugins/fs": {
+      "types": "./lib/plugins/fs.d.ts",
+      "import": "./lib/plugins/fs.js"
+    },
+    "./plugins/global-shortcut": {
+      "types": "./lib/plugins/global-shortcut.d.ts",
+      "import": "./lib/plugins/global-shortcut.js"
+    },
+    "./plugins/http": {
+      "types": "./lib/plugins/http.d.ts",
+      "import": "./lib/plugins/http.js"
+    },
+    "./plugins/log": {
+      "types": "./lib/plugins/log.d.ts",
+      "import": "./lib/plugins/log.js"
+    },
+    "./plugins/notification": {
+      "types": "./lib/plugins/notification.d.ts",
+      "import": "./lib/plugins/notification.js"
+    },
+    "./plugins/opener": {
+      "types": "./lib/plugins/opener.d.ts",
+      "import": "./lib/plugins/opener.js"
+    },
+    "./plugins/os": {
+      "types": "./lib/plugins/os.d.ts",
+      "import": "./lib/plugins/os.js"
+    },
+    "./plugins/positioner": {
+      "types": "./lib/plugins/positioner.d.ts",
+      "import": "./lib/plugins/positioner.js"
+    },
+    "./plugins/process": {
+      "types": "./lib/plugins/process.d.ts",
+      "import": "./lib/plugins/process.js"
+    },
+    "./plugins/shell": {
+      "types": "./lib/plugins/shell.d.ts",
+      "import": "./lib/plugins/shell.js"
+    },
+    "./plugins/sql": {
+      "types": "./lib/plugins/sql.d.ts",
+      "import": "./lib/plugins/sql.js"
+    },
+    "./plugins/store": {
+      "types": "./lib/plugins/store.d.ts",
+      "import": "./lib/plugins/store.js"
+    },
+    "./plugins/stronghold": {
+      "types": "./lib/plugins/stronghold.d.ts",
+      "import": "./lib/plugins/stronghold.js"
+    },
+    "./plugins/upload": {
+      "types": "./lib/plugins/upload.d.ts",
+      "import": "./lib/plugins/upload.js"
+    },
+    "./plugins/websocket": {
+      "types": "./lib/plugins/websocket.d.ts",
+      "import": "./lib/plugins/websocket.js"
+    },
+    "./plugins/window-state": {
+      "types": "./lib/plugins/window-state.d.ts",
+      "import": "./lib/plugins/window-state.js"
     }
   },
   "files": [
@@ -67,8 +151,5 @@
     "LICENSE-TAURI-APACHE",
     "LICENSE-TAURI-MIT",
     "README.md"
-  ],
-  "dependencies": {
-    "@tauri-apps/api": "2.11.1"
-  }
+  ]
 }

@@ -32,7 +32,6 @@ internal static class FrontendDevTests
 
             let lastDevProbe;
             const devProbeTimer = setInterval(async () => {
-              if (!isTauri()) return;
               try {
                 const value = await (commands.dev_version_v2 ?? commands.dev_version)();
                 if (value !== lastDevProbe) { await commands.dev_probe({ value }); lastDevProbe = value; }

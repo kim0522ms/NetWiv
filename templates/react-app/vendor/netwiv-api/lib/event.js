@@ -1,5 +1,5 @@
-import { TauriEvent as UpstreamEvent } from '@tauri-apps/api/event';
-export { listen, once, emit, emitTo } from '@tauri-apps/api/event';
+import { TauriEvent as UpstreamEvent } from './upstream/event.js';
+export { listen, once, emit, emitTo } from './upstream/event.js';
 /** Desktop event names retain their existing wire values. */
 export const TauriEvent = Object.freeze({
     WINDOW_RESIZED: UpstreamEvent.WINDOW_RESIZED,

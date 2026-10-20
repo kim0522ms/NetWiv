@@ -223,7 +223,7 @@ a private nested type fails the NativeAOT build with `SYSLIB1104`.
 | `NetWiv.Ipc` | 2 | Warning | An IPC request was rejected, for example because of an invalid invoke key. |
 | `NetWiv.Commands` | 3 | Debug | The ACL denied a command. |
 | `NetWiv.Commands` | 4 | Error | A command threw an exception other than `InvokeException` or a cancellation. |
-| `NetWiv.Webview` | 1 | Trace–Error | A record from the official log plugin guest. |
+| `NetWiv.Webview` | 1 | Trace–Error | A record from the `@netwiv/api/plugins/log` guest. |
 
 Intentional `InvokeException` errors and cancellations are not logged as
 failures. The guest still receives the same error payload as before.

@@ -1,8 +1,8 @@
-import { invoke } from './vendor/@tauri-apps/api/core.js';
-import { Menu, MenuItem, Submenu } from './vendor/@tauri-apps/api/menu.js';
-import { TrayIcon } from './vendor/@tauri-apps/api/tray.js';
-import { Image } from './vendor/@tauri-apps/api/image.js';
-import { getCurrentWindow } from './vendor/@tauri-apps/api/window.js';
+import { invoke } from './vendor/@netwiv/api/core.js';
+import { Menu, MenuItem, Submenu } from './vendor/@netwiv/api/menu.js';
+import { TrayIcon } from './vendor/@netwiv/api/tray.js';
+import { Image } from './vendor/@netwiv/api/image.js';
+import { getCurrentWindow } from './vendor/@netwiv/api/window.js';
 import { newState, composition, shortcut, missingChecks } from './checks.mjs';
 
 const state = newState();

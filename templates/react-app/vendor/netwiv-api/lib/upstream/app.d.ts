@@ -1,4 +1,4 @@
-import { PluginListener } from '@tauri-apps/api/core';
+import { PluginListener } from './core.js';
 import { Image } from './image.js';
 import { Theme } from './window.js';
 /**

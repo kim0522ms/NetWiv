@@ -1,0 +1,2 @@
+export { BundleType, getName, getVersion, getIdentifier, show, hide, defaultWindowIcon, setTheme, fetchDataStoreIdentifiers, removeDataStore, setDockVisibility, getBundleType, supportsMultipleWindows } from './upstream/app.js';
+export type { DataStoreIdentifier } from './upstream/app.js';

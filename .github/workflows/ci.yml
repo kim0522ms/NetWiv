@@ -23,6 +23,13 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+  DOTNET_INSTALL_DIR: ${{ github.workspace }}/artifacts/ci-dotnet
+  DOTNET_ROOT: ${{ github.workspace }}/artifacts/ci-dotnet
+  NUGET_PACKAGES: ${{ github.workspace }}/.packages
+
 jobs:
   changes:
     name: Classify changes
@@ -90,11 +97,6 @@ jobs:
       run:
         shell: bash
     env:
-      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
-      DOTNET_NOLOGO: '1'
-      DOTNET_INSTALL_DIR: ${{ github.workspace }}/artifacts/ci-dotnet
-      DOTNET_ROOT: ${{ github.workspace }}/artifacts/ci-dotnet
-      NUGET_PACKAGES: ${{ github.workspace }}/.packages
       CARGO_BUILD_JOBS: '2'
       CARGO_TERM_COLOR: always
       SODIUM_DIST_DIR: ${{ github.workspace }}/artifacts/native-source/ci
@@ -107,47 +109,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
-        id: sdk
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Pin the baseline SDK (ignore other preinstalled SDKs)
-        shell: pwsh
-        env:
-          SDK_VERSION: ${{ steps.sdk.outputs.dotnet-version }}
-        run: |
-          @{ sdk = @{ version = $env:SDK_VERSION; rollForward = 'disable'; allowPrerelease = $false } } |
-            ConvertTo-Json | Set-Content global.json
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '24'
-
-      - name: Cache NuGet packages
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: ${{ env.NUGET_PACKAGES }}
-          key: nuget-${{ matrix.os }}-${{ matrix.rid }}-${{ hashFiles('global.json') }}-${{ hashFiles('**/*.csproj', '**/Directory.Build.*', '**/Directory.Packages.props', '**/NuGet.Config', '**/nuget.config') }}
-          restore-keys: |
-            nuget-${{ matrix.os }}-${{ matrix.rid }}-${{ hashFiles('global.json') }}-
-
-      - name: Prepare pinned NSIS compiler
-        if: runner.os == 'Windows'
-        run: node scripts/prepare-nsis.mjs
-
-      - name: Windows installer lifecycle acceptance
-        if: runner.os == 'Windows'
-        timeout-minutes: 15
-        shell: pwsh
-        run: |
-          # Fail packaging acceptance before the expensive native and full-solution builds.
-          dotnet build src/NetWiv.Cli -c Release
-          if ($LASTEXITCODE -ne 0) { throw 'CLI build failed.' }
-          $wixBin = Join-Path $env:WIX 'bin'
-          if (-not (Test-Path (Join-Path $wixBin 'candle.exe'))) { throw 'WiX v3 is missing from the runner.' }
-          $env:PATH = "$wixBin;$env:PATH"
-          ./scripts/test-windows-installers.ps1
+      - uses: ./.github/actions/setup-validation
 
       - name: Install Linux build and desktop dependencies
         if: runner.os == 'Linux'
@@ -213,58 +175,16 @@ jobs:
             artifacts/native-target
           key: ${{ steps.native-cache.outputs.cache-primary-key }}
 
-      - name: Build .NET solution
-        run: dotnet build NetWiv.sln -c Release
+      - name: Build managed Core tests (full solution on Linux)
+        run: |
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            dotnet build NetWiv.sln -c Release
+          else
+            dotnet build tests/NetWiv.Core.Tests -c Release
+          fi
 
       - name: Core tests
         run: dotnet run --project tests/NetWiv.Core.Tests -c Release --no-build
-
-      - name: Prepare pinned CLI test tools
-        run: node scripts/prepare-test-tools.mjs
-
-      - name: macOS app and DMG packaging
-        if: runner.os == 'macOS'
-        timeout-minutes: 5
-        run: dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build -- --filter 'macOS application'
-
-      - name: CLI tests
-        # The signer interoperability test executes the upstream minisign binary.
-        run: |
-          dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build -- --exclude 'macOS application'
-
-      - name: Generator tests
-        run: dotnet test tests/NetWiv.Generators.Tests -c Release --no-build
-
-      - name: API tests
-        run: dotnet test tests/NetWiv.Api.Tests -c Release --no-build
-
-      - name: Shared JavaScript harness and license tests
-        if: runner.os == 'Linux'
-        run: |
-          node --test tests/conformance/scripts/*.test.mjs \
-            tests/NetWiv.Desktop.Smoke/*.test.mjs \
-            tests/NetWiv.Dialog.Smoke/*.test.mjs \
-            tests/NetWiv.MacOS.Sandbox.Smoke/*.test.mjs \
-            tests/NetWiv.Isolation.Smoke/*.test.mjs \
-            compatibility/scripts/upstream-test-inventory.test.mjs \
-            native/license-provenance.test.mjs
-
-      - name: Windows owned-host cleanup tests
-        if: runner.os == 'Windows'
-        run: node --test tests/conformance/scripts/run-host.test.mjs tests/NetWiv.Isolation.Smoke/run.test.mjs
-
-      - name: Platform build-tool script tests
-        run: |
-          node --test scripts/*.test.mjs
-
-      - name: Release bundle tests
-        if: runner.os == 'Linux'
-        run: python3 -m unittest discover -s scripts -p 'test_release_packages.py' -v
-
-      - name: Package consumer project tests
-        shell: pwsh
-        run: |
-          ./scripts/test-package-smoke.ps1
 
       - name: Publish Core tests with NativeAOT
         run: dotnet publish tests/NetWiv.Core.Tests -c Release -r '${{ matrix.rid }}' -p:PublishAot=true -o artifacts/ci/core-aot
@@ -304,7 +224,6 @@ jobs:
         if: runner.os == 'Linux'
         timeout-minutes: 5
         run: |
-          node tests/conformance/scripts/build-frontend.mjs
           dotnet build tests/NetWiv.Dialog.Smoke -c Release -p:PublishAot=false
 
       - name: Linux X11 managed dialog regression
@@ -349,6 +268,7 @@ jobs:
         if: runner.os == 'macOS'
         timeout-minutes: 8
         run: |
+          dotnet build src/NetWiv.Cli -c Release
           cli="$PWD/src/NetWiv.Cli/bin/Release/net8.0/netwiv.dll"
           cd tests/NetWiv.MacOS.Sandbox.Smoke
           dotnet "$cli" build --aot --target '${{ matrix.rid }}' --bundles app-store --no-sign
@@ -370,6 +290,117 @@ jobs:
           path: artifacts/native/
           retention-days: 1
           if-no-files-found: error
+
+  cli:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    name: ${{ matrix.os }} CLI ${{ matrix.group }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, ubuntu-24.04, macos-15, macos-15-intel]
+        group: [contracts, lifecycle]
+    defaults:
+      run:
+        shell: bash
+    env:
+      NETWIV_TEST_TEMPLATE_MATRIX: ${{ matrix.os == 'ubuntu-24.04' && 'full' || 'representative' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-validation
+      - name: Prepare Linux AOT dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang zlib1g-dev
+      - name: Prepare macOS CLI build tools
+        if: runner.os == 'macOS'
+        run: |
+          xcode-select -p
+          xcrun --find clang
+          echo 'MACOSX_DEPLOYMENT_TARGET=12.0' >> "$GITHUB_ENV"
+          if [[ '${{ matrix.group }}' == contracts ]]; then brew install cmake pkgconf libsodium; fi
+      - name: Prepare pinned CLI test tools
+        if: matrix.group == 'contracts'
+        run: node scripts/prepare-test-tools.mjs
+      - name: Build CLI tests
+        run: dotnet build tests/NetWiv.Cli.Tests -c Release
+      - name: Check CLI group completeness
+        if: matrix.os == 'ubuntu-24.04' && matrix.group == 'contracts'
+        run: node scripts/check-cli-groups.mjs
+      - name: macOS app and DMG packaging
+        if: runner.os == 'macOS' && matrix.group == 'contracts'
+        timeout-minutes: 5
+        run: dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build -- --filter 'macOS application'
+      - name: CLI tests
+        run: |
+          if [[ "$RUNNER_OS" == macOS && '${{ matrix.group }}' == contracts ]]; then
+            dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build -- --group contracts --exclude 'macOS application'
+          else
+            dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build -- --group '${{ matrix.group }}'
+          fi
+      - name: Generator tests
+        if: matrix.group == 'contracts' && matrix.os != 'macos-15-intel'
+        run: dotnet test tests/NetWiv.Generators.Tests -c Release
+      - name: Intel macOS generator file-output tests
+        if: matrix.group == 'contracts' && matrix.os == 'macos-15-intel'
+        run: >-
+          dotnet test tests/NetWiv.Generators.Tests -c Release
+          --filter 'FullyQualifiedName~WritesUtf8WithoutTouchingUnchangedFiles|FullyQualifiedName~HandwrittenDeclarationPreventsPartialOverwriteOfExistingJavascript'
+      - name: API tests
+        if: matrix.group == 'contracts'
+        run: dotnet test tests/NetWiv.Api.Tests -c Release
+      - name: Shared JavaScript harness and license tests
+        if: runner.os == 'Linux' && matrix.group == 'contracts'
+        run: |
+          node --test tests/conformance/scripts/*.test.mjs \
+            tests/NetWiv.Desktop.Smoke/*.test.mjs \
+            tests/NetWiv.Dialog.Smoke/*.test.mjs \
+            tests/NetWiv.MacOS.Sandbox.Smoke/*.test.mjs \
+            tests/NetWiv.Isolation.Smoke/*.test.mjs \
+            compatibility/scripts/upstream-test-inventory.test.mjs \
+            native/license-provenance.test.mjs
+      - name: Windows owned-host cleanup tests
+        if: runner.os == 'Windows' && matrix.group == 'contracts'
+        run: node --test tests/conformance/scripts/run-host.test.mjs tests/NetWiv.Isolation.Smoke/run.test.mjs
+      - name: Platform build-tool script tests
+        if: matrix.group == 'contracts'
+        run: node --test scripts/*.test.mjs
+      - name: Release bundle tests
+        if: runner.os == 'Linux' && matrix.group == 'contracts'
+        run: python3 -m unittest discover -s scripts -p 'test_release_packages.py' -v
+      - name: Package consumer project tests
+        if: matrix.group == 'contracts'
+        shell: pwsh
+        run: ./scripts/test-package-smoke.ps1
+
+  windows-installers:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    name: Windows installer lifecycle acceptance
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-validation
+      - name: Prepare pinned NSIS compiler
+        run: node scripts/prepare-nsis.mjs
+      - name: Windows installer lifecycle acceptance
+        timeout-minutes: 15
+        shell: pwsh
+        run: |
+          dotnet build src/NetWiv.Cli -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'CLI build failed.' }
+          $wixBin = Join-Path $env:WIX 'bin'
+          if (-not (Test-Path (Join-Path $wixBin 'candle.exe'))) { throw 'WiX v3 is missing from the runner.' }
+          $env:PATH = "$wixBin;$env:PATH"
+          ./scripts/test-windows-installers.ps1
 
   frontend:
     needs: changes
@@ -405,6 +436,7 @@ jobs:
         major: [9, 10]
     env:
       NetWivTestFramework: net${{ matrix.major }}.0
+      NETWIV_TEST_TEMPLATE_MATRIX: representative
       DOTNET_NOLOGO: '1'
       DOTNET_INSTALL_DIR: ${{ github.workspace }}/artifacts/ci-dotnet
       DOTNET_ROOT: ${{ github.workspace }}/artifacts/ci-dotnet
@@ -412,20 +444,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
-        id: sdk
+      - uses: ./.github/actions/setup-validation
         with:
           dotnet-version: '${{ matrix.major }}.0.x'
-      - name: Pin the SDK under test
-        shell: pwsh
-        env:
-          SDK_VERSION: ${{ steps.sdk.outputs.dotnet-version }}
-        run: |
-          @{ sdk = @{ version = $env:SDK_VERSION; rollForward = 'disable'; allowPrerelease = $false } } |
-            ConvertTo-Json | Set-Content global.json
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '24'
       - name: Prepare AOT and CLI test dependencies
         run: |
           sudo apt-get update
@@ -445,7 +466,7 @@ jobs:
   required:
     name: CI required
     if: always()
-    needs: [changes, desktop, frontend, sdk-compatibility]
+    needs: [changes, desktop, cli, windows-installers, frontend, sdk-compatibility]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -455,11 +476,13 @@ jobs:
           CHANGES_RESULT: ${{ needs.changes.result }}
           BUILD_REQUIRED: ${{ needs.changes.outputs.build }}
           DESKTOP_RESULT: ${{ needs.desktop.result }}
+          CLI_RESULT: ${{ needs.cli.result }}
+          INSTALLER_RESULT: ${{ needs.windows-installers.result }}
           FRONTEND_RESULT: ${{ needs.frontend.result }}
           SDK_RESULT: ${{ needs.sdk-compatibility.result }}
         run: |
           [[ "$CHANGES_RESULT" == success ]] || exit 1
-          case "$BUILD_REQUIRED:$DESKTOP_RESULT:$FRONTEND_RESULT:$SDK_RESULT" in
-            true:success:success:success|false:skipped:skipped:skipped) exit 0 ;;
-            *) echo "Required validation did not pass: $BUILD_REQUIRED:$DESKTOP_RESULT:$FRONTEND_RESULT:$SDK_RESULT"; exit 1 ;;
+          case "$BUILD_REQUIRED:$DESKTOP_RESULT:$CLI_RESULT:$INSTALLER_RESULT:$FRONTEND_RESULT:$SDK_RESULT" in
+            true:success:success:success:success:success|false:skipped:skipped:skipped:skipped:skipped) exit 0 ;;
+            *) echo "Required validation did not pass: $BUILD_REQUIRED:$DESKTOP_RESULT:$CLI_RESULT:$INSTALLER_RESULT:$FRONTEND_RESULT:$SDK_RESULT"; exit 1 ;;
           esac

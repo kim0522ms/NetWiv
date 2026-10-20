@@ -6,6 +6,7 @@ licenses; this file does not relicense them.
 | Component | Origin | License / notice location |
 | --- | --- | --- |
 | TAURI® API, configuration schema, permission/API declarations and reference runtime | https://github.com/tauri-apps/tauri | MIT OR Apache-2.0; pinned source in `compatibility/upstream-lock.json`; copied API license texts accompany its JavaScript |
+| Tauri desktop plugin guests, privately bundled in `@netwiv/api` | https://github.com/tauri-apps/plugins-workspace | MIT OR Apache-2.0; pins in `compatibility/upstream-lock.json`, notices in `packages/api/THIRD-PARTY-NOTICES.md` |
 | wry | https://github.com/tauri-apps/wry | MIT OR Apache-2.0 |
 | tao | https://github.com/tauri-apps/tao | MIT OR Apache-2.0 |
 | muda | https://github.com/tauri-apps/muda | MIT OR Apache-2.0 |

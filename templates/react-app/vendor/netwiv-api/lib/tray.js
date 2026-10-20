@@ -1,2 +1,2 @@
-import { TrayIcon as UpstreamTrayIcon } from '@tauri-apps/api/tray';
+import { TrayIcon as UpstreamTrayIcon } from './upstream/tray.js';
 export const TrayIcon = UpstreamTrayIcon;

@@ -117,8 +117,6 @@ internal static class InitializationScript
             }
           });
           Object.defineProperty(window, '__TAURI_INTERNALS__', { value: internals, configurable: true });
-          Object.defineProperty(window, 'isNetWiv', { value: true, configurable: true });
-          Object.defineProperty(window, 'isTauri', { value: true, configurable: true });
           window.__TAURI_EVENT_PLUGIN_INTERNALS__ = {
             registerListener: (id, callback) => eventCallbacks.set(id, callback),
             unregisterListener: (_event, id) => {

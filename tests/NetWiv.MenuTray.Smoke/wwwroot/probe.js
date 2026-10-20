@@ -1,9 +1,9 @@
-import { invoke } from './vendor/@tauri-apps/api/core.js';
-import { Menu, MenuItem, Submenu, PredefinedMenuItem } from './vendor/@tauri-apps/api/menu.js';
-import { TrayIcon } from './vendor/@tauri-apps/api/tray.js';
-import { Image } from './vendor/@tauri-apps/api/image.js';
-import { PhysicalPosition, PhysicalSize } from './vendor/@tauri-apps/api/dpi.js';
-import { getAllWindows } from './vendor/@tauri-apps/api/window.js';
+import { invoke } from './vendor/@netwiv/api/core.js';
+import { Menu, MenuItem, Submenu, PredefinedMenuItem } from './vendor/@netwiv/api/menu.js';
+import { TrayIcon } from './vendor/@netwiv/api/tray.js';
+import { Image } from './vendor/@netwiv/api/image.js';
+import { PhysicalPosition, PhysicalSize } from './vendor/@netwiv/api/dpi.js';
+import { getAllWindows } from './vendor/@netwiv/api/window.js';
 
 const status = document.querySelector('#status');
 const owned = [];

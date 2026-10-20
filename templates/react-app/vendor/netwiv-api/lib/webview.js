@@ -1,4 +1,4 @@
-import { Webview as UpstreamWebview } from '@tauri-apps/api/webview';
+import { Webview as UpstreamWebview } from './upstream/webview.js';
 import { desktopConstructor, desktopHandle } from './desktop.js';
 export function getCurrentWebview() {
     return desktopHandle(UpstreamWebview.getCurrent());

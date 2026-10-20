@@ -40,9 +40,9 @@ netwiv new MyNetWivApp --template react --source "$feed"
 
 Keep the feed at that location; generated projects refer to its absolute path.
 The CLI's JS/TS starters carry a portable `vendor/netwiv-api` package. Running
-`npm ci` in the generated app installs `@netwiv/api` locally and its pinned
-official dependency from npm; a public `@netwiv/api` registry release is not
-required. See [frontend SDK distribution](frontend-api.md#local-package-distribution).
+`npm ci` in the generated app installs the self-contained `@netwiv/api` package
+locally, including its private core/plugin implementations. No separate upstream
+frontend dependency or public `@netwiv/api` registry release is required. See [frontend SDK distribution](frontend-api.md#installation-and-migration).
 Use `dotnet tool update` if the CLI is already installed. You still need the
 .NET 8 or later SDK, your frontend toolchain and platform WebView/NativeAOT prerequisites.
 Continue with the repository's

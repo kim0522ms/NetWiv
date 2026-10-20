@@ -1,4 +1,4 @@
-import { invoke } from './vendor/@tauri-apps/api/core.js';
+import { invoke } from './vendor/@netwiv/api/core.js';
 const status = document.querySelector('#status'), next = document.querySelector('#next'), finish = document.querySelector('#finish');
 const check = (value) => { if (!value) throw Error('Probe assertion failed'); };
 try {

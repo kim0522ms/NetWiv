@@ -1,8 +1,8 @@
-# Using TAURI® plugins with NetWiv
+# Desktop plugins with NetWiv
 
-The official JavaScript packages referenced here are maintained by the upstream
-`tauri-apps` organization. The .NET implementations and templates described in
-this guide belong to NetWiv and are not officially approved by that organization.
+Applications import plugin guests from `@netwiv/api/plugins/<name>`. Pinned
+upstream guests are privately bundled behind that facade. The .NET implementations
+and templates belong to NetWiv and are not officially approved by Tauri.
 
 ## Reliability and permission contracts
 
@@ -46,7 +46,7 @@ signing and installed-application verification.
 
 ## Installation and registration
 
-New applications use `@netwiv/api` for desktop core APIs. Plugin-specific frontend calls still use the unchanged `@tauri-apps/plugin-*` packages and require the corresponding .NET plugins registered with `Builder`. NetWiv provides desktop implementations for `fs`, `dialog`, `os`, `process`, `store`, `opener`, `http`, `clipboard-manager`, `log`, `shell`, `window-state`, `websocket`, `upload`, `autostart`, `positioner`, `cli`, `sql`, `single-instance`, `deep-link`, `localhost`, `notification`, `global-shortcut`, and `stronghold`. Implementation and validation coverage vary by plugin. See the `EXT-*` rows in the [API status table](api-status.md) for verified scope and remaining features. The updater runtime is excluded from project scope.
+New applications use `@netwiv/api` for desktop core APIs. Plugin-specific frontend calls use `@netwiv/api/plugins/*` and require the corresponding .NET plugins registered with `Builder`. NetWiv provides desktop implementations for `fs`, `dialog`, `os`, `process`, `store`, `opener`, `http`, `clipboard-manager`, `log`, `shell`, `window-state`, `websocket`, `upload`, `autostart`, `positioner`, `cli`, `sql`, `single-instance`, `deep-link`, `localhost`, `notification`, `global-shortcut`, and `stronghold`. Implementation and validation coverage vary by plugin. See the `EXT-*` rows in the [API status table](api-status.md) for verified scope and remaining features. The updater runtime is excluded from project scope.
 
 Prepare an app and package feed using the [quickstart](integration-quickstart.md),
 then install only the packages you need. Replace `$version` below with an actual
@@ -60,10 +60,14 @@ dotnet add src-netwiv/MyApp.csproj package NetWiv.Plugin.Fs --version $version -
 dotnet add src-netwiv/MyApp.csproj package NetWiv.Plugin.Dialog --version $version --source $feed
 ```
 
-Install the corresponding `@tauri-apps/plugin-fs` and `@tauri-apps/plugin-dialog`
-packages in the frontend as well. JS and .NET packages have separate version
-schemes. Reference `NetWiv.Platform.Desktop` and keep SDK and native package versions
+Use `@netwiv/api/plugins/fs` and `@netwiv/api/plugins/dialog` from the same
+frontend package; do not install separate upstream guest packages. SingleInstance,
+Localhost and PersistedScope are backend-only and have no guest module. Reference `NetWiv.Platform.Desktop` and keep SDK and native package versions
 aligned. Ordinary application restore and build operations do not require Cargo.
+
+The facade excludes mobile notification APIs, mobile picker options and mobile fs
+security-scoped helpers. See [frontend migration](frontend-api.md) for exact
+exports and retired detection helpers. Existing backend limitations below remain.
 
 ## Plugin-specific limitations
 
@@ -80,9 +84,9 @@ The synchronous properties remain initialization values; `locale()` and
 
 This correction was checked against the source of
 [`@tauri-apps/plugin-os` 2.4.0, commit `a2364a5f216324439feedeb25b2db74e7b1eba90`](https://github.com/tauri-apps/plugins-workspace/tree/a2364a5f216324439feedeb25b2db74e7b1eba90/plugins/os),
-whose lockfile selects `os_info` 3.10.0. The repository's core upstream lock does
-not currently pin official plugin packages; this source comparison is separate
-from the core compatibility profile. Windows and Linux retain their existing
+whose lockfile selects `os_info` 3.10.0. This historical backend source comparison
+is separate from the shipped guest version: `compatibility/upstream-lock.json`
+now pins the private plugin guests, including OS 2.3.2. Windows and Linux retain their existing
 .NET OS version and OS architecture values; full upstream version/architecture
 parity on those platforms is unverified. Managed and NativeAOT tests cover the
 seven initialization fields, locale/hostname permission and deny rules, and
@@ -90,10 +94,10 @@ version-query failure/timeout fixtures. Run the managed case with
 `dotnet run --project tests/NetWiv.Core.Tests -c Release -- --filter "official OS"`;
 publish with `dotnet publish tests/NetWiv.Core.Tests -c Release -r osx-arm64 -p:PublishAot=true -o artifacts/os-aot`,
 then run `artifacts/os-aot/NetWiv.Core.Tests --filter "official OS"`.
-These tests use the fake desktop runtime; unchanged official guest execution
+These tests use the fake desktop runtime; NetWiv OS facade execution
 in WKWebView and Rosetta/Intel macOS execution require separate evidence.
 
-`NetWiv.Plugin.Cli` exposes application launch arguments through `@tauri-apps/plugin-cli`'s `getMatches()`. It is separate from the `netwiv` CLI used to create and build projects. Application CLI configuration currently supports names, short options, positional arguments, required values, multiple values, allowed values, and subcommands. Unsupported clap features, including conditional constraints and help output, are explicitly rejected.
+`NetWiv.Plugin.Cli` exposes application launch arguments through `@netwiv/api/plugins/cli`'s `getMatches()`. It is separate from the `netwiv` CLI used to create and build projects. Application CLI configuration currently supports names, short options, positional arguments, required values, multiple values, allowed values, and subcommands. Unsupported clap features, including conditional constraints and help output, are explicitly rejected.
 
 Register `NetWiv.Plugin.PersistedScope` after `FsPlugin` and `DialogPlugin`. It saves dialog-selected paths to `.persisted-scope.netwiv.json` in the app's data directory and restores them on restart. It intentionally does not read Tauri's `.persisted-scope` bincode format: sharing formats across different runtime scope structures could restore access incorrectly. Users migrating from Tauri must select their files again. Arbitrary backend scope mutations and deny patterns are not yet persisted. Automated restart checks have passed; actual GUI selection and restart remain unverified.
 
@@ -117,7 +121,7 @@ Core WKWebView support does not imply that every official plugin has macOS OS in
 
 | Area | Current macOS scope |
 | --- | --- |
-| OS information | macOS platform/type, Unix family/EOL, product version and executing-app architecture are implemented. Managed and arm64 NativeAOT payload/permission/query-fixture tests passed on a physical Apple Silicon Mac. Unchanged official guest execution in WKWebView and Rosetta/Intel execution require separate evidence. |
+| OS information | macOS platform/type, Unix family/EOL, product version and executing-app architecture are implemented. Managed and arm64 NativeAOT payload/permission/query-fixture tests passed on a physical Apple Silicon Mac. NetWiv OS facade execution in WKWebView and Rosetta/Intel execution require separate evidence. |
 | External opening | Opener URL/path operations and Shell `open` use `/usr/bin/open` on macOS; Opener reveal uses `open -R` to select the item in Finder. Linux retains `xdg-open` (reveal opens the containing directory). Explicit application selection remains unsupported. |
 | Autostart and DeepLink | OS registration/query/removal paths reject macOS. Parsing explicitly supplied launch URLs is separate from OS URL activation. |
 | Log and persisted scope | Shared managed persistence is available. Core's macOS app log path is `~/Library/Logs/<identifier>`; managed regression checks do not establish installed-app behavior. |
@@ -143,11 +147,11 @@ builder.Plugin(new FsPlugin())
     .Plugin(new DialogPlugin());
 ```
 
-Use the official package functions directly in the frontend:
+Use the NetWiv plugin facade in the frontend:
 
 ```ts
-import { open } from '@tauri-apps/plugin-dialog'
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
+import { open } from '@netwiv/api/plugins/dialog'
+import { readTextFile, writeTextFile } from '@netwiv/api/plugins/fs'
 
 const selected = await open({ filters: [{ name: 'Text', extensions: ['txt'] }] })
 if (typeof selected === 'string') {

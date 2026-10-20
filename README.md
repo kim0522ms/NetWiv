@@ -28,8 +28,8 @@ for OS WebViews, windows, menus and tray integration.
 NetWiv is meant for teams whose backend is already .NET, and for developers who
 want to write their desktop backend in C#. Its desktop frontend SDK is
 [`@netwiv/api`](docs/frontend-api.md), initially backed by the pinned Tauri API
-while moving toward frontend independence. The unchanged official TAURI®
-frontend package remains a separate compatibility path.
+while moving toward frontend independence. Core and plugin imports use this
+single entry point; direct Tauri frontend integration is retired.
 
 NetWiv is developed and maintained using AI coding agents, including **Codex**
 and **Claude Code**. The project began with the maintainer's personal interest
@@ -53,7 +53,7 @@ review and revision.
 | **Generated bindings** | JavaScript calls and TypeScript declarations generated from C# commands. |
 | **Desktop frontend SDK** | `@netwiv/api` in `packages/api`, with mobile-only APIs excluded from its public facade. |
 | **Flexible deployment** | Self-contained .NET by default, installed-runtime deployment or optional NativeAOT. [Deployment modes](docs/deployment.md). |
-| **TAURI frontend support** | Compatibility work targets unchanged `@tauri-apps/api@2.11.1` and TAURI framework 2.11.5 behavior. |
+| **Desktop plugin API** | `@netwiv/api/plugins/*` shares the core facade; .NET plugin registration and permissions remain required. |
 
 Ordinary JS/TS and Blazor application development does not require Cargo.
 Framework maintainers build the native adapter separately; Rust/WASM frontend
@@ -73,9 +73,9 @@ it: **[wry](https://github.com/tauri-apps/wry)** for WebViews,
 **[muda](https://github.com/tauri-apps/muda)** for menus,
 **[tray-icon](https://github.com/tauri-apps/tray-icon)** for system tray integration,
 and **[tauri-utils](https://github.com/tauri-apps/tauri/tree/dev/crates/tauri-utils)**
-for shared configuration types. It also targets the unchanged official
+for shared configuration types. Its frontend facade privately reuses pinned
 **[@tauri-apps/api](https://github.com/tauri-apps/tauri/tree/dev/packages/api)**
-frontend package. NetWiv builds on this upstream work while implementing its
+and desktop plugin implementations. NetWiv builds on this upstream work while implementing its
 application SDK, IPC policy and development tooling in .NET. Some source is
 ported or adapted from the TAURI framework; NetWiv is an independent modified
 implementation, not an official TAURI core runtime. See the
@@ -149,7 +149,8 @@ local CLI manifest. `desktop:dev` handles binding generation, Vite and the app
 process, including frontend updates and C# backend restarts.
 
 `npm ci` installs `@netwiv/api` from the starter's portable `vendor/netwiv-api`
-directory and restores its pinned official Tauri dependency transitively.
+directory, including its private implementation and notices. No upstream frontend
+package is installed as a runtime dependency.
 Generated bindings import `@netwiv/api/core`; use `@netwiv/api` modules for new
 frontend code. This local distribution works without an npm registry release.
 See [frontend SDK usage and migration](docs/frontend-api.md).

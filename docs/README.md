@@ -26,7 +26,7 @@ Official website: [netwiv.github.io](https://netwiv.github.io/).
 | [C# SDK](csharp-api.md) | Commands, state, events, ownership and lifecycle |
 | [Generic Host](hosting.md) | Dependency injection, configuration, options, logging and hosted services |
 | [Frontend bindings](frontend-generator.md) | JS/TS generation and serialization support |
-| [Desktop frontend SDK](frontend-api.md) | NetWiv facade, desktop exclusions and the Tauri compatibility path |
+| [Desktop frontend SDK](frontend-api.md) | Single core/plugin entry point, desktop exclusions and migration from Tauri imports |
 | [Menus](menu-csharp-api.md) | Icons, menu items and About metadata |
 | [Plugin configuration](plugin-configuration.md) | Settings, registration and capability permissions |
 | [Desktop plugins](official-plugins.md) | Installation, contracts and feature-specific limits |
@@ -40,7 +40,7 @@ Official website: [netwiv.github.io](https://netwiv.github.io/).
 
 | Reference | Topics |
 | --- | --- |
-| [Design principles](design-principles.md) | .NET usability and TAURI® compatibility policy |
+| [Design principles](design-principles.md) | .NET usability and the NetWiv frontend contract |
 | [Support and validation](implementation-status.md) | Platforms, distribution and unverified areas |
 | [API status](api-status.md) | Implementation and comparison coverage for the pinned public API inventory |
 | [Platform behavior](pinned-upstream-behavior.md) | Upstream constraints and deliberate C# differences |

@@ -24,7 +24,7 @@ toolchain. See [native architecture](native-architecture.md).
 | Area | Available behavior | Limits |
 | --- | --- | --- |
 | C# SDK | Commands, state, events, channels, windows, WebViews and managed resources. | Applications must follow cancellation, concurrency and ownership contracts. |
-| Frontend SDK | Desktop `@netwiv/api` modules, initially delegating to pinned official Tauri code. New bindings and starters use this facade. | Mobile APIs are excluded. Independent frontend transport is not implemented; unchanged official guests remain a separate compatibility path. See [frontend SDK](frontend-api.md). |
+| Frontend SDK | Desktop `@netwiv/api` modules, initially delegating to pinned official Tauri code. New bindings and starters use this facade. | Mobile APIs are excluded. Independent frontend transport is not implemented; direct upstream guests are no longer a supported entry point; plugin guests use `/plugins/*`. See [frontend SDK](frontend-api.md). |
 | Frontend bindings | Generated JS calls and TS declarations from local and opted-in referenced C# commands and supported JSON metadata. | Explicit tagged polymorphic roots and sealed variants are supported; custom converters, fallback polymorphism and other advanced JSON mappings remain incomplete. Referenced producers need compatible generated metadata; arbitrary dependency discovery is not supported. |
 | Project creation | 18 frontend choices through `netwiv new`; a matching local CLI manifest and SDK references. | Template availability does not establish GUI acceptance for every frontend/toolchain combination. |
 | Development | Frontend updates and C# binding regeneration with backend restart. | Rider and Visual Studio solution loading/debugging require further interactive validation. |
@@ -117,12 +117,11 @@ These are deliberate identity differences, not upstream compatibility passes.
 The unchanged shared conformance cases `app.metadata`, `window.current` and
 `window.configured-startup` expose these differences against the pinned runtime;
 full comparison results must continue to report them. Dedicated Core, native
-and desktop smoke tests verify the NetWiv behavior separately. Frontend imports,
-IPC names, event names, configuration aliases and `isTauri()` bridge detection
-remain available for existing guest code; bridge detection does not identify the
-underlying framework as an official TAURI distribution.
-New applications use `isNetWiv()` from `@netwiv/api/core`; the NetWiv facade
-does not export `getTauriVersion` or `isTauri`.
+and desktop smoke tests verify the NetWiv behavior separately.
+IPC names, event names and configuration aliases remain internal compatibility
+mechanisms. Applications use only `@netwiv/api`, including plugin guests. Runtime
+identity helpers and markers (`isTauri`, `isNetWiv`) are removed; see the
+[frontend migration guide](frontend-api.md).
 
 ## Packaging and distribution
 
@@ -170,9 +169,9 @@ implemented; existing signing support does not establish notarized distribution.
 ## Compatibility and security validation
 
 The reference versions and checksums are pinned in
-[`upstream-lock.json`](../compatibility/upstream-lock.json). Public compatibility
-checks use unchanged `@tauri-apps/api`; direct use of private internals is outside
-the guarantee. Deliberate C# differences are documented separately.
+[`upstream-lock.json`](../compatibility/upstream-lock.json). Internal behavior
+comparisons use unchanged `@tauri-apps/api`; applications use the NetWiv facade
+only. Direct upstream imports and private internals have no public guarantee. Deliberate C# differences are documented separately.
 
 IPC authorization, document/resource ownership, isolation and remote URL patterns
 have implementation and focused tests. Complete coverage across arguments,

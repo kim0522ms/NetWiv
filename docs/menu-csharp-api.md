@@ -1,12 +1,13 @@
 # C# menu API
 
-The menu types in `NetWiv` map to the public `@tauri-apps/api/menu` contract pinned in
+Frontend menu types are exposed through `@netwiv/api/menu`. Their private
+implementation uses the upstream menu protocol pinned in
 `compatibility/upstream-lock.json`: TAURI® runtime 2.11.5 and `@tauri-apps/api` 2.11.1.
 The implementation writes the upstream command names and JSON shapes directly; it does not use
 reflection-based serialization.
 
-New frontend code imports menu types from `@netwiv/api/menu`. The official
-contract above remains the compatibility reference; see [frontend SDK](frontend-api.md).
+The upstream contract is an internal comparison reference, not a supported
+alternative frontend entry point; see [frontend SDK](frontend-api.md).
 
 ## Icon menu items
 

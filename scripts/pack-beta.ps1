@@ -11,9 +11,6 @@ foreach ($project in @('NetWiv.Core', 'NetWiv.Generators', 'NetWiv.Build', 'NetW
 $starter = Join-Path $destination 'Starter'
 New-Item -ItemType Directory -Path $starter -Force | Out-Null
 Copy-Item -Path (Join-Path $repository 'templates/beta-app/*') -Destination $starter -Recurse -Force
-$vendor = Join-Path $starter 'wwwroot/vendor/@tauri-apps'
-New-Item -ItemType Directory -Path $vendor -Force | Out-Null
-Copy-Item -LiteralPath (Join-Path $repository 'samples/NetWiv.SampleApp/wwwroot/vendor/@tauri-apps/api') -Destination $vendor -Recurse -Force
 $netwivVendor = Join-Path $starter 'wwwroot/vendor/@netwiv'
 New-Item -ItemType Directory -Path $netwivVendor -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $repository 'templates/frontends/shared/vendor/@netwiv/api') -Destination $netwivVendor -Recurse -Force

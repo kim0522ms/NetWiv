@@ -806,13 +806,22 @@ public partial class AppJsonContext : JsonSerializerContext;`,
   <ItemGroup>
     <ProjectReference Include="../contracts/Contracts.csproj" />
     <_NetWivApp Include="$(MSBuildProjectDirectory)/../src-netwiv/*.csproj" />
-    <_NetWivCommandSources Include="$(MSBuildProjectDirectory)/../src-netwiv/**/*.cs;$(MSBuildProjectDirectory)/../contracts/**/*.cs"
+    <_NetWivCommandSources Include="$(MSBuildProjectDirectory)/../src-netwiv/**/*.cs;$(MSBuildProjectDirectory)/../src-netwiv/*.csproj;$(MSBuildProjectDirectory)/../src-netwiv/*.props;$(MSBuildProjectDirectory)/../contracts/**/*.cs;$(MSBuildProjectDirectory)/../contracts/*.csproj"
                            Exclude="$(MSBuildProjectDirectory)/../src-netwiv/obj/**;$(MSBuildProjectDirectory)/../src-netwiv/bin/**;$(MSBuildProjectDirectory)/../contracts/obj/**;$(MSBuildProjectDirectory)/../contracts/bin/**" />
   </ItemGroup>
+  <!-- Lists the C# sources so that deleting or renaming a file also counts as a change:
+       the list is rewritten only when it differs, which makes it newer than the client. -->
+  <Target Name="NetWivTrackCommandSources" Condition="'$(DesignTimeBuild)' != 'true'">
+    <PropertyGroup>
+      <_NetWivCommandSourceList>$(IntermediateOutputPath)netwiv-command-sources.txt</_NetWivCommandSourceList>
+    </PropertyGroup>
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <WriteLinesToFile File="$(_NetWivCommandSourceList)" Lines="@(_NetWivCommandSources->'%(FullPath)')" Overwrite="true" WriteOnlyWhenDifferent="true" />
+  </Target>
   <!-- Every app build rewrites Generated/NetWivCommands.g.cs. When the C# sources are newer,
        refresh it with a bindings-only app build before this project compiles. -->
-  <Target Name="NetWivGenerateCommands" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true'"
-          Inputs="@(_NetWivCommandSources)" Outputs="Generated/NetWivCommands.g.cs">
+  <Target Name="NetWivGenerateCommands" BeforeTargets="CoreCompile" DependsOnTargets="NetWivTrackCommandSources" Condition="'$(DesignTimeBuild)' != 'true'"
+          Inputs="@(_NetWivCommandSources);$(_NetWivCommandSourceList)" Outputs="Generated/NetWivCommands.g.cs">
     <Exec Command="dotnet build &quot;@(_NetWivApp->'%(FullPath)')&quot; -p:NetWivBindingsOnly=true -p:PublishAot=false --disable-build-servers -nologo -v:q" />
     <Touch Files="Generated/NetWivCommands.g.cs" />
     <ItemGroup>

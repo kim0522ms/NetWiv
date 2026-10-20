@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>NetWiv.Blazor</PackageId>
+    <Description>Optional managed Blazor Hybrid hosting for NetWiv on Windows.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../NetWiv.Core/NetWiv.Core.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="[8.0.32]" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="8.0.0" />
+    <InternalsVisibleTo Include="NetWiv.Blazor.Tests" />
+    <None Include="buildTransitive/NetWiv.Blazor.targets" Pack="true" PackagePath="buildTransitive/NetWiv.Blazor.targets" />
+  </ItemGroup>
+</Project>

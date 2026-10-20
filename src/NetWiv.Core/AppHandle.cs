@@ -75,6 +75,7 @@ public sealed partial class AppHandle : IDisposable
     public ImageData? DefaultWindowIcon { get; internal set; }
     internal bool AssetProtocolEnabled { get; set; }
     internal IsolationPattern? Isolation { get; set; }
+    internal Func<AssetRequest, AssetResponse, AssetResponse>? AssetResponsePolicy { get; set; }
     internal FileScope? FileAssetScope { get; set; }
     public FileScope AssetProtocolScope() => FileAssetScope ?? throw new InvalidOperationException("The asset protocol is not enabled.");
     public FileScope? TryAssetProtocolScope() => FileAssetScope;
@@ -286,7 +287,8 @@ public sealed partial class AppHandle : IDisposable
         }, DefaultWindowIcon,
         BuiltInCommands.ResolveDirectory((int)BaseDirectory.LocalData, Metadata.Identifier),
         BuiltInCommands.ResolveDirectory((int)BaseDirectory.AppLocalData, Metadata.Identifier), AssetProtocolEnabled, Isolation?.Scheme, OnProtocolInvokeAsync,
-        _uriSchemeProtocols.Keys.ToArray(), ResolveUriSchemeAsync);
+        _uriSchemeProtocols.Keys.ToArray(), ResolveUriSchemeAsync)
+        { ApplyAssetPolicy = AssetResponsePolicy };
 
     private async ValueTask<AssetResponse?> ResolveUriSchemeAsync(AssetRequest request)
     {

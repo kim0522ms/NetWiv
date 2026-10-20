@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>NetWiv.BlazorHybrid.Desktop</AssemblyName>
+    <RootNamespace>NetWiv.BlazorHybrid.Desktop</RootNamespace>
+    <RollForward>Major</RollForward>
+    <NetWivCSharpBindingsDirectory>../Shared/obj/netwiv/$(Configuration)</NetWivCSharpBindingsDirectory>
+    <DefineConstants Condition="'$(NetWivBlazorMode)' == 'Hybrid' and '$(NetWivBindingsOnly)' != 'true'">$(DefineConstants);NETWIV_BLAZOR_HYBRID</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../src/NetWiv.Hosting/NetWiv.Hosting.csproj" />
+    <ProjectReference Include="../../../src/NetWiv.Platform.Desktop/NetWiv.Platform.Desktop.csproj" />
+    <ProjectReference Include="../../../src/NetWiv.Generators/NetWiv.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/NetWiv.Build.Tasks/NetWiv.Build.Tasks.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Contracts/Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(NetWivBlazorMode)' == 'Hybrid' and '$(NetWivBindingsOnly)' != 'true'">
+    <ProjectReference Include="../../../src/NetWiv.Blazor/NetWiv.Blazor.csproj" />
+    <ProjectReference Include="../Shared/Shared.csproj" />
+    <Content Include="wwwroot/**/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../Shared/Assets/**/*" Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../../templates/frontends/shared/vendor/@netwiv/api/**/*" Link="wwwroot/vendor/@netwiv/api/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Import Project="../../../src/NetWiv.Build/buildTransitive/NetWiv.Build.targets" />
+  <Target Name="ValidateBlazorMode" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(NetWivBlazorMode)' != 'Hybrid' and '$(NetWivBlazorMode)' != 'WebAssembly'" Text="NetWivBlazorMode must be Hybrid or WebAssembly." />
+    <Error Condition="'$(NetWivBlazorMode)' == 'Hybrid' and '$(PublishAot)' == 'true'" Text="Blazor Hybrid requires managed .NET. Use NetWivBlazorMode=WebAssembly for NativeAOT desktop publishing." />
+  </Target>
+  <Target Name="BuildWebAssemblyUi" BeforeTargets="AssignTargetPaths" Condition="'$(NetWivBlazorMode)' == 'WebAssembly' and '$(NetWivBindingsOnly)' != 'true' and '$(DesignTimeBuild)' != 'true'">
+    <Exec Command="dotnet publish &quot;$(MSBuildProjectDirectory)/../WebAssembly/WebAssembly.csproj&quot; -c &quot;$(Configuration)&quot; -p:PublishAot=false --disable-build-servers -nologo -v:q" />
+    <ItemGroup>
+      <_PublishedBlazorAsset Include="../WebAssembly/bin/$(Configuration)/net8.0/publish/wwwroot/**/*" />
+      <Content Include="@(_PublishedBlazorAsset)">
+        <Link>wwwroot/%(_PublishedBlazorAsset.RecursiveDir)%(_PublishedBlazorAsset.Filename)%(_PublishedBlazorAsset.Extension)</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </Content>
+    </ItemGroup>
+  </Target>
+</Project>

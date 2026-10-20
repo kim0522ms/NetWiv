@@ -1,0 +1,8 @@
+:root { font-family: system-ui, sans-serif; color-scheme: light dark; }
+body { margin: 0; }
+main { max-width: 54rem; margin: 2rem auto; padding: 0 1.5rem; }
+h1 { font-size: 1.75rem; }
+section { border-top: 1px solid GrayText; margin-top: 1.5rem; padding-top: .5rem; }
+button, input { font: inherit; padding: .45rem .7rem; margin: .2rem .4rem .2rem 0; }
+label { display: block; }
+#error { color: light-dark(#b42318, #fda29b); }

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor" TreatAsLocalProperty="AssemblyName">
+  <PropertyGroup>
+    <AssemblyName>NetWiv.BlazorHybrid.Shared</AssemblyName>
+    <RootNamespace>NetWiv.BlazorHybrid.Shared</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.32" />
+    <ProjectReference Include="../Contracts/Contracts.csproj" />
+    <Compile Include="obj/netwiv/$(Configuration)/NetWivCommands.g.cs"
+             Condition="Exists('obj/netwiv/$(Configuration)/NetWivCommands.g.cs')" />
+  </ItemGroup>
+  <Target Name="GenerateSampleCommands" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)/../Desktop/Desktop.csproj&quot; -c &quot;$(Configuration)&quot; -p:NetWivBindingsOnly=true -p:PublishAot=false -p:NetWivBlazorMode=WebAssembly --disable-build-servers -nologo -v:q" />
+    <ItemGroup>
+      <Compile Include="obj/netwiv/$(Configuration)/NetWivCommands.g.cs" Exclude="@(Compile)" />
+    </ItemGroup>
+  </Target>
+</Project>

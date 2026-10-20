@@ -5,6 +5,7 @@ licenses; this file does not relicense them.
 
 | Component | Origin | License / notice location |
 | --- | --- | --- |
+| Microsoft.AspNetCore.Components.WebView 8.0.32, reused by optional NetWiv.Blazor | https://github.com/dotnet/aspnetcore/tree/v8.0.32/src/Components/WebView/WebView | MIT; NuGet package license; upstream renderer and embedded JavaScript are used without modification |
 | TAURI® API, configuration schema, permission/API declarations and reference runtime | https://github.com/tauri-apps/tauri | MIT OR Apache-2.0; pinned source in `compatibility/upstream-lock.json`; copied API license texts accompany its JavaScript |
 | Tauri desktop plugin guests, privately bundled in `@netwiv/api` | https://github.com/tauri-apps/plugins-workspace | MIT OR Apache-2.0; pins in `compatibility/upstream-lock.json`, notices in `packages/api/THIRD-PARTY-NOTICES.md` |
 | wry | https://github.com/tauri-apps/wry | MIT OR Apache-2.0 |

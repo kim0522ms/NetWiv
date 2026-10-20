@@ -1,0 +1,13 @@
+<Project>
+  <Import Project="../../Directory.Build.props" />
+  <PropertyGroup>
+    <NetWivBlazorMode Condition="'$(NetWivBlazorMode)' == '' and '$(Configuration)' == 'Debug'">Hybrid</NetWivBlazorMode>
+    <NetWivBlazorMode Condition="'$(NetWivBlazorMode)' == ''">WebAssembly</NetWivBlazorMode>
+  </PropertyGroup>
+  <!-- The shared UI generates its client with a separate backend build. -->
+  <PropertyGroup Condition="'$(NetWivBindingsOnly)' == 'true'">
+    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj/bindings/$(Configuration)/</MSBuildProjectExtensionsPath>
+    <IntermediateOutputPath>$(MSBuildProjectDirectory)/obj/bindings/$(Configuration)/</IntermediateOutputPath>
+    <OutputPath>$(MSBuildProjectDirectory)/bin/bindings/$(Configuration)/</OutputPath>
+  </PropertyGroup>
+</Project>

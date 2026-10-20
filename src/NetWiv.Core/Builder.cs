@@ -27,6 +27,7 @@ public sealed class Builder
     private IReadOnlySet<string> _disabledCspModifications = new HashSet<string>();
     private bool _freezePrototype;
     private IDesktopRuntime? _runtime;
+    private Func<IServiceProvider, IDesktopRuntime>? _runtimeFactory;
     private AppMetadata _metadata = AppMetadata.Default;
     private ImageData? _defaultWindowIcon;
     private JsonElement _assetProtocolConfig;
@@ -36,7 +37,22 @@ public sealed class Builder
     private ILoggerFactory? _loggerFactory;
     private readonly Dictionary<string, Func<UriSchemeContext, AssetRequest, Task<AssetResponse>>> _uriSchemeProtocols = new(StringComparer.Ordinal);
 
-    public Builder UseRuntime(IDesktopRuntime runtime) { _runtime = runtime; return this; }
+    public Builder UseRuntime(IDesktopRuntime runtime)
+    {
+        ArgumentNullException.ThrowIfNull(runtime);
+        _runtime = runtime;
+        _runtimeFactory = null;
+        return this;
+    }
+    /// <summary>Creates the runtime at build time using the configured root service provider.</summary>
+    /// <remarks>The factory must not resolve AppHandle, which is available only after construction completes.</remarks>
+    public Builder UseRuntime(Func<IServiceProvider, IDesktopRuntime> factory)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+        _runtimeFactory = factory;
+        _runtime = null;
+        return this;
+    }
     /// <summary>
     /// Supplies the root service provider for instance command receivers and <c>[FromServices]</c> command parameters.
     /// Each command invocation runs in its own scope when the provider supports scopes.
@@ -139,7 +155,10 @@ public sealed class Builder
 
     public App Build()
     {
-        var runtime = _runtime ?? throw new InvalidOperationException("A desktop runtime must be configured with UseRuntime.");
+        var runtime = _runtimeFactory is null
+            ? _runtime ?? throw new InvalidOperationException("A desktop runtime must be configured with UseRuntime.")
+            : _runtimeFactory(_services ?? throw new InvalidOperationException("A runtime factory requires a service provider. Configure UseServiceProvider or use NetWiv.Hosting."))
+                ?? throw new InvalidOperationException("The runtime factory returned null.");
         var windows = _windows.Count == 0 && !_hasEmbeddedConfiguration
             ? [new WindowOptions("main", _metadata.Name, "index.html", 800, 600, default)]
             : _windows.ToArray();
@@ -172,8 +191,9 @@ public sealed class Builder
                 "http://tauri.localhost",
                 "https://tauri.localhost"
             };
+            var responsePolicy = CreateAssetResponsePolicy(isolation);
             var app = new App(runtime, _metadata, windows, state, commands, permissions, _capabilities, origins,
-                _hasAppCommandManifest, CreateAssetResolver(fileAssets, isolation), plugins, _freezePrototype, _setup.ToArray(),
+                _hasAppCommandManifest, CreateAssetResolver(fileAssets, isolation, responsePolicy), plugins, _freezePrototype, _setup.ToArray(),
                 new Dictionary<string, Func<UriSchemeContext, AssetRequest, Task<AssetResponse>>>(_uriSchemeProtocols, StringComparer.Ordinal));
             app.Handle.DefaultWindowIcon = _defaultWindowIcon;
             app.Handle.ConfigureServices(_services, _loggerFactory);
@@ -185,6 +205,7 @@ public sealed class Builder
             app.Handle.AssetProtocolEnabled = fileAssets is not null;
             app.Handle.FileAssetScope = fileAssets?.Scope;
             app.Handle.Isolation = isolation;
+            app.Handle.AssetResponsePolicy = responsePolicy;
             foreach (var handler in _menuEventHandlers) app.OnMenuEvent(handler);
             foreach (var handler in _trayEventHandlers) app.OnTrayIconEvent(handler);
             return app;
@@ -241,19 +262,29 @@ public sealed class Builder
         }
     }
 
-    private Func<AssetRequest, AssetResponse?> CreateAssetResolver(FileAssetProtocol? fileAssets, IsolationPattern? isolation)
+    private Func<AssetRequest, AssetResponse?> CreateAssetResolver(FileAssetProtocol? fileAssets, IsolationPattern? isolation,
+        Func<AssetRequest, AssetResponse, AssetResponse> responsePolicy)
     {
         var resolve = _assetResolver;
         var configuredHeaders = _responseHeaders;
-        var configuredCsp = _contentSecurityPolicy;
         var disabledCspModifications = _disabledCspModifications;
-        var globalScriptHashes = _globalScriptHashes;
         return request =>
         {
             if (isolation?.IsIsolationUri(request.Uri) == true) return isolation.Resolve(request, disabledCspModifications, configuredHeaders);
             if (FileAssetProtocol.IsAssetUri(request.Uri)) return fileAssets?.Resolve(request);
             var response = resolve(request);
-            if (response is null) return null;
+            return response is null ? null : responsePolicy(request, response);
+        };
+    }
+
+    private Func<AssetRequest, AssetResponse, AssetResponse> CreateAssetResponsePolicy(IsolationPattern? isolation)
+    {
+        var configuredHeaders = _responseHeaders;
+        var configuredCsp = _contentSecurityPolicy;
+        var disabledCspModifications = _disabledCspModifications;
+        var globalScriptHashes = _globalScriptHashes;
+        return (request, response) =>
+        {
             if (configuredHeaders.Count == 0 && configuredCsp is null) return response;
             var headers = response.Headers is null
                 ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

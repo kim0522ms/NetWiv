@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk" TreatAsLocalProperty="AssemblyName">
+  <PropertyGroup>
+    <AssemblyName>BlazorHybrid.Contracts</AssemblyName>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+</Project>

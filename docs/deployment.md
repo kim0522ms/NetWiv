@@ -4,6 +4,10 @@ NetWiv consumer applications can use the regular .NET runtime or NativeAOT.
 The framework remains AOT-compatible; using its libraries does not require an
 application or its dependencies to be AOT-compatible.
 
+The optional [Blazor Hybrid package](blazor-hybrid.md) requires managed .NET.
+Its shared UI can instead be built as Blazor WebAssembly for a NativeAOT
+desktop backend; that build must exclude the Hybrid package reference.
+
 ## Choose a publishing mode
 
 Run these commands from the application root after restoring its local tools:

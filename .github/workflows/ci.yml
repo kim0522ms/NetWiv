@@ -344,6 +344,9 @@ jobs:
       - name: API tests
         if: matrix.group == 'contracts'
         run: dotnet test tests/NetWiv.Api.Tests -c Release
+      - name: Managed Blazor Hybrid transport and lifecycle tests
+        if: runner.os == 'Windows' && matrix.group == 'contracts'
+        run: dotnet run --project tests/NetWiv.Blazor.Tests -c Release
       - name: Shared JavaScript harness and license tests
         if: runner.os == 'Linux' && matrix.group == 'contracts'
         run: |

@@ -1,0 +1,40 @@
+<main>
+    <h1>One Razor UI, two execution modes</h1>
+    <p id="execution-mode">@ExecutionMode</p>
+    <p>UI scope: <code id="scope-id">@Session.Id</code></p>
+
+    <section aria-labelledby="counter-heading">
+        <h2 id="counter-heading">Razor event</h2>
+        <p>Count: <output id="counter">@Count</output></p>
+        <button id="increment" @onclick="Increment">Increment</button>
+    </section>
+
+    <section aria-labelledby="command-heading">
+        <h2 id="command-heading">Typed desktop command</h2>
+        <label for="name">Name</label>
+        <input id="name" @bind="Name" />
+        <button id="greet" @onclick="GreetAsync" disabled="@Busy">Greet</button>
+        <p id="greeting" aria-live="polite">@GreetingText</p>
+        <p>Backend calls: <output id="backend-count">@BackendCount</output></p>
+    </section>
+
+    <section aria-labelledby="interop-heading">
+        <h2 id="interop-heading">JavaScript and lifetime</h2>
+        <button id="interop" @onclick="ReadDocumentAsync">Read document title through JS</button>
+        <p id="interop-result" aria-live="polite">@InteropText</p>
+        <button id="reload" @onclick="ReloadAsync">Reload</button>
+        <button id="close" @onclick="CloseAsync">Close window</button>
+        <p>Reload resets the counter and UI scope. The desktop service stays alive.</p>
+    </section>
+    <p id="error" role="alert">@Error</p>
+</main>
+
+@code {
+    private int Count;
+
+    private void Increment()
+    {
+        var nextCount = Count + 1;
+        Count = nextCount;
+    }
+}

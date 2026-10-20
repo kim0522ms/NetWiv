@@ -22,6 +22,7 @@ GeneratedCommandRegistry.Register("generated_selected", static registry =>
 
 var tests = new List<(string Name, Func<Task> Run)>
 {
+    ("runtime asset policy preserves configured CSP headers and isolation sources", AssetResponsePolicyTests.SharedPolicy),
     ("JSON text IPC preserves numeric precision through plain and isolation transport", JsonTextIpcTests.PrecisionAndIsolation),
     ("JSON text IPC enforces input authorization response and document boundaries", JsonTextIpcTests.Boundaries),
     ("website data-store error boundaries", DataStoreTests.ErrorBoundaries),
@@ -76,6 +77,7 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("instance commands MissingRegistrationAndConstructorFailure", NetWiv.Tests.InstanceCommandScenarios.MissingRegistrationAndConstructorFailure),
     ("instance commands GuestIpcAndAuthorization", NetWiv.Tests.InstanceCommandScenarios.GuestIpcAndAuthorization),
     ("hosting wires services, options and AppHandle around the event loop lifecycle", HostingTests.ServicesConfigurationAndLifecycle),
+    ("hosting runtime factories receive the configured root services", HostingTests.RuntimeFactoryUsesConfiguredServices),
     ("hosting StopApplication exits a running event loop and skips one not yet started", HostingTests.StopApplicationExitsEventLoop),
     ("hosting generated commands resolve scoped, keyed and AppHandle services", HostingTests.GeneratedCommandsResolveServices),
     ("hosting shutdown waits for commands in flight before stopping services", HostingTests.ShutdownWaitsForCommandsInFlight),

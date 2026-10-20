@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly" TreatAsLocalProperty="AssemblyName">
+  <PropertyGroup>
+    <AssemblyName>NetWiv.BlazorHybrid.WebAssembly</AssemblyName>
+    <RootNamespace>NetWiv.BlazorHybrid.WebAssembly</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.32" />
+    <ProjectReference Include="../Shared/Shared.csproj" />
+    <Content Include="../Shared/Assets/**/*" Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Content Include="../../../templates/frontends/shared/vendor/@netwiv/api/**/*"
+             Link="wwwroot/vendor/@netwiv/api/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

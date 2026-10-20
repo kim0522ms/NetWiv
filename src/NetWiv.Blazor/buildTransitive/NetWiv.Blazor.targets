@@ -1,0 +1,6 @@
+<Project>
+  <Target Name="NetWivRejectBlazorHybridNativeAot" BeforeTargets="PrepareForBuild;PrepareForPublish"
+          Condition="'$(PublishAot)' == 'true'">
+    <Error Text="NetWiv.Blazor uses Microsoft Blazor Hybrid and does not support NativeAOT. Publish this host with PublishAot=false, or select the Blazor WebAssembly release host and remove the NetWiv.Blazor reference from that build." />
+  </Target>
+</Project>

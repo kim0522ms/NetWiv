@@ -10,6 +10,11 @@ and templates belong to NetWiv and are not officially approved by Tauri.
 
 On Windows, Linux and macOS, `LogPlugin()` keeps an active log file of up to 5 MiB and three archived files by default. Configure these limits with `new LogPlugin(minimumLevel: 1, maxFileBytes: 1024 * 1024, retainedFiles: 2)`; `retainedFiles: 0` disables archives. Records that exceed the limit are truncated at a UTF-8 character boundary and marked with `[truncated]`. Existing constructors and JS calls remain available, but logs no longer grow without a limit. Applications that need permanent audit records should use a separate collection and retention system. This is NetWiv's disk-usage policy; it does not establish parity with every upstream log-rotation behavior.
 
+When an `ILoggerFactory` is configured through `Builder.UseLoggerFactory` or
+Hosting, frontend log records also reach the `NetWiv.Webview` category. Configured
+logging providers replace direct stdout output; file and WebView event outputs
+remain enabled according to the plugin configuration.
+
 `WindowStatePlugin()` automatically restores saved state for existing windows at startup and for windows created later. Its `Ready` Task completes after the initial restoration attempt; do not wait for it synchronously on the UI thread. Immediately before a window is destroyed, the Wry backend supplies its final normal bounds and state, including maximization. The plugin saves this state when the app is disposed. Use the `using var app = builder.Build(); app.Run();` lifecycle. Intercepting window closure or synchronously querying destroyed native windows would introduce deadlock risks and alter close behavior, so the plugin avoids those approaches.
 
 Automatic management requires matching native libraries with this support. Explicit save and restore calls remain available. Applications that manage the lifecycle themselves can preserve that behavior with `new WindowStatePlugin(".window-state.json", StateFlags.All, automatic: false)`. Unselected flags are left unchanged. Corrupt state files are preserved and reported through diagnostics. Automatic saving is not guaranteed after forced termination, a crash, or shutdown before the initial path lookup completes. The verified native restoration scope is Windows x64 and Linux x64/X11; Wayland absolute positioning is outside the native baseline, so position restoration is not a supported Wayland claim. macOS window-state save/relaunch restoration remains unverified.
@@ -71,6 +76,19 @@ exports and retired detection helpers. Existing backend limitations below remain
 
 ## Plugin-specific limitations
 
+`NetWiv.Plugin.Store` supports boolean/numeric autosave settings with debounce,
+explicit save and flushing dirty automatically saved stores during normal disposal.
+The default is now 100 ms rather than immediate persistence; use `save()` or
+`autoSave: 0` when a completed write is required. `autoSave: false` remains explicit
+save only, including shutdown. See [store persistence](store.md) for shared handles,
+failed-save recovery and validation limits.
+
+`NetWiv.Plugin.Fs` implements `watch` and `watchImmediate` with scoped native
+filesystem notifications and document-owned resources. Grant `fs:allow-watch`
+with path scopes and `core:resources:allow-close` for guest unwatch. Recursion,
+batching, rename boundary filtering and cleanup are implemented; exact native
+event counts/subtypes differ from Rust notify. See [filesystem watching](filesystem-watch.md).
+
 `NetWiv.Plugin.Os` reports `macos` for both `platform()` and `type()` on macOS,
 `unix` for `family()`, `\n` for `eol()`, and an empty executable extension. Its
 `version()` is the macOS product version from `/usr/bin/sw_vers -productVersion`,
@@ -101,7 +119,7 @@ in WKWebView requires separate evidence.
 
 Register `NetWiv.Plugin.PersistedScope` after `FsPlugin` and `DialogPlugin`. It saves dialog-selected paths to `.persisted-scope.netwiv.json` in the app's data directory and restores them on restart. It intentionally does not read Tauri's `.persisted-scope` bincode format: sharing formats across different runtime scope structures could restore access incorrectly. Users migrating from Tauri must select their files again. Arbitrary backend scope mutations and deny patterns are not yet persisted. Automated restart checks have passed; actual GUI selection and restart remain unverified.
 
-`NetWiv.Plugin.Sql` currently supports only SQLite through Windows `winsqlite3.dll` and the `sqlite3` native import on non-Windows hosts (Linux `libsqlite3.so`). Managed SQLite query/binding regressions also passed on the Apple Silicon host; macOS NativeAOT database packaging and clean-machine loading remain unverified. `sqlite:app.db` opens under the app configuration directory, and paths that escape that directory are rejected. The official JS `Database.load`, `execute`, `select`, and `close` calls are available. `sql:default` does not include `execute`; grant `sql:allow-execute` separately for writes. MySQL, PostgreSQL, migrations, and result conversion based on SQLite declared types remain incomplete. Results may vary with the system SQLite version.
+`NetWiv.Plugin.Sql` currently supports only SQLite through Windows `winsqlite3.dll` and the `sqlite3` native import on non-Windows hosts (Linux `libsqlite3.so`). Managed and NativeAOT SQLite query, binding and migration checks passed on physical Windows x64 and macOS arm64 hosts and Linux x64 under WSL, in headless test processes. Clean-machine database packaging/loading and live WebView acceptance remain unverified. `sqlite:app.db` opens under the app configuration directory, and paths that escape that directory are rejected. The official JS `Database.load`, `execute`, `select`, and `close` calls are available. `sql:default` does not include `execute`; grant `sql:allow-execute` separately for writes. Backend-registered SQLite forward migrations now apply on load/preload with transactional rollback and applied-history validation; see [SQLite migrations](sqlite.md). MySQL, PostgreSQL, SQLx migration-history import and result conversion based on SQLite declared types remain unsupported. Results may vary with the system SQLite version.
 
 Register `NetWiv.Plugin.SingleInstance` before other plugins and before the app starts. For example, `new SingleInstancePlugin((app, args, cwd) => { /* Forward to the existing window. */ })` receives the second launch's arguments and working directory in the first process. The shared desktop implementation uses a .NET named pipe keyed by the app identifier. This intentionally differs from upstream Tauri's Linux D-Bus service names and Snap/Flatpak service declarations. The plugin does not yet support applications that require upstream-compatible argument forwarding in those sandboxes. Separate-process automated checks have passed on Windows, Linux and the Apple Silicon host; a second launch with the actual GUI remains unverified.
 

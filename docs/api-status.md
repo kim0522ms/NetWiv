@@ -5,6 +5,7 @@ The classification checks dispatch paths, platform adapters, options and test
 definitions. It does not establish full desktop acceptance or every argument/error
 combination; feature-specific execution checks and limits are noted separately.
 Plugin rows remain feature-group inventories, not method-by-method audits.
+The plugin implementation notes and status explanations were reviewed on **2026-10-20**.
 Targets: **Windows x64 / Linux x64 / macOS arm64**. Reference inventory: `@tauri-apps/api@2.11.1`.
 This is a source-based feature inventory, not a declaration of complete TAURI® equivalence or release acceptance.
 
@@ -16,12 +17,16 @@ See [Linux X11/Wayland](linux.md) for runtime support and compositor limits.
 
 Implementation, declaration availability and validation are separate. Counts below
 are derived from the individual core rows, not from CI results or a completion score.
+The ten core **Not implemented** entries are mobile features excluded from NetWiv;
+they are not a desktop implementation backlog. **Declaration available** entries
+are types/constants, not pending functions. Plugin implementation gaps are listed
+separately below and do not contribute to those core counts.
 
 ## Reading the status table
 
 | Status | Meaning |
 | --- | --- |
-| Declaration available | A type or constant is supplied by the unchanged official npm package. This does not establish the behavior of its members or options. |
+| Declaration available | A TypeScript type or a constant is present in the pinned upstream reference. This is not an unimplemented function: types describe values/callbacks/options, while constants supply values. The desktop facade exposes only its selected subset. Runtime support for members/options is listed separately. |
 | Implemented | An execution path exists within the stated platform scope. This includes guest-only implementations and documented platform no-ops. It does not imply complete argument/error equivalence, individual comparison or GUI acceptance. |
 | Unsupported (intentional) | Deliberately rejected to preserve NetWiv runtime identity; this is a documented compatibility difference, not a pending implementation or a compatibility pass. |
 | Planned | Included in the support goals, with implementation or validation work remaining. This does not mean ready for use or scheduled for a specific release. |
@@ -44,7 +49,7 @@ The following feature groups cover official desktop plugins outside the core npm
 | --- | --- | --- | --- |
 | EXT-UPDATER | Update checks, downloads and installation | **Not implemented** | Excluded from project work scope; not deferred. CLI signing support does not provide an updater runtime. |
 | EXT-DIALOG | Native open/save and message dialogs | **Partial** | `NetWiv.Plugin.Dialog` uses asynchronous GTK responses on Linux and rfd on Windows/macOS. Linux pending requests support caller cancellation and parent/WebView/document/app cleanup. Selected managed/NativeAOT file/folder/save, message and cancellation checks passed on Ubuntu 22.04 GNOME Wayland. See the [dialog probe](../tests/NetWiv.Dialog.Smoke/README.md) and [validation scope](implementation-status.md#wayland-validation). Windows/macOS GUI selection and cancellation, portal/compositor coverage and full upstream equivalence remain unverified. |
-| EXT-FS | Frontend file and directory read/write APIs | **Planned** | Main `NetWiv.Plugin.Fs` commands, scopes and binary IPC are implemented. Watching, the full file-option/metadata surface and upstream comparison remain incomplete. |
+| EXT-FS | Frontend file and directory read/write APIs | **Partial** | Main commands, scopes and binary IPC are implemented. Desktop `watch`/`watchImmediate` now use scoped, document-owned filesystem watchers with recursive monitoring, batching and cleanup; see [filesystem watching](filesystem-watch.md). Full file-option/metadata coverage, live guest acceptance and exact upstream event parity remain incomplete. |
 | EXT-OS | OS information, hostname and locale | **Partial** | `NetWiv.Plugin.Os` reports macOS and its product version with process architecture. Windows x64 and Apple Silicon managed/NativeAOT payload and ACL tests passed. Unchanged official OS guest and minimum-macOS comparison remain unverified; see [OS information](official-plugins.md). |
 | EXT-PROCESS | Exit and restart | **Planned** | Permission, exit and restart paths are implemented in `NetWiv.Plugin.Process`. Installed-app restart validation remains incomplete. |
 | EXT-HTTP | Native HTTP client API | **Planned** | `NetWiv.Plugin.Http` implements official fetch IPC, binary response streaming, URL scopes and redirect checks. Proxy and unsafe TLS options, and upstream error/cookie/cancellation comparisons remain incomplete. |
@@ -53,14 +58,14 @@ The following feature groups cover official desktop plugins outside the core npm
 | EXT-CLIPBOARD | Clipboard text and image APIs | **Planned** | `NetWiv.Plugin.ClipboardManager` and arboard implement text, HTML, images and clearing. Actual Windows/Linux X11/Wayland/macOS clipboard roundtrips need validation. Default permissions allow no commands. |
 | EXT-NOTIFICATION | OS notifications and notification permissions | **Planned** | `NetWiv.Plugin.Notification` implements the official desktop `notify` command, two permission commands, the JS `Notification` bridge and native `notify-rust` delivery. Managed/Rust automated checks passed. Actual Windows notification-center/Linux D-Bus/macOS notification display, installed-app identity and error equivalence remain unverified. Mobile channels and scheduling are out of scope. |
 | EXT-GLOBAL-SHORTCUT | Global shortcuts while the app is inactive | **Planned** | `NetWiv.Plugin.GlobalShortcut` connects four official commands, native `global-hotkey` registration/removal and Channel events. C#/Rust automated checks passed. Actual inactive-app input on Windows/Linux/macOS, X11/Wayland behavior and reload races remain unverified. Default permissions allow no commands. |
-| EXT-STORE | Persistent key-value storage API | **Planned** | `NetWiv.Plugin.Store` implements official guest commands, JSON persistence and shared handles. Autosave debounce, custom serializers and full lifecycle validation remain incomplete. |
-| EXT-SQL | Frontend SQL database API | **Planned** | `NetWiv.Plugin.Sql` connects official `load`, `execute`, `select` and `close` IPC to system SQLite. Managed query/binding checks passed on Windows/Linux and Apple Silicon; macOS NativeAOT database distribution remains unverified. MySQL/PostgreSQL, migrations, preload validation and upstream type/error comparison remain incomplete. |
+| EXT-STORE | Persistent key-value storage API | **Partial** | Guest commands, JSON persistence and shared handles are implemented. Boolean/numeric autosave debounce, explicit-save cancellation, graceful disposal flushing and failed-save recovery are implemented; see [store persistence](store.md). Custom Rust serializers are unsupported; live guest acceptance and full upstream lifecycle equivalence remain unverified. |
+| EXT-SQL | Frontend SQL database API | **Partial** | SQLite `load`, `execute`, `select` and `close` are implemented. Backend-registered forward migrations run transactionally on load/preload, validate applied history and roll back failures; see [SQLite migrations](sqlite.md). MySQL/PostgreSQL, declared-type result conversion and SQLx history import are unsupported. Live guest and clean-machine NativeAOT distribution acceptance remain separate from functional checks. |
 | EXT-AUTOSTART | Registration for launch at OS login | **Planned** | `NetWiv.Plugin.Autostart` implements official `enable`, `disable` and `is_enabled`, the Windows user Run registry and Linux XDG autostart `.desktop` entries. Linux temporary-directory regression checks passed. macOS registration is unsupported. Actual login launch, Windows registration and upstream AppImage comparison remain incomplete. |
 | EXT-SINGLE-INSTANCE | Single-instance enforcement and argument forwarding | **Planned** | `NetWiv.Plugin.SingleInstance` detects duplicates, forwards arguments/working directory and requests second-instance exit. Separate-process automated checks passed on Windows/Linux and Apple Silicon. Actual GUI duplicate-launch validation is pending. Linux uses .NET named pipes instead of upstream D-Bus and does not interoperate with Snap/Flatpak service declarations. |
 | EXT-DEEP-LINK | Launch and route apps through external URIs | **Planned** | `NetWiv.Plugin.DeepLink` implements four official commands, declared-scheme launch arguments/events and user protocol registration/removal. Windows/Linux registration checks passed; macOS registration is unsupported. Actual OS URI activation, installer integration and upstream error equivalence remain incomplete. |
 | EXT-CLI-PLUGIN | Application launch-argument parsing | **Planned** | `NetWiv.Plugin.Cli` implements official `cli_matches` responses and argument/subcommand/value validation. Basic flags, multiple values and subcommands passed automated checks. Advanced clap conditional constraints and help output are explicitly unsupported; upstream comparison remains incomplete. |
 | EXT-LOCALHOST | Localhost asset server | **Planned** | `NetWiv.Plugin.Localhost` serves bundled assets over HTTP on a configured port, with CSP, response headers and an `onRequest` hook. GET/HEAD/shutdown checks passed. Actual WebView origin authorization, all HTTP boundaries and upstream equivalence remain unverified. |
-| EXT-LOG | Frontend and backend logging | **Partial** | `NetWiv.Plugin.Log` implements the official log command, file/stdout/WebView outputs and file-size/archive-count limits. Long UTF-8 records and concurrent writes have regression coverage. The full Tauri target/filter/rotation policy and backend logger integration remain incomplete. |
+| EXT-LOG | Frontend and backend logging | **Partial** | `NetWiv.Plugin.Log` implements the official log command, file/stdout/WebView outputs and file-size/archive-count limits. Long UTF-8 records and concurrent writes have regression coverage. Configured `ILoggerFactory` integration is implemented through the `NetWiv.Webview` category; the full Tauri target/filter/rotation policy remains incomplete. |
 | EXT-PERSISTED-SCOPE | Restore file scopes after restart | **Planned** | `NetWiv.Plugin.PersistedScope` restores dialog-selected fs/asset scopes after relaunch; automated restart checks passed. Arbitrary backend scope changes, deny patterns and Tauri's bincode format are unsupported. Storage uses NetWiv JSON and is not interoperable with the upstream file. |
 | EXT-POSITIONER | Position windows relative to screens or trays | **Planned** | `NetWiv.Plugin.Positioner` implements three official commands and screen/tray anchor calculations. Synthetic-monitor checks passed. Actual multi-monitor/tray GUI validation and upstream equivalence remain incomplete. |
 | EXT-STRONGHOLD | Encrypted storage | **Planned** | `NetWiv.Plugin.Stronghold` forwards 11 official commands to IOTA Stronghold. Native snapshot/vault/store/procedure paths and new snapshot save/reload passed NativeAOT integration checks on Windows/Linux and Apple Silicon. The default Argon2 salt path is `snapshotPath.salt`; an existing Tauri salt path can be passed to the constructor. Existing Tauri snapshot interoperability and all procedure inputs remain unverified, so this is not marked ready for use. |
@@ -172,17 +177,18 @@ lag behind tests added to a suite.
   and a [package consumer](../tests/frontend-bindings/ReferencedCommands.cs).
   Both producer and consumer must opt in; aggregation does not recursively load
   arbitrary dependencies. This is no longer a missing feature.
-- Advanced frontend JSON mappings remain unimplemented: custom converters,
-  polymorphism, unsupported ExtensionData and nonpublic JsonInclude produce
-  `DTOXGEN009`. These are actual mapping gaps, unlike the existing core native
-  adapters above. See [serialization limits](frontend-generator.md#serialization-and-current-boundaries).
+- Explicitly tagged polymorphic mappings are implemented within the GEN-ADVANCED
+  limits. Arbitrary converters, fallback polymorphism and unsupported metadata
+  combinations remain rejected with `DTOXGEN009`. See
+  [serialization limits](frontend-generator.md#serialization-and-current-boundaries).
 - Interactive `info --fix` and plugin workflow generation remain explicitly
   unsupported tooling features. They do not block the desktop core API inventory.
 - Plugin implementations remain a separate, coarser feature inventory above.
-  Their Planned/Partial labels must not be read as an absence of code: FS watching,
-  Store autosave debounce, Shell sidecars and SQL migrations are examples of
-  implementation work, whereas dialog GUI selection and installed-app restart
-  require validation of existing paths. A method-level plugin audit is still needed
+  Their Planned/Partial labels must not be read as an absence of code. Filesystem
+  watching, Store autosave debounce and SQLite forward migrations now have
+  implementations and focused functional tests. Shell sidecars and full fs
+  metadata/options remain implementation work; dialog GUI selection and
+  installed-app restart require validation of existing paths. A method-level plugin audit is still needed
   before scheduling a plugin as a whole.
 
 ## Complete public JavaScript/TypeScript API inventory

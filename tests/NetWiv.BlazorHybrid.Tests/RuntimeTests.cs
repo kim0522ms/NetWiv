@@ -10,7 +10,13 @@ internal static class RuntimeTests
 {
     internal static async Task TransportBoundaries()
     {
-        await using var fixture = new RuntimeFixture();
+        foreach (var origin in new[] { BlazorAppOrigin.Windows, BlazorAppOrigin.Native })
+            await TransportBoundaries(origin);
+    }
+
+    private static async Task TransportBoundaries(Uri origin)
+    {
+        await using var fixture = new RuntimeFixture(appBaseUri: origin);
         var context = await fixture.Native.Ready.Task;
         Check.Equal(fixture.Options.AppBaseUri.AbsoluteUri, context.Windows[0].Url);
         Check.Equal("original.html", context.Windows[1].Url);
@@ -29,6 +35,10 @@ internal static class RuntimeTests
             fixture.Message(1) with { Source = new Uri("http://netwiv-blazor.localhost.evil.invalid/") },
             fixture.Message(1) with { Source = new Uri("http://netwiv-blazor.localhost:8443/") },
             fixture.Message(1) with { Source = new Uri("http://user@netwiv-blazor.localhost/") },
+            fixture.Message(1) with { Source = new Uri("netwiv-blazor://localhost.evil.invalid/") },
+            fixture.Message(1) with { Source = new Uri("netwiv-blazor://localhost:8443/") },
+            fixture.Message(1) with { Source = new Uri("netwiv-blazor://user@localhost/") },
+            fixture.Message(1) with { Source = origin == BlazorAppOrigin.Windows ? BlazorAppOrigin.Native : BlazorAppOrigin.Windows },
         }) context.OnMessage(message);
         // An awaited asset request drains earlier work on the same renderer dispatcher.
         await fixture.Asset(1);
@@ -41,6 +51,27 @@ internal static class RuntimeTests
         Check.Equal(1UL, (await fixture.Native.ScriptReady.Task).Document);
         Check.True(!scope.Disposed, "Active page scope was disposed.");
         Check.Equal(0, fixture.Native.ExitCodes.Count);
+    }
+
+    internal static async Task ProtocolAssets()
+    {
+        foreach (var origin in new[] { BlazorAppOrigin.Windows, BlazorAppOrigin.Native })
+        {
+            await using var fixture = new RuntimeFixture(appBaseUri: origin);
+            var context = await fixture.Native.Ready.Task;
+            fixture.Change(1);
+            foreach (var path in new[] { "index.html?x=a%26b", "app.css?v=one%2Ftwo", "nested/route?x=y", "_framework/blazor.webview.js?v=1" })
+            {
+                var response = await context.ResolveUriScheme!(new(new Uri(BlazorAppOrigin.Native, path), "GET",
+                    new Dictionary<string, string>(), WebviewLabel: "main", DocumentId: 1));
+                Check.Equal(200, response!.StatusCode);
+            }
+            foreach (var invalid in new[] { "netwiv-blazor://user@localhost/index.html", "netwiv-blazor://localhost:8443/index.html",
+                "netwiv-blazor://localhost.evil.invalid/index.html", "https://netwiv-blazor.localhost/index.html" })
+                Check.True(await context.ResolveUriScheme!(new(new Uri(invalid), "GET", new Dictionary<string, string>(),
+                    WebviewLabel: "main", DocumentId: 1)) is null, "An untrusted protocol endpoint received bundled assets.");
+            Check.Equal(0, fixture.Probes.Count);
+        }
     }
 
     internal static async Task Reload()
@@ -132,7 +163,7 @@ internal sealed class RuntimeFixture : IAsyncDisposable
     internal BlazorDesktopRuntime Runtime { get; }
     internal Task Run { get; }
 
-    internal RuntimeFixture(bool allowFailure = false)
+    internal RuntimeFixture(bool allowFailure = false, Uri? appBaseUri = null)
     {
         _allowFailure = allowFailure;
         var services = new ServiceCollection().AddLogging().AddNetWivBlazorHybrid();
@@ -145,7 +176,7 @@ internal sealed class RuntimeFixture : IAsyncDisposable
             return probe;
         });
         _services = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
-        Options = new() { FileProvider = _files, HostPage = "index.html" };
+        Options = new(appBaseUri ?? new BlazorWebViewOptions().AppBaseUri) { FileProvider = _files, HostPage = "index.html" };
         Options.RootComponents.Add<EmptyRoot>("#app");
         Runtime = new(Native, _services, Options);
         var context = new RuntimeContext(

@@ -7,7 +7,7 @@ built from source. Release availability depends on maintainer publication;
 cloning the repository does not provide a prebuilt package feed.
 To create packages yourself, see [framework development](development.md#create-a-local-package-feed).
 Full TAURI® compatibility and release validation remain incomplete.
-For a shared Razor UI with managed Windows development and deployment,
+For a shared Razor UI with managed desktop development and deployment,
 optional experimental NativeAOT Hybrid or WebAssembly execution, see the optional
 [NetWiv.BlazorHybrid guide](blazor-hybrid.md).
 With the package feed below, select that layout using

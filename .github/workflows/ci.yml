@@ -208,13 +208,29 @@ jobs:
         timeout-minutes: 5
         run: ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe
 
-      - name: Windows experimental NativeAOT Blazor Hybrid
-        if: runner.os == 'Windows'
-        timeout-minutes: 5
+      - name: Managed Blazor Hybrid native WebView
+        timeout-minutes: 10
         run: |
-          dotnet publish tests/NetWiv.BlazorHybrid.Aot.Tests -c Release -r win-x64 -p:PublishAot=true -o artifacts/ci/blazor-aot
-          ./artifacts/ci/blazor-aot/NetWiv.BlazorHybrid.Aot.Tests.exe
-          ./artifacts/ci/blazor-aot/NetWiv.BlazorHybrid.Aot.Tests.exe --native-webview
+          dotnet publish tests/NetWiv.BlazorHybrid.Aot.Tests -c Release -r '${{ matrix.rid }}' -p:PublishAot=false -p:JsonSerializerIsReflectionEnabledByDefault=true -o artifacts/ci/blazor-managed
+          executable="$PWD/artifacts/ci/blazor-managed/NetWiv.BlazorHybrid.Aot.Tests${{ matrix.exe }}"
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/run-linux-smoke-desktop.sh "$executable" x11 --managed-host --native-webview --back-forward
+            xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/run-linux-smoke-desktop.sh "$executable" x11 --transport-navigation
+          else
+            "$executable" --managed-host --native-webview --back-forward
+          fi
+
+      - name: Experimental NativeAOT Blazor Hybrid
+        timeout-minutes: 10
+        run: |
+          dotnet publish tests/NetWiv.BlazorHybrid.Aot.Tests -c Release -r '${{ matrix.rid }}' -p:PublishAot=true -o artifacts/ci/blazor-aot
+          executable="$PWD/artifacts/ci/blazor-aot/NetWiv.BlazorHybrid.Aot.Tests${{ matrix.exe }}"
+          "$executable"
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/run-linux-smoke-desktop.sh "$executable" x11 --native-webview --back-forward
+          else
+            "$executable" --native-webview --back-forward
+          fi
 
       - name: Linux X11 NativeAOT WebView smoke
         if: runner.os == 'Linux'
@@ -353,7 +369,7 @@ jobs:
         if: matrix.group == 'contracts'
         run: dotnet test tests/NetWiv.Api.Tests -c Release
       - name: Managed Blazor Hybrid transport and lifecycle tests
-        if: runner.os == 'Windows' && matrix.group == 'contracts'
+        if: matrix.group == 'contracts'
         run: dotnet run --project tests/NetWiv.BlazorHybrid.Tests -c Release
       - name: Shared JavaScript harness and license tests
         if: runner.os == 'Linux' && matrix.group == 'contracts'
@@ -364,6 +380,7 @@ jobs:
             tests/NetWiv.MacOS.Sandbox.Smoke/*.test.mjs \
             tests/NetWiv.Isolation.Smoke/*.test.mjs \
             compatibility/scripts/upstream-test-inventory.test.mjs \
+            native/netwiv-native/src/runtime/ipc.test.mjs \
             native/license-provenance.test.mjs
       - name: Windows owned-host cleanup tests
         if: runner.os == 'Windows' && matrix.group == 'contracts'

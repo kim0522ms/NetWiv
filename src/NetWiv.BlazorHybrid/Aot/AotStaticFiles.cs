@@ -37,8 +37,7 @@ internal sealed class AotStaticFiles : IDisposable
     internal AssetResponse? TryGetResponse(AssetRequest request)
     {
         var uri = request.Uri;
-        if (uri.Scheme != _baseUri.Scheme || uri.IdnHost != _baseUri.IdnHost ||
-            uri.Port != _baseUri.Port || uri.UserInfo.Length != 0) return null;
+        if (!BlazorAppOrigin.Matches(uri, _baseUri)) return null;
         if (request.Method is not ("GET" or "HEAD")) return Response(405, "Method not allowed");
         var path = Uri.UnescapeDataString(uri.AbsolutePath).TrimStart('/');
         if (path.Contains('\\') || path.Contains('\0') || path.Split('/').Any(segment => segment is "." or ".."))

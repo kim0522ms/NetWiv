@@ -120,7 +120,8 @@ internal static class BlazorHybridTemplate
 
         Open `{{name}}.sln` and select the `{{name}}` desktop project as the startup
         project, or run `dotnet run --project src-netwiv`. Both Debug and Release
-        default to managed Blazor Hybrid on Windows x64/WebView2. The host uses
+        default to managed Blazor Hybrid on Windows x64/WebView2, Linux x64 with
+        GTK3/WebKitGTK 4.1, or macOS arm64/WKWebView. The host uses
         `AddNetWivBlazorHybrid` and standard `DotNetObjectReference` through the
         shared reference factory. No static component or callback registry is
         needed for this default path.
@@ -151,6 +152,11 @@ internal static class BlazorHybridTemplate
         dotnet tool run netwiv -- build --no-bundle --aot --blazor-mode Hybrid --experimental-blazor-aot
         dotnet tool run netwiv -- dev --aot --blazor-mode Hybrid --experimental-blazor-aot
         ```
+
+        The publish example uses the Windows RID. On Linux use `linux-x64`;
+        on macOS use `osx-arm64`. Publish on the target OS with its native
+        compiler/linker prerequisites. Use `options.AppBaseUri` for the Hybrid
+        window URL; the adapter selects the private origin for the platform.
 
         `--experimental-blazor-aot` requires both `--aot` and explicit
         `--blazor-mode Hybrid`. The MSBuild opt-in selects

@@ -38,7 +38,15 @@ internal static class ManagerTests
 
     internal static async Task Assets()
     {
-        await using var fixture = new ManagerFixture();
+        foreach (var origin in new[] { BlazorAppOrigin.Windows, BlazorAppOrigin.Native })
+            await Assets(origin);
+    }
+
+    private static async Task Assets(Uri origin)
+    {
+        await using var fixture = new ManagerFixture(origin);
+        AssetRequest Request(string path, string? source = null) =>
+            new(new Uri(source is null ? origin : new Uri(source), path), "GET", new Dictionary<string, string>());
         var host = fixture.Manager.TryGetResponse(Request("index.html"));
         Check.Equal(200, host!.StatusCode);
         CheckAssetMime(host, "text/html");
@@ -50,6 +58,8 @@ internal static class ManagerTests
         Check.Equal(200, css!.StatusCode);
         CheckAssetMime(css, "text/css");
         Check.Contains("color: green", Encoding.UTF8.GetString(css.Body.Span));
+        Check.Equal(200, fixture.Manager.TryGetResponse(Request("app.css?v=one%2Ftwo"))!.StatusCode);
+        Check.Equal(200, fixture.Manager.TryGetResponse(Request("nested/route?filter=a%26b"))!.StatusCode);
         var framework = fixture.Manager.TryGetResponse(Request("_framework/blazor.webview.js"));
         Check.Equal(200, framework!.StatusCode);
         CheckAssetMime(framework, "javascript");
@@ -61,6 +71,7 @@ internal static class ManagerTests
         fixture.Manager.Navigate("nested/route");
         Check.Equal(new Uri(fixture.Options.AppBaseUri, "nested/route"), fixture.Navigated);
         Check.Throws<InvalidOperationException>(() => fixture.Manager.Navigate("https://foreign.invalid/"));
+        Check.Throws<InvalidOperationException>(() => fixture.Manager.Navigate(origin.GetLeftPart(UriPartial.Authority).Replace("://", "://user@") + "/"));
     }
 
     private static void CheckAssetMime(AssetResponse response, string mime)
@@ -74,9 +85,17 @@ internal static class ManagerTests
 
     internal static async Task ForeignOrigin()
     {
-        await using var fixture = new ManagerFixture();
+        foreach (var origin in new[] { BlazorAppOrigin.Windows, BlazorAppOrigin.Native })
+            await ForeignOrigin(origin);
+    }
+
+    private static async Task ForeignOrigin(Uri origin)
+    {
+        await using var fixture = new ManagerFixture(origin);
         await fixture.Manager.InitializeAsync();
-        foreach (var source in new[] { "https://foreign.invalid/", "http://netwiv-blazor.localhost.evil.invalid/", "http://netwiv-blazor.localhost:8443/", "https://netwiv-blazor.localhost/" })
+        foreach (var source in new[] { "https://foreign.invalid/", "http://netwiv-blazor.localhost.evil.invalid/", "http://netwiv-blazor.localhost:8443/", "https://netwiv-blazor.localhost/",
+            "netwiv-blazor://localhost.evil.invalid/", "netwiv-blazor://localhost:8443/", "netwiv-blazor://user@localhost/", "http://user@netwiv-blazor.localhost/",
+            (origin == BlazorAppOrigin.Windows ? BlazorAppOrigin.Native : BlazorAppOrigin.Windows).AbsoluteUri })
             fixture.Manager.ReceiveMessage(new(source), fixture.AttachMessage);
         await fixture.Manager.Dispatcher.InvokeAsync(() => { });
         Check.True(!await fixture.Manager.TryDispatchAsync(_ => throw new InvalidOperationException("Foreign page attached.")),
@@ -120,9 +139,6 @@ internal static class ManagerTests
         await disposing;
         Check.True(scope.Disposed, "Page scope was not disposed.");
     }
-
-    private static AssetRequest Request(string path, string origin = "http://netwiv-blazor.localhost/") =>
-        new(new Uri(new Uri(origin), path), "GET", new Dictionary<string, string>());
 }
 
 internal sealed class ManagerFixture : IAsyncDisposable
@@ -137,7 +153,7 @@ internal sealed class ManagerFixture : IAsyncDisposable
     internal Uri? Navigated { get; private set; }
     internal string AttachMessage => $"__bwv:[\"AttachPage\",\"{Options.AppBaseUri}\",\"{Options.AppBaseUri}\"]";
 
-    internal ManagerFixture()
+    internal ManagerFixture(Uri? appBaseUri = null)
     {
         var services = new ServiceCollection().AddLogging().AddNetWivBlazorHybrid();
         services.AddScoped(_ =>
@@ -148,7 +164,7 @@ internal sealed class ManagerFixture : IAsyncDisposable
             return probe;
         });
         _services = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
-        Options = new() { FileProvider = _files, HostPage = "index.html" };
+        Options = new(appBaseUri ?? new BlazorWebViewOptions().AppBaseUri) { FileProvider = _files, HostPage = "index.html" };
         Options.RootComponents.Add<EmptyRoot>("#app");
         Manager = new(_services, Dispatcher.CreateDefault(), Options.AppBaseUri, Options,
             uri => Navigated = uri, Messages.Enqueue);

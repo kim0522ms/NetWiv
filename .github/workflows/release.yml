@@ -78,7 +78,7 @@ jobs:
     needs: [version, bundle]
     name: ${{ matrix.rid }} package consumers with only .NET ${{ matrix.major }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:

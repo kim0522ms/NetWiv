@@ -5,19 +5,26 @@ generated typed command client into two hosts. Both call `greet` through
 `wwwroot/netwiv.js` → `@netwiv/api/core.invokeJson` → NetWiv IPC. The UI never
 receives a desktop backend service directly.
 
-Both Debug and Release default to **managed Hybrid** on Windows x64/WebView2.
+Both Debug and Release default to **managed Hybrid** on Windows x64/WebView2,
+Linux x64 with GTK3/WebKitGTK 4.1, or macOS arm64/WKWebView.
 The default host uses `AddNetWivBlazorHybrid` and Microsoft's ordinary
 `DotNetObjectReference` through the shared reference factory. Application
 components and callbacks do not need the experimental static registry.
 
 Run these commands from the repository root, with the repository's native
-Windows artifacts already built as described in `docs/development.md`:
+artifacts for the current platform already built as described in `docs/development.md`:
 
 ```powershell
 dotnet run --project samples/BlazorHybrid/Desktop -c Debug
 dotnet run --project samples/BlazorHybrid/Desktop -c Release
 dotnet publish samples/BlazorHybrid/Desktop -c Release -r win-x64 --self-contained true -p:PublishAot=false
 ```
+
+The publish commands use the Windows RID. Substitute `linux-x64` on Linux or
+`osx-arm64` on macOS, and publish on the target OS. Linux needs an available X11
+or Wayland desktop session; set `GDK_BACKEND=x11` or `GDK_BACKEND=wayland` to
+select it. The Hybrid window uses `options.AppBaseUri`, which selects the
+platform's private origin without starting an HTTP server.
 
 Choose WebAssembly explicitly to run the shared Razor UI in the browser:
 
@@ -76,5 +83,9 @@ standard object-reference callbacks, DTO interop, reload and normal process exit
 The static host was checked separately in managed and NativeAOT execution.
 Treat the default managed host and the experimental host as separate validation paths. NetCoreDbg handler
 checks do not establish Rider or Visual Studio UI acceptance, full Razor-library
-compatibility, Hot Reload or another platform's support. See the
+compatibility or Hot Reload. The portable managed and experimental NativeAOT
+source harness also covers selected native rendering, interop, command IPC,
+reload and cleanup scenarios on physical Windows/macOS and Linux under WSLg
+with X11 and native Wayland. Physical Linux and minimum-macOS acceptance remain
+separate. See the
 [validation boundary and experimental limits](../../docs/blazor-hybrid.md).

@@ -43,9 +43,39 @@
       actual.items[1] === null && actual.optional === null, "Nested DTO/long strings changed.");
   }
   async function run() {
+    const foreign = document.createElement('iframe');
+    const attempted = new Promise(resolve => {
+      window.addEventListener('message', event => {
+        if (event.source === foreign.contentWindow && event.data?.transportAttempted !== undefined) resolve(event.data.transportAttempted);
+      });
+    });
+    foreign.src = 'data:text/html,' + encodeURIComponent(`<script>
+      const raw = window.webkit?.messageHandlers?.ipc || window.chrome?.webview;
+      if (raw) {
+        raw.postMessage('__transport-forged:raw');
+        raw.postMessage(JSON.stringify({ capability: 'forged', documentId: 1, payload: '__transport-forged:envelope' }));
+      }
+      parent.postMessage({transportAttempted: !!raw}, '*');
+    <\/script>`);
+    document.body.appendChild(foreign);
+    assert(await attempted, 'The foreign frame did not expose the raw native handler.');
+    assert(await window.__TAURI_INTERNALS__.invoke('transport_echo', { input: 'protocol' }) === 'protocol', 'Native protocol command failed.');
+    assert(await window.__TAURI_INTERNALS__.invokeJson('transport_echo', '{"input":"message"}') === '"message"', 'Native message command failed.');
     await waitFor(() => ready && receivedDto && document.getElementById("aot-click"));
     assert(voidCalled && window.proof.moduleCalled, "Standard void/module interop failed.");
-    document.getElementById("aot-click").click();
+    if (window.__NETWIV_IPC__.os === 'linux' && !new URLSearchParams(location.search).has('netwiv-proof-phase') && window.name !== 'netwiv-hybrid-back') {
+      const nonce = window.__NETWIV_IPC_NONCE__();
+      const failingUrl = await window.__TAURI_INTERNALS__.invoke('failure_url');
+      location.href = failingUrl;
+      const pending = window.__TAURI_INTERNALS__.invokeJson('transport_echo', '{"input":"pending"}');
+      document.getElementById('aot-click').click();
+      await new Promise(resolve => setTimeout(() => { window.stop(); resolve(); }, 300));
+      assert(await pending === '"pending"', 'Message IPC stalled across canceled provisional navigation.');
+      await waitFor(() => document.querySelector('output')?.textContent === 'count:1');
+      assert(window.__NETWIV_IPC_NONCE__() === nonce, 'Canceled navigation replaced the committed document.');
+      assert(await window.__TAURI_INTERNALS__.invoke('transport_echo', { input: 'after-cancel' }) === 'after-cancel', 'Protocol IPC stalled after canceled navigation.');
+      assert(await window.__TAURI_INTERNALS__.invokeJson('transport_echo', '{"input":"after-message"}') === '"after-message"', 'Message IPC stalled after canceled navigation.');
+    } else document.getElementById("aot-click").click();
     await waitFor(() => document.querySelector("output")?.textContent === "count:1");
     const text = document.getElementById("text");
     text.value = "changed";
@@ -83,7 +113,7 @@
     catch { rejected = true; }
     assert(rejected, "An unregistered method was accepted.");
     document.getElementById("result").textContent = "PASS";
-    send("__aot-proof:" + JSON.stringify({ passed: true, phase: Number(sessionStorage.getItem("netwiv-aot-phase") || 0) }));
+    send("__aot-proof:" + JSON.stringify({ passed: true, phase: Number(new URLSearchParams(location.search).get("netwiv-proof-phase") || 0), navigationType: performance.getEntriesByType('navigation')[0]?.type }));
   }
   function failed(error) {
     document.getElementById("result").textContent = "FAIL";

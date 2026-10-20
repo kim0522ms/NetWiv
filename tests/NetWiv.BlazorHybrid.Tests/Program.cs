@@ -1,5 +1,6 @@
 var tests = new List<(string Name, Func<Task> Run)>
 {
+    ("Hybrid origins reject authority aliases and opaque foreign schemes", OriginTests.AuthorityBoundaries),
     ("AOT assets preserve routing, reject foreign paths and retain provider ownership", AotAssetTests.Assets),
     ("AOT registration snapshots and host selection reject conflicting setup", AotAssetTests.Registration),
     ("AOT event parsing covers framework built-ins and rejects custom composition events", AotEventDataTests.BuiltInEvents),
@@ -11,10 +12,11 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("inline renderer failures return tasks without interrupting disposal", JsDisposalTests.InlineDispatcherFailure),
     ("tracked JS calls are bounded and use actual nested completion identities", JsDisposalTests.TrackingBound),
 };
-if (OperatingSystem.IsWindows())
+if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
 {
     tests.Add(("Hybrid assets retain configured response policy and reject isolation", HybridSecurityTests.AssetsAndIsolation));
     tests.Add(("Hybrid transport rejects foreign windows origins and stale documents", RuntimeTests.TransportBoundaries));
+    tests.Add(("Hybrid native protocol preserves asset paths and queries and rejects untrusted authorities", RuntimeTests.ProtocolAssets));
     tests.Add(("Hybrid reload retires its scope and ignores late document callbacks", RuntimeTests.Reload));
     tests.Add(("Hybrid close prevents retired document resurrection", RuntimeTests.Close));
     tests.Add(("Hybrid exit and native-loop return await asynchronous renderer cleanup", RuntimeTests.ExitAndReturn));
@@ -25,7 +27,7 @@ if (OperatingSystem.IsWindows())
     tests.Add(("close releases a renderer with an unacknowledged render batch", RetirementTests.PendingRender));
     tests.Add(("rapid reload cancellation preserves the latest page's JS calls", RetirementTests.RapidReload));
 }
-else Console.WriteLine("SKIP Windows Hybrid runtime scenarios: unsupported host platform.");
+else Console.WriteLine("SKIP Hybrid runtime scenarios: unsupported host platform.");
 
 var failures = 0;
 foreach (var (name, run) in tests)

@@ -37,17 +37,22 @@ internal sealed class BlazorWebViewManager : WebViewManager
                 ParameterView.FromDictionary(new Dictionary<string, object?>(root.Parameters)));
     }
 
-    internal void ReceiveMessage(Uri sourceUri, string message) => MessageReceived(sourceUri, message);
+    internal void ReceiveMessage(Uri sourceUri, string message)
+    {
+        if (BlazorAppOrigin.Matches(sourceUri, _appBaseUri)) MessageReceived(sourceUri, message);
+    }
 
     internal AssetResponse? TryGetResponse(AssetRequest request)
     {
+        if (!BlazorAppOrigin.Matches(request.Uri, _appBaseUri)) return null;
         if (request.Method is not ("GET" or "HEAD"))
             return new AssetResponse(405, "text/plain", "Method not allowed"u8.ToArray());
         var acceptsHtml = request.Headers.Any(header =>
             header.Key.Equals("Accept", StringComparison.OrdinalIgnoreCase) &&
             header.Value.Contains("text/html", StringComparison.OrdinalIgnoreCase));
         var allowFallback = acceptsHtml || !Path.HasExtension(request.Uri.AbsolutePath);
-        if (!TryGetResponseContent(request.Uri.AbsoluteUri, allowFallback,
+        // The pinned provider interprets query strings as part of the file name.
+        if (!TryGetResponseContent(request.Uri.GetLeftPart(UriPartial.Path), allowFallback,
             out var status, out _, out var content, out var headers)) return null;
         using (content)
         using (var buffer = new MemoryStream())
@@ -62,7 +67,7 @@ internal sealed class BlazorWebViewManager : WebViewManager
 
     protected override void NavigateCore(Uri absoluteUri)
     {
-        if (!_appBaseUri.IsBaseOf(absoluteUri))
+        if (!BlazorAppOrigin.Matches(absoluteUri, _appBaseUri))
             throw new InvalidOperationException("A Blazor Hybrid webview can navigate only within its bundled application origin.");
         _navigate(absoluteUri);
     }

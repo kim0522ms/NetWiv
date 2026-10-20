@@ -7,14 +7,18 @@ namespace NetWiv.BlazorHybrid;
 /// <summary>Configures a Blazor renderer for one NetWiv webview.</summary>
 public sealed class BlazorWebViewOptions
 {
+    public BlazorWebViewOptions() : this(OperatingSystem.IsWindows() ? BlazorAppOrigin.Windows : BlazorAppOrigin.Native) { }
+
+    internal BlazorWebViewOptions(Uri appBaseUri) => AppBaseUri = appBaseUri;
+
     /// <summary>The host HTML file. Relative paths are resolved from the application directory.</summary>
     public string HostPage { get; set; } = "wwwroot/index.html";
 
     /// <summary>The existing webview label that will host Razor components.</summary>
     public string WebviewLabel { get; set; } = "main";
 
-    /// <summary>The browser-facing Windows origin of the private NetWiv Blazor protocol.</summary>
-    public Uri AppBaseUri { get; } = new("http://netwiv-blazor.localhost/");
+    /// <summary>The browser-facing origin of the private NetWiv Blazor protocol on the current platform.</summary>
+    public Uri AppBaseUri { get; }
 
     /// <summary>
     /// An optional static file provider. When supplied, HostPage is relative to its root.
@@ -38,7 +42,7 @@ public sealed class BlazorWebViewOptions
     internal BlazorWebViewOptions Snapshot()
     {
         Validate();
-        var copy = new BlazorWebViewOptions { HostPage = HostPage, WebviewLabel = WebviewLabel, FileProvider = FileProvider };
+        var copy = new BlazorWebViewOptions(AppBaseUri) { HostPage = HostPage, WebviewLabel = WebviewLabel, FileProvider = FileProvider };
         foreach (var component in RootComponents) copy.RootComponents.Add(component);
         return copy;
     }

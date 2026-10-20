@@ -15,6 +15,13 @@ native library from `NetWiv.Platform.Desktop` and do not need Cargo. Framework
 maintainers should follow the [native build guide](../native/netwiv-native/README.md)
 for source-build dependencies.
 
+The optional [Blazor Hybrid host](blazor-hybrid.md) uses the same Linux x64
+backend and desktop prerequisites. `netwiv new MyApp --template blazor-hybrid`
+defaults to managed hosting; NativeAOT requires the separate experimental opt-in.
+Use `linux-x64` for publishing. Source and package-consumer CI exercise X11.
+Selected managed and experimental NativeAOT Hybrid scenarios also passed under
+WSLg on X11 and native Wayland; physical Linux acceptance is a separate check.
+
 From a generated JS/TS application directory:
 
 ```sh

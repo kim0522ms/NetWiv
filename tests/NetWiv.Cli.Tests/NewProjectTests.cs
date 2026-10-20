@@ -27,6 +27,9 @@ internal static class NewProjectTests
                 "Generated application depends on framework source paths.");
             var program = File.ReadAllText(Path.Combine(destination, "src-netwiv/Program.cs"));
             Check(program.Contains("\"com.example.hybrid\"", StringComparison.Ordinal), "Backend identifier differs from configuration.");
+            Check(program.Contains("options.AppBaseUri.AbsoluteUri", StringComparison.Ordinal) &&
+                !program.Contains("http://netwiv-blazor.localhost/", StringComparison.Ordinal),
+                "Hybrid starter hardcodes a platform-specific origin.");
             Check(program.Contains("#if NETWIV_BLAZOR_EXPERIMENTAL_AOT", StringComparison.Ordinal) &&
                 program.Contains("AddNetWivBlazorHybrid();", StringComparison.Ordinal) &&
                 program.Contains("IUiInteropReferenceFactory, BrowserUiInteropReferenceFactory", StringComparison.Ordinal) &&

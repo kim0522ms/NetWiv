@@ -189,11 +189,14 @@ Other OS/SDK jobs generate the React base template, the Angular overlay and Blaz
 and still check every manager and the full discovery list. Unselected
 template combinations are not claimed as passes on those hosts. The full
 generator suite runs on Windows, Linux and macOS ARM, plus SDK 9/10.
-The optional `blazor-hybrid` starter has a separate CLI generation regression;
-Windows runs the `NetWiv.BlazorHybrid.Tests` managed transport and lifecycle
-harness and publishes and executes `NetWiv.BlazorHybrid.Aot.Tests`, including
-its native WebView2 mode. These checks do not establish IDE or cross-platform
-Hybrid acceptance.
+The optional `blazor-hybrid` starter has a separate CLI generation regression.
+All three supported desktop jobs run the `NetWiv.BlazorHybrid.Tests` managed
+transport and lifecycle harness. They publish and execute
+`NetWiv.BlazorHybrid.Aot.Tests` in the ordinary Microsoft managed host
+(`--managed-host --native-webview`) and experimental NativeAOT host (protocol
+checks and `--native-webview`). Linux CI uses a nested X11 desktop; it does not
+establish physical Wayland acceptance. These checks do not establish IDE or
+arbitrary Razor-library acceptance. See the [Hybrid validation boundary](blazor-hybrid.md#validation-boundary).
 API tests run on all three supported desktop RIDs. macOS x64 is excluded from
 both ordinary CI and tag releases; it is not a supported distribution target.
 

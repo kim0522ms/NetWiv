@@ -46,7 +46,7 @@ internal static class Program
         options.RootComponents.Add<Shared.App>("#app");
         builder.Desktop
             .UseBlazor(new DesktopRuntime(), options)
-            .Window("main", "NetWiv Blazor Hybrid", "http://netwiv-blazor.localhost/", 880, 780);
+            .Window("main", "NetWiv Blazor Hybrid", options.AppBaseUri.AbsoluteUri, 880, 780);
 #else
         var root = Path.Combine(AppContext.BaseDirectory, "wwwroot");
         builder.Desktop

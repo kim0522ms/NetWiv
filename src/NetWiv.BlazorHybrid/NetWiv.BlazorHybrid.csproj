@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>NetWiv.BlazorHybrid</PackageId>
-    <Description>Managed Blazor Hybrid hosting for NetWiv on Windows, with an optional experimental NativeAOT host.</Description>
+    <Description>Managed Blazor Hybrid hosting for NetWiv on Windows, Linux and macOS, with an optional experimental NativeAOT host.</Description>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../NetWiv.Core/NetWiv.Core.csproj" />

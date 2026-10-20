@@ -1,22 +1,23 @@
-# Experimental NativeAOT Blazor product tests
+# Blazor Hybrid native product tests
 
 This executable uses the product `NetWiv.BlazorHybrid` package sources. It contains no
 copy of the rendering host or interop runtime. The project explicitly opts into
 `NetWivBlazorExperimentalAot`; passing it does not establish full Blazor AOT support. Microsoft's unchanged `Renderer`
 still owns component state, event dispatch and diffing.
 
-Both modes assert `JsonSerializer.IsReflectionEnabledByDefault == false`.
-NativeAOT execution also asserts `RuntimeFeature.IsDynamicCodeSupported == false`;
-`--managed` explicitly selects the managed development check.
+The default mode tests the experimental static host with JSON reflection and
+dynamic code disabled. `--managed` runs that same static host under the managed
+runtime for development. `--managed-host --native-webview` instead tests the
+default Microsoft managed host, with dynamic code and JSON reflection enabled.
 
-## Windows execution
+## Native execution
 
 Publishing alone does not pass the execution gate:
 
 ```powershell
 dotnet publish tests/NetWiv.BlazorHybrid.Aot.Tests -c Release -r win-x64 -o artifacts/blazor-aot-tests
 & ./artifacts/blazor-aot-tests/NetWiv.BlazorHybrid.Aot.Tests.exe
-& ./artifacts/blazor-aot-tests/NetWiv.BlazorHybrid.Aot.Tests.exe --native-webview
+& ./artifacts/blazor-aot-tests/NetWiv.BlazorHybrid.Aot.Tests.exe --native-webview --back-forward
 ```
 
 The first invocation injects protocol messages and inspects actual serialized
@@ -24,10 +25,15 @@ render batches from the product session. It also wraps a controlled native
 boundary in the production `BlazorDesktopRuntime` to test origin, webview label,
 document identity, reload retirement and closed-document rejection.
 
-The second uses the production `BlazorDesktopRuntime(new DesktopRuntime(), ...)`,
-actual WebView2, packaged Microsoft `blazor.webview.js` and real DOM events. It
-reloads the browser document once, repeats its assertions and closes the window.
-It requires WebView2 and the usual native backend artifacts described in
+The second uses the production `Builder.UseBlazor` path, the native WebView,
+packaged Microsoft `blazor.webview.js` and real DOM events. It
+reloads the browser document, repeats its assertions and closes the window.
+`--back-forward` additionally returns through browser history and checks a fresh
+native document, component state and UI scope. WebKit cached returns use the
+Hybrid bridge's full reload policy; a normal WebView2 history load is also valid.
+All three UI scopes must finish asynchronous disposal. This does not preserve
+the old cached renderer or its component state.
+It requires the platform WebView and the native backend artifacts described in
 [development](../../docs/development.md). Browser assertions are automated;
 they are separate from manual visual and IDE debugger acceptance.
 
@@ -37,6 +43,24 @@ For managed development checks:
 dotnet run --project tests/NetWiv.BlazorHybrid.Aot.Tests -c Release -p:PublishAot=false -- --managed
 dotnet run --project tests/NetWiv.BlazorHybrid.Aot.Tests -c Release -p:PublishAot=false -- --managed --native-webview
 ```
+
+For the default Microsoft managed host:
+
+```powershell
+dotnet run --project tests/NetWiv.BlazorHybrid.Aot.Tests -c Release -p:PublishAot=false -p:JsonSerializerIsReflectionEnabledByDefault=true -- --managed-host --native-webview --back-forward
+```
+
+On Linux and macOS, publish with `-r linux-x64` or `-r osx-arm64` and run
+`./artifacts/blazor-aot-tests/NetWiv.BlazorHybrid.Aot.Tests` with the same arguments.
+Linux requires a running X11 or Wayland desktop; select `GDK_BACKEND=x11` or
+`GDK_BACKEND=wayland` and the compositor's runtime directory as appropriate.
+WSLg execution is separate from physical Linux device acceptance.
+
+Linux also has `--transport-navigation`, run with the managed executable. It
+checks ordinary Core IPC after WebKit restores the same cached JavaScript
+context: each document must obtain a fresh native grant and retain the correct
+source URI. This is separate from Hybrid's reload policy. CI and package checks
+run it after the managed native browser assertions, without another publish.
 
 ## Assertions
 
@@ -66,10 +90,22 @@ dotnet run --project tests/NetWiv.BlazorHybrid.Aot.Tests -c Release -p:PublishAo
   256 unacknowledged render batches; renderer teardown still completes.
 - Reload cancels old document JS calls and creates a separate page scope. Real
   browser reload and final process return must dispose both asynchronous scopes.
+- `--back-forward` checks a fresh Hybrid scope and usable command/interop paths
+  after history return. Linux also checks renderer and command liveness after
+  canceled provisional navigation.
+- A foreign `data:` iframe attempts raw native messages and forged transport
+  envelopes. It must never be attributed to the application document. Linux
+  rejects these before the managed boundary; other platforms retain their native
+  authenticated sender URL.
+- Actual NetWiv application commands execute through both the custom IPC protocol
+  and JSON message transport on both documents. Private transport capability and
+  epoch headers must be absent from managed asset and command request headers.
+- The managed-host mode uses Microsoft's `DotNetObjectReference<T>` and ordinary
+  attributed callbacks. The experimental host keeps its explicit typed registry.
 
 Protocol checks do not prove DOM behavior. Execute both modes on the native
-artifact before claiming NativeAOT browser acceptance. Other operating systems,
-arbitrary Razor libraries, streams and navigation locks are outside these tests.
+artifact before claiming NativeAOT browser acceptance. Arbitrary Razor libraries,
+streams, restoration of the old cached renderer and navigation locks are outside these tests.
 
 ## Trimming and provenance
 
@@ -77,9 +113,12 @@ There are no framework-wide trimming roots or fallback reflection JSON resolver.
 Only explicitly registered concrete components preserve their metadata. The
 pinned Microsoft Components assembly can emit `IL2072` diagnostics because its
 property injection, parameter and cascading paths obtain types from
-`object.GetType()`. Keep these diagnostics visible and verify the registered
-component paths in the native executable; this does not establish arbitrary
-runtime-discovered component support.
+`object.GetType()`. Native publication also reports `IL3050` diagnostics in
+JSInterop serializer and object-reference converter paths. Keep these diagnostics
+visible and verify the registered component paths in the native executable.
+The experimental checks assert that dynamic code and JSON reflection remain
+disabled at runtime; passing them does not establish arbitrary runtime-discovered
+component or interop support.
 The full form sample has additional upstream AOT diagnostics and a narrower
 tested binding contract; see [NativeAOT limits](../../docs/blazor-hybrid.md#experimental-nativeaot-limits).
 

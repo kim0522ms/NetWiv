@@ -12,7 +12,7 @@ optional experimental NativeAOT Hybrid and WebAssembly deployment.
 | Svelte + TypeScript | `svelte` | Vite, npm | `src/App.svelte` |
 | Angular | `angular` | Angular CLI, npm | `src/app.ts` |
 | Blazor WebAssembly | `blazor` | Selected .NET SDK (8, 9 or 10) | `frontend/Pages/Home.razor` |
-| Blazor Hybrid / WebAssembly | `blazor-hybrid` | .NET SDK; Hybrid runs on Windows x64/WebView2 | `Shared/App.razor` |
+| Blazor Hybrid / WebAssembly | `blazor-hybrid` | .NET SDK; platform WebView prerequisites on Windows x64, Linux x64 or macOS arm64 | `Shared/App.razor` |
 
 The TypeScript starters accept `--manager npm|pnpm|yarn|bun|deno`; Blazor accepts
 only `dotnet`. Default npm projects include lockfiles; other package managers

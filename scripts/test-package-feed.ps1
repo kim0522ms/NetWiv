@@ -151,6 +151,43 @@ internal sealed class PackageOptions { public string Value { get; set; } = ""; }
         }
         else { & $executable --no-window-smoke }
         if ($LASTEXITCODE -ne 0) { throw 'Package-only native startup failed.' }
+
+        if ($major -eq '8') {
+            & $cli new HybridExample --template blazor-hybrid --source $Feed
+            if ($LASTEXITCODE -ne 0) { throw 'Packaged Hybrid starter generation failed.' }
+            & dotnet publish HybridExample/src-netwiv -c Release -p:PublishAot=false --disable-build-servers -o hybrid-starter
+            if ($LASTEXITCODE -ne 0) { throw 'Packaged managed Hybrid starter publish failed.' }
+            if (!(Test-Path hybrid-starter/wwwroot/index.html) -or !(Test-Path hybrid-starter/NetWiv.BlazorHybrid.dll)) {
+                throw 'Packaged Hybrid starter omitted its host or browser assets.'
+            }
+
+            $hybridProject = Join-Path $workspace 'NetWiv.BlazorHybrid.Aot.Tests/NetWiv.BlazorHybrid.Aot.Tests.csproj'
+            foreach ($aot in @($false, $true)) {
+                $flavor = if ($aot) { 'aot' } else { 'managed' }
+                $hybridOutput = Join-Path $workspace "hybrid-$flavor"
+                $publishArguments = @('publish', $hybridProject, '-c', 'Release', "-p:PublishAot=$($aot.ToString().ToLowerInvariant())", '--disable-build-servers', '-o', $hybridOutput)
+                if (!$aot) { $publishArguments += '-p:JsonSerializerIsReflectionEnabledByDefault=true' }
+                & dotnet @publishArguments
+                if ($LASTEXITCODE -ne 0) { throw "Package-only Hybrid $flavor publish failed." }
+                $hybridExecutable = Join-Path $hybridOutput ('NetWiv.BlazorHybrid.Aot.Tests' + $(if ($IsWindows) { '.exe' } else { '' }))
+                if ($aot) {
+                    & $hybridExecutable
+                    if ($LASTEXITCODE -ne 0) { throw 'Package-only experimental Hybrid NativeAOT protocol checks failed.' }
+                    $hybridArguments = @('--native-webview', '--back-forward')
+                }
+                else { $hybridArguments = @('--managed-host', '--native-webview', '--back-forward') }
+                if ($IsLinux) {
+                    & xvfb-run -a bash (Join-Path $repository 'scripts/run-linux-smoke-desktop.sh') $hybridExecutable x11 @hybridArguments
+                }
+                else { & $hybridExecutable @hybridArguments }
+                if ($LASTEXITCODE -ne 0) { throw "Package-only Hybrid $flavor native WebView checks failed." }
+                if ($IsLinux -and !$aot) {
+                    & xvfb-run -a bash (Join-Path $repository 'scripts/run-linux-smoke-desktop.sh') $hybridExecutable x11 --transport-navigation
+                    if ($LASTEXITCODE -ne 0) { throw 'Package-only Core IPC cached-history restoration checks failed.' }
+                }
+                Write-Output "PASS packaged Hybrid ${flavor}: native rendering, interop, reload and cleanup"
+            }
+        }
     }
     finally { Pop-Location }
     Write-Output "PASS ${TargetFramework}: packaged CLI, generated managed GUI/IPC, configuration binding and package-only NativeAOT startup"

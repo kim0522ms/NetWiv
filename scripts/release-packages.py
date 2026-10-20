@@ -77,7 +77,7 @@ def bundle(repository, feed, destination, version, revision):
         f'Source commit: `{revision}`\n\n'
         'Download and extract the ZIP, then follow its README to use `packages/` as a local NuGet feed. '
         'Contains the SDK, Hosting, CLI, managed plugins and native libraries for Windows x64, Linux x64 and macOS arm64. '
-        'The optional Blazor Hybrid package defaults to managed Windows execution; NativeAOT hosting is experimental and requires explicit opt-in.\n\n'
+        'The optional Blazor Hybrid package defaults to managed desktop execution on these targets; NativeAOT hosting is experimental and requires explicit opt-in.\n\n'
         'These packages are not published to NuGet.org. CI validates source builds on all three supported platforms '
         'and runs packaged managed GUI/IPC and NativeAOT startup checks on all three desktop RIDs '
         '(.NET 8 everywhere, plus .NET 9/10 on Linux); this is not complete release acceptance, '

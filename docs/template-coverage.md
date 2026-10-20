@@ -38,8 +38,9 @@ license details.
 The first screen calls the C# `greet` command, shows its answer and the call
 count kept in C# state, and lists the files to edit next. It follows the system
 light or dark appearance and uses only system fonts and inline assets, so it works
-offline from the app's embedded files. Opened in a plain browser tab through the
-dev server, it reports that C# is unreachable instead of failing silently.
+offline from the app's embedded files. It calls only the app's own command, so it
+needs no capability. Opened in a plain browser tab through the dev server, a failed
+call explains how to open it in the NetWiv window instead of failing silently.
 
 All five screens are generated from one source,
 `scripts/generate-frontend-template-overlays.mjs`; change the design there and

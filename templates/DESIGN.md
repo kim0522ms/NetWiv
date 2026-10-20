@@ -210,7 +210,7 @@ A violet-tinted paper-and-ink neutral world with one saturated purple field and 
 **Character:** whatever the developer's OS draws, set tight and bold for the two large lines and plain for everything else. The site's Roboto and JetBrains Mono are deliberately not bundled: the starter must run offline from embedded assets, stay small, and read as the user's app.
 
 ### Hierarchy
-- **Headline** (700, `clamp(26px, 3.6vw, 34px)`, 1.12, -0.025em, max 17ch, balanced): the single column headline; it switches to the offline sentence when the page is outside a NetWiv window.
+- **Headline** (700, `clamp(26px, 3.6vw, 34px)`, 1.12, -0.025em, max 17ch, balanced): the single column headline, true whether the page runs in the window or a browser tab.
 - **Answer** (700, `clamp(24px, 3.2vw, 30px)`, 1.15, -0.02em): the C# message inside the field; 500 weight in field lilac while idle or waiting.
 - **Title** (700, 15px): "Make it yours" above the file map.
 - **Body** (400, 16px, 1.5): the root setting; the input runs at 17px.
@@ -261,7 +261,7 @@ A plain solid slab, one per screen.
 
 ### Top Bar
 - **Style:** 24px mark and the app name (600, truncates with an ellipsis) at left; the status label at right in muted mono 13px with tabular figures, led by an 8px square whose colour tracks the state (hair idle, lavender calling, signal answered, muted failed or offline). A 2px rule closes the bar.
-- **States:** Ready, Not in a NetWiv window, Calling C#, Answered in N ms, No answer.
+- **States:** No calls yet, Calling C#, Answered in N ms, No answer.
 
 ### File Map
 - **Style:** "Make it yours" title over a 2px ink rule, then four rows separated by 1px hairlines, 14px vertical padding, 4px between the path and its sentence. Paths are mono 600; the final row names the documentation site in bold sans because it is a site, not a file.
@@ -270,7 +270,7 @@ A plain solid slab, one per screen.
 The purple block where C# answers.
 - **Content:** the call route in mono lilac at the top, the message large in white, then a translucent hairline over "Calls counted in C#" with the count in mono at the right ("—" before the first call).
 - **States:** idle ("No call yet", 500 weight, lilac), waiting ("Waiting for C#…" until the first answer; later calls keep the previous answer visible), answered, failed (ink block in light, raised dark violet in dark; "C# did not answer", a hint naming what to check, the raw error in mono).
-- **Motion:** each new count re-keys the message and count, which play "land": 360ms `cubic-bezier(0.16, 1, 0.3, 1)` from 0.35 opacity, 6px lower and a 2px blur. Disabled under `prefers-reduced-motion`, as is the button's colour transition.
+- **Motion:** each new count re-keys the message and count, which play "land": 360ms `cubic-bezier(0.16, 1, 0.3, 1)` from 6px lower, movement only, so a paused WebView still shows crisp text. Disabled under `prefers-reduced-motion`, as is the button's colour transition.
 
 ## Do's and Don'ts
 

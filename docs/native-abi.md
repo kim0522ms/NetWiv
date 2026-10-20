@@ -69,7 +69,17 @@ registrations are disposed after completion outside the runtime lock.
 Callback kinds:
 
 1. IPC: `{webviewLabel,windowLabel,source,documentId,json}` where json is the
-   original guest message string and source comes from the native IPC request.
+   original guest message string after removing the private transport envelope.
+   Labels, document identity and source authority are owned by native code.
+   Windows and macOS use native sender metadata. On Linux, WebKitGTK's raw
+   message callback does not identify its sending frame; native code first
+   authenticates the main document's transport, then supplies its native current
+   URI as source, with its origin anchored to the committed document origin.
+   During provisional navigation, the authenticated document's
+   source snapshot remains in effect until a replacement commits.
+   Unauthenticated, retired or mismatched-document messages do not reach this
+   callback. A custom scheme's opaque JavaScript origin does not
+   grant authority: the authenticated native current URI supplies source identity.
 2. Event: `{eventName,label,payload,target?}`. For `tauri://close-requested`, the
    callback returns 1 when Core has matching listeners, preventing default close.
    With `trackWebviewParents`, `netwiv://webview-reparented` has the WebView label
@@ -113,11 +123,48 @@ rejects pending managed requests and releases protocol responders and callbacks.
 The guest bridge sets `window.__NETWIV_IPC__` before Core's initialization script,
 with postMessage, os, windowLabel, webviewLabel, protocolScheme and protocolIpc. The frozen
 protocolScheme selects HTTP or HTTPS in convertFileSrc on Windows. When enabled,
-Core uses fetch against the IPC protocol and returns JSON, text or binary from
+Core uses the bridge's private `fetchIpc` on Linux and ordinary fetch on
+Windows/macOS against the IPC protocol, returning JSON, text or binary from
 its HTTP response. A browser/CSP transport failure switches that document to Wry
 postMessage; its body/header semantics follow the pinned Tauri fallback.
 Frame/origin authenticity is an acceptance requirement, not established merely
 by trusting guest-provided labels, a page URL, or an invoke token.
+
+On Linux, the main-frame bridge captures the transport in a closure and binds
+it to a native-generated cryptographic capability and document epoch. During
+provisional navigation, the current document retains its binding and source
+snapshot so outstanding renderer acknowledgments and interop can complete.
+Commit rotates the binding and a document handshake activates the new bridge.
+Committed replacement and close invalidate the previous binding.
+On `pagehide`, the captured JavaScript bridge clears its active grant and
+changes its handshake identity. If a browser history entry restores that same
+JavaScript context, ordinary Core calls wait for a fresh native grant before
+dispatch. Hybrid separately uses a [full reload on cached restoration](blazor-hybrid.md#page-lifetime-and-cleanup).
+Native code also checks the committed origin before forwarding a message. This
+applies to both postMessage and IPC HTTP requests. Private authentication
+metadata is removed before forwarding HTTP headers to managed code; preflight
+requests do not dispatch commands. The captured fetch transport accepts only
+the private IPC endpoint and rejects redirects. For an authenticated HTTP
+request, native code supplies the authenticated native current document URI as
+the Origin header while anchoring its origin to the committed document. An opaque custom-scheme
+browser origin cannot determine command authority.
+
+Linux path-based capability checks use the committed source path while a
+document is loading or navigation is provisional. Same-origin history changes
+made during loading become visible to these checks after successful load
+completion and native activation; history changes in an idle document are
+reflected immediately. Failed or cancelled navigation retains the previous
+authenticated source and never adopts the uncommitted target URI. This timing preserves
+the authenticated document's source while a provisional target is uncommitted.
+Applications must not rely on an early history mutation to change command
+permissions before loading finishes.
+
+Raw `window.ipc` messages on Linux are outside this authenticated path and are
+rejected. Applications continue to use `@netwiv/api`; `__NETWIV_IPC__`, transport
+envelopes and authentication handshakes are private implementation details.
+Windows per-frame sender authorization and macOS native sender checks retain
+their existing behavior. This hardening does not change ABI 3's external
+callback or protocol payload format.
 
 ---
 

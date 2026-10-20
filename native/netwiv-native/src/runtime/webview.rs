@@ -64,6 +64,8 @@ impl LocalRuntime {
         let resolved_url = resolve_url(&config.url, use_https_scheme);
         let window_origin = webview_origin(&resolved_url, use_https_scheme);
         let doc = Arc::new(AtomicU64::new(0));
+        #[cfg(target_os = "linux")]
+        let ipc = Arc::new(std::sync::Mutex::new(super::ipc::DocumentIpc::default()));
         let bounds = if implicit_root {
             Rect {
                 position: LogicalPosition::new(0, 0).into(),
@@ -95,9 +97,13 @@ impl LocalRuntime {
         let shared_ipc = self.shared.clone();
         let ipc_label = config.label.clone();
         let ipc_doc = doc.clone();
+        #[cfg(target_os = "linux")]
+        let ipc_message = ipc.clone();
         let shared_page = self.shared.clone();
         let page_label = config.label.clone();
         let page_doc = doc.clone();
+        #[cfg(target_os = "linux")]
+        let page_ipc = ipc.clone();
         let shared_tauri_asset = self.shared.clone();
         let shared_file_asset = self.shared.clone();
         let shared_isolation_asset = self.shared.clone();
@@ -147,19 +153,42 @@ impl LocalRuntime {
             .with_url(resolved_url)
             // Match Tauri's platform-specific bridge availability: WebView2
             // includes child frames, whereas WebKitGTK uses the main frame.
-            // IPC authorizes the browser-supplied Origin, never guest JSON.
+            // WebKitGTK has no native sender-frame metadata. Its main document
+            // must prove the native-issued capability before source attribution.
             .with_initialization_script_for_main_only(bridge, !cfg!(target_os = "windows"))
             .with_initialization_script_for_main_only(self.initialization_script.clone(), !cfg!(target_os = "windows"))
             .with_ipc_handler(move |request| {
+                #[cfg(not(target_os = "linux"))]
                 let source = request.uri().to_string();
+                #[cfg(not(target_os = "linux"))]
                 let document_id = ipc_doc.load(Ordering::Acquire);
+                #[cfg(not(target_os = "linux"))]
+                let payload = request.body().clone();
+                #[cfg(target_os = "linux")]
+                let (document_id, payload, source) = {
+                    let Ok(ipc) = ipc_message.lock() else { return; };
+                    let Some(message) = ipc.message(request.body()) else { return; };
+                    message
+                };
+                #[cfg(target_os = "linux")]
+                if ipc_doc.load(Ordering::Acquire) != document_id { return; }
                 if let Some(ipc_window) = shared_ipc.webview_parent(&ipc_label) {
-                    shared_ipc.callback(CALLBACK_IPC, 0, &json!({"webviewLabel":ipc_label,"windowLabel":ipc_window,"source":source,"documentId":document_id,"json":request.body()}), &[]);
+                    shared_ipc.callback(CALLBACK_IPC, 0, &json!({"webviewLabel":ipc_label,"windowLabel":ipc_window,"source":source,"documentId":document_id,"json":payload}), &[]);
                 }
             })
             .with_on_page_load_handler(move |event, _url| {
                 if matches!(event, PageLoadEvent::Started) {
                     let id = shared_page.next_document_id(); page_doc.store(id, Ordering::Release);
+                    #[cfg(target_os = "linux")]
+                    {
+                        let result = page_ipc.lock().map_err(|_| "document IPC lock is poisoned".to_string())
+                            .and_then(|mut ipc| ipc.commit(id, &_url));
+                        if let Err(error) = result {
+                            shared_page.callback(super::CALLBACK_FATAL, 0, &json!({"error":error}), &[]);
+                            return;
+                        }
+                        let _ = shared_page.enqueue(super::UserEvent::ActivateIpc { label: page_label.clone(), document_id: id });
+                    }
                     #[cfg(target_os = "linux")]
                     let _ = shared_page.enqueue(super::UserEvent::DialogDocumentChanged { webview_label: page_label.clone(), document_id: id });
                     shared_page.callback(CALLBACK_DOCUMENT, 0, &json!({"webviewLabel":page_label,"documentId":id,"closed":false}), &[]);
@@ -168,9 +197,13 @@ impl LocalRuntime {
         if register_uri_scheme_protocols {
             for scheme in &self.uri_scheme_protocols {
                 let shared = self.shared.clone();
+                #[cfg(target_os = "linux")]
+                let is_ipc = scheme == "ipc";
                 builder = builder.with_asynchronous_custom_protocol(
                     scheme.clone(),
                     move |webview_id, request, responder| {
+                        #[cfg(target_os = "linux")]
+                        if is_ipc { shared.request_ipc_asset(webview_id, request, responder); return; }
                         shared.request_asset(webview_id, request, responder)
                     },
                 );
@@ -206,6 +239,9 @@ impl LocalRuntime {
             builder = builder.with_asynchronous_custom_protocol(
                 "ipc".into(),
                 move |webview_id, request, responder| {
+                    #[cfg(target_os = "linux")]
+                    shared_ipc_protocol.request_ipc_asset(webview_id, request, responder);
+                    #[cfg(not(target_os = "linux"))]
                     shared_ipc_protocol.request_asset(webview_id, request, responder)
                 },
             );
@@ -343,6 +379,8 @@ impl LocalRuntime {
             window_origin,
             window.label.clone(),
             doc.clone(),
+            #[cfg(target_os = "linux")]
+            ipc.clone(),
         )?;
         #[cfg(target_os = "linux")]
         let native = {
@@ -385,6 +423,47 @@ impl LocalRuntime {
             self.web_contexts.remove(&context_key);
         }
         let native = native?;
+        #[cfg(target_os = "linux")]
+        {
+            use wry::WebViewExtUnix;
+            use webkit2gtk::WebViewExt;
+            let gtk_view = native.webview();
+            let load_ipc = ipc.clone();
+            let load_shared = self.shared.clone();
+            let load_label = config.label.clone();
+            let load_doc = doc.clone();
+            let failed_shared = self.shared.clone();
+            let failed_label = config.label.clone();
+            let failed_doc = doc.clone();
+            let failed_ipc = ipc.clone();
+            gtk_view.connect_load_failed(move |_, _, _, _| {
+                let Ok(ipc) = failed_ipc.lock() else { return false; };
+                let _ = failed_shared.enqueue(super::UserEvent::ResumeIpc {
+                    label: failed_label.clone(), document_id: failed_doc.load(Ordering::Acquire), navigation: ipc.navigation(),
+                });
+                false
+            });
+            gtk_view.connect_load_changed(move |view, event| {
+                if event == webkit2gtk::LoadEvent::Started {
+                    if let Ok(mut ipc) = load_ipc.lock() { ipc.start_navigation(); }
+                } else if event == webkit2gtk::LoadEvent::Finished {
+                    if let Some(source) = view.uri() {
+                        if let Ok(mut ipc) = load_ipc.lock() { ipc.finish_loading_source(source.as_str()); }
+                    }
+                    let _ = load_shared.enqueue(super::UserEvent::ActivateIpc {
+                        label: load_label.clone(), document_id: load_doc.load(Ordering::Acquire),
+                    });
+                }
+            });
+            gtk_view.connect_uri_notify(move |view| {
+                // WebKit publishes the candidate URI before LoadEvent::Started.
+                // Only a committed page's idle history changes may update source.
+                if view.is_loading() { return; }
+                if let Some(source) = view.uri() {
+                    if let Ok(mut ipc) = ipc.lock() { ipc.update_source(source.as_str()); }
+                }
+            });
+        }
         #[cfg(target_os = "windows")]
         if focus.unwrap_or(true) {
             let _ = native.focus();
@@ -619,6 +698,13 @@ impl LocalRuntime {
             return Ok(());
         }
         let view = view.ok_or_else(|| "webview not found".to_string())?;
+        #[cfg(target_os = "linux")]
+        let guarded = if document_id != 0 { self.guard_document_eval(label, script)? } else { None };
+        #[cfg(target_os = "linux")]
+        let script = if document_id != 0 {
+            let Some(guarded) = guarded.as_deref() else { return Ok(()); };
+            guarded
+        } else { script };
         view.native
             .evaluate_script(script)
             .map_err(|e| format!("script evaluation failed for '{label}': {e}"))

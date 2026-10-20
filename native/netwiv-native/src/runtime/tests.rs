@@ -197,6 +197,8 @@ fn reparent_updates_ipc_and_protocol_parent_without_replacing_document() {
             "tauri://localhost".into(),
             "allowed".into(),
             epoch.clone(),
+            #[cfg(target_os = "linux")]
+            Default::default(),
         )
         .unwrap();
     assert_eq!(shared.webview_parent("child").as_deref(), Some("allowed"));

@@ -284,6 +284,9 @@ The adapter supports built-in DOM event payloads, ordinary JS object references
 and byte arrays. Custom DOM event payloads, streaming interop and Microsoft's
 `DotNetObjectReference<T>` are unsupported; use the owned reference API described
 above for instance callbacks.
+In the pinned ASP.NET Core 8.0.32, `compositionstart`, `compositionupdate` and
+`compositionend` require custom event registration and are unsupported by this
+experimental host.
 
 Keep upstream trimming and AOT diagnostics visible. The pinned component
 framework emits `IL2072` warnings for component metadata obtained through

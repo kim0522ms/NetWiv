@@ -2,6 +2,7 @@ var tests = new List<(string Name, Func<Task> Run)>
 {
     ("AOT assets preserve routing, reject foreign paths and retain provider ownership", AotAssetTests.Assets),
     ("AOT registration snapshots and host selection reject conflicting setup", AotAssetTests.Registration),
+    ("AOT event parsing covers framework built-ins and rejects custom composition events", AotEventDataTests.BuiltInEvents),
     ("bundled assets preserve routing and reject foreign origins", ManagerTests.Assets),
     ("foreign page messages cannot attach a managed renderer", ManagerTests.ForeignOrigin),
     ("page replacement awaits asynchronous scoped service disposal", ManagerTests.Replacement),

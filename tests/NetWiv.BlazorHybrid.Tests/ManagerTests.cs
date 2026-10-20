@@ -41,19 +41,35 @@ internal static class ManagerTests
         await using var fixture = new ManagerFixture();
         var host = fixture.Manager.TryGetResponse(Request("index.html"));
         Check.Equal(200, host!.StatusCode);
+        CheckAssetMime(host, "text/html");
         Check.Contains("hybrid-test-root", Encoding.UTF8.GetString(host.Body.Span));
         var route = fixture.Manager.TryGetResponse(Request("nested/route"));
         Check.Equal(200, route!.StatusCode);
         Check.Equal(Encoding.UTF8.GetString(host.Body.Span), Encoding.UTF8.GetString(route.Body.Span));
         var css = fixture.Manager.TryGetResponse(Request("app.css"));
         Check.Equal(200, css!.StatusCode);
+        CheckAssetMime(css, "text/css");
         Check.Contains("color: green", Encoding.UTF8.GetString(css.Body.Span));
-        Check.Equal(404, fixture.Manager.TryGetResponse(Request("missing.js"))!.StatusCode);
+        var framework = fixture.Manager.TryGetResponse(Request("_framework/blazor.webview.js"));
+        Check.Equal(200, framework!.StatusCode);
+        CheckAssetMime(framework, "javascript");
+        var missing = fixture.Manager.TryGetResponse(Request("missing.js"));
+        Check.Equal(404, missing!.StatusCode);
+        CheckAssetMime(missing, "text/plain");
         Check.True(fixture.Manager.TryGetResponse(Request("index.html", "https://foreign.invalid/")) is null,
             "A foreign origin received bundled application content.");
         fixture.Manager.Navigate("nested/route");
         Check.Equal(new Uri(fixture.Options.AppBaseUri, "nested/route"), fixture.Navigated);
         Check.Throws<InvalidOperationException>(() => fixture.Manager.Navigate("https://foreign.invalid/"));
+    }
+
+    private static void CheckAssetMime(AssetResponse response, string mime)
+    {
+        Check.Contains(mime, response.ContentType);
+        Check.True(response.Headers is not null && !response.Headers.Keys.Any(header =>
+            header.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)),
+            "The asset MIME type would be emitted twice by the native response builder.");
+        Check.Equal("no-cache, max-age=0, must-revalidate, no-store", response.Headers!["Cache-Control"]);
     }
 
     internal static async Task ForeignOrigin()

@@ -53,8 +53,10 @@ internal sealed class BlazorWebViewManager : WebViewManager
         using (var buffer = new MemoryStream())
         {
             content.CopyTo(buffer);
-            var contentType = headers.TryGetValue("Content-Type", out var value) ? value : "application/octet-stream";
-            return new AssetResponse(status, contentType, buffer.ToArray(), new Dictionary<string, string>(headers));
+            var responseHeaders = new Dictionary<string, string>(headers, StringComparer.OrdinalIgnoreCase);
+            // Native responses emit ContentType separately from the remaining headers.
+            var contentType = responseHeaders.Remove("Content-Type", out var value) ? value : "application/octet-stream";
+            return new AssetResponse(status, contentType, buffer.ToArray(), responseHeaders);
         }
     }
 

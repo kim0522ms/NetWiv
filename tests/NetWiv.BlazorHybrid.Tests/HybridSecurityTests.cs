@@ -46,6 +46,8 @@ internal static class HybridSecurityTests
                     new Dictionary<string, string>(), WebviewLabel: "main", DocumentId: 1));
                 Check.Equal(200, response!.StatusCode);
                 Check.Equal("same-origin", response.Headers!["Cross-Origin-Opener-Policy"]);
+                Check.True(!response.Headers.Keys.Any(header => header.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)),
+                    "Applying the asset policy duplicated the managed asset MIME type.");
                 if (path == "index.html")
                 {
                     Check.Equal("default-src 'none'", response.Headers["Content-Security-Policy"]);
@@ -56,6 +58,9 @@ internal static class HybridSecurityTests
             var head = await wrapped.ResolveUriScheme!(new(new Uri("netwiv-blazor://localhost/index.html"), "HEAD",
                 new Dictionary<string, string>(), WebviewLabel: "main", DocumentId: 1));
             Check.Equal(0, head!.Body.Length);
+            Check.Contains("text/html", head.ContentType);
+            Check.True(!head.Headers!.Keys.Any(header => header.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)),
+                "The HEAD response duplicated its MIME type.");
             Check.Equal("default-src 'none'", head.Headers!["Content-Security-Policy"]);
             Check.True(int.Parse(head.Headers["Content-Length"]) > 0, "HEAD lost the policy-transformed representation length.");
             Check.Equal(4, policyCalls);

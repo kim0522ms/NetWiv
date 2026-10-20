@@ -6,7 +6,7 @@ using NetWiv.Runtime;
 namespace NetWiv.Plugin.Fs;
 
 /// <summary>Desktop implementation of the official @tauri-apps/plugin-fs wire commands.</summary>
-public sealed class FsPlugin : IPlugin
+public sealed partial class FsPlugin : IPlugin
 {
     private FileScope? _selectedPaths;
     private static readonly string[] Commands =
@@ -15,7 +15,7 @@ public sealed class FsPlugin : IPlugin
         "read", "read_dir", "read_file", "read_text_file", "read_text_file_lines",
         "read_text_file_lines_next", "remove", "rename", "seek", "size", "stat", "truncate",
         "write", "write_file", "write_text_file", "start_accessing_security_scoped_resource",
-        "stop_accessing_security_scoped_resource"
+        "stop_accessing_security_scoped_resource", "watch"
     ];
 
     private static readonly string[] DefaultDirectories = ["$APPCONFIG", "$APPDATA", "$APPLOCALDATA", "$APPCACHE", "$APPLOG"];
@@ -54,13 +54,14 @@ public sealed class FsPlugin : IPlugin
             "allow-read-text-file", "allow-read-dir", "allow-stat", "allow-lstat", "allow-size", "allow-mkdir");
     }
 
-    private static async ValueTask<RuntimeInvokeResponse> Execute(string command, InvokeContext context, JsonElement args, CancellationToken token)
+    private async ValueTask<RuntimeInvokeResponse> Execute(string command, InvokeContext context, JsonElement args, CancellationToken token)
     {
         try
         {
             token.ThrowIfCancellationRequested();
             switch (command)
             {
+                case "watch": return Json(JsonValue.From(await Watch(context, args, token)));
                 case "exists":
                 {
                     var path = await Resolve(context, args, "path", Options(args), token);

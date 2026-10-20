@@ -33,6 +33,17 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("IPC boundary replacement rejects late resources and waits for async scope disposal", IpcBoundaryLifetimeTests.ReplacementWaitsForScopeAndRejectsLateResources),
     ("IPC boundary reparent preserves in-flight channels and rechecks destination ACL", IpcBoundaryLifetimeTests.ReparentPreservesInFlightDocumentAndRechecksAcl),
     ("SQLite integer parameters preserve signed 64-bit values and reject overflow", SqlPluginTests.IntegerBinding),
+    ("SQLite migration registrations reject invalid history and late configuration", SqlMigrationTests.Registration),
+    ("SQLite migrations upgrade once and survive close and application reopen", SqlMigrationTests.UpgradeAndReopen),
+    ("SQLite migration failure rolls back the entire batch and permits retry", SqlMigrationTests.RollbackAndRetry),
+    ("SQLite migrations reject changed missing and reordered applied history", SqlMigrationTests.ChangedHistory),
+    ("SQLite migration scripts cannot escape the host transaction or edit history", SqlMigrationTests.TransactionBoundary),
+    ("SQLite preload applies migrations without granting guest write permission", SqlMigrationTests.PreloadAndPermissions),
+    ("SQLite concurrent connections serialize migration history checks", SqlMigrationTests.ConcurrentLoad),
+    ("SQLite migration cancellation interrupts SQL and rolls back pending changes", SqlMigrationTests.Cancellation),
+    ("SQLite failed preload rolls back and permits corrected startup", SqlMigrationTests.PreloadFailure),
+    ("SQLite path aliases share migration history cache and close identity", SqlMigrationTests.DatabaseAliases),
+    ("SQLite migration parser preserves triggers comments Unicode and 64-bit versions", SqlMigrationTests.ScriptParsing),
     ("Shell execution cancellation stops parent and descendant processes", ShellLifetimeTests.CancellationStopsProcessTree),
     ("HTTP redirects retain credentials only within the same origin", HttpRedirectTests.CredentialsStayOnOrigin),
     ("P2 guest command execution leaves the native UI callback responsive", CommandThreadTests.GuestDoesNotBlockUi),
@@ -106,11 +117,29 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("official fs plugin reads writes and rejects traversal", FsPluginTests.FileOperations),
     ("official fs binary guest write and read traverse IPC with scoped permission", FsPluginTests.BinaryGuestIpc),
     ("official fs scope permission joins command grants without broadening access", FsPluginTests.ScopePermissions),
+    ("filesystem watch create modify rename remove and unwatch", FsWatchTests.Events),
+    ("filesystem watch recursion file URLs and multiple files", FsWatchTests.RecursionAndMultipleFiles),
+    ("filesystem watch debounce and pending disposal", FsWatchTests.Debounce),
+    ("filesystem watch scope ownership reload and close", FsWatchTests.ScopeAndOwnership),
+    ("filesystem watch validation cancellation and plugin disposal", FsWatchTests.ValidationAndDisposal),
+    ("filesystem watch moved root and replacement preserve scope", FsWatchTests.MovedRootScope),
+    ("filesystem watch directory movement cannot restore an invalidated registration", FsWatchRootTests.MovementCannotBecomeCurrentAgain),
+    ("filesystem watch guards physical ancestors and releases directory handles", FsWatchRootTests.PhysicalAncestorsAndDisposal),
+    ("filesystem watch recursive rearm and close across multiple roots", FsWatchTests.RearmLifetime),
+    ("filesystem watch recursive registration resource limit", FsWatchTests.RecursiveRegistrationLimit),
     ("official dialog forwards native selection and grants selected file scope", DialogPluginTests.SelectedFileScope),
     ("official dialog legacy permission aliases authorize message only", DialogPluginTests.PermissionAliases),
     ("official OS guest receives synchronous platform values and guarded hostname", OsPluginTests.GuestContract),
     ("official process guest exit forwards status and restart stays permission guarded", ProcessPluginTests.ExitAndPermissions),
     ("official store guest shares handles and persists JSON on explicit save", StorePluginTests.Persistence),
+    ("store autosave validates options and supports default and immediate saves", StoreAutosaveTests.Options),
+    ("store autosave debounces every supported mutation", StoreAutosaveTests.DebounceAndMutations),
+    ("store autosave explicit save cancels pending writes", StoreAutosaveTests.ExplicitSaveCancelsTimer),
+    ("store autosave reload cancels pending writes and shutdown flush", StoreAutosaveTests.ReloadCancelsPendingWrites),
+    ("store autosave failed reload preserves pending writes and shutdown flush", StoreAutosaveTests.FailedReloadKeepsPendingWrites),
+    ("store autosave shares concurrent handles and flushes during app disposal", StoreAutosaveTests.SharedHandlesAndShutdown),
+    ("store autosave failures remain retryable by save and shutdown", StoreAutosaveTests.FailedSaveRetries),
+    ("store autosave disposal drains racing writes and reports flush failures", StoreAutosaveTests.DisposalRacesAndFailure),
     ("external opening reports launcher failures and respects deny permissions", ExternalOpenTests.LaunchFailures),
     ("external opening preserves opener URL/path arguments and rejects forbidden targets", ExternalOpenTests.OpenerTargets),
     ("external opening reveals files and directories with the platform launcher", ExternalOpenTests.RevealTargets),
@@ -250,7 +279,11 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("IPC cross-condition origin lifetime and resource boundaries", IpcBoundaryMatrixTests.OriginAndLifetime),
 };
 if (OperatingSystem.IsLinux())
+{
     tests.Add(("official fs scope rejects a symlink escaping its allowed directory", FsPluginTests.SymlinkScope));
+    tests.Add(("filesystem watch rejects symlink escapes and filters retargeted queued paths", FsWatchTests.SymlinkScope));
+    tests.Add(("filesystem watch rearm preserves fresh debounce window", FsWatchTests.RearmDebounce));
+}
 if (OperatingSystem.IsWindows()) tests.Add(("upstream scope::windows_root_paths", FileScopeMutationTests.WindowsRootPaths));
 if (OperatingSystem.IsWindows()) tests.Add(("upstream webview::windows_custom_protocol_rejects_spoofed_domain", UriSchemeTests.WindowsCustomProtocolRejectsSpoofedDomain));
 else Console.WriteLine("SKIP upstream scope::windows_root_paths: Windows-specific scenarios");
@@ -1129,9 +1162,9 @@ sealed class FakeRuntime : IDesktopRuntime
     public void EvaluateScript(string webviewLabel, string script) { _scripts.Enqueue(script); _scriptReady.Release(); }
     public void EvaluateScript(string webviewLabel, string script, ulong documentId) { LastScriptDocument = documentId; EvaluateScript(webviewLabel, script); }
     public void Exit(int exitCode = 0) { ExitCode = exitCode; }
-    public async Task<string> NextScript()
+    public async Task<string> NextScript(TimeSpan? timeout = null)
     {
-        if (!await _scriptReady.WaitAsync(TimeSpan.FromSeconds(2))) throw new TimeoutException("Core did not evaluate a callback.");
+        if (!await _scriptReady.WaitAsync(timeout ?? TimeSpan.FromSeconds(2))) throw new TimeoutException("Core did not evaluate a callback.");
         return _scripts.TryDequeue(out var script) ? script : throw new InvalidOperationException();
     }
 }

@@ -41,6 +41,7 @@ internal static class PersistenceFailureTests
                 "{\"path\":" + JsonValue.From(name).GetRawText() + "}"))).GetUInt32();
             using var previous = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             await app.Handle.InvokeAsync("plugin:store|set", JsonValue.Parse($"{{\"rid\":{rid},\"key\":\"answer\",\"value\":42}}"));
+            await app.Handle.InvokeAsync("plugin:store|save", JsonValue.Parse($"{{\"rid\":{rid}}}"));
             using var reader = new StreamReader(previous);
             Assert.Equal("{\"answer\":1}", reader.ReadToEnd());
             Assert.Equal("{\"answer\":42}", File.ReadAllText(path));

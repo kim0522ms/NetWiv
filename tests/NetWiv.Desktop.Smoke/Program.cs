@@ -45,6 +45,9 @@ internal static class Program
         if (args.Length != 0) throw new ArgumentException("Unknown smoke-test arguments.");
         using var probe = new OriginProbe();
         using var asset = new SmokeAsset();
+        // This IPC/lifetime scenario awaits every guest concurrently, including
+        // inactive views. Scheduling policies are checked by the separate options probe.
+        var guestOptions = JsonValue.Parse("""{"backgroundThrottling":"disabled"}""");
         var runtime = new DesktopRuntime();
         var builder = new Builder().UseRuntime(runtime).DefaultWindowIcon(SmokeIcon)
             .Plugin(new StrongholdPlugin())
@@ -64,8 +67,9 @@ internal static class Program
             .UseEmbeddedAssets()
             .UseEmbeddedConfig()
             .Window(new WindowOptions("main", "NetWiv desktop — main + child", "index.html", 860, 540, default,
-                [new("main", "index.html", 0, 0, 430, 500, default), new("child", "index.html", 430, 0, 430, 500, default)]))
-            .Window("secondary", "NetWiv desktop — secondary", "index.html", 440, 420, JsonValue.Parse("{\"useHttpsScheme\":true}"))
+                [new("main", "index.html", 0, 0, 430, 500, guestOptions), new("child", "index.html", 430, 0, 430, 500, guestOptions)]))
+            .Window("secondary", "NetWiv desktop — secondary", "index.html", 440, 420,
+                JsonValue.Parse("""{"useHttpsScheme":true,"backgroundThrottling":"disabled"}"""))
             .RegisterCommand("asset_path", (_, _, _) => Value(JsonValue.From(asset.Path)))
             .RegisterCommand("probe_url", (_, _, _) => Value(JsonValue.From(probe.Url)))
             .RegisterCommand("finish_gui", (_, _, _) => { GuiComplete.TrySetResult(); return Value(JsonValue.Null); })

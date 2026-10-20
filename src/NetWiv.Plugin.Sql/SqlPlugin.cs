@@ -7,10 +7,10 @@ using System.Text.Json;
 namespace NetWiv.Plugin.Sql;
 
 /// <summary>SQLite implementation of the official SQL guest commands.</summary>
-public sealed class SqlPlugin : IPlugin
+public sealed partial class SqlPlugin : IPlugin
 {
     private readonly object _gate = new();
-    private readonly Dictionary<string, nint> _databases = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, nint> _databases = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
     private string? _directory;
     private string[] _preload = [];
 
@@ -18,12 +18,13 @@ public sealed class SqlPlugin : IPlugin
 
     public void Initialize(PluginContext context)
     {
+        lock (_gate) _initialized = true;
         if (context.Config.ValueKind == JsonValueKind.Object && context.Config.TryGetProperty("preload", out var preload))
         {
             if (preload.ValueKind != JsonValueKind.Array) throw new InvokeException("SQL preload must be an array.");
             _preload = preload.EnumerateArray().Select(item => item.GetString() ?? throw new InvokeException("SQL preload must contain strings.")).ToArray();
         }
-        context.RegisterCommand("load", (_, args, token) => Run(() => Load(args.GetProperty("db").GetString()!), token));
+        context.RegisterCommand("load", (_, args, token) => Run(() => Load(args.GetProperty("db").GetString()!, token), token));
         context.RegisterCommand("execute", (_, args, token) => Run(() => Query(args, select: false, token), token));
         context.RegisterCommand("select", (_, args, token) => Run(() => Query(args, select: true, token), token));
         context.RegisterCommand("close", (_, args, token) => Run(() => Close(args), token));
@@ -42,18 +43,21 @@ public sealed class SqlPlugin : IPlugin
             ? Environment.GetEnvironmentVariable("XDG_CONFIG_HOME") is { Length: > 0 } xdg ? xdg : Path.Combine(home, ".config")
             : Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         _directory = Path.Combine(config, app.Metadata.Identifier);
+        foreach (var (database, migrations) in _migrationRegistrations)
+            if (!_migrations.TryAdd(DatabasePath(database), migrations))
+                throw new InvokeException("Migration registrations resolve to the same SQLite database.");
         foreach (var db in _preload) Load(db);
     }
 
     private static async ValueTask<JsonElement> Run(Func<JsonElement> operation, CancellationToken token) =>
         await Task.Run(operation, token);
 
-    private unsafe JsonElement Load(string db)
+    private unsafe JsonElement Load(string db, CancellationToken token = default)
     {
         lock (_gate)
         {
-            if (_databases.ContainsKey(db)) return JsonValue.From(db);
             var path = DatabasePath(db);
+            if (_databases.ContainsKey(path)) return JsonValue.From(db);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             var bytes = Encoding.UTF8.GetBytes(path + "\0");
             fixed (byte* pointer = bytes)
@@ -65,7 +69,16 @@ public sealed class SqlPlugin : IPlugin
                     if (handle != 0) SqliteNative.Close(handle);
                     throw new InvokeException(error);
                 }
-                _databases.Add(db, handle);
+                try
+                {
+                    if (_migrations.TryGetValue(path, out var migrations)) ApplyMigrations(handle, migrations, token);
+                    _databases.Add(path, handle);
+                }
+                catch
+                {
+                    SqliteNative.Close(handle);
+                    throw;
+                }
             }
             return JsonValue.From(db);
         }
@@ -99,7 +112,7 @@ public sealed class SqlPlugin : IPlugin
         }
         lock (_gate)
         {
-            if (!_databases.TryGetValue(db, out var handle)) throw new InvokeException($"Database '{db}' is not loaded.");
+            if (!_databases.TryGetValue(DatabasePath(db), out var handle)) throw new InvokeException($"Database '{db}' is not loaded.");
             using var cancellation = token.Register(() => SqliteNative.Interrupt(handle));
             token.ThrowIfCancellationRequested();
             var bytes = Encoding.UTF8.GetBytes(query + "\0");
@@ -212,7 +225,7 @@ public sealed class SqlPlugin : IPlugin
         {
             if (named is not null)
             {
-                if (!_databases.Remove(named, out var handle)) throw new InvokeException($"Database '{named}' is not loaded.");
+                if (!_databases.Remove(DatabasePath(named), out var handle)) throw new InvokeException($"Database '{named}' is not loaded.");
                 SqliteNative.Close(handle);
             }
             else

@@ -46,15 +46,26 @@ foreach ($name in @('NetWiv.Plugin.CommandFixture', 'NetWiv.Desktop.Smoke')) {
         }
         [void]$project.Project.AppendChild($additionalPackages)
     }
-    foreach ($resource in $project.SelectNodes('//EmbeddedResource')) {
-        if ($resource.Include.StartsWith('../')) {
-            $resourceSource = [IO.Path]::GetFullPath($resource.Include, $source)
-            $relative = Join-Path 'package-fixtures' ([IO.Path]::GetRelativePath($repository, $resourceSource))
-            $resourceDestination = Join-Path $directory $relative
-            New-Item -ItemType Directory -Path (Split-Path $resourceDestination) -Force | Out-Null
-            Copy-Item -LiteralPath $resourceSource -Destination $resourceDestination
-            $resource.SetAttribute('Include', $relative)
-        }
+    # Evaluate MSBuild globs and metadata in the original project before moving
+    # resources. Copy each resolved file and preserve its exact manifest name.
+    $evaluated = & dotnet msbuild (Join-Path $source "$name.csproj") -getItem:EmbeddedResource -nologo
+    if ($LASTEXITCODE -ne 0) { throw 'Could not evaluate smoke resources.' }
+    $externalResources = @(($evaluated | ConvertFrom-Json).Items.EmbeddedResource |
+        Where-Object { $_.Identity.Replace('\', '/').StartsWith('../') })
+    $resourceGroup = $project.CreateElement('ItemGroup')
+    foreach ($resource in @($project.SelectNodes('//EmbeddedResource'))) {
+        if ($resource.Include.StartsWith('../')) { [void]$resource.ParentNode.RemoveChild($resource) }
     }
+    foreach ($resource in $externalResources) {
+        $relative = Join-Path 'package-fixtures' ([IO.Path]::GetRelativePath($repository, $resource.FullPath))
+        $destinationPath = Join-Path $directory $relative
+        New-Item -ItemType Directory -Path (Split-Path $destinationPath) -Force | Out-Null
+        Copy-Item -LiteralPath $resource.FullPath -Destination $destinationPath
+        $element = $project.CreateElement('EmbeddedResource')
+        $element.SetAttribute('Include', $relative)
+        $element.SetAttribute('LogicalName', $resource.LogicalName)
+        [void]$resourceGroup.AppendChild($element)
+    }
+    [void]$project.Project.AppendChild($resourceGroup)
     $project.Save($projectPath)
 }

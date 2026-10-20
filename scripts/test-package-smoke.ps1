@@ -27,7 +27,16 @@ try {
             if (!$smoke.SelectSingleNode("//PackageReference[@Include='$id']")) { throw "Missing $id package probe." }
         }
         $resources = @($smoke.SelectNodes('//EmbeddedResource') | Where-Object Include -like 'package-fixtures*')
-        if ($resources.Count -ne 5) { throw 'Expected all external smoke resources, including the app/image guests, to be copied.' }
+        $originalItems = & dotnet msbuild tests/NetWiv.Desktop.Smoke -getItem:EmbeddedResource -nologo
+        if ($LASTEXITCODE -ne 0) { throw 'Could not evaluate original smoke resources.' }
+        $expected = @(($originalItems | ConvertFrom-Json).Items.EmbeddedResource | Where-Object { $_.Identity.Replace('\', '/').StartsWith('../') })
+        if ($resources.Count -ne $expected.Count -or $resources.Count -eq 0) { throw 'External smoke resources were lost.' }
+        $expectedNames = @($expected | ForEach-Object LogicalName | Sort-Object)
+        $actualNames = @($resources | ForEach-Object LogicalName | Sort-Object)
+        if (Compare-Object $expectedNames $actualNames) { throw 'Consumer manifest resource names changed.' }
+        foreach ($name in @('netwiv.assets.core.js', 'netwiv.assets.plugins/global-shortcut.js', 'netwiv.assets.upstream/app.js', 'netwiv.assets.upstream/image.js')) {
+            if ($name -notin @($actualNames | ForEach-Object { $_.Replace('\', '/') })) { throw "Required frontend resource missing: $name" }
+        }
         $repository = Split-Path $PSScriptRoot -Parent
         $consumer = Join-Path $destination 'NetWiv.Desktop.Smoke'
         foreach ($resource in $resources) {

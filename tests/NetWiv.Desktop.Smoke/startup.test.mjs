@@ -6,8 +6,9 @@ const html = readFileSync(new URL('wwwroot/index.html', import.meta.url), 'utf8'
 const script = html.match(/<script type="module">([\s\S]*?)<\/script>/)[1]
 // Execute the guest itself, supplying its module loader so failures are deterministic.
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
-const startup = new AsyncFunction('window', 'document', 'loadCore',
-  script.replace("await import('./core.js')", 'await loadCore()'))
+const startup = new AsyncFunction('window', 'document', 'loadCore', 'loadShortcut',
+  script.replace("await import('./core.js')", 'await loadCore()')
+    .replace("await import('./plugins/global-shortcut.js')", 'await loadShortcut()'))
 
 function fixture() {
   const stages = [], failures = [], result = {}
@@ -43,7 +44,7 @@ test('a pending guest command leaves its awaited stage available to the host wat
   let completed = false
   void startup(value.window, value.document, async () => ({
     invoke(command) { entered.resolve(command); return new Promise(() => {}) }
-  })).then(() => { completed = true })
+  }), async () => ({ isRegistered: async () => false })).then(() => { completed = true })
   assert.equal(await entered.promise, 'plugin:generated-external|get_status')
   assert.deepEqual(value.stages, ['module import', 'external command'])
   assert.deepEqual(value.failures, [])

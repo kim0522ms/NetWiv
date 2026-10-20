@@ -117,6 +117,13 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("official fs plugin reads writes and rejects traversal", FsPluginTests.FileOperations),
     ("official fs binary guest write and read traverse IPC with scoped permission", FsPluginTests.BinaryGuestIpc),
     ("official fs scope permission joins command grants without broadening access", FsPluginTests.ScopePermissions),
+    ("filesystem watch create modify rename remove and unwatch", FsWatchTests.Events),
+    ("filesystem watch recursion file URLs and multiple files", FsWatchTests.RecursionAndMultipleFiles),
+    ("filesystem watch debounce and pending disposal", FsWatchTests.Debounce),
+    ("filesystem watch scope ownership reload and close", FsWatchTests.ScopeAndOwnership),
+    ("filesystem watch validation cancellation and plugin disposal", FsWatchTests.ValidationAndDisposal),
+    ("filesystem watch moved root and replacement preserve scope", FsWatchTests.MovedRootScope),
+    ("filesystem watch recursive rearm and close across multiple roots", FsWatchTests.RearmLifetime),
     ("official dialog forwards native selection and grants selected file scope", DialogPluginTests.SelectedFileScope),
     ("official dialog legacy permission aliases authorize message only", DialogPluginTests.PermissionAliases),
     ("official OS guest receives synchronous platform values and guarded hostname", OsPluginTests.GuestContract),
@@ -267,7 +274,11 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("IPC cross-condition origin lifetime and resource boundaries", IpcBoundaryMatrixTests.OriginAndLifetime),
 };
 if (OperatingSystem.IsLinux())
+{
     tests.Add(("official fs scope rejects a symlink escaping its allowed directory", FsPluginTests.SymlinkScope));
+    tests.Add(("filesystem watch rejects symlink escapes and filters retargeted queued paths", FsWatchTests.SymlinkScope));
+    tests.Add(("filesystem watch rearm preserves fresh debounce window", FsWatchTests.RearmDebounce));
+}
 if (OperatingSystem.IsWindows()) tests.Add(("upstream scope::windows_root_paths", FileScopeMutationTests.WindowsRootPaths));
 if (OperatingSystem.IsWindows()) tests.Add(("upstream webview::windows_custom_protocol_rejects_spoofed_domain", UriSchemeTests.WindowsCustomProtocolRejectsSpoofedDomain));
 else Console.WriteLine("SKIP upstream scope::windows_root_paths: Windows-specific scenarios");

@@ -138,8 +138,8 @@ Windows and Linux X11, and Windows NSIS/MSI installation, execution and removal.
 Apple Silicon checks additionally exercised source-built NativeAOT WKWebView and
 isolation hosts, a locally ad-hoc-signed `.app`, real C# invocation/menu input,
 and app/DMG packaging. Hosted release checks additionally passed package-only
-managed React execution and windowless NativeAOT consumer execution on both
-macOS architectures. Clean-machine installation and package-only NativeAOT GUI
+managed React execution and windowless NativeAOT consumer execution on
+macOS arm64. Clean-machine installation and package-only NativeAOT GUI
 acceptance are separate from those checks.
 These checks do not establish acceptance for every package format or environment.
 The following release boundaries remain open:

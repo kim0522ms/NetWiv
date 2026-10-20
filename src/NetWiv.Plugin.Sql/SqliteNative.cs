@@ -17,6 +17,11 @@ internal static unsafe partial class SqliteNative
         OperatingSystem.IsWindows() ? Windows.SetAuthorizer(db, callback, 0) : Linux.SetAuthorizer(db, callback, 0);
     internal static int Prepare(nint db, byte* query, out nint statement) => OperatingSystem.IsWindows()
         ? Windows.Prepare(db, query, -1, out statement, 0) : Linux.Prepare(db, query, -1, out statement, 0);
+    internal static int PrepareScript(nint db, byte* query, out nint statement, out byte* tail) => OperatingSystem.IsWindows()
+        ? Windows.PrepareScript(db, query, -1, out statement, out tail) : Linux.PrepareScript(db, query, -1, out statement, out tail);
+    internal static int BusyTimeout(nint db, int milliseconds) => OperatingSystem.IsWindows()
+        ? Windows.BusyTimeout(db, milliseconds) : Linux.BusyTimeout(db, milliseconds);
+    internal static bool IsAutoCommit(nint db) => (OperatingSystem.IsWindows() ? Windows.GetAutoCommit(db) : Linux.GetAutoCommit(db)) != 0;
     internal static int Finalize(nint statement) => OperatingSystem.IsWindows() ? Windows.Finalize(statement) : Linux.Finalize(statement);
     internal static int Step(nint statement) => OperatingSystem.IsWindows() ? Windows.Step(statement) : Linux.Step(statement);
     internal static int BindNull(nint statement, int index) => OperatingSystem.IsWindows() ? Windows.BindNull(statement, index) : Linux.BindNull(statement, index);
@@ -38,6 +43,9 @@ internal static unsafe partial class SqliteNative
 
     private static partial class Windows
     {
+        [LibraryImport("winsqlite3", EntryPoint = "sqlite3_get_autocommit")] internal static partial int GetAutoCommit(nint db);
+        [LibraryImport("winsqlite3", EntryPoint = "sqlite3_busy_timeout")] internal static partial int BusyTimeout(nint db, int milliseconds);
+        [LibraryImport("winsqlite3", EntryPoint = "sqlite3_prepare_v2")] internal static partial int PrepareScript(nint db, byte* query, int length, out nint statement, out byte* tail);
         [LibraryImport("winsqlite3", EntryPoint = "sqlite3_interrupt")] internal static partial void Interrupt(nint db);
         [LibraryImport("winsqlite3", EntryPoint = "sqlite3_set_authorizer")] internal static partial int SetAuthorizer(nint db, delegate* unmanaged[Cdecl]<nint, int, nint, nint, nint, nint, int> callback, nint user);
         [LibraryImport("winsqlite3", EntryPoint = "sqlite3_open_v2")] internal static partial int Open(byte* path, out nint db, int flags = ReadWriteCreate, nint vfs = 0);
@@ -64,6 +72,9 @@ internal static unsafe partial class SqliteNative
 
     private static partial class Linux
     {
+        [LibraryImport("sqlite3", EntryPoint = "sqlite3_get_autocommit")] internal static partial int GetAutoCommit(nint db);
+        [LibraryImport("sqlite3", EntryPoint = "sqlite3_busy_timeout")] internal static partial int BusyTimeout(nint db, int milliseconds);
+        [LibraryImport("sqlite3", EntryPoint = "sqlite3_prepare_v2")] internal static partial int PrepareScript(nint db, byte* query, int length, out nint statement, out byte* tail);
         [LibraryImport("sqlite3", EntryPoint = "sqlite3_interrupt")] internal static partial void Interrupt(nint db);
         [LibraryImport("sqlite3", EntryPoint = "sqlite3_set_authorizer")] internal static partial int SetAuthorizer(nint db, delegate* unmanaged[Cdecl]<nint, int, nint, nint, nint, nint, int> callback, nint user);
         [LibraryImport("sqlite3", EntryPoint = "sqlite3_open_v2")] internal static partial int Open(byte* path, out nint db, int flags = ReadWriteCreate, nint vfs = 0);

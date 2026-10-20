@@ -82,6 +82,57 @@ internal static class StoreAutosaveTests
         Assert.Equal(7, Read(path, "answer"));
     }
 
+    internal static async Task ReloadCancelsPendingWrites()
+    {
+        foreach (var existing in new[] { false, true })
+        foreach (var shutdown in new[] { false, true })
+        {
+            using var fixture = new Fixture();
+            var path = fixture.PathFor("reload.json");
+            if (existing)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllText(path, "{\"answer\":7}");
+            }
+            var rid = await fixture.Load("reload.json",
+                "{\"autoSave\":" + (shutdown ? 60000 : 500) + ",\"defaults\":{\"answer\":1}}");
+            await fixture.Set(rid, "answer", 42);
+            await fixture.Command("reload", rid);
+            Assert.Equal(existing ? 7 : 1, (await fixture.Command("get", rid, ",\"key\":\"answer\""))[0].GetInt32());
+            // An external edit after reload must survive both a stale timer and shutdown.
+            if (existing) File.WriteAllText(path, "{\"answer\":9}");
+            if (shutdown) fixture.App.Dispose();
+            else await Task.Delay(800);
+            if (existing) Assert.Equal(9, Read(path, "answer"));
+            else Assert.True(!File.Exists(path), "Reloaded changes caused an unwanted store write.");
+
+            if (!shutdown)
+            {
+                await fixture.Set(rid, "answer", 10);
+                await Until(() => File.Exists(path) && Read(path, "answer") == 10);
+            }
+        }
+    }
+
+    internal static async Task FailedReloadKeepsPendingWrites()
+    {
+        foreach (var shutdown in new[] { false, true })
+        {
+            using var fixture = new Fixture();
+            var rid = await fixture.Load("reload-failure.json", "{\"autoSave\":" + (shutdown ? 60000 : 500) + "}");
+            var path = fixture.PathFor("reload-failure.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, "invalid JSON");
+            await fixture.Set(rid, "answer", 42);
+            try { await fixture.Command("reload", rid); throw new Exception("Invalid store reload succeeded."); }
+            catch (InvokeException) { }
+            Assert.Equal(42, (await fixture.Command("get", rid, ",\"key\":\"answer\""))[0].GetInt32());
+            if (shutdown) fixture.App.Dispose();
+            else await Until(() => File.ReadAllText(path).StartsWith('{'));
+            Assert.Equal(42, Read(path, "answer"));
+        }
+    }
+
     internal static async Task SharedHandlesAndShutdown()
     {
         using var fixture = new Fixture();

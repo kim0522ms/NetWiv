@@ -227,6 +227,9 @@ public sealed class StorePlugin : IPlugin
             catch (JsonException error) { throw new InvokeException(error.Message, error); }
             Values.Clear();
             foreach (var entry in replacement) Values.Add(entry.Key, entry.Value);
+            _pending = false;
+            _timer?.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            _dirty = false;
         }
 
         public void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);

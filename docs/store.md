@@ -41,6 +41,11 @@ synchronously writes the current snapshot, even with `autoSave: false`. A later
 mutation starts a new interval. Positive-delay mutations complete after updating
 memory and scheduling persistence; they do not wait for the disk write.
 
+Successful `reload()` replaces the in-memory values and cancels their pending
+automatic save, including a later shutdown flush. Reloading a missing file does
+not create it. A failed reload preserves the current values and pending save;
+a new mutation after a successful reload schedules saving normally.
+
 This corrects earlier NetWiv behavior that saved immediately for every option
 except `false`. Applications relying on that immediate persistence should call
 `save()` explicitly or select `autoSave: 0`.
@@ -79,7 +84,8 @@ handle the exception rather than assuming the write succeeded.
 ## Validation boundary
 
 The Core harness checks option parsing, debounce across mutations, shared
-concurrent handles, explicit-save cancellation, atomic replacement, disposal
+concurrent handles, explicit-save and successful-reload cancellation, failed
+reload preservation, atomic replacement, disposal
 races, flush failures and recovery. These backend checks use a fake desktop
 runtime and synthetic JSON files. Managed and NativeAOT executions passed on
 physical Windows x64 and macOS arm64 hosts and Linux x64 under WSL, through

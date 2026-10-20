@@ -135,6 +135,8 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("store autosave validates options and supports default and immediate saves", StoreAutosaveTests.Options),
     ("store autosave debounces every supported mutation", StoreAutosaveTests.DebounceAndMutations),
     ("store autosave explicit save cancels pending writes", StoreAutosaveTests.ExplicitSaveCancelsTimer),
+    ("store autosave reload cancels pending writes and shutdown flush", StoreAutosaveTests.ReloadCancelsPendingWrites),
+    ("store autosave failed reload preserves pending writes and shutdown flush", StoreAutosaveTests.FailedReloadKeepsPendingWrites),
     ("store autosave shares concurrent handles and flushes during app disposal", StoreAutosaveTests.SharedHandlesAndShutdown),
     ("store autosave failures remain retryable by save and shutdown", StoreAutosaveTests.FailedSaveRetries),
     ("store autosave disposal drains racing writes and reports flush failures", StoreAutosaveTests.DisposalRacesAndFailure),

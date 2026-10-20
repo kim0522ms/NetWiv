@@ -30,9 +30,14 @@ internal static class Program
             .Capability(new("main-close", ["core:window:allow-close"], Webviews: ["main"]));
 
 #if NETWIV_BLAZOR_HYBRID
+#if NETWIV_BLAZOR_EXPERIMENTAL_AOT
         builder.Services.AddNetWivBlazorHybridAot(HybridUiRegistration.Configure);
-        builder.Services.AddSampleUi();
         builder.Services.AddScoped<IUiInteropReferenceFactory, HybridUiInteropReferenceFactory>();
+#else
+        builder.Services.AddNetWivBlazorHybrid();
+        builder.Services.AddScoped<IUiInteropReferenceFactory, BrowserUiInteropReferenceFactory>();
+#endif
+        builder.Services.AddSampleUi();
         var options = new BlazorWebViewOptions
         {
             HostPage = Path.Combine(AppContext.BaseDirectory, "wwwroot", "index.html"),

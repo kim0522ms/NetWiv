@@ -1,7 +1,8 @@
-# NativeAOT Blazor product tests
+# Experimental NativeAOT Blazor product tests
 
 This executable uses the product `NetWiv.BlazorHybrid` package sources. It contains no
-copy of the rendering host or interop runtime. Microsoft's unchanged `Renderer`
+copy of the rendering host or interop runtime. The project explicitly opts into
+`NetWivBlazorExperimentalAot`; passing it does not establish full Blazor AOT support. Microsoft's unchanged `Renderer`
 still owns component state, event dispatch and diffing.
 
 Both modes assert `JsonSerializer.IsReflectionEnabledByDefault == false`.
@@ -80,7 +81,7 @@ property injection, parameter and cascading paths obtain types from
 component paths in the native executable; this does not establish arbitrary
 runtime-discovered component support.
 The full form sample has additional upstream AOT diagnostics and a narrower
-tested binding contract; see [NativeAOT limits](../../docs/blazor-hybrid.md#nativeaot-limits).
+tested binding contract; see [NativeAOT limits](../../docs/blazor-hybrid.md#experimental-nativeaot-limits).
 
 Microsoft packages are pinned to `8.0.32`. Adapted product source origins and MIT
 notices are in [the host provenance](../../src/NetWiv.BlazorHybrid/Aot/Hosting/README.md),

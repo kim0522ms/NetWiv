@@ -1,4 +1,4 @@
-#if NETWIV_BLAZOR_HYBRID
+#if NETWIV_BLAZOR_EXPERIMENTAL_AOT
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using NetWiv.BlazorHybrid.Aot;

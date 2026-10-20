@@ -1,7 +1,7 @@
 # Blazor Hybrid and WebAssembly applications
 
 `NetWiv.BlazorHybrid` optionally runs Razor components inside the desktop process,
-using managed .NET or NativeAOT. Microsoft's component renderer owns component
+using managed .NET by default. Microsoft's component renderer owns component
 state, event dispatch and diffing; the WebView renders its DOM updates.
 Managed development provides a regular .NET debugging target for Razor handlers,
 codebehind and desktop commands in one process.
@@ -10,8 +10,9 @@ The integration currently supports **Windows x64 with WebView2**. Linux and
 macOS integration is unverified and is explicitly rejected by this adapter.
 The optional package reuses `Microsoft.AspNetCore.Components.WebView` 8.0.32;
 it does not implement another Razor renderer or copy the framework JavaScript.
-The statically registered host owns the WebView transport, generated JSON
-contracts and typed interop dispatch around that renderer.
+An optional **experimental NativeAOT host** owns the WebView transport,
+generated JSON contracts and typed interop dispatch around that renderer.
+It is not a complete NativeAOT implementation of the Blazor API.
 Applications that do not reference `NetWiv.BlazorHybrid` do not acquire that dependency.
 
 ### Rename from earlier development builds
@@ -31,20 +32,25 @@ class library into two hosts:
 
 | Mode | Razor execution | Desktop backend | Sample default |
 | --- | --- | --- | --- |
-| `Hybrid` | .NET in the desktop process | Managed .NET or NativeAOT | `Debug` |
-| `WebAssembly` | Blazor WebAssembly inside the WebView | Managed .NET or NativeAOT | `Release` and other configurations |
+| `Hybrid` | .NET in the desktop process | Managed .NET | All configurations |
+| `Hybrid` with experimental opt-in | Statically registered .NET in the desktop process | Experimental NativeAOT, or managed execution of the same research host | Never automatic |
+| `WebAssembly` | Blazor WebAssembly inside the WebView | Managed .NET or NativeAOT | Explicit selection |
 
-Use `AddNetWivBlazorHybridAot` for Hybrid applications that share one registration path
-between managed development and NativeAOT deployment. Register concrete
-components, generated JSON metadata and JS-invokable delegates explicitly.
-Unregistered components, DTO types and callbacks fail rather than falling back
-to reflection JSON or assembly discovery. The existing `AddNetWivBlazorHybrid`
-registration remains a managed-only integration.
+Use `AddNetWivBlazorHybrid()` for ordinary applications. It uses Microsoft's
+WebView services, standard `DotNetObjectReference<T>` and `[JSInvokable]`
+discovery. It does not require the experimental component or callback registry.
+This registration requires managed .NET.
+
+`AddNetWivBlazorHybridAot(...)` explicitly selects the experimental host, even
+when run on managed .NET. It requires concrete components, generated JSON
+metadata and JS-invokable delegates. Unregistered types and callbacks fail
+rather than falling back to runtime discovery. Package consumers publishing
+NativeAOT must also set `NetWivBlazorExperimentalAot=true`.
 
 The [NativeAOT acceptance tests](../tests/NetWiv.BlazorHybrid.Aot.Tests/README.md)
 execute the product adapter, including real WebView2 rendering and document
 replacement. They do not establish compatibility with arbitrary component libraries.
-The statically registered host checks that the loaded Components, Components.Web,
+The experimental host checks that the loaded Components, Components.Web,
 JSInterop and WebView assemblies are all 8.0.32. Do not combine it with a newer
 `Microsoft.AspNetCore.App` shared-framework reference; the .NET host runtime
 version and these pinned package versions are separate.
@@ -63,9 +69,12 @@ From the repository root, after preparing the native artifacts described in
 ```powershell
 dotnet run --project samples/BlazorHybrid/Desktop -c Debug
 dotnet run --project samples/BlazorHybrid/Desktop -c Debug -p:NetWivBlazorMode=WebAssembly
-dotnet publish samples/BlazorHybrid/Desktop -c Release -r win-x64 -p:PublishAot=true
+dotnet publish samples/BlazorHybrid/Desktop -c Release -r win-x64
 
-dotnet publish samples/BlazorHybrid/Desktop -c Release -r win-x64 -p:NetWivBlazorMode=Hybrid -p:PublishAot=true
+dotnet publish samples/BlazorHybrid/Desktop -c Release -r win-x64 -p:NetWivBlazorMode=WebAssembly -p:PublishAot=true
+
+# Experimental: retains the limitations described below.
+dotnet publish samples/BlazorHybrid/Desktop -c Release -r win-x64 -p:NetWivBlazorExperimentalAot=true -p:PublishAot=true
 ```
 
 These are source-sample commands. For package consumers, use matching versions
@@ -79,13 +88,15 @@ The CLI selects the same project property with `--blazor-mode`:
 
 ```powershell
 dotnet tool run netwiv -- dev --blazor-mode Hybrid
-dotnet tool run netwiv -- build --no-bundle --aot --blazor-mode Hybrid
+dotnet tool run netwiv -- build --no-bundle --blazor-mode Hybrid
 dotnet tool run netwiv -- build --no-bundle --aot --blazor-mode WebAssembly
+dotnet tool run netwiv -- build --no-bundle --aot --blazor-mode Hybrid --experimental-blazor-aot
 ```
 
-The option does not change the template defaults. `--aot` selects native
-compilation independently of the Razor execution mode.
-Explicit AOT development modes use separate `dev-aot-hybrid` and
+`--aot` alone does not opt a Hybrid app into experimental hosting.
+`--experimental-blazor-aot` requires both `--aot` and explicit
+`--blazor-mode Hybrid`; the same option is available for `netwiv dev`.
+Explicit AOT development modes use separate `dev-aot-hybrid-experimental` and
 `dev-aot-webassembly` directories under `target/<target>/debug/` (or `release/`
 with `--release`), so switching modes does not reuse the other UI's assets.
 Without `--blazor-mode`, the existing `dev-aot` directory is retained.
@@ -98,17 +109,12 @@ matching versions. Register the shared UI's own services separately:
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
 using NetWiv.BlazorHybrid;
-using NetWiv.BlazorHybrid.Aot;
 using NetWiv.Hosting;
 using NetWiv.Platform.Desktop;
 
 // Run this startup code from an [STAThread] Main method.
 var builder = NetWivApplication.CreateBuilder(args);
-builder.Services.AddNetWivBlazorHybridAot(registration =>
-{
-    registration.Components.Register<AppRoot>();
-    registration.JsonTypeInfoResolver = AppJsonContext.Default;
-});
+builder.Services.AddNetWivBlazorHybrid();
 // Register services injected by AppRoot here.
 
 var options = new BlazorWebViewOptions
@@ -127,13 +133,8 @@ app.Run();
 ```
 
 `AppRoot` is the application's `IComponent` implementation, normally a Razor
-component in its shared UI library. `AppJsonContext` is its source-generated
-`JsonSerializerContext` for interop DTOs. Register every concrete child component
-as well, including closed generic framework components used by forms or
-cascading values and every possible `DynamicComponent` target. There is no
-component-registration source generator; the application owns this list.
-A component with constructor dependencies can use the
-`Register<TComponent>(Func<IServiceProvider, TComponent>)` overload.
+component in its shared UI library. The managed host does not require an
+additional registry for every child component or JS-invokable method.
 `UseBlazor` obtains the root provider during
 `Build`, after Generic Host has constructed it. A plain `Builder` can instead
 use `UseServiceProvider` with a caller-owned provider. Direct adapter usage is
@@ -190,7 +191,12 @@ host. Register browser-compatible UI services in both UI hosts. The statically
 registered Hybrid host supplies page-scoped `IJSRuntime`, navigation and
 component services.
 
-For an instance callback, register a typed delegate with
+For a managed instance callback, use the standard `DotNetObjectReference<T>`
+and `[JSInvokable]` method. Dispose the reference with its owning component or
+service. The shared sample uses this same reference implementation in managed
+Hybrid and WebAssembly.
+
+For an **experimental AOT** instance callback, register a typed delegate with
 `registration.Interop.RegisterInstance<TInstance, TArgument, TResult>` and the
 argument/result `JsonTypeInfo` values. Create an owned
 `BlazorAotObjectReference<TInstance>` lease and pass it to JavaScript. Dispose
@@ -203,7 +209,7 @@ The sample demonstrates `@bind`, manual `EditContext` validation,
 an instance callback. Data-annotation validation and routed-assembly discovery
 are separate behaviors and are not supplied by those examples.
 `NavigationManager.NavigateTo`, `LocationChanged` and refresh are supported.
-`Router` assembly discovery, `NavigationLock` and
+In the **experimental host**, `Router` assembly discovery, `NavigationLock` and
 `RegisterLocationChangingHandler` are unsupported. Enabling a navigation lock
 throws because the pinned navigation API does not expose the disconnect
 cancellation hook needed by this host. Do not catch that error and retry
@@ -236,7 +242,7 @@ and service cleanup to continue. Active-page JS failures and unrelated component
 or disposal errors remain application failures. Do not rely on the old DOM or
 browser callbacks to release managed resources.
 
-The older managed-only `AddNetWivBlazorHybrid` path uses a cancellation adapter whose
+The default managed `AddNetWivBlazorHybrid` path uses a cancellation adapter whose
 disconnection failures are marker `JSException` instances. It recognizes the
 pinned Microsoft WebView transport's JS invocation/completion messages.
 The dependency uses the exact
@@ -246,18 +252,31 @@ upstream private transport and rerunning the retirement, active-error, pending
 call and scope-disposal regressions. It does not make the upstream private
 wire format a supported application API.
 
-The statically registered host limits each page to 4096 pending JS calls,
+The experimental host limits each page to 4096 pending JS calls,
 4096 bound object references and 4096 active inbound callbacks. Cancellation
 immediately removes a pending JS call; dispose object-reference leases promptly.
 Retirement stops waiting for inbound application callbacks and discards their
 late results, while observing eventual failures. It cannot cancel the callback's
 own database, network or other work: application services must cancel that work
-when their page scope is disposed. The older managed cancellation
+when their page scope is disposed. The managed cancellation
 adapter retains canceled browser call IDs until completion or page retirement,
 with a separate 4096-ID limit. Both paths reject excess calls rather than
 retaining an unlimited set of IDs.
 
-## NativeAOT limits
+## Experimental NativeAOT limits
+
+These restrictions belong to `AddNetWivBlazorHybridAot`, including managed
+execution of that host. They are not requirements imposed on the default
+managed host. Broader NativeAOT support and library forks are deferred future
+work, outside the current delivery; see the
+[source audit and future work](blazor-hybrid-aot-research.md).
+
+Register every concrete component, including closed generic framework children
+and every possible `DynamicComponent` target, in `BlazorAotOptions.Components`.
+A constructor factory can use `Register<TComponent>(Func<IServiceProvider,
+TComponent>)`. Supply source-generated `JsonSerializerContext` metadata through
+`JsonTypeInfoResolver` and register callback delegates separately. There is no
+component-registration source generator; the application owns these lists.
 
 Static registration covers concrete components, JSON metadata and invokable
 delegates. It does not make arbitrary Razor libraries AOT-compatible.
@@ -315,11 +334,13 @@ malformed messages, stale documents, bounded queues and retirement during a
 pending application callback. Its native WebView2 mode exercises actual Razor
 DOM events, interop, browser reload and disposal of both page scopes.
 
-On Windows, the shared sample passed counter input, invalid/valid form
-submission, navigation, command IPC, module interop and nested DTO instance
-callbacks in both managed Hybrid and NativeAOT Hybrid. An installed CLI created
+On Windows, the default managed sample passed counter input, invalid/valid form
+submission, navigation, command IPC, JS interop and nested DTO callbacks using
+standard `DotNetObjectReference<T>`, followed by reload with a new UI scope and
+normal process exit. The experimental static host separately passed selected
+interactions in managed and NativeAOT execution. An installed CLI created
 a fresh NuGet consumer and published it with
-`build --no-bundle --aot --blazor-mode Hybrid`; that executable passed the same
+the experimental Hybrid AOT build path; that executable passed the same
 interactions, reload with a new UI scope and surviving backend state, and
 application close. Managed source breakpoints, locals, watch expressions,
 stack inspection and continuation were exercised with NetCoreDbg separately.

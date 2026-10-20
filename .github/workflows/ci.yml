@@ -208,7 +208,7 @@ jobs:
         timeout-minutes: 5
         run: ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe
 
-      - name: Windows NativeAOT Blazor Hybrid
+      - name: Windows experimental NativeAOT Blazor Hybrid
         if: runner.os == 'Windows'
         timeout-minutes: 5
         run: |

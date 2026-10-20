@@ -10,7 +10,7 @@ namespace NetWiv.BlazorHybrid;
 
 public static class BlazorExtensions
 {
-    /// <summary>Registers Microsoft's scoped Blazor WebView services in the application's root provider.</summary>
+    /// <summary>Registers the default managed Hybrid host using Microsoft's scoped Blazor WebView services.</summary>
     public static IServiceCollection AddNetWivBlazorHybrid(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -20,9 +20,14 @@ public static class BlazorExtensions
     }
 
     /// <summary>
-    /// Registers the statically configured Hybrid host for managed development and NativeAOT
-    /// publishing. Application components, callback delegates and JSON metadata are explicit.
+    /// Registers the experimental, statically configured Hybrid host for NativeAOT research.
+    /// Application components, callback delegates and JSON metadata are explicit.
     /// </summary>
+    /// <remarks>
+    /// Prefer AddNetWivBlazorHybrid for ordinary managed applications. This opt-in host
+    /// does not provide full Blazor API or component-library compatibility. NativeAOT package
+    /// consumers must also set the NetWivBlazorExperimentalAot MSBuild property to true.
+    /// </remarks>
     public static IServiceCollection AddNetWivBlazorHybridAot(this IServiceCollection services, Action<BlazorAotOptions> configure)
     {
         ArgumentNullException.ThrowIfNull(services);

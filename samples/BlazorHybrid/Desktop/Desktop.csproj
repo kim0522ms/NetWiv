@@ -4,9 +4,10 @@
     <AssemblyName>NetWiv.BlazorHybrid.Desktop</AssemblyName>
     <RootNamespace>NetWiv.BlazorHybrid.Desktop</RootNamespace>
     <RollForward>Major</RollForward>
-    <JsonSerializerIsReflectionEnabledByDefault Condition="'$(NetWivBlazorMode)' == 'Hybrid'">false</JsonSerializerIsReflectionEnabledByDefault>
+    <JsonSerializerIsReflectionEnabledByDefault Condition="'$(NetWivBlazorExperimentalAot)' == 'true'">false</JsonSerializerIsReflectionEnabledByDefault>
     <NetWivCSharpBindingsDirectory>../Shared/obj/netwiv/$(Configuration)</NetWivCSharpBindingsDirectory>
     <DefineConstants Condition="'$(NetWivBlazorMode)' == 'Hybrid' and '$(NetWivBindingsOnly)' != 'true'">$(DefineConstants);NETWIV_BLAZOR_HYBRID</DefineConstants>
+    <DefineConstants Condition="'$(NetWivBlazorMode)' == 'Hybrid' and '$(NetWivBlazorExperimentalAot)' == 'true' and '$(NetWivBindingsOnly)' != 'true'">$(DefineConstants);NETWIV_BLAZOR_EXPERIMENTAL_AOT</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../../src/NetWiv.Hosting/NetWiv.Hosting.csproj" />
@@ -25,6 +26,8 @@
   <Import Project="../../../src/NetWiv.Build/buildTransitive/NetWiv.Build.targets" />
   <Target Name="ValidateBlazorMode" BeforeTargets="PrepareForBuild">
     <Error Condition="'$(NetWivBlazorMode)' != 'Hybrid' and '$(NetWivBlazorMode)' != 'WebAssembly'" Text="NetWivBlazorMode must be Hybrid or WebAssembly." />
+    <Error Condition="'$(NetWivBlazorMode)' == 'Hybrid' and '$(PublishAot)' == 'true' and '$(NetWivBlazorExperimentalAot)' != 'true'" Text="Hybrid NativeAOT is experimental. Set NetWivBlazorExperimentalAot=true explicitly, or publish managed Hybrid." />
+    <Error Condition="'$(NetWivBlazorExperimentalAot)' == 'true' and '$(NetWivBlazorMode)' != 'Hybrid'" Text="NetWivBlazorExperimentalAot requires NetWivBlazorMode=Hybrid." />
   </Target>
   <Target Name="BuildWebAssemblyUi" BeforeTargets="AssignTargetPaths" Condition="'$(NetWivBlazorMode)' == 'WebAssembly' and '$(NetWivBindingsOnly)' != 'true' and '$(DesignTimeBuild)' != 'true'">
     <Exec Command="dotnet publish &quot;$(MSBuildProjectDirectory)/../WebAssembly/WebAssembly.csproj&quot; -c &quot;$(Configuration)&quot; -p:PublishAot=false --disable-build-servers -nologo -v:q" />

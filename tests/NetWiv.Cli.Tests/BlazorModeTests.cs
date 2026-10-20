@@ -24,10 +24,11 @@ internal static class BlazorModeTests
             foreach (var (command, mode, outputName) in new (string[], string?, string?)[]
             {
                 (["build", "--no-bundle"], null, null),
-                (["build", "--no-bundle", "--aot", "--blazor-mode", "hybrid"], "Hybrid", null),
+                (["build", "--no-bundle", "--aot", "--blazor-mode", "hybrid", "--experimental-blazor-aot"], "Hybrid", null),
+                (["build", "--no-bundle", "--aot", "--blazor-mode", "WebAssembly"], "WebAssembly", null),
                 (["dev", "--no-watch", "--no-dev-server", "--blazor-mode", "WebAssembly"], "WebAssembly", null),
                 (["dev", "--no-watch", "--no-dev-server", "--aot"], null, "dev-aot"),
-                (["dev", "--no-watch", "--no-dev-server", "--aot", "--blazor-mode", "Hybrid"], "Hybrid", "dev-aot-hybrid"),
+                (["dev", "--no-watch", "--no-dev-server", "--aot", "--blazor-mode", "Hybrid", "--experimental-blazor-aot"], "Hybrid", "dev-aot-hybrid-experimental"),
                 (["dev", "--no-watch", "--no-dev-server", "--aot", "--blazor-mode", "WebAssembly"], "WebAssembly", "dev-aot-webassembly"),
             })
             {
@@ -43,6 +44,9 @@ internal static class BlazorModeTests
                     throw new InvalidOperationException("The explicit Blazor mode was not passed to MSBuild, or the default was overridden.");
                 if (command.Contains("--aot") && !arguments.Contains("-p:PublishAot=true"))
                     throw new InvalidOperationException("Selecting a Blazor mode changed the requested NativeAOT deployment.");
+                var experimental = command.Contains("--experimental-blazor-aot") ? "true" : "false";
+                if (arguments.Count(value => value.EndsWith("NetWivBlazorExperimentalAot=" + experimental, StringComparison.Ordinal)) != 1)
+                    throw new InvalidOperationException("Experimental Hybrid registration was not selected explicitly or was inherited unexpectedly.");
                 if (outputName is not null)
                 {
                     var outputPath = arguments[Array.IndexOf(arguments, "-o") + 1];
@@ -66,6 +70,25 @@ internal static class BlazorModeTests
             var result = await CliApp.RunAsync([command, "--blazor-mode", "invalid"], TextWriter.Null, errors, Path.GetTempPath());
             if (result == 0 || !errors.ToString().Contains("--blazor-mode must be Hybrid or WebAssembly", StringComparison.Ordinal))
                 throw new InvalidOperationException("An invalid Blazor mode reached project or runner processing.");
+        }
+    }
+
+    internal static async Task ExperimentalValidation()
+    {
+        foreach (var command in new[] { "build", "dev" })
+        foreach (var options in new string[][]
+        {
+            ["--experimental-blazor-aot"],
+            ["--aot", "--experimental-blazor-aot"],
+            ["--blazor-mode", "Hybrid", "--experimental-blazor-aot"],
+            ["--aot", "--blazor-mode", "WebAssembly", "--experimental-blazor-aot"],
+            ["--aot", "--blazor-mode", "Hybrid"],
+        })
+        {
+            var errors = new StringWriter();
+            var result = await CliApp.RunAsync([command, .. options], TextWriter.Null, errors, Path.GetTempPath());
+            if (result == 0 || !errors.ToString().Contains("--experimental-blazor-aot", StringComparison.Ordinal))
+                throw new InvalidOperationException("An invalid experimental Hybrid combination reached project or runner processing.");
         }
     }
 }

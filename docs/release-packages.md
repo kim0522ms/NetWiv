@@ -20,7 +20,7 @@ The archive contains:
 - `SOURCE.txt` with the source commit and `SHA256SUMS` for the extracted files.
 
 `NetWiv.BlazorHybrid` is an optional Windows integration supporting managed
-execution and explicitly registered NativeAOT Hybrid hosting. Its shared Razor
+execution by default and explicitly opted-in experimental NativeAOT Hybrid hosting. Its shared Razor
 UI can also use WebAssembly; that build excludes the Hybrid dependency.
 Other applications do not acquire the Microsoft
 WebView renderer through the ordinary NetWiv packages. See

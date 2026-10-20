@@ -38,6 +38,7 @@ var tests = new (string Name, Func<Task> Run)[]
 {
     ("Blazor mode forwards to build and managed or AOT development without changing defaults", BlazorModeTests.Forwarding),
     ("Blazor mode validates before project or runner processing", BlazorModeTests.Validation),
+    ("Blazor mode experimental AOT requires explicit deployment and Hybrid selection", BlazorModeTests.ExperimentalValidation),
     ("Windows installer options validate before hooks and tools", WindowsInstallerTests.Validation),
     ("Windows installer options render scope lifecycle and literal arguments", WindowsInstallerTests.Rendering),
     ("macOS targets configuration and metadata", MacOsTests.Configuration),
@@ -64,7 +65,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("new project creates a personalized package-only React application", NewProjectTests.CreateReact),
     ("new project defaults keep matching SDK and CLI versions", NewProjectTests.Defaults),
     ("new project covers every starter template and manager choice", NewProjectTests.TemplateMatrix),
-    ("new Blazor Hybrid project separates managed development and WebAssembly deployment", NewProjectTests.BlazorHybrid),
+    ("new Blazor Hybrid project defaults to managed hosting and gates experimental AOT", NewProjectTests.BlazorHybrid),
     ("new project rejects invalid arguments before writing files", NewProjectTests.InvalidInput),
     ("new project preserves existing files and honors cancellation", NewProjectTests.PreserveAndCancel),
     ("new project help list and shell completions are discoverable", NewProjectTests.Discovery),

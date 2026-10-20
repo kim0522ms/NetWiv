@@ -3,6 +3,7 @@
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <PublishAot>true</PublishAot>
+    <NetWivBlazorExperimentalAot>true</NetWivBlazorExperimentalAot>
     <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
     <TrimmerSingleWarn>false</TrimmerSingleWarn>
   </PropertyGroup>

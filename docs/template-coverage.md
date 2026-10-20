@@ -3,7 +3,7 @@
 `netwiv new` creates an application from one of six starters. The first five
 share a C# backend and first screen, written in their own framework. The
 optional Hybrid starter shares one Razor UI between managed development,
-statically registered NativeAOT Hybrid and WebAssembly deployment.
+optional experimental NativeAOT Hybrid and WebAssembly deployment.
 
 | Frontend | `--template` | Tooling | Screen source |
 | --- | --- | --- | --- |
@@ -41,12 +41,12 @@ the client's calls to them. See the [frontend SDK](frontend-api.md) and the
 license details.
 
 The `blazor-hybrid` starter uses `NetWiv.Hosting`, a shared Razor library and
-conditional desktop package references. `Debug` defaults to managed Hybrid;
-`Release` defaults to WebAssembly and can publish the desktop backend with
-NativeAOT. Override with `--blazor-mode Hybrid|WebAssembly` in the CLI or
+conditional desktop package references. Both `Debug` and `Release` default to
+managed Hybrid. WebAssembly can publish the desktop backend with NativeAOT. Override with `--blazor-mode Hybrid|WebAssembly` in the CLI or
 `-p:NetWivBlazorMode=Hybrid` / `-p:NetWivBlazorMode=WebAssembly` in MSBuild.
-Hybrid also supports NativeAOT through explicit component, generated JSON and
-callback registration. See [Blazor Hybrid](blazor-hybrid.md) for its registration
+Hybrid NativeAOT remains experimental and requires `--aot --blazor-mode Hybrid
+--experimental-blazor-aot` or the `NetWivBlazorExperimentalAot=true` MSBuild property,
+plus explicit component, generated JSON and callback registration. See [Blazor Hybrid](blazor-hybrid.md) for its registration
 requirements, AOT limitations and trusted-code boundaries.
 
 ## The starter screen

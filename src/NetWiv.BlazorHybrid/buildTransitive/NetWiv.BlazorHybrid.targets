@@ -3,8 +3,11 @@
     <JsonSerializerIsReflectionEnabledByDefault Condition="'$(JsonSerializerIsReflectionEnabledByDefault)' == ''">false</JsonSerializerIsReflectionEnabledByDefault>
   </PropertyGroup>
   <Target Name="NetWivValidateBlazorHybridNativeAot" BeforeTargets="PrepareForBuild;PrepareForPublish"
-          Condition="'$(PublishAot)' == 'true' and '$(JsonSerializerIsReflectionEnabledByDefault)' == 'true'">
-    <Error Text="NetWiv.BlazorHybrid NativeAOT requires source-generated JSON metadata. Use AddNetWivBlazorHybridAot and set JsonSerializerIsReflectionEnabledByDefault=false." />
+          Condition="'$(PublishAot)' == 'true'">
+    <Error Condition="'$(NetWivBlazorExperimentalAot)' != 'true'"
+           Text="NetWiv.BlazorHybrid NativeAOT hosting is experimental. Use managed Hybrid by default. To opt in, set NetWivBlazorExperimentalAot=true and register AddNetWivBlazorHybridAot explicitly." />
+    <Error Condition="'$(JsonSerializerIsReflectionEnabledByDefault)' == 'true'"
+           Text="Experimental NetWiv.BlazorHybrid NativeAOT requires source-generated JSON metadata. Use AddNetWivBlazorHybridAot and set JsonSerializerIsReflectionEnabledByDefault=false." />
   </Target>
   <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)../licenses/dotnet-runtime-MIT.txt')">
     <None Include="$(MSBuildThisFileDirectory)../licenses/dotnet-runtime-MIT.txt"

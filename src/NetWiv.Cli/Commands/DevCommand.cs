@@ -10,13 +10,15 @@ internal static class DevCommand
 {
     public static async Task<int> RunAsync(string[] args, TextWriter output, string workingDirectory, CancellationToken cancellationToken)
     {
-        if (args.Contains("--help")) { await output.WriteLineAsync("Usage: netwiv dev [--release] [--no-watch] [--aot] [--blazor-mode Hybrid|WebAssembly] [--no-dev-server] [--port PORT] [-t TARGET] [-c CONFIG] [-f FEATURES] [-- APP_ARGS]"); return 0; }
+        if (args.Contains("--help")) { await output.WriteLineAsync("Usage: netwiv dev [--release] [--no-watch] [--aot] [--blazor-mode Hybrid|WebAssembly] [--experimental-blazor-aot] [--no-dev-server] [--port PORT] [-t TARGET] [-c CONFIG] [-f FEATURES] [-- APP_ARGS]"); return 0; }
         var arguments = new CommandArguments(args);
         var appArguments = arguments.TakeAfterSeparator();
         var release = arguments.TakeFlag("--release");
         var noWatch = arguments.TakeFlag("--no-watch");
         var aot = arguments.TakeFlag("--aot");
         var blazorMode = CommandConfig.BlazorMode(arguments.TakeOption("--blazor-mode"));
+        var experimentalBlazorAot = arguments.TakeFlag("--experimental-blazor-aot");
+        CommandConfig.ValidateBlazorAot(aot, blazorMode, experimentalBlazorAot);
         var runner = arguments.TakeOption("--runner", "-r");
         var featuresArg = arguments.TakeOption("--features", "-f");
         var (config, target) = CommandConfig.Load(arguments, workingDirectory);
@@ -60,7 +62,7 @@ internal static class DevCommand
             if (!noDevServerWait && devUrl is not null) await WaitForUrlAsync(devUrl, cancellationToken);
 
             if (aot)
-                return await RunAotAsync(config, target, project, release, !noWatch, additionalWatch, featuresArg, blazorMode, appArguments, runner, environment, devUrl, output, cancellationToken);
+                return await RunAotAsync(config, target, project, release, !noWatch, additionalWatch, featuresArg, blazorMode, experimentalBlazorAot, appArguments, runner, environment, devUrl, output, cancellationToken);
 
             configurationChanges = noWatch ? null : WatchConfiguration(config);
             while (true)
@@ -103,6 +105,7 @@ internal static class DevCommand
                 processArgs.AddRange(["-c", release ? "Release" : "Debug", "--property:NetWivFeatures=\"" + string.Join("%3B", features) + "\""]);
                 processArgs.Add("--property:NetWivDevelopment=true");
                 if (blazorMode is not null) processArgs.Add($"--property:NetWivBlazorMode={blazorMode}");
+                processArgs.Add("--property:NetWivBlazorExperimentalAot=false");
                 if (!noWatch && watchFolders.Count > 0) processArgs.Add("--property:NetWivAdditionalWatchItems=" + string.Join("%3B", watchFolders.Select(path => Path.Combine(path, "**", "*"))));
                 processArgs.Add($"--property:NetWivConfigPath={effectiveConfig}");
                 processArgs.Add($"--property:NetWivResourceBaseDirectory={config.ConfigDirectory}");
@@ -143,9 +146,10 @@ internal static class DevCommand
         }
     }
 
-    private static async Task<int> RunAotAsync(ConfigDocument config, BuildTarget target, string project, bool release, bool watch, IReadOnlyList<string> additionalWatchFolders, string? featuresArg, string? blazorMode, IReadOnlyList<string> appArgs, string? runner, IReadOnlyDictionary<string, string?> environment, string? developmentUrl, TextWriter output, CancellationToken cancellationToken)
+    private static async Task<int> RunAotAsync(ConfigDocument config, BuildTarget target, string project, bool release, bool watch, IReadOnlyList<string> additionalWatchFolders, string? featuresArg, string? blazorMode, bool experimentalBlazorAot, IReadOnlyList<string> appArgs, string? runner, IReadOnlyDictionary<string, string?> environment, string? developmentUrl, TextWriter output, CancellationToken cancellationToken)
     {
         var outputName = blazorMode is null ? "dev-aot" : "dev-aot-" + blazorMode.ToLowerInvariant();
+        if (experimentalBlazorAot) outputName += "-experimental";
         var outputDirectory = Path.Combine(config.ProjectDirectory, "target", target.RequestedTarget, release ? "release" : "debug", outputName);
         var effectiveConfig = string.Empty;
         var artifactsDirectory = Path.Combine(config.ProjectDirectory, "target", target.RequestedTarget, "msbuild-artifacts-dev");
@@ -182,6 +186,7 @@ internal static class DevCommand
             var features = CommandConfig.Features(config, featuresArg);
             var publish = new List<string> { "publish", project, "-c", release ? "Release" : "Debug", "-r", target.RuntimeIdentifier, "--self-contained", "true", "-p:PublishAot=true", "-p:NetWivDevelopment=true", $"-p:NetWivFeatures={string.Join("%3B", features)}", $"-p:NetWivConfigPath={effectiveConfig}", $"-p:NetWivResourceBaseDirectory={config.ConfigDirectory}", "--artifacts-path", artifactsDirectory, "-o", outputDirectory };
             if (blazorMode is not null) publish.Add($"-p:NetWivBlazorMode={blazorMode}");
+            publish.Add($"-p:NetWivBlazorExperimentalAot={experimentalBlazorAot.ToString().ToLowerInvariant()}");
             if (config.String("mainBinaryName") is { } mainBinaryName) publish.Add($"-p:AssemblyName={mainBinaryName}");
             if (developmentUrl is null && config.String("build", "frontendDist") is { } frontend && !Uri.TryCreate(frontend, UriKind.Absolute, out _))
                 publish.Add($"-p:NetWivFrontendDist={Path.GetFullPath(frontend, config.ConfigDirectory)}");

@@ -119,55 +119,67 @@ internal static class BlazorHybridTemplate
         # {{name}}
 
         Open `{{name}}.sln` and select the `{{name}}` desktop project as the startup
-        project, or run `dotnet run --project src-netwiv`. Debug defaults to managed
-        Blazor Hybrid on Windows x64/WebView2. Set breakpoints in `Shared/App.razor`,
-        `Shared/App.razor.cs` and `src-netwiv/GreetingCommands.cs` to follow a Razor
-        event, generated typed IPC call and desktop command in the same process.
+        project, or run `dotnet run --project src-netwiv`. Both Debug and Release
+        default to managed Blazor Hybrid on Windows x64/WebView2. The host uses
+        `AddNetWivBlazorHybrid` and standard `DotNetObjectReference` through the
+        shared reference factory. No static component or callback registry is
+        needed for this default path.
 
-        The Hybrid host references `NetWiv.BlazorHybrid` and registers it with
-        `AddNetWivBlazorHybridAot`. Its explicit registrations are shared by
-        managed development and NativeAOT publishing.
+        Set breakpoints in `Shared/App.razor`, `Shared/App.razor.cs` and
+        `src-netwiv/GreetingCommands.cs` to follow a Razor event, generated typed
+        IPC call and desktop command in the same process.
 
-        The same shared Razor library runs as WebAssembly when building Release:
+        ```powershell
+        dotnet run --project src-netwiv -c Debug
+        dotnet run --project src-netwiv -c Release
+        dotnet tool restore
+        dotnet tool run netwiv -- build --no-bundle
+        ```
+
+        Choose the separate WebAssembly UI explicitly. NativeAOT then applies
+        only to the desktop backend; that graph excludes the Hybrid package:
 
         ```powershell
         dotnet run --project src-netwiv -c Debug -p:NetWivBlazorMode=WebAssembly
-        dotnet publish src-netwiv -c Release -r win-x64 -p:PublishAot=true
+        dotnet tool run netwiv -- build --no-bundle --aot --blazor-mode WebAssembly
         ```
 
-        NativeAOT applies to the desktop backend, not the WebAssembly UI. The release
-        dependency graph excludes the optional Hybrid package. Explicitly select
-        Hybrid with `-p:NetWivBlazorMode=Hybrid`. The same statically registered
-        Hybrid renderer can also be published as NativeAOT:
+        Hybrid NativeAOT is experimental and requires an explicit opt-in:
 
         ```powershell
-        dotnet publish src-netwiv -c Release -r win-x64 -p:NetWivBlazorMode=Hybrid -p:PublishAot=true
-        dotnet tool run netwiv -- build --no-bundle --aot --blazor-mode Hybrid
+        dotnet publish src-netwiv -c Release -r win-x64 -p:NetWivBlazorMode=Hybrid -p:PublishAot=true -p:NetWivBlazorExperimentalAot=true
+        dotnet tool run netwiv -- build --no-bundle --aot --blazor-mode Hybrid --experimental-blazor-aot
+        dotnet tool run netwiv -- dev --aot --blazor-mode Hybrid --experimental-blazor-aot
         ```
 
-        Hybrid registers its components, JSON metadata and instance callbacks in
-        `src-netwiv/HybridUiRegistration.cs`. Register each added concrete component
-        and closed generic child there. There is no registration source generator.
-        The sample uses manual form validation and statically selected navigation
-        views. Router assembly discovery, NavigationLock and location-changing
-        guards are unsupported by this Hybrid host. Copy additional Razor library
-        `_content` assets explicitly; Debug static-web-asset manifests are not discovered.
-        WebAssembly keeps its separate dependency graph.
-        Both modes call commands through the same `@netwiv/api` opaque JSON bridge.
+        `--experimental-blazor-aot` requires both `--aot` and explicit
+        `--blazor-mode Hybrid`. The MSBuild opt-in selects
+        `AddNetWivBlazorHybridAot`, an owned `BlazorAotObjectReference` lease and
+        generated JSON metadata, and disables JSON reflection. Its registrations
+        live in `src-netwiv/HybridUiRegistration.cs`. Register every new concrete
+        component, closed generic child, DTO and callback there; no registration
+        source generator is provided. Router assembly discovery, NavigationLock
+        and location-changing guards are unsupported by this experimental host.
+        Copy additional Razor library `_content` assets explicitly; it does not
+        discover Debug static-web-asset manifests. Arbitrary Razor libraries are
+        not guaranteed to support this path.
 
-        Increment, edit the name and call Greet. Try invalid and valid form submissions,
-        navigate to Details and Home, and roundtrip the nested DTO through its instance
-        callback. Read the document title, reload and close the window.
-        Reload resets the UI count and scope ID while the backend call count continues.
-        Hybrid page-scoped services are disposed on reattachment and shutdown.
-        Interactive rendering, disposal and debugger acceptance must be validated in
-        the target desktop session; a successful build alone does not verify them.
+        Desktop output and restore roots are separated by host flavor under
+        `bin/Hybrid/`, `bin/HybridExperimentalAot/` and `bin/WebAssembly/`, and
+        corresponding `obj/` folders. CLI artifacts also separate these flavors.
+        Explicit experimental AOT development uses `dev-aot-hybrid-experimental`;
+        explicit WebAssembly AOT development uses `dev-aot-webassembly`.
 
-        `dotnet tool restore` then `dotnet tool run netwiv -- build --no-bundle --aot`
-        also publishes the default WebAssembly release. No frontend server or npm
-        installation is required. Use your NetWiv NuGet feed for package restore.
-        `netwiv dev --blazor-mode Hybrid` selects Hybrid explicitly; add `--aot` to
-        publish and run its native development executable.
+        Both UI modes call commands through the same `@netwiv/api` opaque JSON
+        bridge. Try Increment, edit the name and call Greet. Submit invalid and
+        valid forms, navigate to Details and Home, and roundtrip the nested DTO
+        through its instance callback. Read the document title, reload and close.
+        Reload resets the UI count and scope ID while the backend count continues.
+        Hybrid page scopes are disposed on reattachment and shutdown.
+
+        Interactive rendering, disposal and debugger acceptance require target
+        desktop validation. A successful build does not prove them. No frontend
+        server or npm installation is needed. Use your NetWiv feed for restore.
 
         TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.
         NetWiv is independent and is not affiliated with, endorsed by, or officially

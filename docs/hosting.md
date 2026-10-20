@@ -107,9 +107,10 @@ extension methods written for that interface work unchanged.
 
 The optional [NetWiv.BlazorHybrid host](blazor-hybrid.md) uses the same root
 provider with a separate scope for each Razor page. On Windows x64,
-`AddNetWivBlazorHybrid()` selects the managed host;
-`AddNetWivBlazorHybridAot(...)` uses explicit component, generated JSON and
-callback registrations for managed development and NativeAOT deployment.
+`AddNetWivBlazorHybrid()` selects the default managed host;
+`AddNetWivBlazorHybridAot(...)` selects a separate experimental host with explicit
+component, generated JSON and callback registrations. NativeAOT publishing also
+requires `NetWivBlazorExperimentalAot=true`.
 Its platform and component-library limits are separate from the Hosting
 package's own NativeAOT support.
 

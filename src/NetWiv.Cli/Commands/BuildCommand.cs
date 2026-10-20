@@ -6,13 +6,15 @@ internal static class BuildCommand
 {
     public static async Task<int> RunAsync(string[] args, TextWriter output, string workingDirectory, CancellationToken cancellationToken)
     {
-        if (args.Contains("--help")) { await output.WriteLineAsync("Usage: netwiv build [--debug] [--aot | --framework-dependent] [--blazor-mode Hybrid|WebAssembly] [--no-bundle] [-b BUNDLES] [-t TARGET] [-c CONFIG] [-f FEATURES] [-- RUNNER_ARGS]"); return 0; }
+        if (args.Contains("--help")) { await output.WriteLineAsync("Usage: netwiv build [--debug] [--aot | --framework-dependent] [--blazor-mode Hybrid|WebAssembly] [--experimental-blazor-aot] [--no-bundle] [-b BUNDLES] [-t TARGET] [-c CONFIG] [-f FEATURES] [-- RUNNER_ARGS]"); return 0; }
         var arguments = new CommandArguments(args);
         var runnerArgs = arguments.TakeAfterSeparator();
         var debug = arguments.TakeFlag("--debug", "-d");
         var noBundle = arguments.TakeFlag("--no-bundle");
         var aot = arguments.TakeFlag("--aot");
         var blazorMode = CommandConfig.BlazorMode(arguments.TakeOption("--blazor-mode"));
+        var experimentalBlazorAot = arguments.TakeFlag("--experimental-blazor-aot");
+        CommandConfig.ValidateBlazorAot(aot, blazorMode, experimentalBlazorAot);
         var frameworkDependent = arguments.TakeFlag("--framework-dependent");
         if (aot && frameworkDependent) throw new ArgumentException("--aot cannot be combined with --framework-dependent.");
         var noSign = arguments.TakeFlag("--no-sign");
@@ -60,6 +62,7 @@ internal static class BuildCommand
             publishArguments.Add($"-p:NetWivFrontendDist={Path.GetFullPath(frontend, config.ConfigDirectory)}");
         publishArguments.AddRange(runnerArgs);
         if (blazorMode is not null) publishArguments.Add($"-p:NetWivBlazorMode={blazorMode}");
+        publishArguments.Add($"-p:NetWivBlazorExperimentalAot={experimentalBlazorAot.ToString().ToLowerInvariant()}");
         // CLI deployment modes are authoritative even for older AOT-first templates.
         publishArguments.AddRange(["--self-contained", frameworkDependent ? "false" : "true",
             $"-p:PublishAot={aot.ToString().ToLowerInvariant()}",

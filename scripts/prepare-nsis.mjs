@@ -30,7 +30,7 @@ for (let attempt = 1; attempt <= 3; attempt++) {
     const transient = status === 408 || status === 429 || (status >= 500 && status <= 599) ||
       error.name === 'TimeoutError' || error.name === 'AbortError' ||
       ['UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT',
-        'UND_ERR_SOCKET', 'ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN'].includes(error.cause?.code)
+        'UND_ERR_SOCKET', 'ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EAI_AGAIN'].includes(error.cause?.code)
     if (!transient || attempt === 3) throw error
     console.warn(`NSIS download attempt ${attempt}/3 failed temporarily; retrying`)
     await setTimeout(attempt * 1000)

@@ -39,6 +39,7 @@ function fixture(t, script) {
       appendFileSync('downloads.log', url + '\\n')
       const failure = failures.shift()
       if (failure === 'timeout') throw new TypeError('fetch failed', { cause: { code: 'UND_ERR_CONNECT_TIMEOUT' } })
+      if (failure === 'refused') throw new TypeError('fetch failed', { cause: { code: 'ECONNREFUSED' } })
       if (failure === 'tls') throw new TypeError('fetch failed', { cause: { code: 'CERT_HAS_EXPIRED' } })
       if (failure === 'body') return {
         ok: true,
@@ -158,7 +159,7 @@ test('NSIS prepares the pinned compiler and exports its directory', t => {
   assert.equal(readFileSync(pathFile, 'utf8'), `${path.join(realpathSync(f.directory), 'artifacts/tools/nsis-3.11/nsis-3.11')}\n`)
 })
 
-for (const failures of [['timeout', 503], ['body'], [408], [429]]) {
+for (const failures of [['timeout', 503], ['refused'], ['body'], [408], [429]]) {
   test(`NSIS retries transient download failures: ${failures.join(', ')}`, t => {
     const f = fixture(t, 'prepare-nsis.mjs')
     const source = readFileSync(path.join(root, 'scripts/prepare-nsis.mjs'), 'utf8')
@@ -176,6 +177,7 @@ for (const failures of [['timeout', 503], ['body'], [408], [429]]) {
 
 for (const [label, failures, attempts, tamper] of [
   ['persistent connection timeout', ['timeout', 'timeout', 'timeout'], 3, false],
+  ['persistent connection refusal', ['refused', 'refused', 'refused'], 3, false],
   ['persistent HTTP 503', [503, 503, 503], 3, false],
   ['HTTP 404', [404], 1, false],
   ['TLS verification failure', ['tls'], 1, false],

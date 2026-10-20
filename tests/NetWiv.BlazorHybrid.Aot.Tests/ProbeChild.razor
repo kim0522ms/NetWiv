@@ -1,0 +1,10 @@
+@namespace NetWiv.BlazorHybrid.Aot.Tests
+@using Microsoft.AspNetCore.Components
+@inject ProofScope Scope
+
+<output id="cascade" data-same-scope="@(ReferenceEquals(Scope, CounterComponent.CapturedScope).ToString())">@Label:@Value</output>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [CascadingParameter] public string Value { get; set; } = "";
+}

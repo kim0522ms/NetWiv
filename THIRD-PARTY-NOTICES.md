@@ -5,7 +5,8 @@ licenses; this file does not relicense them.
 
 | Component | Origin | License / notice location |
 | --- | --- | --- |
-| Microsoft.AspNetCore.Components.WebView 8.0.32, reused by optional NetWiv.Blazor | https://github.com/dotnet/aspnetcore/tree/v8.0.32/src/Components/WebView/WebView | MIT; NuGet package license; upstream renderer and embedded JavaScript are used without modification |
+| Microsoft.AspNetCore.Components.WebView 8.0.32, reused by optional NetWiv.BlazorHybrid | https://github.com/dotnet/aspnetcore/tree/v8.0.32/src/Components/WebView/WebView | MIT; NuGet package license; upstream renderer and embedded JavaScript are used without modification |
+| ASP.NET Core 8.0.32 render-batch serialization, DOM event readers, navigation and WebView renderer shell, adapted in `src/NetWiv.BlazorHybrid/Aot/Hosting` | https://github.com/dotnet/aspnetcore/tree/7413d24330774263a78a4f3837ca53493518455a/src/Components | MIT; `licenses/dotnet-runtime-MIT.txt`, included in NetWiv.BlazorHybrid; exact source origins and adaptations in `src/NetWiv.BlazorHybrid/Aot/Hosting/README.md` |
 | TAURI® API, configuration schema, permission/API declarations and reference runtime | https://github.com/tauri-apps/tauri | MIT OR Apache-2.0; pinned source in `compatibility/upstream-lock.json`; copied API license texts accompany its JavaScript |
 | Tauri desktop plugin guests, privately bundled in `@netwiv/api` | https://github.com/tauri-apps/plugins-workspace | MIT OR Apache-2.0; pins in `compatibility/upstream-lock.json`, notices in `packages/api/THIRD-PARTY-NOTICES.md` |
 | wry | https://github.com/tauri-apps/wry | MIT OR Apache-2.0 |

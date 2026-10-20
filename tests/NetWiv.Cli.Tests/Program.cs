@@ -36,6 +36,8 @@ if (Environment.GetEnvironmentVariable("NETWIV_RUNNER_PROBE_OUTPUT") is { } runn
 
 var tests = new (string Name, Func<Task> Run)[]
 {
+    ("Blazor mode forwards to build and managed or AOT development without changing defaults", BlazorModeTests.Forwarding),
+    ("Blazor mode validates before project or runner processing", BlazorModeTests.Validation),
     ("Windows installer options validate before hooks and tools", WindowsInstallerTests.Validation),
     ("Windows installer options render scope lifecycle and literal arguments", WindowsInstallerTests.Rendering),
     ("macOS targets configuration and metadata", MacOsTests.Configuration),

@@ -10,6 +10,10 @@ export function readDocumentTitle() {
     return document.title;
 }
 
+export async function roundtrip(reference, request) {
+    return reference.invokeMethodAsync('DescribeAsync', request);
+}
+
 export function reload() {
     window.location.reload();
 }

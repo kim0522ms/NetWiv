@@ -2,8 +2,8 @@
 
 `netwiv new` creates an application from one of six starters. The first five
 share a C# backend and first screen, written in their own framework. The
-optional Hybrid starter shares one Razor UI between managed development and
-WebAssembly deployment.
+optional Hybrid starter shares one Razor UI between managed development,
+statically registered NativeAOT Hybrid and WebAssembly deployment.
 
 | Frontend | `--template` | Tooling | Screen source |
 | --- | --- | --- | --- |
@@ -12,7 +12,7 @@ WebAssembly deployment.
 | Svelte + TypeScript | `svelte` | Vite, npm | `src/App.svelte` |
 | Angular | `angular` | Angular CLI, npm | `src/app.ts` |
 | Blazor WebAssembly | `blazor` | Selected .NET SDK (8, 9 or 10) | `frontend/Pages/Home.razor` |
-| Blazor Hybrid development / WebAssembly deployment | `blazor-hybrid` | .NET SDK; Hybrid runs on Windows x64/WebView2 | `Shared/App.razor` |
+| Blazor Hybrid / WebAssembly | `blazor-hybrid` | .NET SDK; Hybrid runs on Windows x64/WebView2 | `Shared/App.razor` |
 
 The TypeScript starters accept `--manager npm|pnpm|yarn|bun|deno`; Blazor accepts
 only `dotnet`. Default npm projects include lockfiles; other package managers
@@ -43,9 +43,11 @@ license details.
 The `blazor-hybrid` starter uses `NetWiv.Hosting`, a shared Razor library and
 conditional desktop package references. `Debug` defaults to managed Hybrid;
 `Release` defaults to WebAssembly and can publish the desktop backend with
-NativeAOT. Override with `-p:NetWivBlazorMode=Hybrid` or
-`-p:NetWivBlazorMode=WebAssembly`. Hybrid explicitly rejects NativeAOT. See
-[Blazor Hybrid](blazor-hybrid.md) for its trusted-code and platform boundaries.
+NativeAOT. Override with `--blazor-mode Hybrid|WebAssembly` in the CLI or
+`-p:NetWivBlazorMode=Hybrid` / `-p:NetWivBlazorMode=WebAssembly` in MSBuild.
+Hybrid also supports NativeAOT through explicit component, generated JSON and
+callback registration. See [Blazor Hybrid](blazor-hybrid.md) for its registration
+requirements, AOT limitations and trusted-code boundaries.
 
 ## The starter screen
 
@@ -70,7 +72,7 @@ Their smoke tests start the app with `--smoke-test`, which opens the window with
 The original five starters target Windows x64, Linux x64 and macOS arm64 through Wry.
 macOS applications require a main-thread `App.Run()` and matching native RID
 assets; see [macOS](macos.md).
-Hybrid development currently supports Windows x64 only; its shared WebAssembly
+Hybrid execution currently supports Windows x64 only; its shared WebAssembly
 release keeps the ordinary desktop backend. Other platforms' Hybrid execution
 is explicitly unsupported, and cross-platform acceptance of that starter is
 unverified.
@@ -79,6 +81,8 @@ CI generates every starter on Linux and builds and type-checks the four
 TypeScript frontends. The React starter also runs the GUI/IPC smoke test and the
 package-consumer checks. The Blazor frontend is generated but not compiled in CI.
 GUI acceptance on every platform is not complete for any starter.
+The product Hybrid adapter has a separate Windows NativeAOT WebView2 CI check;
+local acceptance also covers a CLI-generated NuGet Hybrid consumer.
 Read [support and validation](implementation-status.md).
 
 The separate `NetWiv.Templates` package for direct `dotnet new` use provides only

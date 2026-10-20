@@ -5,7 +5,7 @@ using NetWiv.Platform.Desktop;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 #if NETWIV_BLAZOR_HYBRID
-using NetWiv.Blazor;
+using NetWiv.BlazorHybrid;
 using NetWiv.BlazorHybrid.Shared;
 #endif
 
@@ -30,8 +30,9 @@ internal static class Program
             .Capability(new("main-close", ["core:window:allow-close"], Webviews: ["main"]));
 
 #if NETWIV_BLAZOR_HYBRID
-        builder.Services.AddNetWivBlazor();
+        builder.Services.AddNetWivBlazorHybridAot(HybridUiRegistration.Configure);
         builder.Services.AddSampleUi();
+        builder.Services.AddScoped<IUiInteropReferenceFactory, HybridUiInteropReferenceFactory>();
         var options = new BlazorWebViewOptions
         {
             HostPage = Path.Combine(AppContext.BaseDirectory, "wwwroot", "index.html"),

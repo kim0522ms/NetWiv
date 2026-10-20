@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>NetWiv.BlazorHybrid</PackageId>
+    <Description>Blazor Hybrid hosting for NetWiv on Windows, with managed and statically configured NativeAOT execution.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../NetWiv.Core/NetWiv.Core.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="[8.0.32]" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="8.0.0" />
+    <InternalsVisibleTo Include="NetWiv.BlazorHybrid.Tests" />
+    <InternalsVisibleTo Include="NetWiv.BlazorHybrid.Aot.Tests" />
+    <None Include="../../licenses/dotnet-runtime-MIT.txt" Pack="true" PackagePath="licenses/" />
+    <None Include="buildTransitive/NetWiv.BlazorHybrid.targets" Pack="true" PackagePath="buildTransitive/NetWiv.BlazorHybrid.targets" />
+  </ItemGroup>
+</Project>

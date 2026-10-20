@@ -6,6 +6,14 @@ namespace NetWiv.Cli;
 
 internal static class CommandConfig
 {
+    internal static string? BlazorMode(string? value) => value switch
+    {
+        null => null,
+        _ when value.Equals("Hybrid", StringComparison.OrdinalIgnoreCase) => "Hybrid",
+        _ when value.Equals("WebAssembly", StringComparison.OrdinalIgnoreCase) => "WebAssembly",
+        _ => throw new ArgumentException("--blazor-mode must be Hybrid or WebAssembly.")
+    };
+
     public static (ConfigDocument Config, Build.Execution.BuildTarget Target) Load(CommandArguments arguments, string workingDirectory)
     {
         var overlays = arguments.TakeOptions("--config", "-c");

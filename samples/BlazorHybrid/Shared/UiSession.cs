@@ -22,6 +22,7 @@ public static class SharedServices
     {
         services.AddScoped<NetWivCommands>();
         services.AddScoped<UiSession>();
+        services.AddScoped<UiInteropCallbacks>();
         return services;
     }
 }

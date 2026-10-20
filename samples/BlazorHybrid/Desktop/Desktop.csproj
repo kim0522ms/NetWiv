@@ -4,6 +4,7 @@
     <AssemblyName>NetWiv.BlazorHybrid.Desktop</AssemblyName>
     <RootNamespace>NetWiv.BlazorHybrid.Desktop</RootNamespace>
     <RollForward>Major</RollForward>
+    <JsonSerializerIsReflectionEnabledByDefault Condition="'$(NetWivBlazorMode)' == 'Hybrid'">false</JsonSerializerIsReflectionEnabledByDefault>
     <NetWivCSharpBindingsDirectory>../Shared/obj/netwiv/$(Configuration)</NetWivCSharpBindingsDirectory>
     <DefineConstants Condition="'$(NetWivBlazorMode)' == 'Hybrid' and '$(NetWivBindingsOnly)' != 'true'">$(DefineConstants);NETWIV_BLAZOR_HYBRID</DefineConstants>
   </PropertyGroup>
@@ -15,7 +16,7 @@
     <ProjectReference Include="../Contracts/Contracts.csproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(NetWivBlazorMode)' == 'Hybrid' and '$(NetWivBindingsOnly)' != 'true'">
-    <ProjectReference Include="../../../src/NetWiv.Blazor/NetWiv.Blazor.csproj" />
+    <ProjectReference Include="../../../src/NetWiv.BlazorHybrid/NetWiv.BlazorHybrid.csproj" />
     <ProjectReference Include="../Shared/Shared.csproj" />
     <Content Include="wwwroot/**/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../Shared/Assets/**/*" Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
@@ -24,7 +25,6 @@
   <Import Project="../../../src/NetWiv.Build/buildTransitive/NetWiv.Build.targets" />
   <Target Name="ValidateBlazorMode" BeforeTargets="PrepareForBuild">
     <Error Condition="'$(NetWivBlazorMode)' != 'Hybrid' and '$(NetWivBlazorMode)' != 'WebAssembly'" Text="NetWivBlazorMode must be Hybrid or WebAssembly." />
-    <Error Condition="'$(NetWivBlazorMode)' == 'Hybrid' and '$(PublishAot)' == 'true'" Text="Blazor Hybrid requires managed .NET. Use NetWivBlazorMode=WebAssembly for NativeAOT desktop publishing." />
   </Target>
   <Target Name="BuildWebAssemblyUi" BeforeTargets="AssignTargetPaths" Condition="'$(NetWivBlazorMode)' == 'WebAssembly' and '$(NetWivBindingsOnly)' != 'true' and '$(DesignTimeBuild)' != 'true'">
     <Exec Command="dotnet publish &quot;$(MSBuildProjectDirectory)/../WebAssembly/WebAssembly.csproj&quot; -c &quot;$(Configuration)&quot; -p:PublishAot=false --disable-build-servers -nologo -v:q" />

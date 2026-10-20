@@ -3,10 +3,17 @@
 Install `NetWiv.Cli` as a .NET tool to create applications with `netwiv new`.
 It provides [six starter templates](template-coverage.md): React, Vue, Svelte
 and Angular with TypeScript, Blazor WebAssembly, and optional Windows Blazor
-Hybrid development. The default is React + Vite + C# with
+Hybrid with managed or NativeAOT hosting. The default is React + Vite + C# with
 the `@netwiv/api` desktop frontend SDK. TypeScript starters include a portable
 vendored package, installed by `npm ci`; generated bindings import its core
 module. See [frontend SDK](frontend-api.md). No starter requires Rust or Cargo.
+
+The `blazor-hybrid` starter uses `NetWiv.BlazorHybrid` and a shared Razor
+library instead of the React layout below. It defaults to managed Hybrid in
+Debug and WebAssembly in Release. Use `--blazor-mode Hybrid` with `netwiv dev`
+or `netwiv build` to select Hybrid explicitly; add `--aot` for native compilation.
+See the [Hybrid guide](blazor-hybrid.md) for registration requirements and
+Windows-only support.
 
 Prepare a package feed using the [quickstart](integration-quickstart.md).
 Replace `$feed` and `$version` with actual values, then run from the parent

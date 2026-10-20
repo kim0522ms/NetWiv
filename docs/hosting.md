@@ -105,9 +105,13 @@ extension methods written for that interface work unchanged.
 `NetWivApplication` exposes `Services`, `Configuration`, `Environment`,
 `Lifetime`, `Logger`, the underlying `App` and its `Handle`.
 
-An optional [Blazor Hybrid host](blazor-hybrid.md) uses the same root provider
-with a separate scope for each Razor page. It is managed-only on Windows;
-this does not change the Hosting package's own NativeAOT support.
+The optional [NetWiv.BlazorHybrid host](blazor-hybrid.md) uses the same root
+provider with a separate scope for each Razor page. On Windows x64,
+`AddNetWivBlazorHybrid()` selects the managed host;
+`AddNetWivBlazorHybridAot(...)` uses explicit component, generated JSON and
+callback registrations for managed development and NativeAOT deployment.
+Its platform and component-library limits are separate from the Hosting
+package's own NativeAOT support.
 
 ## Commands and services
 

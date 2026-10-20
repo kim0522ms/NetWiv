@@ -4,9 +4,11 @@ NetWiv consumer applications can use the regular .NET runtime or NativeAOT.
 The framework remains AOT-compatible; using its libraries does not require an
 application or its dependencies to be AOT-compatible.
 
-The optional [Blazor Hybrid package](blazor-hybrid.md) requires managed .NET.
-Its shared UI can instead be built as Blazor WebAssembly for a NativeAOT
-desktop backend; that build must exclude the Hybrid package reference.
+The optional [Blazor Hybrid package](blazor-hybrid.md) supports managed .NET and
+NativeAOT on Windows x64/WebView2. NativeAOT Hybrid applications use
+`AddNetWivBlazorHybridAot` with explicit component, JSON metadata and interop
+registrations. The shared UI can also run as Blazor WebAssembly with a NativeAOT
+desktop backend; that mode excludes the Hybrid package reference.
 
 ## Choose a publishing mode
 
@@ -18,6 +20,19 @@ dotnet tool run netwiv -- build --no-bundle                       # self-contain
 dotnet tool run netwiv -- build --framework-dependent --no-bundle # installed .NET runtime
 dotnet tool run netwiv -- build --aot --no-bundle                 # NativeAOT
 ```
+
+For the `blazor-hybrid` starter, Release defaults to WebAssembly. Select either
+execution mode explicitly:
+
+```sh
+dotnet tool run netwiv -- build --no-bundle --aot --blazor-mode Hybrid
+dotnet tool run netwiv -- build --no-bundle --aot --blazor-mode WebAssembly
+```
+
+The execution mode and `--aot` deployment choice are independent;
+an explicit CLI mode overrides the project default and forwarded MSBuild mode
+arguments. See the [Hybrid registration requirements and supported behavior](blazor-hybrid.md)
+before adding components or third-party Razor libraries.
 
 | Mode | Runtime on the destination | Consumer dependency requirements |
 | --- | --- | --- |

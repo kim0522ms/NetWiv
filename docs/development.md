@@ -190,8 +190,10 @@ and still check every manager and the full discovery list. Unselected
 template combinations are not claimed as passes on those hosts. The full
 generator suite runs on Windows, Linux and macOS ARM, plus SDK 9/10.
 The optional `blazor-hybrid` starter has a separate CLI generation regression;
-Windows runs the 18-case `NetWiv.Blazor.Tests` managed transport and lifecycle
-harness. These checks do not establish IDE or cross-platform Hybrid acceptance.
+Windows runs the `NetWiv.BlazorHybrid.Tests` managed transport and lifecycle
+harness and publishes and executes `NetWiv.BlazorHybrid.Aot.Tests`, including
+its native WebView2 mode. These checks do not establish IDE or cross-platform
+Hybrid acceptance.
 API tests run on all three supported desktop RIDs. macOS x64 is excluded from
 both ordinary CI and tag releases; it is not a supported distribution target.
 
@@ -277,7 +279,7 @@ new package version and an unused output directory:
 # Output feed: artifacts/integration/0.1.0-local.1/packages
 ```
 
-This packages Core, Hosting, optional Blazor, Generators, Build, Platform.Desktop, CLI and the managed plugins.
+This packages Core, Hosting, optional BlazorHybrid, Generators, Build, Platform.Desktop, CLI and the managed plugins.
 It refuses an existing output directory and does
 not publish to a remote feed. Use a new version for changed contents to avoid
 NuGet cache collisions. Supply the resulting `packages` directory and version

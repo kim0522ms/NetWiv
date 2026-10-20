@@ -19,7 +19,7 @@ internal static class NewCommand
         {
             arguments.EnsureEmpty();
             await output.WriteLineAsync("TypeScript: " + string.Join(", ", JavaScriptTemplates.Select(name => name == "react" ? "react (default)" : name)));
-            await output.WriteLineAsync(".NET frontend: blazor, blazor-hybrid (Windows development; WebAssembly deployment)");
+            await output.WriteLineAsync(".NET frontend: blazor, blazor-hybrid (Windows Hybrid; shared WebAssembly UI)");
             await output.WriteLineAsync("Managers: npm, pnpm, yarn, bun, deno (TypeScript); dotnet (Blazor)");
             return 0;
         }

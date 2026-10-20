@@ -18,7 +18,7 @@ internal static class NewProjectTests
                 config["build"]!["dotnetProject"]!.GetValue<string>() == "Example.csproj",
                 "Hybrid application metadata was not personalized.");
             var backend = XDocument.Load(Path.Combine(destination, "src-netwiv/Example.csproj"));
-            var hybrid = backend.Descendants("PackageReference").Single(item => (string?)item.Attribute("Include") == "NetWiv.Blazor");
+            var hybrid = backend.Descendants("PackageReference").Single(item => (string?)item.Attribute("Include") == "NetWiv.BlazorHybrid");
             Check(hybrid.Parent!.Attribute("Condition")!.Value.Contains("NetWivBlazorMode", StringComparison.Ordinal),
                 "Hybrid dependency is unconditional.");
             Check(backend.Descendants("PackageReference").All(item => (string?)item.Attribute("Version") == CliApp.Version),
@@ -27,6 +27,13 @@ internal static class NewProjectTests
                 "Generated application depends on framework source paths.");
             var program = File.ReadAllText(Path.Combine(destination, "src-netwiv/Program.cs"));
             Check(program.Contains("\"com.example.hybrid\"", StringComparison.Ordinal), "Backend identifier differs from configuration.");
+            Check(program.Contains("AddNetWivBlazorHybridAot", StringComparison.Ordinal) &&
+                File.ReadAllText(Path.Combine(destination, "src-netwiv/HybridUiRegistration.cs")).Contains("RegisterInstance<UiInteropCallbacks", StringComparison.Ordinal),
+                "Hybrid does not use the statically registered application path.");
+            Check(!backend.Descendants("Error").Any(item => ((string?)item.Attribute("Condition"))?.Contains("PublishAot", StringComparison.Ordinal) == true),
+                "Hybrid still rejects NativeAOT application publishing.");
+            Check(File.ReadAllText(Path.Combine(destination, "README.md")).Contains("--aot --blazor-mode Hybrid", StringComparison.Ordinal),
+                "Hybrid NativeAOT publishing guidance is missing.");
             var props = XDocument.Load(Path.Combine(destination, "Directory.Build.props"));
             Check(!props.Descendants("Import").Any() && props.Descendants("NetWivBlazorMode").Any(item => item.Value == "WebAssembly"),
                 "Generated mode configuration is not standalone.");

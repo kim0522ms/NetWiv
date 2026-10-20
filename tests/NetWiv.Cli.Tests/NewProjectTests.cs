@@ -111,7 +111,7 @@ internal static class NewProjectTests
                     Check(File.Exists(Path.Combine(destination, "frontend/wwwroot/vendor/@netwiv/api/upstream/core.js")), "Blazor JS API module missing");
                     Check(File.Exists(Path.Combine(destination, "frontend/wwwroot/vendor/@netwiv/api/core.js")), "Blazor NetWiv API module missing");
                     Check(File.ReadAllText(Path.Combine(destination, "frontend/wwwroot/netwiv.js")).Contains("./vendor/@netwiv/api/core.js", StringComparison.Ordinal), "Blazor frontend bypasses NetWiv API");
-                    foreach (var sample in new[] { "frontend/Pages/Counter.razor", "frontend/Pages/Weather.razor", "frontend/Layout/NavMenu.razor", "frontend/wwwroot/lib", "frontend/wwwroot/sample-data", "vendor", "scripts" })
+                    foreach (var sample in new[] { "frontend/Pages/Counter.razor", "frontend/Pages/Weather.razor", "frontend/Layout/NavMenu.razor", "frontend/wwwroot/lib", "frontend/wwwroot/css/bootstrap", "frontend/wwwroot/sample-data", "vendor", "scripts" })
                         Check(!File.Exists(Path.Combine(destination, sample)) && !Directory.Exists(Path.Combine(destination, sample)), "Blazor sample or leftover remains: " + sample);
                     Check(!File.ReadAllText(Path.Combine(destination, "frontend/wwwroot/index.html")).Contains("bootstrap", StringComparison.Ordinal), "Blazor still links Bootstrap");
                 }

@@ -146,7 +146,8 @@ internal static class NewCommand
         // Keep only the starter screen: drop the Blazor template's sample pages, navigation and Bootstrap.
         foreach (var sample in new[] { "Pages/Counter.razor", "Pages/Weather.razor", "Layout/NavMenu.razor", "Layout/NavMenu.razor.css", "Layout/MainLayout.razor.css" })
             File.Delete(Path.Combine(frontend, sample));
-        foreach (var sample in new[] { "wwwroot/sample-data", "wwwroot/lib" })
+        // .NET 8 keeps Bootstrap in wwwroot/css/bootstrap; .NET 9 and later in wwwroot/lib.
+        foreach (var sample in new[] { "wwwroot/sample-data", "wwwroot/lib", "wwwroot/css/bootstrap" })
             if (Directory.Exists(Path.Combine(frontend, sample))) Directory.Delete(Path.Combine(frontend, sample), recursive: true);
         var overlay = Path.Combine(AppContext.BaseDirectory, "templates", "frontends", "blazor");
         foreach (var source in Directory.EnumerateFiles(overlay, "*", SearchOption.AllDirectories))
@@ -159,7 +160,7 @@ internal static class NewCommand
         var indexPath = Path.Combine(frontend, "wwwroot", "index.html");
         // Bootstrap is gone, and with no scoped .razor.css files left there is no NetWivUi.styles.css bundle.
         var index = File.ReadAllText(indexPath).Replace("<base href=\"/\" />", "<base href=\"./\" />", StringComparison.Ordinal);
-        index = string.Join('\n', index.Split('\n').Where(line => !line.Contains("lib/bootstrap/", StringComparison.Ordinal) && !line.Contains("NetWivUi.styles.css", StringComparison.Ordinal)));
+        index = string.Join('\n', index.Split('\n').Where(line => !line.Contains("bootstrap", StringComparison.OrdinalIgnoreCase) && !line.Contains("NetWivUi.styles.css", StringComparison.Ordinal)));
         File.WriteAllText(indexPath, index);
         Directory.Delete(Path.Combine(project, "scripts"), recursive: true);
         Directory.Delete(Path.Combine(project, "vendor"), recursive: true);

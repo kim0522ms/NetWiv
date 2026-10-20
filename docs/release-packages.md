@@ -87,7 +87,7 @@ windowless startup and configuration binding. The .NET 8 baseline jobs additiona
 publish and execute the default managed self-contained React app, checking its
 bundled runtime policy and GUI/IPC behavior. The macOS job also bundles and
 executes the managed `.app` in both deployment modes through the GUI/IPC smoke flow.
-The three .NET 8 baseline jobs also generate and publish a managed
+All five consumer jobs also generate and publish a matching-target managed
 `blazor-hybrid` starter, then execute a package-only Hybrid fixture in the
 ordinary Microsoft managed host and experimental NativeAOT host. The fixture
 checks native DOM events, interop, reload and page-scope cleanup. Linux runs

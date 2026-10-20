@@ -43,6 +43,17 @@ internal static class NewProjectTests
             Check(!props.Descendants("Import").Any() && props.Descendants("NetWivBlazorMode").Single().Value == "Hybrid",
                 "Generated mode configuration is not standalone or does not default to Hybrid.");
             var shared = XDocument.Load(Path.Combine(destination, "Shared/Shared.csproj"));
+            foreach (var (target, version) in new[] { ("net8.0", "8.0.32"), ("net9.0", "9.0.21"), ("net10.0", "10.0.13") })
+            {
+                using var selectionTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                var selection = await NetWiv.Build.Execution.ProcessRunner.RunAsync(new(
+                    Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet", ["msbuild", "Shared/Shared.csproj", "-nologo",
+                    "-getProperty:TargetFramework,BlazorFrameworkVersion", "-p:NetWivBlazorTargetFramework=" + target], destination, CaptureOutput: true), selectionTimeout.Token);
+                Check(selection.ExitCode == 0, selection.StandardOutput + selection.StandardError);
+                var selected = JsonNode.Parse(selection.StandardOutput)!["Properties"]!;
+                Check(selected["TargetFramework"]!.GetValue<string>() == target && selected["BlazorFrameworkVersion"]!.GetValue<string>() == version,
+                    "Hybrid starter selected mismatched component packages.");
+            }
             Check(shared.Descendants("Exec").Single().Attribute("Command")!.Value.Contains("../src-netwiv/Example.csproj", StringComparison.Ordinal),
                 "Shared client generation still points at the source sample.");
             Check(File.Exists(Path.Combine(destination, "Shared/Assets/vendor/@netwiv/api/core.js")) &&

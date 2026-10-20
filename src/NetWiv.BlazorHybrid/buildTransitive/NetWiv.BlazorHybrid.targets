@@ -13,4 +13,8 @@
     <None Include="$(MSBuildThisFileDirectory)../licenses/dotnet-runtime-MIT.txt"
           Link="NetWiv.BlazorHybrid.MIT.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)../licenses/Microsoft.AspNetCore.Components.WebView.NOTICES.txt')">
+    <None Include="$(MSBuildThisFileDirectory)../licenses/Microsoft.AspNetCore.Components.WebView.NOTICES.txt"
+          Link="Microsoft.AspNetCore.Components.WebView.NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

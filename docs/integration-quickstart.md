@@ -13,7 +13,10 @@ optional experimental NativeAOT Hybrid or WebAssembly execution, see the optiona
 With the package feed below, select that layout using
 `netwiv new MyBlazorApp -t blazor-hybrid --source $feed`, then run
 `dotnet run --project src-netwiv` from the new directory. Its Debug mode uses
-managed Hybrid on Windows in both Debug and Release. Choose WebAssembly with
+managed Hybrid on the supported desktop platforms in both Debug and Release.
+Set `NetWivBlazorTargetFramework` in the generated `Directory.Build.props` to
+`net9.0` or `net10.0` to change the default .NET 8 target and matching component
+packages together. Choose WebAssembly with
 `--blazor-mode WebAssembly`. Experimental NativeAOT Hybrid requires
 `netwiv build --no-bundle --aot --blazor-mode Hybrid --experimental-blazor-aot`.
 

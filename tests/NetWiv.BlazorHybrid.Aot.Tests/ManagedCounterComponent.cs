@@ -54,6 +54,7 @@ public sealed partial class ManagedCounterComponent : ComponentBase, IAsyncDispo
         _jsDisposed = DotNetObjectReference.Create(new InvokableReceiver("js-disposed:"));
         await JS.InvokeVoidAsync("proof.setInstances", _live, _disposed, _jsDisposed);
         _disposed.Dispose();
+        await VersionInteropProof.RunAsync(JS);
         Ready = true;
         await JS.InvokeVoidAsync("proof.ready");
         StateHasChanged();

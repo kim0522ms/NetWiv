@@ -25,6 +25,13 @@ commit `7413d24330774263a78a4f3837ca53493518455a`:
 Per-file .NET Foundation attribution is retained. The full MIT license is in
 `licenses/dotnet-runtime-MIT.txt` at the repository root.
 
+The original attribution above records the copied source. The render-batch
+writer and incoming WebView IPC receiver were also compared against ASP.NET
+Core 9.0.21 (`b4d87e3b9131a019bc3b51df99ff69ac79bef459`) and .NET 10.0.13
+in dotnet/dotnet (`4099f83977f4d29604a9aeb971fb0a7bc1d5f699`) and are unchanged.
+The .NET 9/10 host exposes interactive renderer metadata; .NET 10 interop also
+uses the new JS call-kind field. See the [multi-target assessment](../../../../docs/blazor-hybrid-aot-research.md#multi-target-adapter-assessment).
+
 Component construction uses explicit metadata-preserving registrations and
 direct factories. There is no component assembly discovery. Routing applications
 must use statically declared components; registering the framework Router is

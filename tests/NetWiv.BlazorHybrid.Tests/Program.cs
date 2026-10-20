@@ -1,5 +1,6 @@
 var tests = new List<(string Name, Func<Task> Run)>
 {
+    ("Hybrid selects the consumer's framework and rejects substituted assemblies", FrameworkTests.MatchingTarget),
     ("Hybrid origins reject authority aliases and opaque foreign schemes", OriginTests.AuthorityBoundaries),
     ("AOT assets preserve routing, reject foreign paths and retain provider ownership", AotAssetTests.Assets),
     ("AOT registration snapshots and host selection reject conflicting setup", AotAssetTests.Registration),

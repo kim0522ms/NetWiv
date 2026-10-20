@@ -18,6 +18,7 @@ public sealed partial class CounterComponent : ComponentBase, IAsyncDisposable
     [Inject] public IJSRuntime JS { get; set; } = null!;
     [Inject] public ProofScope Scope { get; set; } = null!;
     [Parameter] public string Label { get; set; } = "";
+    [Parameter] public bool NativeInteropChecks { get; set; }
     public static int Count { get; private set; }
     public static string RenderedLabel { get; private set; } = "";
     public static ProbeDto? JsReply { get; private set; }
@@ -35,6 +36,9 @@ public sealed partial class CounterComponent : ComponentBase, IAsyncDisposable
     protected override void OnParametersSet()
     {
         RenderedLabel = Label;
+#if NET9_0_OR_GREATER
+        ProofGate.Check(RendererInfo.Name == "WebView" && RendererInfo.IsInteractive, "The renderer did not advertise interactive WebView execution.");
+#endif
         CapturedScope = Scope;
         CapturedJS = JS;
         lock (Scopes) if (!Scopes.Contains(Scope)) Scopes.Add(Scope);
@@ -54,6 +58,7 @@ public sealed partial class CounterComponent : ComponentBase, IAsyncDisposable
         _jsDisposed = BlazorAotObjectReference.Create(new InvokableReceiver("js-disposed:"));
         await JS.InvokeVoidAsync("proof.setInstances", _live, _disposed, _jsDisposed);
         _disposed.Dispose();
+        if (NativeInteropChecks) await VersionInteropProof.RunAsync(JS);
         Ready = true;
         await JS.InvokeVoidAsync("proof.ready");
         StateHasChanged();

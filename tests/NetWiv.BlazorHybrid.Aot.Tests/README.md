@@ -14,6 +14,12 @@ default Microsoft managed host, with dynamic code and JSON reflection enabled.
 
 Publishing alone does not pass the execution gate:
 
+The default target is `net8.0`. Add `-p:NetWivTestFramework=net9.0` or
+`-p:NetWivTestFramework=net10.0` to publish the matching adapter and Microsoft
+packages. Each executable verifies the selected package identity. Run both
+protocol and native-WebView modes for every target; .NET 10 native checks also
+exercise constructor and property get/set operations on global and object targets.
+
 ```powershell
 dotnet publish tests/NetWiv.BlazorHybrid.Aot.Tests -c Release -r win-x64 -o artifacts/blazor-aot-tests
 & ./artifacts/blazor-aot-tests/NetWiv.BlazorHybrid.Aot.Tests.exe
@@ -136,7 +142,10 @@ component or interop support.
 The full form sample has additional upstream AOT diagnostics and a narrower
 tested binding contract; see [NativeAOT limits](../../docs/blazor-hybrid.md#experimental-nativeaot-limits).
 
-Microsoft packages are pinned to `8.0.32`. Adapted product source origins and MIT
+Microsoft packages are pinned to `8.0.32`, `9.0.21` or `10.0.13`, according to
+the consumer's target. Known upstream `IL2072`/`IL3050` diagnostics are allowed
+as visible warnings only in this experimental test project; other warnings
+remain errors. Adapted product source origins and MIT
 notices are in [the host provenance](../../src/NetWiv.BlazorHybrid/Aot/Hosting/README.md),
 [the license](../../licenses/dotnet-runtime-MIT.txt) and
 [third-party notices](../../THIRD-PARTY-NOTICES.md).

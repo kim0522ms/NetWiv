@@ -6,9 +6,15 @@
     <NetWivBlazorExperimentalAot>true</NetWivBlazorExperimentalAot>
     <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
     <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <!-- Upstream experimental diagnostics stay visible; runtime gates require
+         generated JSON and dynamic-code-disabled native execution. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);IL2072;IL3050</WarningsNotAsErrors>
+    <DependencyInjectionVersion>8.0.1</DependencyInjectionVersion>
+    <DependencyInjectionVersion Condition="'$(TargetFramework)' == 'net9.0'">9.0.21</DependencyInjectionVersion>
+    <DependencyInjectionVersion Condition="'$(TargetFramework)' == 'net10.0'">10.0.13</DependencyInjectionVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(DependencyInjectionVersion)" />
     <ProjectReference Include="../../src/NetWiv.BlazorHybrid/NetWiv.BlazorHybrid.csproj" />
     <ProjectReference Include="../../src/NetWiv.Platform.Desktop/NetWiv.Platform.Desktop.csproj" />
     <Content Update="wwwroot/**/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

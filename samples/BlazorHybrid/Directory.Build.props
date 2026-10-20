@@ -1,6 +1,11 @@
 <Project>
   <Import Project="../../Directory.Build.props" />
   <PropertyGroup>
+    <NetWivBlazorTargetFramework Condition="'$(NetWivBlazorTargetFramework)' == ''">net8.0</NetWivBlazorTargetFramework>
+    <TargetFramework>$(NetWivBlazorTargetFramework)</TargetFramework>
+    <BlazorFrameworkVersion Condition="'$(TargetFramework)' == 'net8.0'">8.0.32</BlazorFrameworkVersion>
+    <BlazorFrameworkVersion Condition="'$(TargetFramework)' == 'net9.0'">9.0.21</BlazorFrameworkVersion>
+    <BlazorFrameworkVersion Condition="'$(TargetFramework)' == 'net10.0'">10.0.13</BlazorFrameworkVersion>
     <NetWivBlazorMode Condition="'$(NetWivBlazorMode)' == ''">Hybrid</NetWivBlazorMode>
   </PropertyGroup>
   <PropertyGroup Condition="Exists('$(MSBuildProjectDirectory)/HybridUiRegistration.cs') and '$(NetWivBindingsOnly)' != 'true'">
@@ -13,8 +18,8 @@
   </PropertyGroup>
   <!-- The shared UI generates its client with a separate backend build. -->
   <PropertyGroup Condition="'$(NetWivBindingsOnly)' == 'true'">
-    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj/bindings/$(Configuration)/</MSBuildProjectExtensionsPath>
-    <IntermediateOutputPath>$(MSBuildProjectDirectory)/obj/bindings/$(Configuration)/</IntermediateOutputPath>
-    <OutputPath>$(MSBuildProjectDirectory)/bin/bindings/$(Configuration)/</OutputPath>
+    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj/bindings/$(Configuration)/$(TargetFramework)/</MSBuildProjectExtensionsPath>
+    <IntermediateOutputPath>$(MSBuildProjectDirectory)/obj/bindings/$(Configuration)/$(TargetFramework)/</IntermediateOutputPath>
+    <OutputPath>$(MSBuildProjectDirectory)/bin/bindings/$(Configuration)/$(TargetFramework)/</OutputPath>
   </PropertyGroup>
 </Project>

@@ -5,6 +5,10 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $repository = Split-Path $PSScriptRoot -Parent
+$sdk = & dotnet --version
+if ($LASTEXITCODE -ne 0 -or [int]($sdk.Split('.')[0]) -lt 10) {
+    throw 'Packing the multi-target Blazor Hybrid feed requires .NET SDK 10 or later.'
+}
 if (!$OutputDirectory) { $OutputDirectory = "artifacts/integration/$Version" }
 $destination = [IO.Path]::GetFullPath($OutputDirectory, $repository)
 $feed = Join-Path $destination 'packages'

@@ -23,7 +23,7 @@ internal static class NativeWebViewProof
         var services = registrations.BuildServiceProvider();
         var options = new BlazorWebViewOptions();
         if (System.Runtime.CompilerServices.RuntimeFeature.IsDynamicCodeSupported && managedHost) options.RootComponents.Add<ManagedCounterComponent>("#app", new Dictionary<string, object?> { ["Label"] = "Managed counter" });
-        else options.RootComponents.Add<CounterComponent>("#app", new Dictionary<string, object?> { ["Label"] = "NativeAOT counter" });
+        else options.RootComponents.Add<CounterComponent>("#app", new Dictionary<string, object?> { ["Label"] = "NativeAOT counter", ["NativeInteropChecks"] = true });
         var passed = false;
         var reloaded = false;
         var returned = false;

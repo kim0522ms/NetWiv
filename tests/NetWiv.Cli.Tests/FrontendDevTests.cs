@@ -11,7 +11,7 @@ internal static class FrontendDevTests
         consumer = Path.GetFullPath(consumer);
         if (await PortOpen()) throw new InvalidOperationException("Port 5173 is already occupied; no existing server will be stopped.");
         var sourceFile = Path.Combine(consumer, "src-netwiv", "Program.cs");
-        var reactFile = Path.Combine(consumer, "src", "App.jsx");
+        var reactFile = Path.Combine(consumer, "src", "App.tsx");
         var source = await File.ReadAllTextAsync(sourceFile);
         var react = await File.ReadAllTextAsync(reactFile);
         var record = Path.Combine(consumer, "dev-restart-" + Guid.NewGuid().ToString("N") + ".log");

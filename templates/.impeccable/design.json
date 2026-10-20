@@ -1,0 +1,578 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-20T03:52:12.765Z",
+  "title": "Design System: NetWiv starter",
+  "extensions": {
+    "source": {
+      "generator": "../scripts/generate-frontend-template-overlays.mjs",
+      "outputs": [
+        "react-app/src/App.tsx",
+        "react-app/src/style.css",
+        "frontends/vue/src/App.vue",
+        "frontends/svelte/src/App.svelte",
+        "frontends/angular/src/app.ts",
+        "frontends/blazor/frontend/Pages/Home.razor",
+        "frontends/blazor/frontend/wwwroot/css/app.css"
+      ],
+      "note": "All five frameworks are regenerated from the generator; the outputs are never edited by hand."
+    },
+    "appearance": {
+      "light": "default :root set",
+      "dark": "prefers-color-scheme: dark swaps every token; tokens suffixed -dark in the frontmatter",
+      "cssCustomProperties": [
+        "--paper",
+        "--ink",
+        "--muted",
+        "--hair",
+        "--rule",
+        "--field",
+        "--field-ink",
+        "--field-muted",
+        "--field-hair",
+        "--stop",
+        "--stop-ink",
+        "--stop-muted",
+        "--button",
+        "--button-ink",
+        "--button-hover",
+        "--button-off",
+        "--button-off-ink",
+        "--focus",
+        "--signal",
+        "--mark-back",
+        "--mark-front",
+        "--mark-letter",
+        "--sans",
+        "--mono",
+        "--ease"
+      ]
+    },
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Program Paper",
+        "canonical": "#f6f5fb",
+        "oklch": "oklch(97.3% 0.008 293.9)",
+        "tonalRamp": [
+          "oklch(15% 0.008 293.9)",
+          "oklch(26.4% 0.008 293.9)",
+          "oklch(37.9% 0.008 293.9)",
+          "oklch(49.3% 0.008 293.9)",
+          "oklch(60.7% 0.008 293.9)",
+          "oklch(72.1% 0.008 293.9)",
+          "oklch(83.6% 0.008 293.9)",
+          "oklch(95% 0.008 293.9)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Program Ink",
+        "canonical": "#17142a",
+        "oklch": "oklch(20.7% 0.043 288.3)",
+        "tonalRamp": [
+          "oklch(15% 0.043 288.3)",
+          "oklch(26.4% 0.043 288.3)",
+          "oklch(37.9% 0.043 288.3)",
+          "oklch(49.3% 0.043 288.3)",
+          "oklch(60.7% 0.043 288.3)",
+          "oklch(72.1% 0.043 288.3)",
+          "oklch(83.6% 0.043 288.3)",
+          "oklch(95% 0.043 288.3)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Margin Violet-Grey",
+        "canonical": "#5b5674",
+        "oklch": "oklch(47% 0.048 292.1)",
+        "tonalRamp": [
+          "oklch(15% 0.048 292.1)",
+          "oklch(26.4% 0.048 292.1)",
+          "oklch(37.9% 0.048 292.1)",
+          "oklch(49.3% 0.048 292.1)",
+          "oklch(60.7% 0.048 292.1)",
+          "oklch(72.1% 0.048 292.1)",
+          "oklch(83.6% 0.048 292.1)",
+          "oklch(95% 0.048 292.1)"
+        ]
+      },
+      "hair": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#d9d5ea",
+        "oklch": "oklch(88.3% 0.029 294.5)",
+        "tonalRamp": [
+          "oklch(15% 0.029 294.5)",
+          "oklch(26.4% 0.029 294.5)",
+          "oklch(37.9% 0.029 294.5)",
+          "oklch(49.3% 0.029 294.5)",
+          "oklch(60.7% 0.029 294.5)",
+          "oklch(72.1% 0.029 294.5)",
+          "oklch(83.6% 0.029 294.5)",
+          "oklch(95% 0.029 294.5)"
+        ]
+      },
+      "field": {
+        "role": "primary",
+        "displayName": "Answer Purple",
+        "canonical": "#512bd4",
+        "oklch": "oklch(46.2% 0.235 282.4)",
+        "tonalRamp": [
+          "oklch(15% 0.2 282.4)",
+          "oklch(26.4% 0.2 282.4)",
+          "oklch(37.9% 0.2 282.4)",
+          "oklch(49.3% 0.2 282.4)",
+          "oklch(60.7% 0.2 282.4)",
+          "oklch(72.1% 0.2 282.4)",
+          "oklch(83.6% 0.15 282.4)",
+          "oklch(95% 0.073 282.4)"
+        ]
+      },
+      "field-muted": {
+        "role": "neutral",
+        "displayName": "Field Lilac",
+        "canonical": "#ddd5fc",
+        "oklch": "oklch(89.2% 0.054 294.7)",
+        "tonalRamp": [
+          "oklch(15% 0.054 294.7)",
+          "oklch(26.4% 0.054 294.7)",
+          "oklch(37.9% 0.054 294.7)",
+          "oklch(49.3% 0.054 294.7)",
+          "oklch(60.7% 0.054 294.7)",
+          "oklch(72.1% 0.054 294.7)",
+          "oklch(83.6% 0.054 294.7)",
+          "oklch(95% 0.054 294.7)"
+        ]
+      },
+      "lavender": {
+        "role": "secondary",
+        "displayName": "Back-Layer Lavender",
+        "canonical": "#b9a8f5",
+        "oklch": "oklch(77.4% 0.109 293.8)",
+        "tonalRamp": [
+          "oklch(15% 0.109 293.8)",
+          "oklch(26.4% 0.109 293.8)",
+          "oklch(37.9% 0.109 293.8)",
+          "oklch(49.3% 0.109 293.8)",
+          "oklch(60.7% 0.109 293.8)",
+          "oklch(72.1% 0.109 293.8)",
+          "oklch(83.6% 0.109 293.8)",
+          "oklch(95% 0.073 293.8)"
+        ]
+      },
+      "white": {
+        "role": "neutral",
+        "displayName": "White",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100% 0 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0 89.9)",
+          "oklch(26.4% 0 89.9)",
+          "oklch(37.9% 0 89.9)",
+          "oklch(49.3% 0 89.9)",
+          "oklch(60.7% 0 89.9)",
+          "oklch(72.1% 0 89.9)",
+          "oklch(83.6% 0 89.9)",
+          "oklch(95% 0 89.9)"
+        ]
+      },
+      "stop-muted": {
+        "role": "neutral",
+        "displayName": "Stop Grey",
+        "canonical": "#c9c4dc",
+        "oklch": "oklch(83.2% 0.034 295.2)",
+        "tonalRamp": [
+          "oklch(15% 0.034 295.2)",
+          "oklch(26.4% 0.034 295.2)",
+          "oklch(37.9% 0.034 295.2)",
+          "oklch(49.3% 0.034 295.2)",
+          "oklch(60.7% 0.034 295.2)",
+          "oklch(72.1% 0.034 295.2)",
+          "oklch(83.6% 0.034 295.2)",
+          "oklch(95% 0.034 295.2)"
+        ]
+      },
+      "paper-dark": {
+        "role": "neutral",
+        "displayName": "Night Paper",
+        "canonical": "#17142a",
+        "oklch": "oklch(20.7% 0.043 288.3)",
+        "tonalRamp": [
+          "oklch(15% 0.043 288.3)",
+          "oklch(26.4% 0.043 288.3)",
+          "oklch(37.9% 0.043 288.3)",
+          "oklch(49.3% 0.043 288.3)",
+          "oklch(60.7% 0.043 288.3)",
+          "oklch(72.1% 0.043 288.3)",
+          "oklch(83.6% 0.043 288.3)",
+          "oklch(95% 0.043 288.3)"
+        ]
+      },
+      "ink-dark": {
+        "role": "neutral",
+        "displayName": "Night Ink",
+        "canonical": "#dcd9ea",
+        "oklch": "oklch(89.3% 0.023 294)",
+        "tonalRamp": [
+          "oklch(15% 0.023 294)",
+          "oklch(26.4% 0.023 294)",
+          "oklch(37.9% 0.023 294)",
+          "oklch(49.3% 0.023 294)",
+          "oklch(60.7% 0.023 294)",
+          "oklch(72.1% 0.023 294)",
+          "oklch(83.6% 0.023 294)",
+          "oklch(95% 0.023 294)"
+        ]
+      },
+      "muted-dark": {
+        "role": "neutral",
+        "displayName": "Night Violet-Grey",
+        "canonical": "#9a94b8",
+        "oklch": "oklch(68.4% 0.053 292.6)",
+        "tonalRamp": [
+          "oklch(15% 0.053 292.6)",
+          "oklch(26.4% 0.053 292.6)",
+          "oklch(37.9% 0.053 292.6)",
+          "oklch(49.3% 0.053 292.6)",
+          "oklch(60.7% 0.053 292.6)",
+          "oklch(72.1% 0.053 292.6)",
+          "oklch(83.6% 0.053 292.6)",
+          "oklch(95% 0.053 292.6)"
+        ]
+      },
+      "hair-dark": {
+        "role": "neutral",
+        "displayName": "Night Hairline",
+        "canonical": "#3a3456",
+        "oklch": "oklch(34.7% 0.059 291.1)",
+        "tonalRamp": [
+          "oklch(15% 0.059 291.1)",
+          "oklch(26.4% 0.059 291.1)",
+          "oklch(37.9% 0.059 291.1)",
+          "oklch(49.3% 0.059 291.1)",
+          "oklch(60.7% 0.059 291.1)",
+          "oklch(72.1% 0.059 291.1)",
+          "oklch(83.6% 0.059 291.1)",
+          "oklch(95% 0.059 291.1)"
+        ]
+      },
+      "rule-dark": {
+        "role": "neutral",
+        "displayName": "Night Rule",
+        "canonical": "#7d77a0",
+        "oklch": "oklch(59% 0.062 291.1)",
+        "tonalRamp": [
+          "oklch(15% 0.062 291.1)",
+          "oklch(26.4% 0.062 291.1)",
+          "oklch(37.9% 0.062 291.1)",
+          "oklch(49.3% 0.062 291.1)",
+          "oklch(60.7% 0.062 291.1)",
+          "oklch(72.1% 0.062 291.1)",
+          "oklch(83.6% 0.062 291.1)",
+          "oklch(95% 0.062 291.1)"
+        ]
+      },
+      "field-dark": {
+        "role": "primary",
+        "displayName": "Night Answer Purple",
+        "canonical": "#3b2e96",
+        "oklch": "oklch(38.6% 0.162 281.3)",
+        "tonalRamp": [
+          "oklch(15% 0.162 281.3)",
+          "oklch(26.4% 0.162 281.3)",
+          "oklch(37.9% 0.162 281.3)",
+          "oklch(49.3% 0.162 281.3)",
+          "oklch(60.7% 0.162 281.3)",
+          "oklch(72.1% 0.162 281.3)",
+          "oklch(83.6% 0.15 281.3)",
+          "oklch(95% 0.073 281.3)"
+        ]
+      },
+      "field-muted-dark": {
+        "role": "neutral",
+        "displayName": "Night Field Lilac",
+        "canonical": "#d4ccf8",
+        "oklch": "oklch(86.6% 0.061 293.4)",
+        "tonalRamp": [
+          "oklch(15% 0.061 293.4)",
+          "oklch(26.4% 0.061 293.4)",
+          "oklch(37.9% 0.061 293.4)",
+          "oklch(49.3% 0.061 293.4)",
+          "oklch(60.7% 0.061 293.4)",
+          "oklch(72.1% 0.061 293.4)",
+          "oklch(83.6% 0.061 293.4)",
+          "oklch(95% 0.061 293.4)"
+        ]
+      },
+      "stop-dark": {
+        "role": "neutral",
+        "displayName": "Night Stop Violet",
+        "canonical": "#2f2a4a",
+        "oklch": "oklch(30.6% 0.057 289.8)",
+        "tonalRamp": [
+          "oklch(15% 0.057 289.8)",
+          "oklch(26.4% 0.057 289.8)",
+          "oklch(37.9% 0.057 289.8)",
+          "oklch(49.3% 0.057 289.8)",
+          "oklch(60.7% 0.057 289.8)",
+          "oklch(72.1% 0.057 289.8)",
+          "oklch(83.6% 0.057 289.8)",
+          "oklch(95% 0.057 289.8)"
+        ]
+      },
+      "stop-ink-dark": {
+        "role": "neutral",
+        "displayName": "Night Stop Ink",
+        "canonical": "#ece9f8",
+        "oklch": "oklch(94.1% 0.02 295.2)",
+        "tonalRamp": [
+          "oklch(15% 0.02 295.2)",
+          "oklch(26.4% 0.02 295.2)",
+          "oklch(37.9% 0.02 295.2)",
+          "oklch(49.3% 0.02 295.2)",
+          "oklch(60.7% 0.02 295.2)",
+          "oklch(72.1% 0.02 295.2)",
+          "oklch(83.6% 0.02 295.2)",
+          "oklch(95% 0.02 295.2)"
+        ]
+      },
+      "stop-muted-dark": {
+        "role": "neutral",
+        "displayName": "Night Stop Grey",
+        "canonical": "#aaa4c6",
+        "oklch": "oklch(73.5% 0.049 293.2)",
+        "tonalRamp": [
+          "oklch(15% 0.049 293.2)",
+          "oklch(26.4% 0.049 293.2)",
+          "oklch(37.9% 0.049 293.2)",
+          "oklch(49.3% 0.049 293.2)",
+          "oklch(60.7% 0.049 293.2)",
+          "oklch(72.1% 0.049 293.2)",
+          "oklch(83.6% 0.049 293.2)",
+          "oklch(95% 0.049 293.2)"
+        ]
+      },
+      "field-hair": {
+        "role": "neutral",
+        "displayName": "Field Hairline",
+        "canonical": "rgb(255 255 255 / 0.3)",
+        "note": "Translucent white rule above the count on the light answer field."
+      },
+      "field-hair-dark": {
+        "role": "neutral",
+        "displayName": "Night Field Hairline",
+        "canonical": "rgb(255 255 255 / 0.25)",
+        "note": "Translucent white rule above the count on the dark answer field."
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "The one column headline; max 17ch, balanced."
+      },
+      "answer": {
+        "displayName": "Answer",
+        "purpose": "The C# message inside the answer field; 500 weight while idle."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "\"Make it yours\" above the file map."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Root setting."
+      },
+      "input": {
+        "displayName": "Input",
+        "purpose": "The name field."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field label; the button uses 600 at body size."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "File-row sentences, count label, failure detail."
+      },
+      "mono-path": {
+        "displayName": "Mono path",
+        "purpose": "File paths in the map."
+      },
+      "mono-route": {
+        "displayName": "Mono route",
+        "purpose": "The call route and the top-bar status measurement."
+      },
+      "mono-count": {
+        "displayName": "Mono count",
+        "purpose": "The call count, tabular figures."
+      },
+      "mono-error": {
+        "displayName": "Mono error",
+        "purpose": "The raw error string under a failure."
+      }
+    },
+    "shadows": [],
+    "elevationNote": "Flat. The only box-shadow is `0 1px 0 var(--focus)` under the focused input, a stroke that thickens the underline, not depth.",
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The single easing curve."
+      },
+      {
+        "name": "land",
+        "value": "360ms ease; from translateY(6px), movement only",
+        "purpose": "The one authored motion: the answer message and count enter on each new count. Disabled under prefers-reduced-motion."
+      },
+      {
+        "name": "button-colour",
+        "value": "background-color 160ms ease",
+        "purpose": "Button hover colour change. Disabled under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "single-column",
+        "value": "720px",
+        "purpose": "At or below, the split stacks and the answer follows the form."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Call greet: ink slab in light mode, purple on hover.",
+      "html": "<button class=\"ds-btn\">Call greet</button> <button class=\"ds-btn\" disabled>Calling…</button>",
+      "css": ".ds-btn { min-height: 46px; min-width: 9.5em; padding: 0 22px; font: 600 16px/1.5 var(--sans, system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans\", \"Helvetica Neue\", Arial, sans-serif); color: #ffffff; background: #17142a; border: 0; border-radius: 0; cursor: pointer; transition: background-color 160ms var(--ease, cubic-bezier(0.16, 1, 0.3, 1)); } .ds-btn:hover { background: #512bd4; } .ds-btn:focus-visible { outline: 2px solid var(--focus, #512bd4); outline-offset: 3px; } .ds-btn:disabled { cursor: progress; color: #ffffff; background: #5b5674; } @media (prefers-reduced-motion: reduce) { .ds-btn { transition: none; } }"
+    },
+    {
+      "name": "Primary Button (dark)",
+      "kind": "button",
+      "refersTo": "button-primary-dark",
+      "description": "The light inverse block used in dark mode; lavender on hover.",
+      "html": "<div style=\"background:#17142a;padding:16px\"><button class=\"ds-btn-dark\">Call greet</button> <button class=\"ds-btn-dark\" disabled>Calling…</button></div>",
+      "css": ".ds-btn-dark { min-height: 46px; min-width: 9.5em; padding: 0 22px; font: 600 16px/1.5 var(--sans, system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans\", \"Helvetica Neue\", Arial, sans-serif); color: #17142a; background: #dcd9ea; border: 0; border-radius: 0; cursor: pointer; transition: background-color 160ms var(--ease, cubic-bezier(0.16, 1, 0.3, 1)); } .ds-btn-dark:hover { background: #b9a8f5; } .ds-btn-dark:focus-visible { outline: 2px solid #b9a8f5; outline-offset: 3px; } .ds-btn-dark:disabled { cursor: progress; color: #c9c4dc; background: #2f2a4a; } @media (prefers-reduced-motion: reduce) { .ds-btn-dark { transition: none; } }"
+    },
+    {
+      "name": "Name Field",
+      "kind": "input",
+      "refersTo": "input-underline",
+      "description": "Underlined input with the label above; no box.",
+      "html": "<div class=\"ds-ask\"><label for=\"ds-name\">Name</label><input id=\"ds-name\" value=\"React\" autocomplete=\"off\"></div>",
+      "css": ".ds-ask { font-family: var(--sans, system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans\", \"Helvetica Neue\", Arial, sans-serif); color: #17142a; } .ds-ask label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 600; } .ds-ask input { width: 100%; padding: 10px 0; font: 17px/1.5 var(--sans, system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans\", \"Helvetica Neue\", Arial, sans-serif); color: #17142a; caret-color: #512bd4; background: transparent; border: 0; border-bottom: 2px solid #17142a; border-radius: 0; } .ds-ask input:focus { outline: none; border-bottom-color: #512bd4; box-shadow: 0 1px 0 #512bd4; }"
+    },
+    {
+      "name": "Top Bar",
+      "kind": "nav",
+      "refersTo": "top-bar",
+      "description": "Mark and app name at left, status measurement at right, closed by a 2px ink rule.",
+      "html": "<header class=\"ds-bar\"><span class=\"ds-brand\"><svg class=\"ds-mark\" viewBox=\"76 88 348 348\" aria-hidden=\"true\"><rect class=\"back\" x=\"160\" y=\"88\" width=\"264\" height=\"264\" rx=\"48\"/><rect class=\"gap\" x=\"76\" y=\"148\" width=\"288\" height=\"288\" rx=\"60\"/><rect class=\"front\" x=\"88\" y=\"160\" width=\"264\" height=\"264\" rx=\"48\"/><path class=\"letter\" d=\"M152 360V224h40l56 100V224h40v136h-40l-56-100v100z\"/></svg><span>NetWiv app</span></span><span class=\"ds-status\" data-state=\"answered\">Answered in 40 ms</span></header>",
+      "css": ".ds-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 24px; border-bottom: 2px solid #17142a; background: #f6f5fb; color: #17142a; font: 16px/1.5 var(--sans, system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans\", \"Helvetica Neue\", Arial, sans-serif); } .ds-brand { display: flex; align-items: center; gap: 10px; font-weight: 600; } .ds-mark { width: 24px; height: 24px; } .ds-mark .back { fill: #b9a8f5; } .ds-mark .gap { fill: #f6f5fb; } .ds-mark .front { fill: #512bd4; } .ds-mark .letter { fill: #ffffff; } .ds-status { display: flex; align-items: center; gap: 8px; font: 13px/1.4 var(--mono, ui-monospace, \"SF Mono\", SFMono-Regular, \"Cascadia Mono\", Consolas, \"Liberation Mono\", Menlo, monospace); font-variant-numeric: tabular-nums; color: #5b5674; } .ds-status::before { content: \"\"; width: 8px; height: 8px; background: #d9d5ea; } .ds-status[data-state=\"answered\"]::before { background: #512bd4; }"
+    },
+    {
+      "name": "Answer Field",
+      "kind": "custom",
+      "refersTo": "answer-field",
+      "description": "Signature: the purple block where C# answers, with the route, the message and the count; the message lands on each new count.",
+      "html": "<div class=\"ds-answer\"><p class=\"route\">commands.greet → Commands.Greet</p><p class=\"message\">Hello, React!</p><dl class=\"count\"><dt>Calls counted in C#</dt><dd>1</dd></dl></div>",
+      "css": ".ds-answer { padding: 20px 24px 18px; background: #512bd4; color: #ffffff; font-family: var(--sans, system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans\", \"Helvetica Neue\", Arial, sans-serif); border-radius: 0; } .ds-answer .route { margin: 0; font: 13px/1.4 var(--mono, ui-monospace, \"SF Mono\", SFMono-Regular, \"Cascadia Mono\", Consolas, \"Liberation Mono\", Menlo, monospace); color: #ddd5fc; } .ds-answer .message { margin: 10px 0 16px; font-size: 30px; line-height: 1.15; letter-spacing: -0.02em; font-weight: 700; animation: ds-land 360ms var(--ease, cubic-bezier(0.16, 1, 0.3, 1)); } .ds-answer .count { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin: 0; padding-top: 12px; border-top: 1px solid rgb(255 255 255 / 0.3); font-size: 14px; } .ds-answer .count dt { color: #ddd5fc; } .ds-answer .count dd { margin: 0; font: 600 20px/1 var(--mono, ui-monospace, \"SF Mono\", SFMono-Regular, \"Cascadia Mono\", Consolas, \"Liberation Mono\", Menlo, monospace); font-variant-numeric: tabular-nums; } @keyframes ds-land { from { transform: translateY(6px); } } @media (prefers-reduced-motion: reduce) { .ds-answer .message { animation: none; } }"
+    },
+    {
+      "name": "Answer Field (dark)",
+      "kind": "custom",
+      "refersTo": "answer-field-dark",
+      "description": "The softer night field, still the only colour on screen.",
+      "html": "<div style=\"background:#17142a;padding:16px\"><div class=\"ds-answer-dark\"><p class=\"route\">commands.greet → Commands.Greet</p><p class=\"message\">Hello, React!</p><dl class=\"count\"><dt>Calls counted in C#</dt><dd>1</dd></dl></div></div>",
+      "css": ".ds-answer-dark { padding: 20px 24px 18px; background: #3b2e96; color: #ffffff; font-family: var(--sans, system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans\", \"Helvetica Neue\", Arial, sans-serif); border-radius: 0; } .ds-answer-dark .route { margin: 0; font: 13px/1.4 var(--mono, ui-monospace, \"SF Mono\", SFMono-Regular, \"Cascadia Mono\", Consolas, \"Liberation Mono\", Menlo, monospace); color: #d4ccf8; } .ds-answer-dark .message { margin: 10px 0 16px; font-size: 30px; line-height: 1.15; letter-spacing: -0.02em; font-weight: 700; animation: ds-land 360ms var(--ease, cubic-bezier(0.16, 1, 0.3, 1)); } .ds-answer-dark .count { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin: 0; padding-top: 12px; border-top: 1px solid rgb(255 255 255 / 0.25); font-size: 14px; } .ds-answer-dark .count dt { color: #d4ccf8; } .ds-answer-dark .count dd { margin: 0; font: 600 20px/1 var(--mono, ui-monospace, \"SF Mono\", SFMono-Regular, \"Cascadia Mono\", Consolas, \"Liberation Mono\", Menlo, monospace); font-variant-numeric: tabular-nums; } @keyframes ds-land { from { transform: translateY(6px); } } @media (prefers-reduced-motion: reduce) { .ds-answer-dark .message { animation: none; } }"
+    },
+    {
+      "name": "Answer Field (failed)",
+      "kind": "custom",
+      "refersTo": "answer-field-failed",
+      "description": "Ink block with the failure, a hint and the raw error in mono.",
+      "html": "<div class=\"ds-failed\"><p class=\"route\">commands.greet → Commands.Greet</p><p class=\"message\">C# did not answer</p><p class=\"detail\">The greet command failed in C#. Greet is in src-netwiv/Program.cs.<code>Error: command failed</code></p></div>",
+      "css": ".ds-failed { padding: 20px 24px 18px; background: #17142a; color: #ffffff; font-family: var(--sans, system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans\", \"Helvetica Neue\", Arial, sans-serif); } .ds-failed .route { margin: 0; font: 13px/1.4 var(--mono, ui-monospace, \"SF Mono\", SFMono-Regular, \"Cascadia Mono\", Consolas, \"Liberation Mono\", Menlo, monospace); color: #c9c4dc; } .ds-failed .message { margin: 10px 0 16px; font-size: 30px; line-height: 1.15; letter-spacing: -0.02em; font-weight: 700; } .ds-failed .detail { margin: 0; font-size: 14px; color: #c9c4dc; } .ds-failed .detail code { display: block; margin-top: 10px; font: 12px/1.5 var(--mono, ui-monospace, \"SF Mono\", SFMono-Regular, \"Cascadia Mono\", Consolas, \"Liberation Mono\", Menlo, monospace); }"
+    },
+    {
+      "name": "File Map",
+      "kind": "card",
+      "refersTo": "file-row",
+      "description": "Ruled rows of path and plain sentence under a 2px ink rule.",
+      "html": "<aside class=\"ds-map\"><h2>Make it yours</h2><ul><li><code>src/App.tsx</code><span>This screen. Replace it with your interface.</span></li><li><code>src-netwiv/Program.cs</code><span>Commands, state and the window. Greet is defined here.</span></li><li><strong>netwiv.github.io</strong><span>Guides and the API reference.</span></li></ul></aside>",
+      "css": ".ds-map { font-family: var(--sans, system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans\", \"Helvetica Neue\", Arial, sans-serif); color: #17142a; } .ds-map h2 { margin: 0 0 14px; font-size: 15px; font-weight: 700; } .ds-map ul { margin: 0; padding: 0; list-style: none; border-top: 2px solid #17142a; } .ds-map li { display: grid; gap: 4px; padding: 14px 0; border-bottom: 1px solid #d9d5ea; } .ds-map code { font: 600 14px/1.4 var(--mono, ui-monospace, \"SF Mono\", SFMono-Regular, \"Cascadia Mono\", Consolas, \"Liberation Mono\", Menlo, monospace); } .ds-map strong, .ds-map span { font-size: 14px; } .ds-map span { color: #5b5674; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Working Console",
+    "overview": "The starter is a one-screen console, not a welcome page. A thin top bar carries the mark, the app name and a live status measurement; below it, two equal columns split by a hairline. The left column performs the C# round trip (headline, name field, Call greet, and a purple answer field pinned to the column bottom); the right column is the map of what to edit, four ruled rows of path and plain sentence. It adapts the NetWiv site's Swiss technical program (paper, ink, ink rules, one purple field, the layered mark as the only ornament) to a screen the developer will delete within minutes.\n\nIt is deliberately modest and self-contained: system faces only, no network assets, square corners, no shadows, one colour field, one authored motion. NetWiv identity is a 24px mark in the corner and nothing more. The screen exists in five frameworks (React, Vue, Svelte, Angular, Blazor) that must stay visually identical; they share one stylesheet, one markup structure and one copy deck, all generated from `scripts/generate-frontend-template-overlays.mjs`.\n\nRejected by the user: a high-contrast dark theme (the dark set is intentionally soft), and bundling the brand faces Roboto and JetBrains Mono.",
+    "keyCharacteristics": [
+      "Split console: round trip on the left, file map on the right, equal columns, hairline between.",
+      "Paper ground, ink type, 2px ink rules under the top bar and above the file map.",
+      "One purple answer field per screen; it stays the only colour field in dark mode.",
+      "System sans for reading, system monospace only for paths, the call route, the count and the status measurement.",
+      "Square corners everywhere except inside the layered mark; flat, no shadows.",
+      "One authored motion: the answer \"lands\" on each new count."
+    ],
+    "rules": [
+      {
+        "name": "The One Field Rule",
+        "body": "The answer field is the only solid colour on screen. In dark mode it stays the only colour field; the button becomes a light inverse block (ink-dark slab with paper-dark text) instead of a second dark purple.",
+        "section": "colors"
+      },
+      {
+        "name": "The Soft Dark Rule",
+        "body": "The dark set is soft by decision: body ink is a lilac grey, not white, and rules are mid-tone. Do not raise contrast toward a black-and-white dark theme; the user rejected it. White is reserved for type on the answer field.",
+        "section": "colors"
+      },
+      {
+        "name": "The Back Layer Rule",
+        "body": "Lavender is the layer behind: the mark's back plate, a status square, a hover or focus on ink. It never fills a surface.",
+        "section": "colors"
+      },
+      {
+        "name": "The System Faces Rule",
+        "body": "System fonts only. No webfont files, no network fonts; the brand faces stay in the brand banners.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono Means Data Rule",
+        "body": "Monospace is reserved for paths, the call route, the count and the status measurement (plus the raw error string they produce). Headings, labels, sentences and the documentation site name are set in the sans.",
+        "section": "typography"
+      },
+      {
+        "name": "The Split Console Rule",
+        "body": "Two equal halves: the left performs, the right explains. Do not centre a card, and do not add a third region.",
+        "section": "layout"
+      },
+      {
+        "name": "The Rules Not Shadows Rule",
+        "body": "Separate regions with rules and the one colour field, never with elevation.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Square Except the Mark Rule",
+        "body": "Rounded corners belong only to the mark.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do change the screen in `scripts/generate-frontend-template-overlays.mjs` and regenerate all five frameworks; never hand-edit the generated `App.tsx`, `App.vue`, `App.svelte`, `app.ts`, `Home.razor` or their stylesheets.",
+      "Do define every colour as a custom property on `:root` with a matching value in the dark set.",
+      "Do keep the answer field the only colour field in both appearances, with the button as an ink slab in light and a light inverse block in dark.",
+      "Do set paths, the call route, the count and the status measurement in the system monospace, with tabular figures for numbers.",
+      "Do keep the layered mark as the only ornament, coloured from the mark tokens.",
+      "Do keep \"land\" the only authored motion and disable it under reduced motion."
+    ],
+    "donts": [
+      "Don't load webfonts or any remote asset; the starter runs offline from embedded files.",
+      "Don't raise the dark set to a high-contrast black-and-white theme.",
+      "Don't add rounded corners to anything except the mark.",
+      "Don't use shadows, gradients, blur or glass for depth.",
+      "Don't add a second colour field, a lavender ground, or a purple tint wash.",
+      "Don't add icons, illustrations or decorative glyphs beyond the mark.",
+      "Don't replace the split console with a centred hero card and a \"Get started\" button."
+    ]
+  }
+}

@@ -184,9 +184,9 @@ Each group has its own checkout, environment and build outputs. Do not execute
 multiple groups concurrently in the same checkout: tests change process-wide
 settings and build referenced projects.
 
-Linux .NET 8 covers all 18 template overlays and all package-manager choices.
-Other OS/SDK jobs generate representative JavaScript, TypeScript, Rust and Blazor
-templates and still check every manager and the full discovery list. Unselected
+Linux .NET 8 covers all five starter templates and all package-manager choices.
+Other OS/SDK jobs generate the React base template, the Angular overlay and Blazor,
+and still check every manager and the full discovery list. Unselected
 template combinations are not claimed as passes on those hosts. The full
 generator suite runs on Windows, Linux and macOS ARM, plus SDK 9/10.
 API tests run on all three supported desktop RIDs. macOS x64 is excluded from

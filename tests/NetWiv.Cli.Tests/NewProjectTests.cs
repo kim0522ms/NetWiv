@@ -4,6 +4,118 @@ using NetWiv.Cli;
 
 internal static class NewProjectTests
 {
+    internal static async Task BlazorConfigurationBuilds()
+    {
+        var root = Directory.CreateTempSubdirectory("netwiv-blazor-build-").FullName;
+        try
+        {
+            var app = Path.Combine(root, "app");
+            var created = await Run(["new", "Example", "-t", "blazor", "-o", app], root);
+            Check(created.Code == 0, created.Error);
+            var backend = Path.Combine(app, "src-netwiv/Example.csproj");
+            var bindingDirectory = XDocument.Load(backend).Descendants("NetWivCSharpBindingsDirectory").Single().Value;
+            Check(bindingDirectory == "../frontend/obj/netwiv/$(Configuration)", "Generated clients share an output across configurations.");
+            var frontendBuild = XDocument.Load(Path.Combine(app, "Example.Frontend.esproj")).Descendants("BuildCommand").Single().Value;
+            Check(frontendBuild.Contains("-c \"$(Configuration)\"", StringComparison.Ordinal), "App build does not pass its configuration to the frontend publish.");
+            Check(File.ReadAllLines(Path.Combine(app, ".gitignore")).Contains("**/obj/"), "Generated client directory is not ignored.");
+            // Exercise the actual template targets with a deterministic exporter. Generator
+            // semantics are tested separately; this fixture isolates MSBuild scheduling,
+            // incremental Compile items and concurrent configuration output ownership.
+            File.WriteAllText(backend, $$"""
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup>
+                    <TargetFramework>net8.0</TargetFramework>
+                    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+                    <NetWivCSharpBindingsDirectory>{{bindingDirectory}}</NetWivCSharpBindingsDirectory>
+                  </PropertyGroup>
+                  <Target Name="ExportClient" AfterTargets="CoreCompile">
+                    <MakeDir Directories="$(NetWivCSharpBindingsDirectory)" />
+                    <WriteLinesToFile File="$(NetWivCSharpBindingsDirectory)/NetWivCommands.g.cs"
+                      Lines="public class $(Configuration)$(FixtureSuffix)Client { }" Overwrite="true" WriteOnlyWhenDifferent="true" />
+                  </Target>
+                </Project>
+                """);
+            File.WriteAllText(Path.Combine(app, "contracts/Contracts.csproj"), """
+                <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup>
+                <TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+                </PropertyGroup></Project>
+                """);
+            File.WriteAllText(Path.Combine(app, "frontend/NetWivUi.csproj"), """
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+                  <ItemGroup><Compile Include="Consumer.cs" /></ItemGroup>
+                  <Import Project="NetWiv.targets" />
+                </Project>
+                """);
+            File.WriteAllText(Path.Combine(app, "frontend/Consumer.cs"), """
+                #if DEBUG
+                #if IMPORTED_CLIENT
+                public class Consumer : DebugImportedClient { }
+                #else
+                public class Consumer : DebugClient { }
+                #endif
+                #else
+                #if IMPORTED_CLIENT
+                public class Consumer : ReleaseImportedClient { }
+                #else
+                public class Consumer : ReleaseClient { }
+                #endif
+                #endif
+                """);
+            var runner = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet";
+            async Task<string> Execute(params string[] arguments)
+            {
+                var start = new System.Diagnostics.ProcessStartInfo(runner)
+                {
+                    WorkingDirectory = app, UseShellExecute = false, CreateNoWindow = true,
+                    RedirectStandardOutput = true, RedirectStandardError = true
+                };
+                foreach (var argument in arguments)
+                    start.ArgumentList.Add(argument);
+                using var process = System.Diagnostics.Process.Start(start)!;
+                var output = process.StandardOutput.ReadToEndAsync();
+                var error = process.StandardError.ReadToEndAsync();
+                using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+                try { await process.WaitForExitAsync(timeout.Token); }
+                catch { process.Kill(entireProcessTree: true); await process.WaitForExitAsync(); throw; }
+                Check(process.ExitCode == 0, await output + await error);
+                return await output;
+            }
+            Task<string> Build(string configuration, string project = "frontend/NetWivUi.csproj", bool bindingsOnly = false) =>
+                Execute("build", project, "-c", configuration, "--disable-build-servers", "-v:q", "-nologo",
+                    "-p:NetWivBindingsOnly=" + bindingsOnly.ToString().ToLowerInvariant());
+            await Task.WhenAll(Build("Debug"), Build("Release"));
+            // A competing backend export cannot replace the other configuration's client,
+            // even when that frontend's incremental generation target is skipped.
+            await Build("Debug", "src-netwiv/Example.csproj", true);
+            await Build("Release");
+            foreach (var configuration in new[] { "Debug", "Release" })
+            {
+                var client = Path.Combine(app, "frontend/obj/netwiv", configuration, "NetWivCommands.g.cs");
+                Check(File.ReadAllText(client).Contains(configuration + "Client", StringComparison.Ordinal), "Wrong configuration client.");
+                File.Delete(client);
+                await Build(configuration);
+                Check(File.Exists(client), "Deleted generated client was not regenerated.");
+            }
+            // This imported file is outside both the app and contracts source globs.
+            File.WriteAllText(Path.Combine(root, "Directory.Build.props"), """
+                <Project><PropertyGroup>
+                  <FixtureSuffix>Imported</FixtureSuffix>
+                  <DefineConstants>$(DefineConstants);IMPORTED_CLIENT</DefineConstants>
+                </PropertyGroup></Project>
+                """);
+            await Build("Release");
+            Check(File.ReadAllText(Path.Combine(app, "frontend/obj/netwiv/Release/NetWivCommands.g.cs"))
+                .Contains("ReleaseImportedClient", StringComparison.Ordinal), "Imported properties did not refresh the client.");
+            var designTime = JsonNode.Parse(await Execute("msbuild", "frontend/NetWivUi.csproj",
+                "-p:Configuration=Release", "-p:DesignTimeBuild=true", "-getItem:Compile", "-nologo"))!;
+            Check(designTime["Items"]!["Compile"]!.AsArray().Any(item =>
+                item!["Identity"]!.GetValue<string>().Replace('\\', '/') == "obj/netwiv/Release/NetWivCommands.g.cs"),
+                "IDE design-time compilation omitted the existing client.");
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
     internal static async Task CreateReact()
     {
         var root = Directory.CreateTempSubdirectory("netwiv-new-test-").FullName;
@@ -74,25 +186,20 @@ internal static class NewProjectTests
         {
             var cases = new (string Name, string Evidence)[]
             {
-                ("vanilla", "src/main.js"), ("vanilla-ts", "src/main.ts"),
-                ("vue", "src/App.vue"), ("vue-ts", "src/App.vue"),
-                ("svelte", "src/App.svelte"), ("svelte-ts", "src/App.svelte"),
-                ("react", "src/App.jsx"), ("react-ts", "src/App.tsx"),
-                ("solid", "src/App.jsx"), ("solid-ts", "src/App.tsx"),
-                ("angular", "angular.json"), ("preact", "src/App.jsx"), ("preact-ts", "src/App.tsx"),
-                ("yew", "src/main.rs"), ("leptos", "src/main.rs"),
-                ("sycamore", "src/main.rs"), ("dioxus", "src/main.rs"),
-                ("blazor", "frontend/NetWivUi.csproj"),
+                ("react", "src/App.tsx"), ("vue", "src/App.vue"), ("svelte", "src/App.svelte"),
+                ("angular", "src/app.ts"), ("blazor", "frontend/Pages/Home.razor"),
             };
             var listed = await Run(["new", "--list"], root);
             Check(listed.Code == 0, listed.Error);
             foreach (var (template, _) in cases)
-                Check(listed.Output.Contains(template, StringComparison.Ordinal), "The upstream template is missing from --list: " + template);
+                Check(listed.Output.Contains(template, StringComparison.Ordinal), "The template is missing from --list: " + template);
+            foreach (var removed in new[] { "vanilla", "solid", "preact", "yew", "leptos", "sycamore", "dioxus", "-ts" })
+                Check(!listed.Output.Contains(removed, StringComparison.Ordinal), "A retired template is still listed: " + removed);
             var matrix = Environment.GetEnvironmentVariable("NETWIV_TEST_TEMPLATE_MATRIX") ?? "full";
             if (matrix is not ("full" or "representative")) throw new InvalidOperationException("Unknown template test matrix: " + matrix);
             // Linux's baseline job covers every overlay. Other OS/SDK jobs still
-            // exercise JS, TS, Rust and Blazor generation and every manager below.
-            var selected = matrix == "full" ? cases : cases.Where(item => item.Name is "react" or "vanilla-ts" or "yew" or "blazor").ToArray();
+            // exercise the base template, an overlay, Blazor and every manager below.
+            var selected = matrix == "full" ? cases : cases.Where(item => item.Name is "react" or "angular" or "blazor").ToArray();
             Console.WriteLine($"Template matrix: {matrix} ({selected.Length}/{cases.Length} templates; all managers)");
             foreach (var (template, evidence) in selected)
             {
@@ -100,6 +207,9 @@ internal static class NewProjectTests
                 var result = await Run(["new", "Example", "--template", template, "--output", destination], root);
                 Check(result.Code == 0, result.Error);
                 Check(File.Exists(Path.Combine(destination, evidence)), "Missing frontend for " + template);
+                var screen = File.ReadAllText(Path.Combine(destination, evidence));
+                Check(screen.Contains("Example", StringComparison.Ordinal) && !screen.Contains("NetWiv app", StringComparison.Ordinal), "Starter screen does not show the project name: " + template);
+                Check(!screen.Contains("getName", StringComparison.Ordinal), "Starter screen calls an API that needs a capability: " + template);
                 var config = JsonNode.Parse(File.ReadAllText(Path.Combine(destination, "src-netwiv/netwiv.conf.json")))!;
                 Check(config["build"]!["dotnetProject"]!.GetValue<string>() == "Example.csproj", "Backend project mismatch: " + template);
                 Check(File.Exists(Path.Combine(destination, "Example.sln")), "Solution missing: " + template);
@@ -110,19 +220,27 @@ internal static class NewProjectTests
                 var readme = File.ReadAllText(Path.Combine(destination, "README.md"));
                 Check(readme.Contains("TAURI®", StringComparison.Ordinal) && readme.Contains("The Tauri Programme within the Commons Conservancy", StringComparison.Ordinal), "Trademark notice missing: " + template);
                 Check(readme.Contains("not affiliated with, endorsed by, or officially approved by", StringComparison.Ordinal), "Independent template notice missing: " + template);
-                if (template is "yew" or "leptos" or "sycamore" or "dioxus")
-                {
-                    Check(File.Exists(Path.Combine(destination, "vendor/@netwiv/api/upstream/core.js")), "Private implementation module missing: " + template);
-                    Check(File.Exists(Path.Combine(destination, "vendor/@netwiv/api/core.js")), "NetWiv JS API module missing: " + template);
-                    Check(File.ReadAllText(Path.Combine(destination, "index.html")).Contains("./vendor/@netwiv/api/core.js", StringComparison.Ordinal), "Rust frontend bypasses NetWiv API: " + template);
-                    Check(!File.Exists(Path.Combine(destination, "package.json")), "Rust frontend unexpectedly requires npm: " + template);
-                }
-                else if (template == "blazor")
+                if (template == "blazor")
                 {
                     Check(config["build"]!["frontendDist"]!.GetValue<string>() == "../dist/wwwroot", "Blazor asset root mismatch");
                     Check(File.Exists(Path.Combine(destination, "frontend/wwwroot/vendor/@netwiv/api/upstream/core.js")), "Blazor JS API module missing");
                     Check(File.Exists(Path.Combine(destination, "frontend/wwwroot/vendor/@netwiv/api/core.js")), "Blazor NetWiv API module missing");
                     Check(File.ReadAllText(Path.Combine(destination, "frontend/wwwroot/netwiv.js")).Contains("./vendor/@netwiv/api/core.js", StringComparison.Ordinal), "Blazor frontend bypasses NetWiv API");
+                    foreach (var sample in new[] { "frontend/Pages/Counter.razor", "frontend/Pages/Weather.razor", "frontend/Layout/NavMenu.razor", "frontend/wwwroot/lib", "frontend/wwwroot/css/bootstrap", "frontend/wwwroot/sample-data", "vendor", "scripts" })
+                        Check(!File.Exists(Path.Combine(destination, sample)) && !Directory.Exists(Path.Combine(destination, sample)), "Blazor sample or leftover remains: " + sample);
+                    Check(!File.ReadAllText(Path.Combine(destination, "frontend/wwwroot/index.html")).Contains("bootstrap", StringComparison.Ordinal), "Blazor still links Bootstrap");
+                    // The typed C# client: shared contracts, the export target and the client registration.
+                    Check(File.ReadAllText(Path.Combine(destination, "contracts/Contracts.csproj")).Contains("TreatAsLocalProperty=\"AssemblyName\"", StringComparison.Ordinal) && File.ReadAllText(Path.Combine(destination, "contracts/Contracts.cs")).Contains("record Greeting", StringComparison.Ordinal), "Blazor contracts project missing");
+                    Check(File.ReadAllText(Path.Combine(destination, "Example.sln")).Contains("Contracts.csproj", StringComparison.Ordinal), "Contracts project missing from the solution");
+                    var program = File.ReadAllText(Path.Combine(destination, "src-netwiv/Program.cs"));
+                    Check(!program.Contains("record Greeting", StringComparison.Ordinal) && !program.Contains("class AppJsonContext", StringComparison.Ordinal), "Shared types were not moved out of Program.cs");
+                    var backendProject = File.ReadAllText(Path.Combine(destination, "src-netwiv/Example.csproj"));
+                    Check(backendProject.Contains("<NetWivCSharpBindingsDirectory>../frontend/obj/netwiv/$(Configuration)</NetWivCSharpBindingsDirectory>", StringComparison.Ordinal) &&
+                        !backendProject.Contains("NetWivFrontendBindingsDirectory", StringComparison.Ordinal) && backendProject.Contains("../contracts/Contracts.csproj", StringComparison.Ordinal), "Blazor app does not export the C# client");
+                    Check(File.Exists(Path.Combine(destination, "Directory.Build.props")) && !File.Exists(Path.Combine(destination, "src-netwiv/Directory.Build.props")), "Bindings-only build isolation missing");
+                    Check(File.ReadAllText(Path.Combine(destination, "frontend/NetWivUi.csproj")).Contains("NetWiv.targets", StringComparison.Ordinal), "Frontend does not import NetWiv.targets");
+                    Check(File.ReadAllText(Path.Combine(destination, "frontend/Program.cs")).Contains("AddScoped<NetWiv.Generated.NetWivCommands>()", StringComparison.Ordinal), "Typed client is not registered");
+                    Check(File.ReadAllText(Path.Combine(destination, "frontend/Pages/Home.razor")).Contains("Commands.GreetAsync(Name)", StringComparison.Ordinal), "Blazor screen does not use the typed client");
                 }
                 else
                 {
@@ -133,10 +251,11 @@ internal static class NewProjectTests
                     var api = JsonNode.Parse(File.ReadAllText(Path.Combine(destination, "vendor/netwiv-api/package.json")))!;
                     Check(api["name"]!.GetValue<string>() == "@netwiv/api" && File.Exists(Path.Combine(destination, "vendor/netwiv-api/lib/core.js")), "Local NetWiv API package is incomplete: " + template);
                     Check(api["dependencies"] is null, "The frontend facade must be self-contained: " + template);
-                    Check(!File.Exists(Path.Combine(destination, "src/App.jsx")) || template == "react" || template is "solid" or "preact", "React source leaked into " + template);
+                    Check(!File.Exists(Path.Combine(destination, "src/App.tsx")) || template == "react", "React source leaked into " + template);
+                    Check(File.Exists(Path.Combine(destination, template == "angular" ? "tsconfig.app.json" : "tsconfig.json")), "TypeScript configuration missing: " + template);
                 }
             }
-            foreach (var (manager, template) in new[] { ("pnpm", "vue"), ("yarn", "svelte"), ("bun", "react"), ("deno", "vanilla") })
+            foreach (var (manager, template) in new[] { ("pnpm", "vue"), ("yarn", "svelte"), ("bun", "react"), ("deno", "angular") })
             {
                 var destination = Path.Combine(root, manager);
                 var result = await Run(["new", "Example", "-t", template, "-m", manager, "-o", destination], root);
@@ -163,7 +282,8 @@ internal static class NewProjectTests
                 new[] { "new", "App", "--identifier", "bad identifier" }, new[] { "new", "App", "--source", "missing" },
                 new[] { "new", "App", "--bogus" }, new[] { "new", "App", "Extra" }, new[] { "new", "App", "-o" },
                 new[] { "new", "App", "--template", "blazor", "--manager", "npm" },
-                new[] { "new", "App", "--template", "yew", "--manager", "pnpm" } })
+                new[] { "new", "App", "--template", "react", "--manager", "cargo" },
+                new[] { "new", "App", "--template", "yew" }, new[] { "new", "App", "--template", "react-ts" } })
             {
                 var (code, _, error) = await Run(args, root);
                 Check(code == 1 && error.Length > 0, "Invalid arguments succeeded: " + string.Join(' ', args));

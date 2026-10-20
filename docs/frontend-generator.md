@@ -1,7 +1,7 @@
 # Generated frontend bindings
 
 `NetWiv.Generators` produces JavaScript calls and TypeScript declarations from
-C# command signatures. See the [quickstart](integration-quickstart.md) for
+C# command signatures, and a typed C# client for .NET frontends such as Blazor. See the [quickstart](integration-quickstart.md) for
 package setup and the support boundaries below before exposing custom DTOs.
 
 ## Build workflow
@@ -69,6 +69,89 @@ to use `@netwiv/api/core`; direct upstream imports are no longer supported. Remo
 the old frontend dependencies and runtime-detection guards as described in
 [the migration guide](frontend-api.md#installation-and-migration). Command names,
 permissions and backend registration remain unchanged.
+
+### Typed C# client for .NET frontends
+
+A .NET frontend such as Blazor WebAssembly can call the same commands through
+generated C# methods instead of command-name strings. Set a second output
+directory in the C# app project:
+
+```xml
+<NetWivCSharpBindingsDirectory>../frontend/obj/netwiv/$(Configuration)</NetWivCSharpBindingsDirectory>
+```
+
+Each build then writes `NetWivCommands.g.cs` (namespace `NetWiv.Generated`) under
+the frontend's configuration-specific intermediate directory. Include that file
+in the frontend's `Compile` items after generation; the starter's `NetWiv.targets`
+handles this ordering and regeneration. Register it and call the commands with
+their C# types:
+
+```csharp
+builder.Services.AddScoped<NetWiv.Generated.NetWivCommands>();
+
+// In a component: @inject NetWiv.Generated.NetWivCommands Commands
+Greeting greeting = await Commands.GreetAsync("World");
+```
+
+The client does not redeclare DTOs. It uses the app's own parameter and result
+types and its `CommandJsonContext`, so both sides serialize with the same
+options. That requires those types and the JSON context to live in a library
+that both the app and the frontend reference, such as the Blazor starter's
+`contracts/` project. A command whose types are declared in the app itself, or
+in a NetWiv package, gets no method; the generated file lists it with the reason.
+Only commands declared in the app are included, not commands from referenced
+plugin assemblies. A command whose parameters and result are only `byte[]` or
+`JsonElement` (or none) needs no shared context.
+
+When `NetWivCSharpBindingsDirectory` is set and `NetWivFrontendBindingsDirectory`
+is not, the app emits only the C# client: `commands.js` and `commands.d.ts` are
+not generated, so wire types that the TypeScript mapping rejects (for example a
+custom `[JsonConverter]`) do not fail the app build. `netwiv bindings` reports
+that such an app has no JavaScript bindings.
+
+Method names are the C# method name plus `Async`; two methods with the same name
+fall back to the external command name, and a numeric suffix settles any
+collision left. Each method takes an optional `CancellationToken`, which stops
+waiting for the answer but does not cancel the command. Arguments are serialized
+with the shared JSON context; top-level `byte[]` travels as an array of numbers
+and `JsonElement` unchanged, as the command dispatcher expects. They are sent
+through the frontend's `wwwroot/netwiv.js` module, whose `invokeJson`
+function forwards them to `@netwiv/api/core`. A failed call surfaces as a
+`JSException`. Renaming a command, a parameter or a DTO member in C# changes the
+generated method or type, so the frontend build fails instead of the call failing
+at run time. Exposure rules are unchanged: the client does not register commands
+or grant permissions.
+
+The bridge uses `@netwiv/api/core.invokeJson`: arguments and results stay JSON
+text while crossing JavaScript, and are parsed only by C#. This preserves
+`long`, `ulong`, `Int128`, `decimal` and nested `JsonElement` numeric values
+without requiring `NumberHandling` overrides. The command and shared context
+still determine the supported C# types and serialization rules. Ordinary
+JavaScript `invoke` calls retain JavaScript's numeric limits.
+
+`invokeJson(command, argsJson, options?)` requires a JSON object as its input
+text and returns JSON text, including `"null"` for a null result. Binary responses
+are rejected; top-level typed `byte[]` commands still use JSON numeric arrays.
+The call uses the authenticated message bridge, including on hosts with protocol
+IPC, with the same capability and document lifetime checks as `invoke`. Isolation
+hooks receive the argument JSON as a string and must preserve it as text to avoid
+rounding numbers. Older runtimes fail explicitly instead of silently falling back
+to a lossy call. JavaScript callers that use `JSON.parse` on the result still have
+JavaScript's numeric limits.
+
+The Blazor starter imports `frontend/NetWiv.targets`, which refreshes the client
+before each ordinary frontend compilation using an incremental bindings-only app
+build of the same configuration. MSBuild evaluates the backend's full imported
+props/targets and conditional compile inputs, including parent build files and
+deleted sources. IDE design-time builds include an existing client without
+launching the bindings build. The project's root `Directory.Build.props` gives that
+build its own `obj/bindings` and `bin/bindings` folders in the app and in
+`contracts/`, so it does not share files with a normal, IDE or NativeAOT build
+running at the same time; it also imports any `Directory.Build.props` further
+up. The client is written to `frontend/obj/netwiv/$(Configuration)/NetWivCommands.g.cs`
+and compiled only for that configuration. This isolates overlapping Debug and
+Release builds and keeps generated code under the existing `obj/` Git ignore.
+The client file is rewritten only when its content changes.
 
 ### Referenced command assemblies
 

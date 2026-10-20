@@ -3,12 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": "^20.19.0 || >=22.12.0" },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "scripts": {
     "bindings": "node scripts/generate-bindings.mjs",
     "predev": "npm run bindings",
     "dev": "vite",
-    "build": "npm run bindings && vite build",
+    "build": "npm run bindings && tsc --noEmit && vite build",
     "desktop": "dotnet run --project src-netwiv",
     "desktop:dev": "dotnet tool restore && dotnet tool run netwiv -- dev -- --dev",
     "desktop:dev:backend": "dotnet watch --project src-netwiv --no-hot-reload run -p:NetWivDevelopment=true -- --dev",
@@ -20,7 +22,10 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.1.1",
+    "typescript": "6.0.3",
     "vite": "8.2.2"
   }
 }

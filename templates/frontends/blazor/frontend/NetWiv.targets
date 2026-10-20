@@ -1,0 +1,23 @@
+<Project>
+  <!-- The types shared with the desktop app, and the typed client generated from its commands. -->
+  <ItemGroup>
+    <ProjectReference Include="../contracts/Contracts.csproj" />
+    <_NetWivApp Include="$(MSBuildProjectDirectory)/../src-netwiv/*.csproj" />
+    <Compile Include="obj/netwiv/$(Configuration)/NetWivCommands.g.cs"
+             Condition="Exists('obj/netwiv/$(Configuration)/NetWivCommands.g.cs')" />
+  </ItemGroup>
+  <PropertyGroup>
+    <!-- The SDK that runs this build, also when MSBuild is hosted by an IDE. -->
+    <_NetWivDotnet>$(DOTNET_HOST_PATH)</_NetWivDotnet>
+    <_NetWivDotnet Condition="'$(_NetWivDotnet)' == ''">dotnet</_NetWivDotnet>
+  </PropertyGroup>
+  <!-- Let the backend's incremental build evaluate all imports and command inputs. A local
+       source-file stamp cannot track parent props, targets or conditional compile items.
+       Existing clients are included above for IDE design-time builds without launching builds. -->
+  <Target Name="NetWivGenerateCommands" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Exec Command="&quot;$(_NetWivDotnet)&quot; build &quot;@(_NetWivApp->'%(FullPath)')&quot; -c &quot;$(Configuration)&quot; -p:NetWivBindingsOnly=true -p:PublishAot=false --disable-build-servers -nologo -v:q" />
+    <ItemGroup>
+      <Compile Include="obj/netwiv/$(Configuration)/NetWivCommands.g.cs" Exclude="@(Compile)" />
+    </ItemGroup>
+  </Target>
+</Project>

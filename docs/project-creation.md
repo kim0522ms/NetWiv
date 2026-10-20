@@ -1,12 +1,11 @@
 # Create a NetWiv app with the .NET CLI
 
 Install `NetWiv.Cli` as a .NET tool to create applications with `netwiv new`.
-It provides [18 frontend choices corresponding to the official TAURI® selector](template-coverage.md).
-The default is React + Vite + C# with the `@netwiv/api` desktop frontend SDK.
-JS/TS starters include a portable vendored package, installed by `npm ci`;
-generated bindings import its core module. See [frontend SDK](frontend-api.md).
-Ordinary JS/TS and Blazor C# backends require
-neither Rust nor Cargo. Rust/WASM frontends require Cargo and Trunk.
+It provides [five starter templates](template-coverage.md): React, Vue, Svelte
+and Angular with TypeScript, and Blazor. The default is React + Vite + C# with
+the `@netwiv/api` desktop frontend SDK. TypeScript starters include a portable
+vendored package, installed by `npm ci`; generated bindings import its core
+module. See [frontend SDK](frontend-api.md). No starter requires Rust or Cargo.
 
 Prepare a package feed using the [quickstart](integration-quickstart.md).
 Replace `$feed` and `$version` with actual values, then run from the parent
@@ -78,8 +77,8 @@ netwiv new --help
   directory name.
 - `--template`: Defaults to `react`. Use `netwiv new --list` or the
   [template matrix](template-coverage.md) for all choices.
-- `--manager`: JS/TS accepts `npm` (default), `pnpm`, `yarn`, `bun` or `deno`;
-  Rust/WASM uses `cargo`, and Blazor uses `dotnet`.
+- `--manager`: TypeScript starters accept `npm` (default), `pnpm`, `yarn`, `bun`
+  or `deno`; Blazor uses `dotnet`.
 - `--output`: A new or empty directory. Existing files are not overwritten.
 - `--identifier`: App identifier. Defaults to `dev.netwiv.<lowercase-project-name>`,
   with `_` replaced by `-`.

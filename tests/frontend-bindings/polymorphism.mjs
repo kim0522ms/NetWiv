@@ -55,8 +55,9 @@ export async function configurePolymorphism(consumer) {
   await writeFile(programFile, (await readFile(programFile, 'utf8'))
     .replace('builder.InvokeHandler("smoke_done")', 'builder.InvokeHandler("smoke_done").InvokeHandler("polymorphic_profile")')
     .replace('[JsonSerializable(typeof(Greeting))]', '[JsonSerializable(typeof(Greeting))]\n[JsonSerializable(typeof(PolyWire))]'));
-  const reactFile = path.join(consumer, 'src/App.jsx');
-  await writeFile(reactFile, (await readFile(reactFile, 'utf8'))
+  const reactFile = path.join(consumer, 'src/App.tsx');
+  // The injected checks are untyped JavaScript, as they were in the former App.jsx.
+  await writeFile(reactFile, '// @ts-nocheck\n' + (await readFile(reactFile, 'utf8'))
     .replace('await commands.smoke_done({ result:', polymorphismGuestChecks('polymorphic_profile') + '\nawait commands.smoke_done({ result:'));
   return { file, source };
 }

@@ -32,3 +32,8 @@ target/
 
 # Local development notes and documentation archives
 /.local-docs/
+
+# Impeccable working files for the starter design (decisions live in templates/DESIGN.md)
+templates/.impeccable/mocks/
+templates/.impeccable/review/
+templates/.impeccable/brief-body.md

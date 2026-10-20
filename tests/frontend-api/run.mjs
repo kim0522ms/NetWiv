@@ -15,6 +15,7 @@ async function run(command, args, cwd) {
 }
 try {
   const { tarball, packed, manifest } = await packApi(run, temporary);
+  await run(process.execPath, ['--test', path.join(root, 'tests/frontend-api/json-transport.test.mjs')], root);
   assert.ok(packed.files.some(file => file.path === 'lib/index.js'));
   assert.ok(packed.files.some(file => file.path === 'lib/index.d.ts'));
   assert.ok(!packed.files.some(file => /^(?:src|tests|node_modules)\/|\.tgz$|package-lock\.json$/.test(file.path)),

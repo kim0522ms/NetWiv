@@ -43,7 +43,8 @@ internal static class InitializationScript
           const sendToNative = message => {
             let payload = message.payload;
             const binary = ArrayBuffer.isView(payload) || payload instanceof ArrayBuffer || Array.isArray(payload);
-            if (bridge.protocolIpc) {
+            // JSON text must stay opaque to JavaScript, including on protocol-enabled hosts.
+            if (bridge.protocolIpc && !message.__NETWIV_JSON__) {
               if (!protocolIpcFailed) {
                 const headers = new Headers(message.options?.headers || {});
                 headers.set('Content-Type', binary ? 'application/octet-stream' : 'application/json');
@@ -82,13 +83,13 @@ internal static class InitializationScript
           };
           let sendIpc = sendToNative;
           {{(isolationScheme is null ? string.Empty : IsolationPattern.TransportScript(isolationScheme))}}
-          const invoke = (cmd, args = {}, options) => new Promise((resolve, reject) => {
+          const invoke = (cmd, args = {}, options, json = false) => new Promise((resolve, reject) => {
             let callback;
             let error;
             callback = transformCallback(value => { callbacks.delete(error); resolve(value); }, true);
             error = transformCallback(value => { callbacks.delete(callback); reject(value); }, true);
             try {
-              sendIpc({ cmd, callback, error, payload: args, options });
+              sendIpc({ cmd, callback, error, payload: args, options, __NETWIV_JSON__: json });
             } catch (exception) {
               callbacks.delete(callback); callbacks.delete(error); reject(exception);
             }
@@ -105,6 +106,10 @@ internal static class InitializationScript
             unregisterCallback: id => callbacks.delete(id),
             runCallback,
             invoke,
+            invokeJson: (cmd, args = '{}', options) => {
+              if (typeof args !== 'string') return Promise.reject(new TypeError('invokeJson requires JSON text'));
+              return invoke(cmd, args, options, true);
+            },
             convertFileSrc: (path, protocol = 'asset') => isWindows
               ? `${bridge.protocolScheme === 'https' ? 'https' : 'http'}://${protocol}.localhost/${encodeURIComponent(path)}`
               : `${protocol}://localhost/${encodeURIComponent(path)}`,

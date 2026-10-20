@@ -3,6 +3,11 @@
     <_NetWivBindingsTaskAssembly>$(MSBuildThisFileDirectory)../tools/net8.0/NetWiv.Build.Tasks.dll</_NetWivBindingsTaskAssembly>
     <_NetWivBindingsTaskAssembly Condition="!Exists('$(_NetWivBindingsTaskAssembly)')">$(MSBuildThisFileDirectory)../../NetWiv.Build.Tasks/bin/$(Configuration)/net8.0/NetWiv.Build.Tasks.dll</_NetWivBindingsTaskAssembly>
   </PropertyGroup>
+  <!-- Lets NetWiv.Generators skip the TypeScript mapping when only the C# client is requested. -->
+  <ItemGroup>
+    <CompilerVisibleProperty Include="NetWivFrontendBindingsDirectory" />
+    <CompilerVisibleProperty Include="NetWivCSharpBindingsDirectory" />
+  </ItemGroup>
   <UsingTask TaskName="NetWiv.Build.Tasks.ExportFrontendBindings" AssemblyFile="$(_NetWivBindingsTaskAssembly)" />
   <UsingTask TaskName="NetWiv.Build.Tasks.GetIsolationAssets" AssemblyFile="$(_NetWivBindingsTaskAssembly)" />
   <UsingTask TaskName="NetWiv.Build.Tasks.GetApplicationVersion" AssemblyFile="$(_NetWivBindingsTaskAssembly)" />
@@ -59,11 +64,17 @@
     </ItemGroup>
   </Target>
   <Target Name="NetWivExportFrontendBindings" AfterTargets="CoreCompile"
-          Condition="'$(NetWivFrontendBindingsDirectory)' != '' and '$(DesignTimeBuild)' != 'true'">
+          Condition="('$(NetWivFrontendBindingsDirectory)' != '' or '$(NetWivCSharpBindingsDirectory)' != '') and '$(DesignTimeBuild)' != 'true'">
     <Error Condition="!Exists('$(_NetWivBindingsTaskAssembly)')" Text="NetWiv binding export task is missing. Build NetWiv.Build before using source targets, or restore the complete NetWiv.Build package." />
+    <!-- An unset directory stays empty; GetFullPath('') would point at the project itself. -->
+    <PropertyGroup>
+      <_NetWivScriptBindingsOutput Condition="'$(NetWivFrontendBindingsDirectory)' != ''">$([System.IO.Path]::GetFullPath('$(NetWivFrontendBindingsDirectory)', '$(MSBuildProjectDirectory)'))</_NetWivScriptBindingsOutput>
+      <_NetWivCSharpBindingsOutput Condition="'$(NetWivCSharpBindingsDirectory)' != ''">$([System.IO.Path]::GetFullPath('$(NetWivCSharpBindingsDirectory)', '$(MSBuildProjectDirectory)'))</_NetWivCSharpBindingsOutput>
+    </PropertyGroup>
     <NetWiv.Build.Tasks.ExportFrontendBindings
         AssemblyPath="@(IntermediateAssembly)"
-        OutputDirectory="$([System.IO.Path]::GetFullPath('$(NetWivFrontendBindingsDirectory)', '$(MSBuildProjectDirectory)'))" />
+        OutputDirectory="$(_NetWivScriptBindingsOutput)"
+        CSharpOutputDirectory="$(_NetWivCSharpBindingsOutput)" />
   </Target>
   <ItemGroup>
     <Compile Remove="$(MSBuildProjectDirectory)/target/**/*.cs" />

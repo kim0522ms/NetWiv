@@ -49,15 +49,14 @@ review and revision.
 | | What you work with |
 | :--- | :--- |
 | **C# application layer** | A .NET SDK for commands, shared state, permissions and plugins. |
-| **Frontend choice** | 18 template choices, including React, Vue, Svelte and Blazor. |
+| **Frontend choice** | Five starters: React, Vue, Svelte and Angular with TypeScript, and Blazor. |
 | **Generated bindings** | JavaScript calls and TypeScript declarations generated from C# commands. |
 | **Desktop frontend SDK** | `@netwiv/api` in `packages/api`, with mobile-only APIs excluded from its public facade. |
 | **Flexible deployment** | Self-contained .NET by default, installed-runtime deployment or optional NativeAOT. [Deployment modes](docs/deployment.md). |
 | **Desktop plugin API** | `@netwiv/api/plugins/*` shares the core facade; .NET plugin registration and permissions remain required. |
 
-Ordinary JS/TS and Blazor application development does not require Cargo.
-Framework maintainers build the native adapter separately; Rust/WASM frontend
-templates require their own Rust toolchain.
+Application development does not require Cargo. Framework maintainers build the
+native adapter separately.
 
 NetWiv prioritizes idiomatic .NET usability and stability. TAURI frontend compatibility
 remains an important support goal, with deliberate differences documented and

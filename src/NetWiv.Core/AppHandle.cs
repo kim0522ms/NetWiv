@@ -398,6 +398,16 @@ public sealed partial class AppHandle : IDisposable
                     ? args.GetProperty("contentType").GetString() == "application/octet-stream"
                     : root.TryGetProperty("__NETWIV_BODY_TYPE__", out var bodyType) ? bodyType.GetString() == "application/octet-stream" : args.ValueKind == JsonValueKind.Array;
                 if (Isolation is not null) args = Isolation.Decrypt(args);
+                var jsonText = root.TryGetProperty("__NETWIV_JSON__", out var jsonMode) && jsonMode.ValueKind == JsonValueKind.True;
+                if (jsonText)
+                {
+                    if (isBinary || args.ValueKind != JsonValueKind.String)
+                        throw new InvokeException("invokeJson requires a JSON object encoded as text.");
+                    using var parsed = JsonDocument.Parse(args.GetString()!);
+                    if (parsed.RootElement.ValueKind != JsonValueKind.Object)
+                        throw new InvokeException("invokeJson requires a JSON object encoded as text.");
+                    args = parsed.RootElement.Clone();
+                }
                 if (fallback) isBinary = false;
                 var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 if (root.TryGetProperty("options", out var options) && options.ValueKind == JsonValueKind.Object &&
@@ -413,7 +423,12 @@ public sealed partial class AppHandle : IDisposable
                 }
                 var body = isBinary ? InvokeBody.FromBytes(args.EnumerateArray().Select(static item => item.GetByte()).ToArray()) : InvokeBody.FromJson(args);
                 var result = await InvokeCoreAsync(command, args, message.WindowLabel ?? message.WebviewLabel, message.WebviewLabel, message.Source, false, CancellationToken.None, message.DocumentId, new Request(body, headers));
-                RunInvokeCallback(message.WebviewLabel, callback, result, message.DocumentId);
+                if (jsonText)
+                {
+                    if (result.IsBinary) throw new InvokeException("invokeJson does not support binary responses; use invoke.");
+                    RunCallback(message.WebviewLabel, callback, JsonValue.From(result.Json.GetRawText()), message.DocumentId);
+                }
+                else RunInvokeCallback(message.WebviewLabel, callback, result, message.DocumentId);
             }
             catch (InvokeException exception)
             {

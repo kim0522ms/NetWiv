@@ -122,6 +122,7 @@
     message.callback = data.callback
     message.error = data.error
     message.options = data.options
+    message.__NETWIV_JSON__ = data.__NETWIV_JSON__ === true
     message.payload = await encrypt(data.payload)
     sendMessage(message)
   }

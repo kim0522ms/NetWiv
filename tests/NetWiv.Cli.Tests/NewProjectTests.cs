@@ -200,7 +200,10 @@ internal static class NewProjectTests
             }
             Task<string> Build(string configuration, string project = "frontend/NetWivUi.csproj", bool bindingsOnly = false) =>
                 Execute("build", project, "-c", configuration, "--disable-build-servers", "-v:q", "-nologo",
-                    "-p:NetWivBindingsOnly=" + bindingsOnly.ToString().ToLowerInvariant());
+                    "-p:NetWivBindingsOnly=" + bindingsOnly.ToString().ToLowerInvariant(), "--no-restore");
+            // Debug and Release share NuGet's frontend/contracts obj files. Restore them
+            // before testing parallel compilation; bindings-only restores are isolated by configuration.
+            await Execute("restore", "frontend/NetWivUi.csproj", "--disable-build-servers", "-v:q", "-nologo");
             await Task.WhenAll(Build("Debug"), Build("Release"));
             // A competing backend export cannot replace the other configuration's client,
             // even when that frontend's incremental generation target is skipped.

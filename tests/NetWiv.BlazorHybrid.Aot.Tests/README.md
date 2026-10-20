@@ -62,6 +62,12 @@ context: each document must obtain a fresh native grant and retain the correct
 source URI. This is separate from Hybrid's reload policy. CI and package checks
 run it after the managed native browser assertions, without another publish.
 
+Linux `--hostless-ipc` checks that `about:blank` reaches the managed callback
+with its exact native source and current document epoch, in managed and AOT
+execution. Rust unit tests additionally reject cross-document hostless URLs.
+This does not establish browser IPC support for `data:` URLs: some forms fail
+in the pinned Wry request-URI parser before NetWiv receives the message.
+
 `--registered-ipc` runs on all three platforms in managed or NativeAOT
 executables. It loads a document through an application-registered `ipc` scheme,
 checks custom GET/POST handling and message-based Core commands, and verifies
@@ -106,6 +112,8 @@ Private transport headers must not reach the custom handler.
 - Actual NetWiv application commands execute through both the custom IPC protocol
   and JSON message transport on both documents. Private transport capability and
   epoch headers must be absent from managed asset and command request headers.
+  On Linux, modified serialization and header-iterator prototypes must not
+  observe the private credentials during these calls.
 - The managed-host mode uses Microsoft's `DotNetObjectReference<T>` and ordinary
   attributed callbacks. The experimental host keeps its explicit typed registry.
 

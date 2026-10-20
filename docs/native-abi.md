@@ -144,10 +144,24 @@ Native code also checks the committed origin before forwarding a message. This
 applies to both postMessage and IPC HTTP requests. Private authentication
 metadata is removed before forwarding HTTP headers to managed code; preflight
 requests do not dispatch commands. The captured fetch transport accepts only
-the private IPC endpoint and rejects redirects. For an authenticated HTTP
+the private IPC endpoint and rejects redirects. It captures native URL accessors
+before application scripts run and passes a validated URL string to fetch;
+changing `URL.prototype` cannot redirect authentication headers.
+Credential-bearing envelopes, headers and fetch options have null prototypes,
+so inherited serialization hooks, header iterators and option getters cannot
+observe those credentials.
+For an authenticated HTTP
 request, native code supplies the authenticated native current document URI as
 the Origin header while anchoring its origin to the committed document. An opaque custom-scheme
 browser origin cannot determine command authority.
+Hostless documents such as `about:` and `data:` require an exact parsed URL
+match alongside the capability and epoch. They do not share authority merely
+because their JavaScript origins serialize to `null`; Core command permissions
+still apply.
+The native `about:blank` message path is covered by a Linux browser regression.
+Some `data:` URLs fail in the pinned Wry WebKitGTK request-URI parser before
+NetWiv receives the message; hostless authentication does not remove that
+upstream limitation or establish `data:` browser IPC support.
 
 Linux path-based capability checks use the committed source path while a
 document is loading or navigation is provisional. Same-origin history changes

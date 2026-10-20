@@ -186,6 +186,10 @@ internal sealed class PackageOptions { public string Value { get; set; } = ""; }
                 }
                 else { & $hybridExecutable --registered-ipc }
                 if ($LASTEXITCODE -ne 0) { throw 'Package-only registered IPC scheme ownership checks failed.' }
+                if ($IsLinux) {
+                    & xvfb-run -a bash (Join-Path $repository 'scripts/run-linux-smoke-desktop.sh') $hybridExecutable x11 --hostless-ipc
+                    if ($LASTEXITCODE -ne 0) { throw 'Package-only hostless IPC authentication checks failed.' }
+                }
                 if ($IsLinux -and !$aot) {
                     & xvfb-run -a bash (Join-Path $repository 'scripts/run-linux-smoke-desktop.sh') $hybridExecutable x11 --transport-navigation
                     if ($LASTEXITCODE -ne 0) { throw 'Package-only Core IPC cached-history restoration checks failed.' }

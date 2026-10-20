@@ -59,8 +59,31 @@
     <\/script>`);
     document.body.appendChild(foreign);
     assert(await attempted, 'The foreign frame did not expose the raw native handler.');
-    assert(await window.__TAURI_INTERNALS__.invoke('transport_echo', { input: 'protocol' }) === 'protocol', 'Native protocol command failed.');
-    assert(await window.__TAURI_INTERNALS__.invokeJson('transport_echo', '{"input":"message"}') === '"message"', 'Native message command failed.');
+    let credentialExposed = false;
+    const originalToJson = Object.getOwnPropertyDescriptor(Object.prototype, 'toJSON');
+    const originalIterator = Headers.prototype[Symbol.iterator];
+    const linux = window.__NETWIV_IPC__.os === 'linux';
+    if (linux) {
+      Object.defineProperty(Object.prototype, 'toJSON', { configurable: true, value() {
+        if (typeof this.capability === 'string') credentialExposed = true;
+        return this;
+      } });
+      Headers.prototype[Symbol.iterator] = function () {
+        if (this.get('NetWiv-Document-Capability')) credentialExposed = true;
+        return originalIterator.call(this);
+      };
+    }
+    try {
+      assert(await window.__TAURI_INTERNALS__.invoke('transport_echo', { input: 'protocol' }) === 'protocol', 'Native protocol command failed.');
+      assert(await window.__TAURI_INTERNALS__.invokeJson('transport_echo', '{"input":"message"}') === '"message"', 'Native message command failed.');
+    } finally {
+      if (linux) {
+        if (originalToJson) Object.defineProperty(Object.prototype, 'toJSON', originalToJson);
+        else delete Object.prototype.toJSON;
+        Headers.prototype[Symbol.iterator] = originalIterator;
+      }
+    }
+    assert(!credentialExposed, 'A modified JavaScript prototype observed private transport credentials.');
     await waitFor(() => ready && receivedDto && document.getElementById("aot-click"));
     assert(voidCalled && window.proof.moduleCalled, "Standard void/module interop failed.");
     if (window.__NETWIV_IPC__.os === 'linux' && !new URLSearchParams(location.search).has('netwiv-proof-phase') && window.name !== 'netwiv-hybrid-back') {

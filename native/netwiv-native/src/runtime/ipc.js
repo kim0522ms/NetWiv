@@ -3,9 +3,12 @@
   const post = window.webkit.messageHandlers.ipc.postMessage.bind(window.webkit.messageHandlers.ipc);
   const nativeFetch = window.fetch.bind(window);
   const NativeHeaders = window.Headers;
-  const setHeader = Function.call.bind(NativeHeaders.prototype.set);
+  const forEachHeader = Function.call.bind(NativeHeaders.prototype.forEach);
   const stringify = JSON.stringify.bind(JSON);
   const NativeURL = window.URL;
+  const [urlProtocol, urlHostname, urlPort, urlUsername, urlPassword, urlHref] =
+    ['protocol', 'hostname', 'port', 'username', 'password', 'href'].map(name =>
+      Function.call.bind(Object.getOwnPropertyDescriptor(NativeURL.prototype, name).get));
   const random = crypto.getRandomValues.bind(crypto);
   const createNonce = () => Array.from(random(new Uint8Array(32)), value => value.toString(16).padStart(2, '0')).join('');
   let nonce = createNonce();
@@ -19,7 +22,7 @@
   });
   const send = message => {
     const payload = typeof message === 'string' ? message : stringify(message);
-    const deliver = () => post(stringify({ capability, documentId, payload }));
+    const deliver = () => post(stringify({ __proto__: null, capability, documentId, payload }));
     if (capability) deliver();
     else pending.push(deliver);
   };
@@ -29,16 +32,20 @@
       return;
     }
     const target = new NativeURL(url);
-    if (target.protocol !== 'ipc:' || target.hostname !== 'localhost' || target.port || target.username || target.password) {
+    if (urlProtocol(target) !== 'ipc:' || urlHostname(target) !== 'localhost' ||
+        urlPort(target) || urlUsername(target) || urlPassword(target)) {
       reject(new TypeError('The private IPC transport requires ipc://localhost.'));
       return;
     }
+    // Snapshot before caller-controlled headers/options or queued delivery can run.
+    const href = urlHref(target);
     const deliver = () => {
       try {
-        const headers = new NativeHeaders(options.headers);
-        setHeader(headers, 'NetWiv-Document-Capability', capability);
-        setHeader(headers, 'NetWiv-Document-Id', String(documentId));
-        nativeFetch(target.href, { ...options, headers, redirect: 'error' }).then(resolve, reject);
+        const headers = { __proto__: null };
+        forEachHeader(new NativeHeaders(options.headers), (value, name) => { headers[name] = value; });
+        headers['netwiv-document-capability'] = capability;
+        headers['netwiv-document-id'] = String(documentId);
+        nativeFetch(href, { __proto__: null, ...options, headers, redirect: 'error' }).then(resolve, reject);
       } catch (error) { reject(error); }
     };
     if (capability) deliver();

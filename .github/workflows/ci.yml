@@ -217,6 +217,7 @@ jobs:
             xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/run-linux-smoke-desktop.sh "$executable" x11 --managed-host --native-webview --back-forward
             xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/run-linux-smoke-desktop.sh "$executable" x11 --transport-navigation
             xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/run-linux-smoke-desktop.sh "$executable" x11 --registered-ipc
+            xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/run-linux-smoke-desktop.sh "$executable" x11 --hostless-ipc
           else
             "$executable" --managed-host --native-webview --back-forward
             "$executable" --registered-ipc
@@ -231,6 +232,7 @@ jobs:
           if [[ "$RUNNER_OS" == Linux ]]; then
             xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/run-linux-smoke-desktop.sh "$executable" x11 --native-webview --back-forward
             xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/run-linux-smoke-desktop.sh "$executable" x11 --registered-ipc
+            xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/run-linux-smoke-desktop.sh "$executable" x11 --hostless-ipc
           else
             "$executable" --native-webview --back-forward
             "$executable" --registered-ipc

@@ -98,6 +98,9 @@ impl DocumentIpc {
 
 fn same_origin(left: &str, right: &str) -> bool {
     let (Ok(left), Ok(right)) = (url::Url::parse(left), url::Url::parse(right)) else { return false; };
+    // Hostless documents have no shared authority. Only their exact native URL
+    // may match; opaque origins must never become one universal "null" origin.
+    if left.host_str().is_none() || right.host_str().is_none() { return left == right; }
     // Custom schemes have opaque URL origins; compare their actual authorities.
     left.scheme() == right.scheme() && left.host_str().is_some() && left.host_str() == right.host_str() &&
         left.port_or_known_default() == right.port_or_known_default()
@@ -230,5 +233,38 @@ mod tests {
         ipc.start_navigation();
         ipc.resume_failed_navigation("retained-document", ipc.navigation);
         assert!(!ipc.may_activate(2));
+    }
+
+    #[test]
+    fn hostless_sources_require_exact_urls_and_current_document_credentials() {
+        for (source, different) in [
+            ("about:blank", "about:srcdoc"),
+            ("data:text/html,one", "data:text/html,two"),
+            ("file:///one.html", "file:///two.html"),
+        ] {
+            let mut ipc = DocumentIpc::default();
+            ipc.commit(1, source).unwrap();
+            let cap = ipc.capability.clone();
+            let message = serde_json::json!({"capability":cap,"documentId":1,"payload":"trusted"}).to_string();
+            assert_eq!(ipc.message(&message), Some((1, "trusted".into(), source.into())));
+            assert!(ipc.authorize(&cap, 1, source));
+            assert!(!ipc.authorize(&cap, 1, different));
+            assert!(!ipc.authorize(&cap, 1, &format!("{source}#different")));
+            assert!(!ipc.authorize("forged", 1, source));
+            assert!(!ipc.authorize(&cap, 2, source));
+            ipc.update_source(different);
+            assert_eq!(ipc.message(&message).unwrap().2, source);
+            let request = http::Request::builder().header("netwiv-document-capability", &cap)
+                .header("netwiv-document-id", "1").body(vec![]).unwrap();
+            assert_eq!(ipc.protocol_source(&request), Some((1, source.into())));
+            ipc.commit(2, source).unwrap();
+            assert!(ipc.message(&message).is_none());
+            assert!(ipc.protocol_source(&request).is_none());
+            ipc.invalidate();
+            assert!(!ipc.authorize(&ipc.capability, 2, source));
+        }
+        assert!(!same_origin("about:blank", "data:text/html,blank"));
+        assert!(!same_origin("file:///one.html", "file://foreign/one.html"));
+        assert!(!same_origin("invalid URL", "invalid URL"));
     }
 }

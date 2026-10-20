@@ -55,6 +55,8 @@ class ReleasePackagesTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             feed = self.fixture(root)
+            self.assertEqual({'win-x64', 'linux-x64', 'osx-arm64'}, {native.parent.as_posix() for native in release.NATIVE_FILES})
+            self.assertFalse((root / 'artifacts/native/osx-x64').exists())
             output = root / 'output'
             release.bundle(root, feed, output, '0.1.0-beta.1', 'a' * 40)
             archive = output / 'NetWiv-0.1.0-beta.1-packages.zip'
@@ -71,6 +73,16 @@ class ReleasePackagesTests(unittest.TestCase):
             self.assertIn(hashlib.sha256(archive.read_bytes()).hexdigest(), (output / 'SHA256SUMS').read_text())
             with self.assertRaises(FileExistsError):
                 release.bundle(root, feed, output, '0.1.0-beta.1', 'a' * 40)
+
+    def test_rejects_retired_macos_x64_payload(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            feed = self.fixture(root)
+            with zipfile.ZipFile(feed / 'NetWiv.Platform.Desktop.0.1.0-beta.1.nupkg', 'a') as package:
+                package.writestr('runtimes/osx-x64/native/libnetwiv_native.dylib', b'stale native fixture')
+            with self.assertRaisesRegex(ValueError, 'unexpected native assets'):
+                release.bundle(root, feed, root / 'output', '0.1.0-beta.1', 'a' * 40)
+            self.assertFalse((root / 'output').exists())
 
     def test_rejects_incomplete_or_wrong_packages(self):
         cases = [dict(missing='NetWiv.Hosting'), dict(missing='NOTICE'),

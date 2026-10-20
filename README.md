@@ -161,14 +161,18 @@ Explore the [template matrix](docs/template-coverage.md) or the
 ## Current status
 
 Desktop targets are **Windows x64**, **Linux x64 on Ubuntu 24.04 / WSLg**, and
-**macOS arm64/x64**. Linux supports X11 and native Wayland with different platform
+**macOS arm64**. Linux supports X11 and native Wayland with different platform
 constraints; see the [Linux](docs/linux.md) and [macOS](docs/macos.md) guides.
 
 | Platform | WebView stack | Selected integration checks |
 | :--- | :--- | :--- |
 | Windows x64 | WebView2 | React + C# NativeAOT app; NSIS/MSI installation, execution and removal. |
 | Linux x64 | GTK3 + WebKitGTK 4.1 | X11 React + C# NativeAOT integration; managed/NativeAOT Wayland lifecycle, IPC, menu/tray, input and dialog checks on Ubuntu 22.04 GNOME. Physical Ubuntu 24.04 Wayland acceptance remains unverified. |
-| macOS arm64 / x64 | WKWebView + AppKit | Hosted NativeAOT integration and package-consumer checks on both architectures; selected physical Apple Silicon GUI and local app/DMG checks. Physical Intel GUI and minimum-OS acceptance remain unverified. |
+| macOS arm64 | WKWebView + AppKit | Hosted NativeAOT integration and package-consumer checks on arm64; selected physical Apple Silicon GUI and local app/DMG checks. Minimum-OS acceptance remains unverified. |
+
+macOS x64 is no longer an official support or distribution target. Intel users
+can maintain an [unsupported source build](docs/macos.md); new packages contain
+only the arm64 macOS backend.
 
 These are focused application checks. Real-certificate signing, WebView2-absent
 installation and full upstream conformance remain acceptance gaps. Wayland global
@@ -223,7 +227,7 @@ The integrated native sample is `tests/NetWiv.Desktop.Smoke`. Publish it with:
 
 ```sh
 dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r win-x64
-# On Linux, use -r linux-x64; on macOS, use -r osx-arm64 or osx-x64.
+# On Linux, use -r linux-x64; on macOS, use -r osx-arm64.
 ```
 
 Run the published executable to test two windows, three webviews, official JS
@@ -243,7 +247,7 @@ These maintainer tests require the pinned Rust compiler and never launch a GUI.
 
 NuGet delivery includes RID-specific native libraries. Ordinary application
 restore/build/publish will not invoke Cargo or download libraries at runtime.
-Packing the framework requires native artifacts for all four supported RIDs to exist.
+Packing the framework requires native artifacts for all three supported RIDs to exist.
 
 </details>
 

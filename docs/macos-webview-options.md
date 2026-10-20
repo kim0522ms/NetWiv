@@ -31,7 +31,7 @@ dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r osx-arm64 -o artifacts/w
 artifacts/webview-options/aot/NetWiv.Desktop.Smoke --webview-options-smoke
 ```
 
-Use `osx-x64` for an Intel target. The focused probe calls the live WKWebView's
+The focused probe calls the live WKWebView's
 `acceptsFirstMouse:` method, reads `allowsLinkPreview`, and reads its actual
 configuration's `inactiveSchedulingPolicy`. It covers initial windows, dynamic
 root and child WebViews, both boolean values, omitted defaults, all three
@@ -59,7 +59,7 @@ two-minute hold does not mark those interactions as passed. Remote pointer input
 on physical macOS arm64 confirmed the OFF activation click stayed at zero, the
 second click reached one, and the ON activation click reached one in both managed
 and NativeAOT execution. This does not establish pressure-based preview gestures.
-Intel, macOS 12/13,
+macOS 12/13,
 preview gestures and background timing each need their own execution coverage.
 
 See the [macOS guide](macos.md) for build prerequisites and the broader validation

@@ -36,13 +36,12 @@ SDK 8/9 need this explicitly for NativeAOT-safe `Services.Configure<T>` calls.
 
 ## Validation
 
-The existing desktop CI uses SDK 8 for Windows x64, Linux x64, macOS arm64 and
-macOS x64. Separate Linux jobs exercise SDK/runtime 9 and 10 with the same
+The existing desktop CI uses SDK 8 for Windows x64, Linux x64 and macOS arm64. Separate Linux jobs exercise SDK/runtime 9 and 10 with the same
 `net8.0` source libraries, managed tests and NativeAOT Core tests; they do not
 rebuild Rust. The `CI required` check includes these jobs.
 
-Release packaging builds one feed and reuses it in six separate consumer
-jobs: Linux x64 with SDK/runtime 8, 9 and 10, plus Windows x64 and macOS arm64/x64
+Release packaging builds one feed and reuses it in five separate consumer
+jobs: Linux x64 with SDK/runtime 8, 9 and 10, plus Windows x64 and macOS arm64
 with SDK/runtime 8. The baseline covers all packaged native RIDs; keeping newer
 SDK/runtime coverage on Linux bounds the CI cost. Each job uses a private
 `DOTNET_ROOT`, removes

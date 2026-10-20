@@ -88,11 +88,6 @@ jobs:
             target: aarch64-apple-darwin
             native-directory: osx-arm64
             exe: ''
-          - os: macos-15-intel
-            rid: osx-x64
-            target: x86_64-apple-darwin
-            native-directory: osx-x64
-            exe: ''
     defaults:
       run:
         shell: bash
@@ -300,7 +295,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2025, ubuntu-24.04, macos-15, macos-15-intel]
+        os: [windows-2025, ubuntu-24.04, macos-15]
         group: [contracts, lifecycle]
     defaults:
       run:
@@ -344,13 +339,8 @@ jobs:
             dotnet run --project tests/NetWiv.Cli.Tests -c Release --no-build -- --group '${{ matrix.group }}'
           fi
       - name: Generator tests
-        if: matrix.group == 'contracts' && matrix.os != 'macos-15-intel'
+        if: matrix.group == 'contracts'
         run: dotnet test tests/NetWiv.Generators.Tests -c Release
-      - name: Intel macOS generator file-output tests
-        if: matrix.group == 'contracts' && matrix.os == 'macos-15-intel'
-        run: >-
-          dotnet test tests/NetWiv.Generators.Tests -c Release
-          --filter 'FullyQualifiedName~WritesUtf8WithoutTouchingUnchangedFiles|FullyQualifiedName~HandwrittenDeclarationPreventsPartialOverwriteOfExistingJavascript'
       - name: API tests
         if: matrix.group == 'contracts'
         run: dotnet test tests/NetWiv.Api.Tests -c Release

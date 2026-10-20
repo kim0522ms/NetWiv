@@ -16,7 +16,7 @@ if (version.trim() !== version || !/^\d+\.\d+\.\d+(?:\.\d+)?(?:-[0-9A-Za-z]+(?:[
   process.exit(1);
 }
 const hostRid = `${process.platform === 'win32' ? 'win' : process.platform === 'darwin' ? 'osx' : 'linux'}-${process.arch}`;
-if (rid !== hostRid || !['win-x64', 'linux-x64', 'osx-arm64', 'osx-x64'].includes(rid)) {
+if (rid !== hostRid || !['win-x64', 'linux-x64', 'osx-arm64'].includes(rid)) {
   console.error('Use a supported RID matching the host OS/architecture.');
   process.exit(1);
 }

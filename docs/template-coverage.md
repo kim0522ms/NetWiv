@@ -48,7 +48,7 @@ rather than the reference selector's Angular 22. Ordinary JS/TS and Blazor .NET
 backends do not require Cargo. Rust/WASM frontends require the
 `wasm32-unknown-unknown` target and Trunk.
 
-The same template choices target Windows x64, Linux x64 and macOS arm64/x64
+The same template choices target Windows x64, Linux x64 and macOS arm64
 through Wry. macOS applications require a main-thread `App.Run()` and matching
 native RID assets; see [macOS](macos.md). Availability of a template does not mean
 its frontend/toolchain has completed macOS package-only or GUI acceptance.

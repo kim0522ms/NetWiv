@@ -26,11 +26,10 @@
              Pack="true" PackagePath="runtimes/osx-arm64/native" Condition="'$(NetWivNativeRid)' == 'osx-arm64'" />
     <None Include="$(NetWivNativeDirectory)/osx-arm64/libnetwiv_native.dylib"
           Pack="true" PackagePath="runtimes/osx-arm64/native" Condition="'$(NetWivNativeRid)' != 'osx-arm64'" />
+    <!-- Unsupported source builds may copy a locally built Intel backend; exclude it from official packages. -->
     <Content Include="$(NetWivNativeDirectory)/osx-x64/libnetwiv_native.dylib"
              Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
-             Pack="true" PackagePath="runtimes/osx-x64/native" Condition="'$(NetWivNativeRid)' == 'osx-x64'" />
-    <None Include="$(NetWivNativeDirectory)/osx-x64/libnetwiv_native.dylib"
-          Pack="true" PackagePath="runtimes/osx-x64/native" Condition="'$(NetWivNativeRid)' != 'osx-x64'" />
+             Pack="false" Condition="'$(NetWivNativeRid)' == 'osx-x64'" />
     <None Include="../../THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="" />
     <None Include="../../native/THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="native-notices/" />
     <None Include="../../native/third-party-licenses/manifest.json" Pack="true" PackagePath="native-notices/" />
@@ -43,6 +42,5 @@
     <Error Condition="!Exists('$(NetWivNativeDirectory)/win-x64/WebView2Loader.dll')" Text="Copy the pinned WebView2Loader.dll with the win-x64 native artifact before packing." />
     <Error Condition="!Exists('$(NetWivNativeDirectory)/linux-x64/libnetwiv_native.so')" Text="Build the linux-x64 NetWiv native artifact before packing." />
     <Error Condition="!Exists('$(NetWivNativeDirectory)/osx-arm64/libnetwiv_native.dylib')" Text="Build the osx-arm64 NetWiv native artifact before packing." />
-    <Error Condition="!Exists('$(NetWivNativeDirectory)/osx-x64/libnetwiv_native.dylib')" Text="Build the osx-x64 NetWiv native artifact before packing." />
   </Target>
 </Project>

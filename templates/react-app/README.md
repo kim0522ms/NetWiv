@@ -81,7 +81,7 @@ dotnet publish src-netwiv -c Release -r win-x64 --self-contained true -p:Publish
 Windows NativeAOT 빌드에는 C++ Build Tools와 Windows SDK가 필요합니다. 실행 파일은 `publish/win-x64/ReactExample.exe`이며 DLL을 포함한 publish 폴더 전체가 필요합니다. Linux에서는 해당 OS에서 `-r linux-x64`로 빌드하고 GTK3·WebKitGTK 4.1을 설치하세요.
 
 macOS에서는 CPU에 맞는 .NET SDK·NetWiv 네이티브 패키지가 필요하며, NativeAOT를 선택하면 Xcode Command Line Tools도 필요합니다.
-Apple Silicon은 `-r osx-arm64`, Intel은 `-r osx-x64`로 해당 Mac에서 빌드하세요.
+macOS는 Apple Silicon의 `-r osx-arm64`만 공식 지원합니다.
 실행 파일과 `.dylib`를 포함한 publish 폴더 전체를 사용하세요. AppKit 이벤트 루프는
 프로세스의 메인 스레드에서 실행해야 하므로 생성된 동기 `Main`을 유지하세요.
 
@@ -92,10 +92,9 @@ dotnet tool restore
 dotnet tool run netwiv -- build --target osx-arm64 --bundles app,dmg --no-sign
 ```
 
-결과는 `target/osx-arm64/release/bundle/`에 생성됩니다. Intel에서는 타깃을
-`osx-x64`로 바꾸세요. `--no-sign`도 실행에 필요한 ad-hoc 서명은 갱신합니다.
+결과는 `target/osx-arm64/release/bundle/`에 생성됩니다. `--no-sign`도 실행에 필요한 ad-hoc 서명은 갱신합니다.
 Developer ID 신뢰를 제공하지 않으며 공증 자동화는 구현되지 않았습니다.
-macOS arm64/x64의 호스팅 CI에서 패키지만 사용하는 managed React 실행과 창 없는 NativeAOT 소비자 검증은 통과했습니다. Intel 실기 GUI, 최소 macOS 버전 및 깨끗한 환경에서의 설치 검증은 별도 미검증 항목입니다.
+macOS arm64의 호스팅 CI에서 패키지만 사용하는 managed React 실행과 창 없는 NativeAOT 소비자 검증은 통과했습니다. 최소 macOS 버전 및 깨끗한 환경에서의 설치 검증은 별도 미검증 항목입니다.
 
 빌드된 React 파일은 실행 파일의 리소스에 포함됩니다. 배포 실행에는 Node.js나 Vite 서버가 필요하지 않습니다. NuGet.Config가 로컬 packages 폴더를 사용한다면 폴더 관계를 유지하세요.
 

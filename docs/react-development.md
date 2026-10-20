@@ -57,12 +57,12 @@ Linux runs need a display. Build the CLI test executable first and launch it
 through `scripts/run-linux-smoke-desktop.sh` with `x11` or `wayland`; the native
 app inherits that display. Do not run two nested desktop wrappers concurrently.
 
-On macOS, run in a logged-in desktop session with the matching `osx-arm64` or
-`osx-x64` Wry assets. Keep the generated synchronous C# entry point on the process
+On macOS, run in a logged-in desktop session with the matching `osx-arm64`
+Wry assets. Keep the generated synchronous C# entry point on the process
 main thread. The frontend-binding harness above currently hardcodes Windows/Linux
 RIDs, so its development restart scenario does not establish macOS acceptance.
 The separate release package-consumer harness checks managed React execution
-and windowless NativeAOT consumers on both macOS architectures. Source-linked
+and windowless NativeAOT consumers on macOS arm64. Source-linked
 WKWebView smoke is another separate integration check; see
 [macOS setup and validation](macos.md).
 

@@ -95,7 +95,7 @@ version-query failure/timeout fixtures. Run the managed case with
 publish with `dotnet publish tests/NetWiv.Core.Tests -c Release -r osx-arm64 -p:PublishAot=true -o artifacts/os-aot`,
 then run `artifacts/os-aot/NetWiv.Core.Tests --filter "official OS"`.
 These tests use the fake desktop runtime; NetWiv OS facade execution
-in WKWebView and Rosetta/Intel macOS execution require separate evidence.
+in WKWebView requires separate evidence.
 
 `NetWiv.Plugin.Cli` exposes application launch arguments through `@netwiv/api/plugins/cli`'s `getMatches()`. It is separate from the `netwiv` CLI used to create and build projects. Application CLI configuration currently supports names, short options, positional arguments, required values, multiple values, allowed values, and subcommands. Unsupported clap features, including conditional constraints and help output, are explicitly rejected.
 
@@ -121,7 +121,7 @@ Core WKWebView support does not imply that every official plugin has macOS OS in
 
 | Area | Current macOS scope |
 | --- | --- |
-| OS information | macOS platform/type, Unix family/EOL, product version and executing-app architecture are implemented. Managed and arm64 NativeAOT payload/permission/query-fixture tests passed on a physical Apple Silicon Mac. NetWiv OS facade execution in WKWebView and Rosetta/Intel execution require separate evidence. |
+| OS information | macOS platform/type, Unix family/EOL, product version and executing-app architecture are implemented. Managed and arm64 NativeAOT payload/permission/query-fixture tests passed on a physical Apple Silicon Mac. NetWiv OS facade execution in WKWebView requires separate evidence. |
 | External opening | Opener URL/path operations and Shell `open` use `/usr/bin/open` on macOS; Opener reveal uses `open -R` to select the item in Finder. Linux retains `xdg-open` (reveal opens the containing directory). Explicit application selection remains unsupported. |
 | Autostart and DeepLink | OS registration/query/removal paths reject macOS. Parsing explicitly supplied launch URLs is separate from OS URL activation. |
 | Log and persisted scope | Shared managed persistence is available. Core's macOS app log path is `~/Library/Logs/<identifier>`; managed regression checks do not establish installed-app behavior. |

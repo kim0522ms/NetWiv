@@ -26,10 +26,11 @@ public sealed class DesktopRuntime : IDesktopRuntime
     public unsafe void Run(RuntimeContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
+        // Intel macOS is retained only for unsupported, locally built native backends.
         if (OperatingSystem.IsMacOS()
             ? RuntimeInformation.ProcessArchitecture is not (Architecture.Arm64 or Architecture.X64)
             : (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux()) || RuntimeInformation.ProcessArchitecture != Architecture.X64)
-            throw new PlatformNotSupportedException("NetWiv supports Windows x64, Linux x64 and macOS arm64/x64.");
+            throw new PlatformNotSupportedException("Official NetWiv packages support Windows x64, Linux x64 and macOS arm64.");
         if (OperatingSystem.IsWindows() && Thread.CurrentThread.GetApartmentState() != ApartmentState.STA)
             throw new InvalidOperationException("Call NetWiv Run from an [STAThread] Main method.");
         var config = RuntimeJson.Config(context);

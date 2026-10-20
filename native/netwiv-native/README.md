@@ -20,7 +20,7 @@ $env:SODIUM_DIST_DIR = (Resolve-Path artifacts/native-source/ci).Path
 On Linux/macOS (both build from the same signed source archive):
 
 ```sh
-# On macOS, replace linux-x64 with osx-arm64 (Apple Silicon) or osx-x64 (Intel).
+# On macOS, replace linux-x64 with osx-arm64 (Apple Silicon).
 node scripts/prepare-native-dependencies.mjs linux-x64 artifacts/native-source/ci
 export SODIUM_DIST_DIR="$PWD/artifacts/native-source/ci"
 bash scripts/build-native.sh

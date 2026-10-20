@@ -168,9 +168,9 @@ Then, from the repository root:
 node tests/conformance/scripts/run-host.mjs --reference tests/conformance/reference/src-tauri/target/debug/netwiv-tauri-reference --candidate tests/conformance/netwiv/target/osx-arm64/release/NetWiv.Conformance
 ```
 
-Use `osx-x64` on Intel and a matching reference binary on the same Mac. The runner
+Use a matching arm64 reference binary on the same Mac. The runner
 uses the current platform only to validate availability skips; it does not record
-platform metadata. Run each architecture separately. If platform-specific
+platform metadata. Run each supported platform separately. If platform-specific
 fixtures need adjustment, keep failures/skips visible rather than changing the
 unchanged official guest or treating two failures as a match. Windows/WebKitGTK observations
 above do not establish WKWebView behavior.
@@ -217,7 +217,7 @@ branching. macOS below 14 skips the unsafe pinned-upstream identifier selectors
 with a specific availability reason; NetWiv's SDK smoke still checks its explicit
 unsupported error. A matching skip is not a macOS compatibility pass. The focused
 SDK lifecycle comparison passed managed and NativeAOT on physical macOS arm64;
-the full suite, Intel and minimum-OS executions remain unverified.
+the full suite and minimum-OS executions remain unverified.
 
 For the independent NetWiv public creation-option regression, run a NetWiv
 conformance executable through the same in-memory assertion transport:

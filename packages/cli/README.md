@@ -23,7 +23,7 @@ desktop NuGet assets described in the [macOS guide](../../docs/macos.md) and
 [package quickstart](../../docs/integration-quickstart.md). The npm sidecar lock
 `native-tools.json` records Windows/Linux minisign binaries and the verified
 0.12 source archive used for macOS tests. `scripts/prepare-test-tools.mjs` builds
-that source on macOS arm64/x64; export its printed `NETWIV_MINISIGN_PATH` when
+that source on macOS arm64; export its printed `NETWIV_MINISIGN_PATH` when
 running local signer tests. This does not populate npm release sidecars. Updater minisign signatures are separate from macOS
 `codesign` signatures and do not notarize an app.
 

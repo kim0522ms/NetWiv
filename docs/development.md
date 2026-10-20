@@ -11,7 +11,7 @@ requires WebView2, the C++ build tools and Windows SDK. The Linux baseline is
 Ubuntu 24.04 with GTK3, WebKitGTK 4.1 and NativeAOT/native linker dependencies.
 See [Linux X11 and Wayland](linux.md) for session requirements and feature limits.
 macOS requires Xcode Command Line Tools and uses the system WKWebView; see the
-[macOS guide](macos.md) for arm64/x64 build and signing instructions.
+[macOS guide](macos.md) for arm64 build and signing instructions.
 Frontend tooling must satisfy the selected template's `package.json` engines.
 
 The [native build guide](../native/netwiv-native/README.md) describes dependency
@@ -54,7 +54,7 @@ disposal still complete; the existing timeouts and parallel checks remain enable
 
 The test-tool preparation downloads checksum-pinned official minisign 0.12
 binaries for the CLI signer interoperability test on Windows/Linux x64. On macOS
-arm64/x64 it builds checksum-pinned 0.12 source using CMake, pkg-config and libsodium
+arm64 it builds checksum-pinned 0.12 source using CMake, pkg-config and libsodium
 (`brew install cmake pkgconf libsodium`). The official macOS binary is arm64-only.
 Export the printed `NETWIV_MINISIGN_PATH` before running the CLI suite locally;
 the helper writes it to `GITHUB_ENV` automatically in CI.
@@ -63,7 +63,7 @@ Publish the desktop smoke host after preparing the native binaries:
 
 ```sh
 dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r win-x64
-# On Linux, use -r linux-x64; on macOS, use -r osx-arm64 or osx-x64.
+# On Linux, use -r linux-x64; on macOS, use -r osx-arm64.
 ```
 
 On macOS, keep `App.Run()` on the process's original main thread and use a
@@ -164,15 +164,15 @@ an up-to-date base branch; repository administrators can bypass these PR and CI
 requirements. Review approval is optional so a single maintainer can merge their
 own PRs.
 
-Windows Server 2025 x64, Ubuntu 24.04 x64, macOS 15 Apple Silicon (`macos-15`)
-and macOS 15 Intel (`macos-15-intel`) retain independent native and NativeAOT
+Windows Server 2025 x64, Ubuntu 24.04 x64 and macOS 15 Apple Silicon (`macos-15`)
+retain independent native and NativeAOT
 execution. CI separates work that does not depend on the native build:
 
 | Job | Required coverage |
 | --- | --- |
-| Desktop, four RIDs | Rust build/tests, managed and AOT Core tests, native startup diagnostics and real WebView smoke; platform-specific dialog, isolation and sandbox scenarios |
-| CLI contracts, four RIDs | Configuration, hooks, templates, permissions, signing/packaging contracts, API and platform script tests |
-| CLI lifecycle, four RIDs | Real consumer publishing in managed/framework-dependent/AOT modes, mode-switch cleanup and managed/AOT development restarts |
+| Desktop, three RIDs | Rust build/tests, managed and AOT Core tests, native startup diagnostics and real WebView smoke; platform-specific dialog, isolation and sandbox scenarios |
+| CLI contracts, three RIDs | Configuration, hooks, templates, permissions, signing/packaging contracts, API and platform script tests |
+| CLI lifecycle, three RIDs | Real consumer publishing in managed/framework-dependent/AOT modes, mode-switch cleanup and managed/AOT development restarts |
 | Windows installers | Actual NSIS/MSI installation, upgrade and removal in both installation scopes on a dedicated runner |
 | Frontend | SDK runtime tests, isolated packed consumer types/exports and template builds |
 | SDK 9/10, Linux | Managed Core/CLI/API/generator coverage and executed NativeAOT Core tests |
@@ -188,9 +188,9 @@ Linux .NET 8 covers all 18 template overlays and all package-manager choices.
 Other OS/SDK jobs generate representative JavaScript, TypeScript, Rust and Blazor
 templates and still check every manager and the full discovery list. Unselected
 template combinations are not claimed as passes on those hosts. The full
-generator suite runs on Windows, Linux and macOS ARM, plus SDK 9/10; Intel macOS
-retains the generator file-output checks, while its native and AOT tests remain
-complete. API tests still run on all four desktop RIDs.
+generator suite runs on Windows, Linux and macOS ARM, plus SDK 9/10.
+API tests run on all three supported desktop RIDs. macOS x64 is excluded from
+both ordinary CI and tag releases; it is not a supported distribution target.
 
 The complete solution is compiled on Linux. Other desktop jobs build their
 required project graphs rather than unrelated samples and test projects.
@@ -210,12 +210,12 @@ NativeAOT Core harnesses.
 Each desktop job publishes and executes the Core suite with NativeAOT, publishes the
 NativeAOT desktop smoke host, checks incompatible native-library startup diagnostics
 and runs the automated WebView smoke scenario. Linux uses Xvfb with a nested
-X11/Xfce desktop and tray host. Both macOS jobs additionally run windowless
-startup and NativeAOT isolation IPC checks. The macOS contracts groups retain
-a separate five-minute app/DMG step, excluded from their remaining tests. It
-creates and executes an ad-hoc-signed Mach-O app fixture, validate its plist/resources, build and verify a DMG, rebuild the app
-with the DMG's `/Applications` shortcut present, and check signing failures
-using real macOS tools. These cases run once per architecture. CLI logs include
+X11/Xfce desktop and tray host. The macOS desktop job additionally runs windowless
+startup and NativeAOT isolation IPC checks. The macOS contracts group retains
+a separate five-minute app/DMG step, excluded from its remaining tests. It
+creates and executes an ad-hoc-signed Mach-O app fixture, validates its plist/resources, builds and verifies a DMG, rebuilds the app
+with the DMG's `/Applications` shortcut present, and checks signing failures
+using real macOS tools. These cases run once on macOS arm64. CLI logs include
 each test's start and elapsed time to make stalled cases identifiable.
 
 The desktop guest smoke handles initial module-load failures through the
@@ -266,7 +266,7 @@ publishing to NuGet.org.
 
 ## Create a local package feed
 
-Build Windows, Linux and both macOS architecture native artifacts first. In PowerShell 7, select a
+Build Windows, Linux and macOS arm64 native artifacts first. In PowerShell 7, select a
 new package version and an unused output directory:
 
 ```powershell

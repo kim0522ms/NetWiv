@@ -258,7 +258,13 @@ internal static class Program
                 Console.WriteLine($"GUI menu checked: {await item.IsCheckedAsync()}");
             }
             app.GetWebview("secondary")!.EvaluateScript($"location.href={JsonValue.From(probe.Url + "/top").GetRawText()};");
-            Require(await probe.RemoteDenied.Task.WaitAsync(TimeSpan.FromSeconds(10)), "remote document default command denial");
+            using (var originDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+            {
+                await WaitForOriginStage(probe.TopRequested.Task, "remote navigation request", originDeadline.Token);
+                await WaitForOriginStage(probe.InvokeStarted.Task, "remote page invoke entry", originDeadline.Token);
+                await WaitForOriginStage(probe.RemoteDenied.Task, "remote command denial result", originDeadline.Token);
+                Require(await probe.RemoteDenied.Task, "remote document default command denial");
+            }
             Require(_sensitiveCalls == 0, "remote frame or document invoked a local command");
             Console.WriteLine("PASS remote iframe isolation and navigation origin denial");
             await TrayIcon.RemoveByIdAsync(app, tray.Id);
@@ -268,6 +274,13 @@ internal static class Program
             app.Exit();
         }
         catch (Exception error) { Fail(error.ToString()); app.Exit(1); }
+    }
+
+    private static async Task WaitForOriginStage(Task stage, string name, CancellationToken cancellationToken)
+    {
+        try { await stage.WaitAsync(cancellationToken); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        { throw new TimeoutException($"Origin probe timed out during {name}."); }
     }
 
     private static async Task VerifyStrongholdAndShortcutBridge(AppHandle app)

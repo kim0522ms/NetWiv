@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace NetWiv.Plugin.Store;
 
@@ -7,6 +9,7 @@ public sealed class StorePlugin : IPlugin
 {
     private readonly Dictionary<string, StoreData> _stores = new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
     private readonly object _gate = new();
+    private bool _disposed;
     private static readonly string[] Commands =
         ["load", "get_store", "set", "get", "has", "delete", "clear", "reset", "keys", "values", "entries", "length", "reload", "save"];
 
@@ -24,6 +27,25 @@ public sealed class StorePlugin : IPlugin
         context.PermissionSet("default", Commands.Select(name => "allow-" + name.Replace('_', '-')).ToArray());
     }
 
+    public void Dispose()
+    {
+        StoreData[] stores;
+        lock (_gate)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            stores = [.. _stores.Values];
+            _stores.Clear();
+        }
+        List<Exception>? errors = null;
+        foreach (var store in stores)
+        {
+            try { store.Dispose(); }
+            catch (Exception error) { (errors ??= []).Add(error); }
+        }
+        if (errors is not null) throw new AggregateException("One or more stores failed to save during disposal.", errors);
+    }
+
     private async ValueTask<JsonElement> Execute(string command, InvokeContext context, JsonElement args, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
@@ -32,10 +54,11 @@ public sealed class StorePlugin : IPlugin
             var path = await ResolvePath(context.App, Text(args, "path"), token);
             lock (_gate)
             {
+                ObjectDisposedException.ThrowIf(_disposed, this);
                 if (!_stores.TryGetValue(path, out var store))
                 {
                     if (command == "get_store") return JsonValue.Null;
-                    store = StoreData.Load(path, Option(args, "options"));
+                    store = StoreData.Load(path, Option(args, "options"), context.App.LoggerFactory.CreateLogger("NetWiv.Store"));
                     _stores.Add(path, store);
                 }
                 var loadedHandle = new StoreHandle(store, context.WebviewLabel, context.DocumentId);
@@ -50,6 +73,7 @@ public sealed class StorePlugin : IPlugin
         var data = handle.Data;
         lock (data.Gate)
         {
+            data.ThrowIfDisposed();
             switch (command)
             {
                 case "set":
@@ -149,23 +173,37 @@ public sealed class StorePlugin : IPlugin
         public uint Id { get; set; }
     }
 
-    private sealed class StoreData
+    private sealed class StoreData : IDisposable
     {
         public readonly object Gate = new();
         public readonly Dictionary<string, JsonElement> Values = new(StringComparer.Ordinal);
         public readonly Dictionary<string, JsonElement> Defaults = new(StringComparer.Ordinal);
         public readonly string Path;
-        public readonly bool AutoSave;
+        private readonly ulong? _autoSaveDelay;
+        private readonly ILogger _logger;
+        private Timer? _timer;
+        private long _changedAt;
+        private bool _pending;
+        private bool _dirty;
+        private bool _disposed;
 
-        private StoreData(string path, bool autoSave) { Path = path; AutoSave = autoSave; }
+        private StoreData(string path, ulong? autoSaveDelay, ILogger logger)
+        { Path = path; _autoSaveDelay = autoSaveDelay; _logger = logger; }
 
-        public static StoreData Load(string path, JsonElement options)
+        public static StoreData Load(string path, JsonElement options, ILogger logger)
         {
             if (options.ValueKind == JsonValueKind.Object &&
                 (options.TryGetProperty("serializeFnName", out _) || options.TryGetProperty("deserializeFnName", out _)))
                 throw new InvokeException("Custom Rust store serializers are unavailable in the .NET plugin.");
-            var autoSave = options.ValueKind != JsonValueKind.Object || !options.TryGetProperty("autoSave", out var setting) || setting.ValueKind != JsonValueKind.False;
-            var store = new StoreData(path, autoSave);
+            var setting = Option(options, "autoSave");
+            ulong? delay = setting.ValueKind switch
+            {
+                JsonValueKind.Undefined or JsonValueKind.Null or JsonValueKind.True => 100,
+                JsonValueKind.False => null,
+                JsonValueKind.Number when setting.TryGetUInt64(out var milliseconds) => milliseconds,
+                _ => throw new InvokeException("Store autoSave must be a boolean or an unsigned integer number of milliseconds.")
+            };
+            var store = new StoreData(path, delay, logger);
             if (options.ValueKind == JsonValueKind.Object && options.TryGetProperty("defaults", out var defaults) && defaults.ValueKind == JsonValueKind.Object)
                 foreach (var entry in defaults.EnumerateObject()) store.Defaults[entry.Name] = entry.Value.Clone();
             store.Reload(options.ValueKind == JsonValueKind.Object && options.TryGetProperty("overrideDefaults", out var replace) && replace.ValueKind == JsonValueKind.True,
@@ -191,8 +229,65 @@ public sealed class StorePlugin : IPlugin
             foreach (var entry in replacement) Values.Add(entry.Key, entry.Value);
         }
 
-        public void SaveIfAutomatic() { if (AutoSave) Save(); }
+        public void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);
+
+        // Commands, timer callbacks and disposal share Gate, including the disk write.
+        public void SaveIfAutomatic()
+        {
+            _dirty = true;
+            if (_autoSaveDelay is null) return;
+            if (_autoSaveDelay == 0) { Save(); return; }
+            _changedAt = Stopwatch.GetTimestamp();
+            _pending = true;
+            _timer ??= new Timer(AutomaticSave, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            Schedule(_autoSaveDelay.Value);
+        }
+
+        private void Schedule(ulong milliseconds) => _timer!.Change(
+            TimeSpan.FromMilliseconds(Math.Min(milliseconds, uint.MaxValue - 1UL)), Timeout.InfiniteTimeSpan);
+
+        private void AutomaticSave(object? state)
+        {
+            lock (Gate)
+            {
+                if (_disposed || !_pending) return;
+                var elapsed = (ulong)Stopwatch.GetElapsedTime(_changedAt).TotalMilliseconds;
+                if (elapsed < _autoSaveDelay!.Value)
+                {
+                    Schedule(_autoSaveDelay.Value - elapsed);
+                    return;
+                }
+                _pending = false;
+                try { SaveCore(); }
+                catch (Exception)
+                {
+                    // Keep the dirty data for a later mutation, explicit save or shutdown retry.
+                    // Avoid paths or exception details in the background warning.
+                    _logger.LogWarning("Store automatic save failed; call save() to retry and observe the error.");
+                }
+            }
+        }
+
         public void Save()
+        {
+            _pending = false;
+            _timer?.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            SaveCore();
+        }
+
+        public void Dispose()
+        {
+            lock (Gate)
+            {
+                if (_disposed) return;
+                _disposed = true;
+                _pending = false;
+                _timer?.Dispose();
+                if (_autoSaveDelay is not null && _dirty) SaveCore();
+            }
+        }
+
+        private void SaveCore()
         {
             Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!);
             using var stream = new MemoryStream();
@@ -213,6 +308,7 @@ public sealed class StorePlugin : IPlugin
                 }
                 if (File.Exists(Path)) File.Replace(temporary, Path, null);
                 else File.Move(temporary, Path);
+                _dirty = false;
             }
             finally { if (File.Exists(temporary)) File.Delete(temporary); }
         }

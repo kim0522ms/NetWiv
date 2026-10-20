@@ -140,9 +140,11 @@ to a lossy call. JavaScript callers that use `JSON.parse` on the result still ha
 JavaScript's numeric limits.
 
 The Blazor starter imports `frontend/NetWiv.targets`, which refreshes the client
-before the frontend compiles whenever the app's or the contracts' C# sources or
-project files changed (including deleted files), using a bindings-only app build
-of the same configuration. The project's root `Directory.Build.props` gives that
+before each ordinary frontend compilation using an incremental bindings-only app
+build of the same configuration. MSBuild evaluates the backend's full imported
+props/targets and conditional compile inputs, including parent build files and
+deleted sources. IDE design-time builds include an existing client without
+launching the bindings build. The project's root `Directory.Build.props` gives that
 build its own `obj/bindings` and `bin/bindings` folders in the app and in
 `contracts/`, so it does not share files with a normal, IDE or NativeAOT build
 running at the same time; it also imports any `Directory.Build.props` further

@@ -814,33 +814,19 @@ public partial class AppJsonContext : JsonSerializerContext;`,
   <ItemGroup>
     <ProjectReference Include="../contracts/Contracts.csproj" />
     <_NetWivApp Include="$(MSBuildProjectDirectory)/../src-netwiv/*.csproj" />
-    <_NetWivCommandSources Include="$(MSBuildProjectDirectory)/../src-netwiv/**/*.cs;$(MSBuildProjectDirectory)/../src-netwiv/*.csproj;$(MSBuildProjectDirectory)/../contracts/**/*.cs;$(MSBuildProjectDirectory)/../contracts/*.csproj;$(MSBuildProjectDirectory)/../Directory.Build.props"
-                           Exclude="$(MSBuildProjectDirectory)/../src-netwiv/obj/**;$(MSBuildProjectDirectory)/../src-netwiv/bin/**;$(MSBuildProjectDirectory)/../contracts/obj/**;$(MSBuildProjectDirectory)/../contracts/bin/**" />
+    <Compile Include="obj/netwiv/$(Configuration)/NetWivCommands.g.cs"
+             Condition="Exists('obj/netwiv/$(Configuration)/NetWivCommands.g.cs')" />
   </ItemGroup>
   <PropertyGroup>
     <!-- The SDK that runs this build, also when MSBuild is hosted by an IDE. -->
     <_NetWivDotnet>$(DOTNET_HOST_PATH)</_NetWivDotnet>
     <_NetWivDotnet Condition="'$(_NetWivDotnet)' == ''">dotnet</_NetWivDotnet>
   </PropertyGroup>
-  <!-- Lists the C# sources so that deleting or renaming a file also counts as a change:
-       the list is rewritten only when it differs, which makes it newer than the stamp. -->
-  <Target Name="NetWivTrackCommandSources" Condition="'$(DesignTimeBuild)' != 'true'">
-    <PropertyGroup>
-      <_NetWivCommandSourceList>$(IntermediateOutputPath)netwiv-command-sources.txt</_NetWivCommandSourceList>
-      <_NetWivCommandsStamp>$(IntermediateOutputPath)netwiv-commands.stamp</_NetWivCommandsStamp>
-    </PropertyGroup>
-    <MakeDir Directories="$(IntermediateOutputPath)" />
-    <WriteLinesToFile File="$(_NetWivCommandSourceList)" Lines="@(_NetWivCommandSources->'%(FullPath)')" Overwrite="true" WriteOnlyWhenDifferent="true" />
-    <Delete Files="$(_NetWivCommandsStamp)" Condition="!Exists('obj/netwiv/$(Configuration)/NetWivCommands.g.cs')" />
-  </Target>
-  <!-- Every app build rewrites obj/netwiv/$(Configuration)/NetWivCommands.g.cs when its commands change. When the
-       C# sources changed since the last check, refresh it with a bindings-only app build of the
-       same configuration before this project compiles. The stamp records the check, so an edit
-       that leaves the commands as they were does not recompile the frontend. -->
-  <Target Name="NetWivGenerateCommands" BeforeTargets="CoreCompile" DependsOnTargets="NetWivTrackCommandSources" Condition="'$(DesignTimeBuild)' != 'true'"
-          Inputs="@(_NetWivCommandSources);$(_NetWivCommandSourceList)" Outputs="$(_NetWivCommandsStamp)">
+  <!-- Let the backend's incremental build evaluate all imports and command inputs. A local
+       source-file stamp cannot track parent props, targets or conditional compile items.
+       Existing clients are included above for IDE design-time builds without launching builds. -->
+  <Target Name="NetWivGenerateCommands" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true'">
     <Exec Command="&quot;$(_NetWivDotnet)&quot; build &quot;@(_NetWivApp->'%(FullPath)')&quot; -c &quot;$(Configuration)&quot; -p:NetWivBindingsOnly=true -p:PublishAot=false --disable-build-servers -nologo -v:q" />
-    <Touch Files="$(_NetWivCommandsStamp)" AlwaysCreate="true" />
     <ItemGroup>
       <Compile Include="obj/netwiv/$(Configuration)/NetWivCommands.g.cs" Exclude="@(Compile)" />
     </ItemGroup>

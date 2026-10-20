@@ -31,7 +31,7 @@ internal static class NewProjectTests
                   <Target Name="ExportClient" AfterTargets="CoreCompile">
                     <MakeDir Directories="$(NetWivCSharpBindingsDirectory)" />
                     <WriteLinesToFile File="$(NetWivCSharpBindingsDirectory)/NetWivCommands.g.cs"
-                      Lines="public class $(Configuration)Client { }" Overwrite="true" WriteOnlyWhenDifferent="true" />
+                      Lines="public class $(Configuration)$(FixtureSuffix)Client { }" Overwrite="true" WriteOnlyWhenDifferent="true" />
                   </Target>
                 </Project>
                 """);
@@ -49,22 +49,29 @@ internal static class NewProjectTests
                 """);
             File.WriteAllText(Path.Combine(app, "frontend/Consumer.cs"), """
                 #if DEBUG
+                #if IMPORTED_CLIENT
+                public class Consumer : DebugImportedClient { }
+                #else
                 public class Consumer : DebugClient { }
+                #endif
+                #else
+                #if IMPORTED_CLIENT
+                public class Consumer : ReleaseImportedClient { }
                 #else
                 public class Consumer : ReleaseClient { }
                 #endif
+                #endif
                 """);
             var runner = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet";
-            async Task Build(string configuration, string project = "frontend/NetWivUi.csproj", bool bindingsOnly = false)
+            async Task<string> Execute(params string[] arguments)
             {
                 var start = new System.Diagnostics.ProcessStartInfo(runner)
                 {
                     WorkingDirectory = app, UseShellExecute = false, CreateNoWindow = true,
                     RedirectStandardOutput = true, RedirectStandardError = true
                 };
-                foreach (var argument in new[] { "build", project, "-c", configuration, "--disable-build-servers", "-v:q", "-nologo" })
+                foreach (var argument in arguments)
                     start.ArgumentList.Add(argument);
-                if (bindingsOnly) start.ArgumentList.Add("-p:NetWivBindingsOnly=true");
                 using var process = System.Diagnostics.Process.Start(start)!;
                 var output = process.StandardOutput.ReadToEndAsync();
                 var error = process.StandardError.ReadToEndAsync();
@@ -72,7 +79,11 @@ internal static class NewProjectTests
                 try { await process.WaitForExitAsync(timeout.Token); }
                 catch { process.Kill(entireProcessTree: true); await process.WaitForExitAsync(); throw; }
                 Check(process.ExitCode == 0, await output + await error);
+                return await output;
             }
+            Task<string> Build(string configuration, string project = "frontend/NetWivUi.csproj", bool bindingsOnly = false) =>
+                Execute("build", project, "-c", configuration, "--disable-build-servers", "-v:q", "-nologo",
+                    "-p:NetWivBindingsOnly=" + bindingsOnly.ToString().ToLowerInvariant());
             await Task.WhenAll(Build("Debug"), Build("Release"));
             // A competing backend export cannot replace the other configuration's client,
             // even when that frontend's incremental generation target is skipped.
@@ -86,6 +97,21 @@ internal static class NewProjectTests
                 await Build(configuration);
                 Check(File.Exists(client), "Deleted generated client was not regenerated.");
             }
+            // This imported file is outside both the app and contracts source globs.
+            File.WriteAllText(Path.Combine(root, "Directory.Build.props"), """
+                <Project><PropertyGroup>
+                  <FixtureSuffix>Imported</FixtureSuffix>
+                  <DefineConstants>$(DefineConstants);IMPORTED_CLIENT</DefineConstants>
+                </PropertyGroup></Project>
+                """);
+            await Build("Release");
+            Check(File.ReadAllText(Path.Combine(app, "frontend/obj/netwiv/Release/NetWivCommands.g.cs"))
+                .Contains("ReleaseImportedClient", StringComparison.Ordinal), "Imported properties did not refresh the client.");
+            var designTime = JsonNode.Parse(await Execute("msbuild", "frontend/NetWivUi.csproj",
+                "-p:Configuration=Release", "-p:DesignTimeBuild=true", "-getItem:Compile", "-nologo"))!;
+            Check(designTime["Items"]!["Compile"]!.AsArray().Any(item =>
+                item!["Identity"]!.GetValue<string>().Replace('\\', '/') == "obj/netwiv/Release/NetWivCommands.g.cs"),
+                "IDE design-time compilation omitted the existing client.");
         }
         finally { Directory.Delete(root, recursive: true); }
     }

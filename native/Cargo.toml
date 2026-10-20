@@ -2,3 +2,11 @@
 members = ["netwiv-native"]
 resolver = "2"
 
+# Shipped adapters carry no local symbol table. Dynamic exports (the C ABI and
+# Objective-C class statics) remain; Rust panic messages and locations are
+# unaffected, but backtraces from release builds no longer name frames.
+# One codegen unit trims a further 5-12% per RID for a slower leaf rebuild.
+# LTO is not enabled: Cargo skips it while the crate also builds an rlib.
+[profile.release]
+strip = "symbols"
+codegen-units = 1

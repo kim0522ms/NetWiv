@@ -28,9 +28,14 @@ public sealed partial class CommandGenerator : IIncrementalGenerator
             .Where(static candidate => candidate is not null)
             .Select(static (candidate, _) => candidate!);
 
-        var input = context.CompilationProvider.Combine(commands.Collect());
+        // NetWiv.Build exposes its output properties. An app that asks only for the C# client
+        // (Blazor) must not fail on wire types that only the TypeScript mapping rejects.
+        var scriptBindings = context.AnalyzerConfigOptionsProvider.Select(static (options, _) =>
+            !options.GlobalOptions.TryGetValue("build_property.NetWivCSharpBindingsDirectory", out var csharp) || string.IsNullOrWhiteSpace(csharp) ||
+            options.GlobalOptions.TryGetValue("build_property.NetWivFrontendBindingsDirectory", out var script) && !string.IsNullOrWhiteSpace(script));
+        var input = context.CompilationProvider.Combine(commands.Collect()).Combine(scriptBindings);
         context.RegisterSourceOutput(input, static (productionContext, value) =>
-            Emit(productionContext, value.Left, value.Right));
+            Emit(productionContext, value.Left.Left, value.Left.Right, value.Right));
 
         var plugins = context.SyntaxProvider.ForAttributeWithMetadataName(
                 PluginAttributeName,
@@ -62,7 +67,8 @@ public sealed partial class CommandGenerator : IIncrementalGenerator
     private static void Emit(
         SourceProductionContext context,
         Compilation compilation,
-        ImmutableArray<CommandCandidate> candidates)
+        ImmutableArray<CommandCandidate> candidates,
+        bool scriptBindings)
     {
         var exportFrontend = compilation.Assembly.GetAttributes().Any(static attribute =>
             attribute.AttributeClass?.ToDisplayString() == "NetWiv.GenerateFrontendBindingsAttribute");
@@ -151,7 +157,7 @@ public sealed partial class CommandGenerator : IIncrementalGenerator
                         context.ReportDiagnostic(Diagnostic.Create(DuplicateName, command.Method.Locations.FirstOrDefault(), group.Key));
                 return;
             }
-            FrontendBindingEmitter.Emit(context, jsonContext, frontend, compilation.Assembly);
+            FrontendBindingEmitter.Emit(context, jsonContext, frontend, compilation.Assembly, scriptBindings);
         }
     }
 }

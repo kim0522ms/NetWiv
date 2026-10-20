@@ -33,13 +33,22 @@ public sealed record FrontendBindings(string JavaScript, string TypeScript)
             if (key is not ("NetWiv.Frontend.JavaScript.v1" or "NetWiv.Frontend.TypeScript.v1" or "NetWiv.Frontend.CSharp.v1")) continue;
             if (value is null || !values.TryAdd(key, value)) throw new InvalidOperationException("Missing or duplicate frontend binding metadata: " + key);
         }
-        if (!values.TryGetValue("NetWiv.Frontend.JavaScript.v1", out var js) || !values.TryGetValue("NetWiv.Frontend.TypeScript.v1", out var types))
-            throw new InvalidOperationException("No generated frontend bindings found. Add [assembly: GenerateFrontendBindings] and reference NetWiv.Generators, then build the managed DLL.");
-        return new(js, types) { CSharp = values.TryGetValue("NetWiv.Frontend.CSharp.v1", out var csharp) ? csharp : null };
+        var csharp = values.TryGetValue("NetWiv.Frontend.CSharp.v1", out var client) ? client : null;
+        if (values.TryGetValue("NetWiv.Frontend.JavaScript.v1", out var js) && values.TryGetValue("NetWiv.Frontend.TypeScript.v1", out var types))
+            return new(js, types) { CSharp = csharp };
+        // An app that sets only NetWivCSharpBindingsDirectory gets the C# client without script bindings.
+        if (csharp is not null) return new("", "") { CSharp = csharp, HasScript = false };
+        throw new InvalidOperationException("No generated frontend bindings found. Add [assembly: GenerateFrontendBindings] and reference NetWiv.Generators, then build the managed DLL.");
     }
 
+    /// <summary>False when the app was built for the C# client only, without commands.js and commands.d.ts.</summary>
+    public bool HasScript { get; init; } = true;
+
     public void WriteTo(string directory)
-        => Write(directory, [(Path.Combine(directory, "commands.js"), JavaScript), (Path.Combine(directory, "commands.d.ts"), TypeScript)]);
+    {
+        if (!HasScript) throw new InvalidOperationException("The app was built with only NetWivCSharpBindingsDirectory set, so it has no JavaScript bindings. Set NetWivFrontendBindingsDirectory to generate commands.js and commands.d.ts.");
+        Write(directory, [(Path.Combine(directory, "commands.js"), JavaScript), (Path.Combine(directory, "commands.d.ts"), TypeScript)]);
+    }
 
     /// <summary>Writes the typed C# client (NetWivCommands.g.cs) for a .NET frontend.</summary>
     public void WriteCSharpTo(string directory)
@@ -57,9 +66,24 @@ public sealed record FrontendBindings(string JavaScript, string TypeScript)
         foreach (var (path, content) in files) WriteIfChanged(path, content);
     }
 
+    // The app's own build and a frontend's bindings-only build can export at the same time, so
+    // replace the file in one step and accept a concurrent writer that produced the same text.
     private static void WriteIfChanged(string path, string content)
     {
         if (File.Exists(path) && File.ReadAllText(path) == content) return;
-        File.WriteAllText(path, content, new UTF8Encoding(false));
+        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            File.WriteAllText(temporary, content, new UTF8Encoding(false));
+            File.Move(temporary, path, overwrite: true);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            if (!File.Exists(path) || File.ReadAllText(path) != content) throw;
+        }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
     }
 }

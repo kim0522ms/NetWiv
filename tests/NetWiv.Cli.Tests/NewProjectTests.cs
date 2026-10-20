@@ -118,14 +118,14 @@ internal static class NewProjectTests
                         Check(!File.Exists(Path.Combine(destination, sample)) && !Directory.Exists(Path.Combine(destination, sample)), "Blazor sample or leftover remains: " + sample);
                     Check(!File.ReadAllText(Path.Combine(destination, "frontend/wwwroot/index.html")).Contains("bootstrap", StringComparison.Ordinal), "Blazor still links Bootstrap");
                     // The typed C# client: shared contracts, the export target and the client registration.
-                    Check(File.Exists(Path.Combine(destination, "contracts/Contracts.csproj")) && File.ReadAllText(Path.Combine(destination, "contracts/Contracts.cs")).Contains("record Greeting", StringComparison.Ordinal), "Blazor contracts project missing");
+                    Check(File.ReadAllText(Path.Combine(destination, "contracts/Contracts.csproj")).Contains("TreatAsLocalProperty=\"AssemblyName\"", StringComparison.Ordinal) && File.ReadAllText(Path.Combine(destination, "contracts/Contracts.cs")).Contains("record Greeting", StringComparison.Ordinal), "Blazor contracts project missing");
                     Check(File.ReadAllText(Path.Combine(destination, "Example.sln")).Contains("Contracts.csproj", StringComparison.Ordinal), "Contracts project missing from the solution");
                     var program = File.ReadAllText(Path.Combine(destination, "src-netwiv/Program.cs"));
                     Check(!program.Contains("record Greeting", StringComparison.Ordinal) && !program.Contains("class AppJsonContext", StringComparison.Ordinal), "Shared types were not moved out of Program.cs");
                     var backendProject = File.ReadAllText(Path.Combine(destination, "src-netwiv/Example.csproj"));
                     Check(backendProject.Contains("<NetWivCSharpBindingsDirectory>../frontend/Generated</NetWivCSharpBindingsDirectory>", StringComparison.Ordinal) &&
                         !backendProject.Contains("NetWivFrontendBindingsDirectory", StringComparison.Ordinal) && backendProject.Contains("../contracts/Contracts.csproj", StringComparison.Ordinal), "Blazor app does not export the C# client");
-                    Check(File.Exists(Path.Combine(destination, "src-netwiv/Directory.Build.props")), "Bindings-only build isolation missing");
+                    Check(File.Exists(Path.Combine(destination, "Directory.Build.props")) && !File.Exists(Path.Combine(destination, "src-netwiv/Directory.Build.props")), "Bindings-only build isolation missing");
                     Check(File.ReadAllText(Path.Combine(destination, "frontend/NetWivUi.csproj")).Contains("NetWiv.targets", StringComparison.Ordinal), "Frontend does not import NetWiv.targets");
                     Check(File.ReadAllText(Path.Combine(destination, "frontend/Program.cs")).Contains("AddScoped<NetWiv.Generated.NetWivCommands>()", StringComparison.Ordinal), "Typed client is not registered");
                     Check(File.ReadAllText(Path.Combine(destination, "frontend/Pages/Home.razor")).Contains("Commands.GreetAsync(Name)", StringComparison.Ordinal), "Blazor screen does not use the typed client");

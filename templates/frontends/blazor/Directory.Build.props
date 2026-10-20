@@ -1,0 +1,16 @@
+<Project>
+  <!-- Keep the settings of a Directory.Build.props further up, such as a repository's. -->
+  <PropertyGroup>
+    <_NetWivParentBuildProps>$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))</_NetWivParentBuildProps>
+  </PropertyGroup>
+  <Import Project="$(_NetWivParentBuildProps)" Condition="'$(_NetWivParentBuildProps)' != ''" />
+  <!-- The frontend refreshes its typed client with a bindings-only build of the app and of
+       contracts/. Give that build its own restore, obj and bin folders in every project so it
+       never shares files with a normal, IDE or NativeAOT build running at the same time.
+       obj/ stays the base folder, so neither build compiles the other's generated sources. -->
+  <PropertyGroup Condition="'$(NetWivBindingsOnly)' == 'true'">
+    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj/bindings/</MSBuildProjectExtensionsPath>
+    <IntermediateOutputPath>$(MSBuildProjectDirectory)/obj/bindings/$(Configuration)/</IntermediateOutputPath>
+    <OutputPath>$(MSBuildProjectDirectory)/bin/bindings/$(Configuration)/</OutputPath>
+  </PropertyGroup>
+</Project>

@@ -1,6 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk" TreatAsLocalProperty="AssemblyName">
   <!-- Types the desktop app and the Blazor frontend share. Both reference this project. -->
   <PropertyGroup>
+    <!-- netwiv build names the app (mainBinaryName) with a global AssemblyName; keep this one. -->
+    <AssemblyName>Contracts</AssemblyName>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>

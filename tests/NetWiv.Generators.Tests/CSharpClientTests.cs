@@ -14,6 +14,12 @@ public sealed class CSharpClientTests
     private const string ContractsSource = """
         using System.Text.Json.Serialization;
         public sealed record Greeting(string Message, int Count);
+        // A custom converter has no TypeScript mapping, but the C# client reuses it as is.
+        [JsonConverter(typeof(TokenConverter))] public sealed record Token(string Value);
+        public sealed class TokenConverter : JsonConverter<Token> {
+            public override Token Read(ref System.Text.Json.Utf8JsonReader reader, System.Type type, System.Text.Json.JsonSerializerOptions options) => new(reader.GetString()!);
+            public override void Write(System.Text.Json.Utf8JsonWriter writer, Token value, System.Text.Json.JsonSerializerOptions options) => writer.WriteStringValue(value.Value);
+        }
         [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
         public abstract class SharedContext : JsonSerializerContext {
             protected SharedContext() : base(null) { }
@@ -62,6 +68,14 @@ public sealed class CSharpClientTests
             PlatformReferences().Append(MetadataReference.CreateFromImage(contracts)).Append(MetadataReference.CreateFromFile(typeof(Microsoft.JSInterop.IJSRuntime).Assembly.Location)),
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
         Assert.DoesNotContain(frontend.GetDiagnostics(), diagnostic => diagnostic.Severity >= DiagnosticSeverity.Warning);
+        // Blazor frontends may enable the trim and AOT analyzers with warnings as errors.
+        var tree = frontend.SyntaxTrees.Single();
+        var model = frontend.GetSemanticModel(tree);
+        var unsafeCalls = tree.GetRoot().DescendantNodes().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.InvocationExpressionSyntax>()
+            .Select(call => model.GetSymbolInfo(call).Symbol as IMethodSymbol).Where(method => method is not null)
+            .Where(method => method!.OriginalDefinition.GetAttributes().Any(attribute => attribute.AttributeClass?.Name is "RequiresUnreferencedCodeAttribute" or "RequiresDynamicCodeAttribute"))
+            .Select(method => method!.ToDisplayString()).ToArray();
+        Assert.Empty(unsafeCalls);
         using var stream = new MemoryStream();
         var emitted = frontend.Emit(stream);
         Assert.True(emitted.Success, string.Join("\n", emitted.Diagnostics));
@@ -120,6 +134,54 @@ public sealed class CSharpClientTests
         Assert.Equal("{\"a\":[1]}", element.GetRawText());
     }
 
+    private const string ConverterApp = """
+        using NetWiv;
+        [assembly: GenerateFrontendBindings]
+        [assembly: CommandJsonContext(typeof(SharedContext))]
+        public static class Commands { [Command] public static Token Renew(Token token) => token; }
+        """;
+
+    [Fact]
+    public void AnAppThatWantsOnlyTheCSharpClientSkipsTheTypeScriptMapping()
+    {
+        // With script bindings requested, the converter still has no TypeScript mapping.
+        Generate(DesktopApp(ConverterApp), csharpOnly: false, out var diagnostics);
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Id == "DTOXGEN009");
+
+        var bindings = Bindings(ConverterApp, csharpOnly: true);
+        Assert.False(bindings.HasScript);
+        Assert.Contains("RenewAsync(global::Token token, ", bindings.CSharp, StringComparison.Ordinal);
+        Compile(bindings.CSharp!);
+        var directory = Directory.CreateTempSubdirectory("netwiv-csharp-only-").FullName;
+        try { Assert.Throws<InvalidOperationException>(() => bindings.WriteTo(directory)); }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    [Fact]
+    public void CommandsThatBypassTheSerializerNeedNoSharedContext()
+    {
+        var client = Client("""
+            using System.Text.Json;
+            using System.Text.Json.Serialization;
+            using NetWiv;
+            [assembly: GenerateFrontendBindings]
+            [assembly: CommandJsonContext(typeof(AppContext))]
+            public abstract class AppContext : JsonSerializerContext {
+                protected AppContext() : base(null) { }
+                public static AppContext Default => throw new System.Exception();
+            }
+            public static class Commands {
+                [Command] public static void Ping() { }
+                [Command] public static byte[] Hash(byte[] data, JsonElement @await) => data;
+                [Command] public static string Greet(string name) => name;
+            }
+            """);
+        Assert.Contains(" PingAsync(global::System.Threading.CancellationToken cancellationToken = default)", client, StringComparison.Ordinal);
+        Assert.Contains(" HashAsync(byte[] data, global::System.Text.Json.JsonElement @await, ", client, StringComparison.Ordinal);
+        Assert.Contains("//   greet: AppContext is declared in the app, not in a shared project", client, StringComparison.Ordinal);
+        Compile(client);
+    }
+
     [Fact]
     public void SkipsEveryCommandWhenTheJsonContextLivesInTheApp()
     {
@@ -156,22 +218,46 @@ public sealed class CSharpClientTests
         finally { Directory.Delete(directory, true); }
     }
 
-    private static string Client(string app)
+    private static string Client(string app, bool csharpOnly = false) => Bindings(app, csharpOnly).CSharp ?? throw new InvalidOperationException("No C# client was emitted.");
+
+    private static FrontendBindings Bindings(string app, bool csharpOnly)
     {
-        var compilation = CSharpCompilation.Create("DesktopApp", [CSharpSyntaxTree.ParseText(app, new CSharpParseOptions(LanguageVersion.CSharp12))],
-            PlatformReferences().Append(MetadataReference.CreateFromFile(typeof(CommandAttribute).Assembly.Location)).Append(Reference("Contracts", ContractsSource)),
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(new CommandGenerator());
-        driver.RunGeneratorsAndUpdateCompilation(compilation, out var updated, out var diagnostics);
+        var updated = Generate(DesktopApp(app), csharpOnly, out var diagnostics);
         Assert.DoesNotContain(diagnostics.Concat(updated.GetDiagnostics()), diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         var path = Path.Combine(Path.GetTempPath(), "netwiv-csharp-client-" + Guid.NewGuid().ToString("N") + ".dll");
         try
         {
             var emitted = updated.Emit(path);
             Assert.True(emitted.Success, string.Join("\n", emitted.Diagnostics));
-            return FrontendBindings.Read(path).CSharp ?? throw new InvalidOperationException("No C# client was emitted.");
+            return FrontendBindings.Read(path);
         }
         finally { File.Delete(path); }
+    }
+
+    private static Compilation Generate(Compilation compilation, bool csharpOnly, out ImmutableArray<Diagnostic> diagnostics)
+    {
+        // What NetWiv.Build passes through CompilerVisibleProperty for an app that only wants the C# client.
+        var options = csharpOnly ? new Options(new Dictionary<string, string> { ["build_property.NetWivCSharpBindingsDirectory"] = "../frontend/Generated", ["build_property.NetWivFrontendBindingsDirectory"] = "" }) : new Options([]);
+        GeneratorDriver driver = CSharpGeneratorDriver.Create([new CommandGenerator().AsSourceGenerator()], optionsProvider: options);
+        driver.RunGeneratorsAndUpdateCompilation(compilation, out var updated, out diagnostics);
+        return updated;
+    }
+
+    private static Compilation DesktopApp(string app)
+        => CSharpCompilation.Create("DesktopApp", [CSharpSyntaxTree.ParseText(app, new CSharpParseOptions(LanguageVersion.CSharp12))],
+            PlatformReferences().Append(MetadataReference.CreateFromFile(typeof(CommandAttribute).Assembly.Location)).Append(Reference("Contracts", ContractsSource)),
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
+
+    private sealed class Options(Dictionary<string, string> values) : Microsoft.CodeAnalysis.Diagnostics.AnalyzerConfigOptionsProvider
+    {
+        public override Microsoft.CodeAnalysis.Diagnostics.AnalyzerConfigOptions GlobalOptions { get; } = new Values(values);
+        public override Microsoft.CodeAnalysis.Diagnostics.AnalyzerConfigOptions GetOptions(SyntaxTree tree) => new Values([]);
+        public override Microsoft.CodeAnalysis.Diagnostics.AnalyzerConfigOptions GetOptions(AdditionalText textFile) => new Values([]);
+    }
+
+    private sealed class Values(Dictionary<string, string> values) : Microsoft.CodeAnalysis.Diagnostics.AnalyzerConfigOptions
+    {
+        public override bool TryGetValue(string key, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out string? value) => values.TryGetValue(key, out value);
     }
 
     private static IEnumerable<MetadataReference> PlatformReferences()

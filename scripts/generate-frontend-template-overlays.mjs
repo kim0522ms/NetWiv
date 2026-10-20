@@ -772,9 +772,11 @@ export class App implements AfterViewInit {
 const blazorRoute = 'NetWivCommands.GreetAsync → Commands.Greet';
 await rm(path.join(root, 'blazor'), { recursive: true, force: true });
 await save(path.join(root, 'blazor'), {
-  'contracts/Contracts.csproj': `<Project Sdk="Microsoft.NET.Sdk">
+  'contracts/Contracts.csproj': `<Project Sdk="Microsoft.NET.Sdk" TreatAsLocalProperty="AssemblyName">
   <!-- Types the desktop app and the Blazor frontend share. Both reference this project. -->
   <PropertyGroup>
+    <!-- netwiv build names the app (mainBinaryName) with a global AssemblyName; keep this one. -->
+    <AssemblyName>Contracts</AssemblyName>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -791,14 +793,20 @@ public sealed record Greeting(string Message, int Count);
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(Greeting))]
 public partial class AppJsonContext : JsonSerializerContext;`,
-  'src-netwiv/Directory.Build.props': `<Project>
-  <!-- The frontend asks for a bindings-only app build to refresh its typed client. Give that
-       build its own folders so it never mixes with the app's normal or NativeAOT build. -->
-  <!-- obj/ stays the base folder, so neither build compiles the other's generated sources. -->
+  'Directory.Build.props': `<Project>
+  <!-- Keep the settings of a Directory.Build.props further up, such as a repository's. -->
+  <PropertyGroup>
+    <_NetWivParentBuildProps>$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))</_NetWivParentBuildProps>
+  </PropertyGroup>
+  <Import Project="$(_NetWivParentBuildProps)" Condition="'$(_NetWivParentBuildProps)' != ''" />
+  <!-- The frontend refreshes its typed client with a bindings-only build of the app and of
+       contracts/. Give that build its own restore, obj and bin folders in every project so it
+       never shares files with a normal, IDE or NativeAOT build running at the same time.
+       obj/ stays the base folder, so neither build compiles the other's generated sources. -->
   <PropertyGroup Condition="'$(NetWivBindingsOnly)' == 'true'">
-    <MSBuildProjectExtensionsPath>$(MSBuildThisFileDirectory)obj/bindings/</MSBuildProjectExtensionsPath>
-    <IntermediateOutputPath>$(MSBuildThisFileDirectory)obj/bindings/</IntermediateOutputPath>
-    <OutputPath>$(MSBuildThisFileDirectory)bin/bindings/</OutputPath>
+    <MSBuildProjectExtensionsPath>$(MSBuildProjectDirectory)/obj/bindings/</MSBuildProjectExtensionsPath>
+    <IntermediateOutputPath>$(MSBuildProjectDirectory)/obj/bindings/$(Configuration)/</IntermediateOutputPath>
+    <OutputPath>$(MSBuildProjectDirectory)/bin/bindings/$(Configuration)/</OutputPath>
   </PropertyGroup>
 </Project>`,
   'frontend/NetWiv.targets': `<Project>
@@ -806,24 +814,33 @@ public partial class AppJsonContext : JsonSerializerContext;`,
   <ItemGroup>
     <ProjectReference Include="../contracts/Contracts.csproj" />
     <_NetWivApp Include="$(MSBuildProjectDirectory)/../src-netwiv/*.csproj" />
-    <_NetWivCommandSources Include="$(MSBuildProjectDirectory)/../src-netwiv/**/*.cs;$(MSBuildProjectDirectory)/../src-netwiv/*.csproj;$(MSBuildProjectDirectory)/../src-netwiv/*.props;$(MSBuildProjectDirectory)/../contracts/**/*.cs;$(MSBuildProjectDirectory)/../contracts/*.csproj"
+    <_NetWivCommandSources Include="$(MSBuildProjectDirectory)/../src-netwiv/**/*.cs;$(MSBuildProjectDirectory)/../src-netwiv/*.csproj;$(MSBuildProjectDirectory)/../contracts/**/*.cs;$(MSBuildProjectDirectory)/../contracts/*.csproj;$(MSBuildProjectDirectory)/../Directory.Build.props"
                            Exclude="$(MSBuildProjectDirectory)/../src-netwiv/obj/**;$(MSBuildProjectDirectory)/../src-netwiv/bin/**;$(MSBuildProjectDirectory)/../contracts/obj/**;$(MSBuildProjectDirectory)/../contracts/bin/**" />
   </ItemGroup>
+  <PropertyGroup>
+    <!-- The SDK that runs this build, also when MSBuild is hosted by an IDE. -->
+    <_NetWivDotnet>$(DOTNET_HOST_PATH)</_NetWivDotnet>
+    <_NetWivDotnet Condition="'$(_NetWivDotnet)' == ''">dotnet</_NetWivDotnet>
+  </PropertyGroup>
   <!-- Lists the C# sources so that deleting or renaming a file also counts as a change:
-       the list is rewritten only when it differs, which makes it newer than the client. -->
+       the list is rewritten only when it differs, which makes it newer than the stamp. -->
   <Target Name="NetWivTrackCommandSources" Condition="'$(DesignTimeBuild)' != 'true'">
     <PropertyGroup>
       <_NetWivCommandSourceList>$(IntermediateOutputPath)netwiv-command-sources.txt</_NetWivCommandSourceList>
+      <_NetWivCommandsStamp>$(IntermediateOutputPath)netwiv-commands.stamp</_NetWivCommandsStamp>
     </PropertyGroup>
     <MakeDir Directories="$(IntermediateOutputPath)" />
     <WriteLinesToFile File="$(_NetWivCommandSourceList)" Lines="@(_NetWivCommandSources->'%(FullPath)')" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <Delete Files="$(_NetWivCommandsStamp)" Condition="!Exists('Generated/NetWivCommands.g.cs')" />
   </Target>
-  <!-- Every app build rewrites Generated/NetWivCommands.g.cs. When the C# sources are newer,
-       refresh it with a bindings-only app build before this project compiles. -->
+  <!-- Every app build rewrites Generated/NetWivCommands.g.cs when its commands change. When the
+       C# sources changed since the last check, refresh it with a bindings-only app build of the
+       same configuration before this project compiles. The stamp records the check, so an edit
+       that leaves the commands as they were does not recompile the frontend. -->
   <Target Name="NetWivGenerateCommands" BeforeTargets="CoreCompile" DependsOnTargets="NetWivTrackCommandSources" Condition="'$(DesignTimeBuild)' != 'true'"
-          Inputs="@(_NetWivCommandSources);$(_NetWivCommandSourceList)" Outputs="Generated/NetWivCommands.g.cs">
-    <Exec Command="dotnet build &quot;@(_NetWivApp->'%(FullPath)')&quot; -p:NetWivBindingsOnly=true -p:PublishAot=false --disable-build-servers -nologo -v:q" />
-    <Touch Files="Generated/NetWivCommands.g.cs" />
+          Inputs="@(_NetWivCommandSources);$(_NetWivCommandSourceList)" Outputs="$(_NetWivCommandsStamp)">
+    <Exec Command="&quot;$(_NetWivDotnet)&quot; build &quot;@(_NetWivApp->'%(FullPath)')&quot; -c &quot;$(Configuration)&quot; -p:NetWivBindingsOnly=true -p:PublishAot=false --disable-build-servers -nologo -v:q" />
+    <Touch Files="$(_NetWivCommandsStamp)" AlwaysCreate="true" />
     <ItemGroup>
       <Compile Include="Generated/NetWivCommands.g.cs" Exclude="@(Compile)" />
     </ItemGroup>

@@ -45,7 +45,7 @@ internal static class CSharpClientEmitter
         {
             source.Append("// Commands without a typed C# call. Move their parameter, result and JSON context\n")
                 .Append("// types into a project that both the app and this frontend reference:\n");
-            foreach (var line in skipped) source.Append("//   ").Append(line).Append('\n');
+            foreach (var line in skipped) source.Append("//   ").Append(OneLine(line)).Append('\n');
             source.Append('\n');
         }
         source.Append(
@@ -73,7 +73,7 @@ internal static class CSharpClientEmitter
 
     private static void AppendMethod(StringBuilder output, FrontendCommand command, string name)
     {
-        var context = command.JsonContext!.ToDisplayString(TypeFormat) + ".Default";
+        var context = command.JsonContext?.ToDisplayString(TypeFormat) + ".Default";
         // Locals must not shadow or collide with the command's own parameter names.
         var taken = new HashSet<string>(command.Parameters.Select(static parameter => parameter.Name), StringComparer.Ordinal);
         var token = Unique("cancellationToken", taken);
@@ -111,8 +111,7 @@ internal static class CSharpClientEmitter
     // (not System.Text.Json's base64 string) and passes JsonElement through unchanged.
     private static string Helpers(IReadOnlyList<FrontendCommand> commands)
     {
-        var types = commands.SelectMany(static command => command.Parameters.Select(static parameter => parameter.Type)
-            .Concat(command.Result is null ? Array.Empty<ITypeSymbol>() : new[] { command.Result })).ToArray();
+        var types = commands.SelectMany(WireTypes).ToArray();
         var helpers = new StringBuilder();
         if (types.Any(IsByteArray))
         {
@@ -121,7 +120,8 @@ internal static class CSharpClientEmitter
                 "    {\n" +
                 "        if (values is null) return null;\n" +
                 "        var array = new global::System.Text.Json.Nodes.JsonArray();\n" +
-                "        foreach (var value in values) array.Add(value);\n" +
+                // The JsonNode cast picks the non-generic Add; Add<T> is not trim or AOT safe.
+                "        foreach (var value in values) array.Add((global::System.Text.Json.Nodes.JsonNode)global::System.Text.Json.Nodes.JsonValue.Create(value));\n" +
                 "        return array;\n" +
                 "    }\n\n" +
                 "    private static byte[]? ReadByteArray(string json)\n" +
@@ -149,6 +149,9 @@ internal static class CSharpClientEmitter
         return helpers.ToString();
     }
 
+    private static IEnumerable<ITypeSymbol> WireTypes(FrontendCommand command)
+        => command.Parameters.Select(static parameter => parameter.Type).Concat(command.Result is null ? Array.Empty<ITypeSymbol>() : new[] { command.Result });
+
     private static bool IsByteArray(ITypeSymbol type)
         => type is IArrayTypeSymbol { Rank: 1, ElementType.SpecialType: SpecialType.System_Byte };
 
@@ -165,13 +168,16 @@ internal static class CSharpClientEmitter
     // Reasons a command cannot get a typed C# call; null means it can.
     private static string? Unsupported(IAssemblySymbol application, FrontendCommand command)
     {
-        if (command.JsonContext is null) return "no [assembly: CommandJsonContext] is declared";
-        if (!Reachable(application, command.JsonContext)) return command.JsonContext.Name + " is declared in the app, not in a shared project";
-        foreach (var type in command.Parameters.Select(static parameter => parameter.Type).Concat(command.Result is null ? Array.Empty<ITypeSymbol>() : new[] { command.Result }))
+        var types = WireTypes(command).ToArray();
+        foreach (var type in types)
         {
             var blocked = Blocked(application, type);
             if (blocked is not null) return blocked;
         }
+        // byte[] and JsonElement bypass the serializer context, so a command that uses only those needs none.
+        if (types.All(static type => IsByteArray(type) || IsJsonElement(type))) return null;
+        if (command.JsonContext is null) return "no [assembly: CommandJsonContext] is declared";
+        if (!Reachable(application, command.JsonContext)) return command.JsonContext.Name + " is declared in the app, not in a shared project";
         return null;
     }
 
@@ -241,12 +247,17 @@ internal static class CSharpClientEmitter
         return builder.ToString();
     }
 
+    // Parameters live in an async method, where the contextual keyword await is reserved too.
     private static string Identifier(string name)
-        => Microsoft.CodeAnalysis.CSharp.SyntaxFacts.GetKeywordKind(name) != Microsoft.CodeAnalysis.CSharp.SyntaxKind.None ? "@" + name : name;
+        => Microsoft.CodeAnalysis.CSharp.SyntaxFacts.GetKeywordKind(name) != Microsoft.CodeAnalysis.CSharp.SyntaxKind.None || name == "await" ? "@" + name : name;
 
     private static string Literal(string value)
         => Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(value, true);
 
+    // Comment text stays on one line whatever the command or type name contains.
+    private static string OneLine(string value)
+        => new string(value.Select(static c => char.IsControl(c) || c is '\u2028' or '\u2029' ? ' ' : c).ToArray());
+
     private static string Escape(string value)
-        => value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
+        => OneLine(value).Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
 }

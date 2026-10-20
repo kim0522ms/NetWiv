@@ -97,23 +97,42 @@ that both the app and the frontend reference, such as the Blazor starter's
 `contracts/` project. A command whose types are declared in the app itself, or
 in a NetWiv package, gets no method; the generated file lists it with the reason.
 Only commands declared in the app are included, not commands from referenced
-plugin assemblies.
+plugin assemblies. A command whose parameters and result are only `byte[]` or
+`JsonElement` (or none) needs no shared context.
+
+When `NetWivCSharpBindingsDirectory` is set and `NetWivFrontendBindingsDirectory`
+is not, the app emits only the C# client: `commands.js` and `commands.d.ts` are
+not generated, so wire types that the TypeScript mapping rejects (for example a
+custom `[JsonConverter]`) do not fail the app build. `netwiv bindings` reports
+that such an app has no JavaScript bindings.
 
 Method names are the C# method name plus `Async`; two methods with the same name
-fall back to the external command name. Each method takes an optional
-`CancellationToken`. Arguments are serialized with the shared JSON context and
-sent through the frontend's `wwwroot/netwiv.js` module, whose `invokeJson`
+fall back to the external command name, and a numeric suffix settles any
+collision left. Each method takes an optional `CancellationToken`, which stops
+waiting for the answer but does not cancel the command. Arguments are serialized
+with the shared JSON context; top-level `byte[]` travels as an array of numbers
+and `JsonElement` unchanged, as the command dispatcher expects. They are sent
+through the frontend's `wwwroot/netwiv.js` module, whose `invokeJson`
 function forwards them to `@netwiv/api/core`. A failed call surfaces as a
 `JSException`. Renaming a command, a parameter or a DTO member in C# changes the
 generated method or type, so the frontend build fails instead of the call failing
 at run time. Exposure rules are unchanged: the client does not register commands
 or grant permissions.
 
+Values cross JavaScript on the way, so numbers become JavaScript numbers.
+`long`, `ulong`, `Int128` and `decimal` values beyond 2^53 or 15–17 significant
+digits lose precision, as they do for TypeScript callers. Send such values as
+strings, or give the shared context
+`NumberHandling = JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString`.
+
 The Blazor starter imports `frontend/NetWiv.targets`, which refreshes the client
-before the frontend compiles whenever the app's C# sources are newer, using a
-bindings-only app build. `src-netwiv/Directory.Build.props` gives that build its
-own `obj/bindings` and `bin/bindings` folders so it does not mix with the normal
-or NativeAOT build.
+before the frontend compiles whenever the app's or the contracts' C# sources or
+project files changed (including deleted files), using a bindings-only app build
+of the same configuration. The project's root `Directory.Build.props` gives that
+build its own `obj/bindings` and `bin/bindings` folders in the app and in
+`contracts/`, so it does not share files with a normal, IDE or NativeAOT build
+running at the same time; it also imports any `Directory.Build.props` further
+up. The client file is rewritten only when its content changes.
 
 ### Referenced command assemblies
 

@@ -66,6 +66,7 @@ internal static class NewProjectTests
             Check(!Directory.EnumerateDirectories(destination, "*", SearchOption.AllDirectories)
                 .Any(path => Path.GetFileName(path) is "bin" or "obj"), "Template copied build output.");
             Check(result.Output.Contains("dotnet run --project src-netwiv", StringComparison.Ordinal), "Hybrid startup guidance is missing.");
+            CheckAgentConfig(destination, result.Output, "blazor-hybrid");
             var hostPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var (configuration, mode, aot, experimental, expectedMode, expectedFlavor, succeeds) in new[]
             {
@@ -354,6 +355,7 @@ internal static class NewProjectTests
                 var readme = File.ReadAllText(Path.Combine(destination, "README.md"));
                 Check(readme.Contains("TAURI®", StringComparison.Ordinal) && readme.Contains("The Tauri Programme within the Commons Conservancy", StringComparison.Ordinal), "Trademark notice missing: " + template);
                 Check(readme.Contains("not affiliated with, endorsed by, or officially approved by", StringComparison.Ordinal), "Independent template notice missing: " + template);
+                CheckAgentConfig(destination, result.Output, template);
                 if (template == "blazor")
                 {
                     Check(config["build"]!["frontendDist"]!.GetValue<string>() == "../dist/wwwroot", "Blazor asset root mismatch");
@@ -445,6 +447,17 @@ internal static class NewProjectTests
             Check(result.Code == 130 && !Directory.Exists(Path.Combine(root, "Cancelled")), "Cancelled creation wrote files");
         }
         finally { Directory.Delete(root, true); }
+    }
+
+    // Every starter registers its own local CLI as the coding-agent MCP server.
+    private static void CheckAgentConfig(string destination, string output, string template)
+    {
+        var agent = JsonNode.Parse(File.ReadAllText(Path.Combine(destination, ".mcp.json")))!["mcpServers"]!["netwiv"]!;
+        Check(agent["command"]!.GetValue<string>() == "dotnet" &&
+            agent["args"]!.AsArray().Select(static item => item!.GetValue<string>()).SequenceEqual(["tool", "run", "netwiv", "--", "mcp"]),
+            "MCP server registration is wrong: " + template);
+        Check(File.ReadAllText(Path.Combine(destination, "README.md")).Contains("## Coding agents", StringComparison.Ordinal) &&
+            output.Contains("netwiv mcp", StringComparison.Ordinal), "Coding agent guidance is missing: " + template);
     }
 
     internal static async Task Discovery()

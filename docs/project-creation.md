@@ -104,6 +104,10 @@ It does not install or replace global user templates, and preserves an existing
 output directory if generation fails. Project creation does not automatically
 install npm dependencies or launch the app.
 
+Every starter also gets `.mcp.json`, which registers the project's local CLI as a
+read-only MCP server (`netwiv mcp`) for coding agents. Run `dotnet tool restore`
+once before an agent starts it; see [coding agents](coding-agents.md).
+
 ## Use the generated app
 
 Write `[Command]` C# methods in `src-netwiv/Program.cs`. JS/TS frontend code calls

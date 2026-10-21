@@ -19,6 +19,7 @@
     <Compile Include="../Shared/PermissionIdentifier.cs" Link="Commands/PermissionIdentifier.cs" />
     <Compile Include="../Shared/CapabilityValidation.cs" Link="Commands/CapabilityValidation.cs" />
     <ProjectReference Include="..\NetWiv.Build\NetWiv.Build.csproj" />
+    <PackageReference Include="ModelContextProtocol.Core" Version="2.3.0" />
     <None Include="../../THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="" />
     <None Include="../NetWiv.Build/ThirdParty/Json5/LICENSE.txt" Pack="true" PackagePath="licenses/Json5-LICENSE.txt" />
   </ItemGroup>
@@ -27,6 +28,8 @@
              Exclude="../../samples/BlazorHybrid/**/bin/**;../../samples/BlazorHybrid/**/obj/**;../../samples/BlazorHybrid/**/dist/**;../../samples/BlazorHybrid/**/target/**;../../samples/BlazorHybrid/**/.vs/**"
              Link="templates/blazor-hybrid/%(RecursiveDir)%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" Pack="false" />
+    <!-- Guides served by `netwiv mcp`, from the same revision as this CLI. -->
+    <Content Include="../../docs/*.md" Link="docs/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Pack="false" />
     <Content Include="..\..\templates\**\*" Exclude="../../templates/*.md;../../templates/.impeccable/**;../../templates/**/node_modules/**;../../templates/**/bin/**;../../templates/**/obj/**;../../templates/**/dist/**;../../templates/react-app/src/generated/**" Link="templates\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Pack="false" />
   </ItemGroup>
 </Project>

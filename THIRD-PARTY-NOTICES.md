@@ -18,6 +18,7 @@ licenses; this file does not relicense them.
 | infer 0.19.0 file signatures, adapted in `FileAssetMimeType.cs` | https://github.com/bojand/infer | MIT; full grant below |
 | Json5 source | See `src/NetWiv.Build/ThirdParty/Json5/SOURCE.md` | MIT; original `LICENSE.txt` preserved alongside source |
 | Tomlyn | https://github.com/xoofx/Tomlyn | BSD-2-Clause; NuGet package license |
+| ModelContextProtocol.Core 2.3.0, used by `netwiv mcp` in NetWiv.Cli | https://github.com/modelcontextprotocol/csharp-sdk | Apache-2.0; NuGet package license; its Microsoft.Extensions.AI.Abstractions dependency is MIT |
 | AngleSharp 1.5.2 | https://github.com/AngleSharp/AngleSharp | MIT; `licenses/AngleSharp-MIT.txt`, included in NetWiv.Core |
 | JetBrains Mono 2.304 glyph outlines, in `assets/brand/netwiv-banner-*.svg` and `assets/diagrams/architecture-*.svg` | https://github.com/JetBrains/JetBrainsMono | OFL-1.1; Copyright 2020 The JetBrains Mono Project Authors; `licenses/JetBrainsMono-OFL.txt` |
 | Roboto 2.000980 glyph outlines, in `assets/brand/netwiv-banner-*.svg` and `assets/diagrams/architecture-*.svg` | https://github.com/googlefonts/roboto | Apache-2.0; font data copyright Google 2014; `LICENSE-APACHE` |

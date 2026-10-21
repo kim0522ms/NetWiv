@@ -248,10 +248,12 @@ internal static class McpCommand
     private static string? BuiltAssembly(string project, string projectRoot, string? mainBinaryName)
     {
         var document = XDocument.Load(project);
-        var name = document.Descendants("AssemblyName").Select(static element => element.Value.Trim()).FirstOrDefault(static value => value.Length > 0 && !value.Contains('$'))
-            ?? Path.GetFileNameWithoutExtension(project);
+        // Conditions are not evaluated: retain every literal override and the SDK default.
+        var names = document.Descendants("AssemblyName").Select(static element => element.Value.Trim())
+            .Where(static value => value.Length > 0 && !value.Contains('$'))
+            .Append(Path.GetFileNameWithoutExtension(project)).Append(mainBinaryName)
+            .OfType<string>().Distinct(StringComparer.Ordinal).ToArray();
         var projectDirectory = Path.GetDirectoryName(project)!;
-        var names = new[] { name, mainBinaryName }.OfType<string>().Distinct(StringComparer.Ordinal).ToArray();
         var roots = new[] { Path.Combine(projectDirectory, "bin"), Path.Combine(projectRoot, "target") };
         return roots.Where(System.IO.Directory.Exists)
             .SelectMany(root => names.SelectMany(candidate => System.IO.Directory.EnumerateFiles(root, candidate + ".dll", SearchOption.AllDirectories)))

@@ -82,8 +82,10 @@ run project hooks.
   from. Search matches words in headings and text; it is not semantic search.
 - `netwiv_commands` reads metadata from the newest built application assembly
   under the application's `bin/` or the configured project root's `target/`,
-  without loading or running it. Both the project's assembly name and the
-  configured `mainBinaryName` are considered when selecting the newest output.
+  without loading or running it. All literal `AssemblyName` values in the project
+  (including conditional declarations), the default project name and configured
+  `mainBinaryName` are candidates for the newest output. MSBuild conditions and
+  property expressions are not evaluated.
   Build the application after changing commands;
   an application without `[assembly: GenerateFrontendBindings]` has no command
   metadata to show.

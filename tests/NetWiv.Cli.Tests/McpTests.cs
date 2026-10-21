@@ -109,6 +109,16 @@ internal static class McpTests
                 if (name == "netwiv_commands") Check(result.ToString().Contains("mcpProbe", StringComparison.Ordinal), "stdio reads actual generated command metadata");
                 if (name == "netwiv_commands") Check(result.ToString().Contains("Renamed.dll", StringComparison.Ordinal), "stdio selects the newer mainBinaryName output instead of stale bin metadata");
             }
+            File.WriteAllText(Path.Combine(root, "netwiv.conf.json"), """{"identifier":"dev.netwiv.mcp"}""");
+            File.WriteAllText(Path.Combine(root, "Probe.csproj"), """
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup Condition="'$(Configuration)' == 'Debug'"><AssemblyName>DebugProbe</AssemblyName></PropertyGroup>
+                  <PropertyGroup Condition="'$(Configuration)' == 'Release'"><AssemblyName>Renamed</AssemblyName></PropertyGroup>
+                </Project>
+                """);
+            var conditional = await Request("tools/call", new { name = "netwiv_commands", arguments = new { } });
+            Check((!conditional.TryGetProperty("isError", out var conditionalError) || !conditionalError.GetBoolean()) &&
+                conditional.ToString().Contains("Renamed.dll", StringComparison.Ordinal), "stdio discovers a later conditional assembly name");
             process.StandardInput.Close();
             await process.WaitForExitAsync(timeout.Token);
             Check(process.ExitCode == 0 && string.IsNullOrWhiteSpace(await errors), "stdin EOF shuts down cleanly without diagnostics");
@@ -195,6 +205,21 @@ internal static class McpTests
                     Check(commands.IsError != true && Text(commands).Contains("Renamed.dll", StringComparison.Ordinal) && Text(commands).Contains("mcpProbe", StringComparison.Ordinal),
                         "mainBinaryName output is found with implicit or explicit project assembly names");
                 }
+                File.WriteAllText(Path.Combine(root, "netwiv.conf.json"), """{"identifier":"dev.netwiv.mcp"}""");
+                foreach (var assemblyProperties in new[]
+                {
+                    "<PropertyGroup Condition=\"'$(Configuration)' == 'Debug'\"><AssemblyName>DebugProbe</AssemblyName></PropertyGroup><PropertyGroup Condition=\"'$(Configuration)' == 'Release'\"><AssemblyName>Renamed</AssemblyName></PropertyGroup>",
+                    "<PropertyGroup><AssemblyName>$(CustomName)</AssemblyName><AssemblyName> </AssemblyName><AssemblyName>Renamed</AssemblyName><AssemblyName>Renamed</AssemblyName></PropertyGroup>",
+                })
+                {
+                    File.WriteAllText(Path.Combine(root, "Probe.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\">" + assemblyProperties + "</Project>");
+                    commands = await Call(client, "netwiv_commands", [], timeout.Token);
+                    Check(commands.IsError != true && Text(commands).Contains("Renamed.dll", StringComparison.Ordinal), "all literal assembly names are considered without evaluating MSBuild");
+                }
+                File.WriteAllText(Path.Combine(root, "Probe.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup Condition=\"'$(Configuration)' == 'Debug'\"><AssemblyName>DebugProbe</AssemblyName></PropertyGroup></Project>");
+                File.Move(Path.Combine(build, "Renamed.dll"), Path.Combine(build, "Probe.dll"));
+                commands = await Call(client, "netwiv_commands", [], timeout.Token);
+                Check(commands.IsError != true && Text(commands).Contains("Probe.dll", StringComparison.Ordinal), "the default project name remains a candidate when conditional overrides do not apply");
                 var missing = await Call(client, "netwiv_docs_read", new() { ["name"] = "missing" }, timeout.Token);
                 Check(missing.IsError == true && Text(missing).Contains("Available", StringComparison.Ordinal), "tool errors are results, not protocol failures");
                 var outside = await Call(client, "netwiv_project_info", new() { ["directory"] = "no-such-dir" }, timeout.Token);

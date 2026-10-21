@@ -59,9 +59,11 @@ internal static class InitializationScript
                   const value = type === 'application/json' ? await response.json() :
                     type === 'text/plain' ? await response.text() : await response.arrayBuffer();
                   return [callback, value];
-                }).then(([callback, value]) => runCallback(callback, value), () => {
+                }).then(([callback, value]) => runCallback(callback, value), error => {
                   protocolIpcFailed = true;
-                  sendToNative(message);
+                  // A lost response can follow successful native dispatch. Never
+                  // replay this command; use the message transport for future calls.
+                  runCallback(message.error, error);
                 });
               } else {
                 bridge.postMessage(JSON.stringify({ ...message,

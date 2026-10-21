@@ -104,3 +104,64 @@ test('older runtime fails explicitly and the Blazor bridge has no numeric conver
   assert.match(bridge, /export \{ invokeJson \} from/);
   assert.doesNotMatch(bridge, /JSON\.(parse|stringify)/);
 });
+
+for (const failure of ['fetch', 'json', 'text', 'arrayBuffer']) {
+  test(`protocol ${failure} rejection never replays a dispatched command`, async () => {
+    let executions = 0;
+    let posted = 0;
+    let finish;
+    const inFlight = new Promise(resolve => { finish = resolve; });
+    const error = new TypeError('response unavailable');
+    const window = { location: { origin: 'netwiv://localhost' }, __NETWIV_IPC__: {
+      os: 'macos', protocolIpc: true,
+      fetchIpc: async () => {
+        executions++;
+        // A transport failure does not cancel already-dispatched native work.
+        void inFlight.then(() => { executions += 10; });
+        if (failure === 'fetch') throw error;
+        return {
+          headers: new Headers({ 'Tauri-Response': 'ok', 'content-type':
+            failure === 'json' ? 'application/json' : failure === 'text' ? 'text/plain' : 'application/octet-stream' }),
+          [failure]: async () => { throw error; }
+        };
+      },
+      postMessage: text => {
+        posted++;
+        const message = JSON.parse(text);
+        assert.equal(message.cmd, 'nextCommand');
+        assert.equal(message.options.customProtocolIpcBlocked, true);
+        window.__TAURI_INTERNALS__.runCallback(message.callback, 'next result');
+      }
+    }};
+    window.top = window;
+    vm.runInNewContext(script(false), { window, crypto: webcrypto, Headers, URL, ArrayBuffer, Uint8Array, Map });
+    const api = window.__TAURI_INTERNALS__;
+    await assert.rejects(api.invoke('increment'), rejected => rejected === error);
+    assert.equal(executions, 1);
+    assert.equal(posted, 0);
+    assert.equal(api.callbacks.size, 0);
+    assert.equal(await api.invoke('nextCommand'), 'next result');
+    assert.equal(posted, 1);
+    assert.equal(api.callbacks.size, 0);
+    finish();
+    await inFlight;
+    assert.equal(executions, 11, 'The original in-flight operation must finish only once');
+  });
+}
+
+test('known unavailable protocol uses message transport before dispatch', async () => {
+  let executions = 0;
+  const window = { __NETWIV_IPC__: { os: 'macos', protocolIpc: false,
+    fetchIpc: () => { throw new Error('An unavailable protocol must not be attempted'); },
+    postMessage: text => {
+      executions++;
+      const message = JSON.parse(text);
+      window.__TAURI_INTERNALS__.runCallback(message.callback, executions);
+    }
+  }};
+  window.top = window;
+  vm.runInNewContext(script(false), { window, crypto: webcrypto, Headers, URL, ArrayBuffer, Uint8Array, Map });
+  assert.equal(await window.__TAURI_INTERNALS__.invoke('increment'), 1);
+  assert.equal(executions, 1);
+  assert.equal(window.__TAURI_INTERNALS__.callbacks.size, 0);
+});

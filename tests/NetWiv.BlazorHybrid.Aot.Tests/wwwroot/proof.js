@@ -13,6 +13,7 @@
   let voidCalled = false;
   let receivedDto = false;
   window.proof = {
+    VersionBox: class { constructor(value) { this.value = value; } },
     dto(value) {
       assert(JSON.stringify(value) === JSON.stringify(input), "Generated DTO input differs.");
       receivedDto = true;
@@ -135,6 +136,13 @@
     try { await DotNet.invokeMethodAsync(assembly, "NotRegistered", input); }
     catch { rejected = true; }
     assert(rejected, "An unregistered method was accepted.");
+    const before = await window.__TAURI_INTERNALS__.invoke('transport_count');
+    let responseRejected = false;
+    try { await window.__TAURI_INTERNALS__.invoke('transport_increment'); }
+    catch { responseRejected = true; }
+    assert(responseRejected, 'A malformed protocol response did not reject.');
+    assert(await window.__TAURI_INTERNALS__.invoke('transport_count') === before + 1,
+      'Protocol response failure replayed the command or broke subsequent message IPC.');
     document.getElementById("result").textContent = "PASS";
     send("__aot-proof:" + JSON.stringify({ passed: true, phase: Number(new URLSearchParams(location.search).get("netwiv-proof-phase") || 0), navigationType: performance.getEntriesByType('navigation')[0]?.type }));
   }

@@ -35,6 +35,12 @@ internal static class AotAssetTests
             Check.Equal(200, framework.StatusCode);
             Check.Contains("javascript", framework.ContentType);
             Check.True(framework.Body.Length > 1000, "The pinned embedded transport was not served.");
+#if NET10_0_OR_GREATER
+            var modules = assets.TryGetResponse(Request("_framework/blazor.modules.json"))!;
+            Check.Equal(200, modules.StatusCode);
+            using var manifest = System.Text.Json.JsonDocument.Parse(modules.Body);
+            Check.True(manifest.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array, "Invalid framework module manifest.");
+#endif
             Check.Equal(404, assets.TryGetResponse(Request("_framework/missing"))!.StatusCode);
         }
         Check.True(!files.Disposed, "The host disposed an application-owned file provider.");

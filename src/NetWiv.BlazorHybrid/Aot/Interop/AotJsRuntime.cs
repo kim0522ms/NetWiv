@@ -65,7 +65,26 @@ internal sealed class AotJsRuntime : IJSRuntime, IDisposable, IAotReferenceOwner
     internal async Task InvokeVoidAsync(string identifier, params object?[] args) =>
         _ = await InvokeAsync<IJSVoidResult>(identifier, args);
 
-    private ValueTask<TValue> InvokeAsync<TValue>(long target, string identifier, CancellationToken cancellationToken, object?[]? args)
+#if NET10_0_OR_GREATER
+    public ValueTask<IJSObjectReference> InvokeConstructorAsync(string identifier, object?[]? args) =>
+        InvokeConstructorAsync(identifier, CancellationToken.None, args);
+    public ValueTask<IJSObjectReference> InvokeConstructorAsync(string identifier, CancellationToken cancellationToken, object?[]? args) =>
+        InvokeAsync<IJSObjectReference>(0, identifier, cancellationToken, args, JSCallType.ConstructorCall);
+    public ValueTask<TValue> GetValueAsync<[DynamicallyAccessedMembers(JsonMembers)] TValue>(string identifier) =>
+        GetValueAsync<TValue>(identifier, CancellationToken.None);
+    public ValueTask<TValue> GetValueAsync<[DynamicallyAccessedMembers(JsonMembers)] TValue>(string identifier, CancellationToken cancellationToken) =>
+        InvokeAsync<TValue>(0, identifier, cancellationToken, null, JSCallType.GetValue);
+    public ValueTask SetValueAsync<[DynamicallyAccessedMembers(JsonMembers)] TValue>(string identifier, TValue value) =>
+        SetValueAsync(identifier, value, CancellationToken.None);
+    public async ValueTask SetValueAsync<[DynamicallyAccessedMembers(JsonMembers)] TValue>(string identifier, TValue value, CancellationToken cancellationToken) =>
+        _ = await InvokeAsync<IJSVoidResult>(0, identifier, cancellationToken, [value], JSCallType.SetValue);
+#endif
+
+    private ValueTask<TValue> InvokeAsync<TValue>(long target, string identifier, CancellationToken cancellationToken, object?[]? args
+#if NET10_0_OR_GREATER
+        , JSCallType callType = JSCallType.FunctionCall
+#endif
+        )
     {
         if (_disconnected) throw Disconnected();
         ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
@@ -133,6 +152,9 @@ internal sealed class AotJsRuntime : IJSRuntime, IDisposable, IAotReferenceOwner
                         writer.WriteStringValue(argsJson);
                         writer.WriteNumberValue((int)resultType);
                         writer.WriteNumberValue(target);
+#if NET10_0_OR_GREATER
+                        writer.WriteNumberValue((int)callType);
+#endif
                     }));
                 }
             }
@@ -450,5 +472,28 @@ internal sealed class AotJsRuntime : IJSRuntime, IDisposable, IAotReferenceOwner
             _disposed = true;
             _ = await runtime.InvokeAsync<IJSVoidResult>(0, "DotNet.disposeJSObjectReferenceById", CancellationToken.None, [id]);
         }
+#if NET10_0_OR_GREATER
+        public ValueTask<IJSObjectReference> InvokeConstructorAsync(string identifier, object?[]? args) =>
+            InvokeConstructorAsync(identifier, CancellationToken.None, args);
+        public ValueTask<IJSObjectReference> InvokeConstructorAsync(string identifier, CancellationToken cancellationToken, object?[]? args)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            return runtime.InvokeAsync<IJSObjectReference>(id, identifier, cancellationToken, args, JSCallType.ConstructorCall);
+        }
+        public ValueTask<TValue> GetValueAsync<[DynamicallyAccessedMembers(JsonMembers)] TValue>(string identifier) =>
+            GetValueAsync<TValue>(identifier, CancellationToken.None);
+        public ValueTask<TValue> GetValueAsync<[DynamicallyAccessedMembers(JsonMembers)] TValue>(string identifier, CancellationToken cancellationToken)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            return runtime.InvokeAsync<TValue>(id, identifier, cancellationToken, null, JSCallType.GetValue);
+        }
+        public ValueTask SetValueAsync<[DynamicallyAccessedMembers(JsonMembers)] TValue>(string identifier, TValue value) =>
+            SetValueAsync(identifier, value, CancellationToken.None);
+        public async ValueTask SetValueAsync<[DynamicallyAccessedMembers(JsonMembers)] TValue>(string identifier, TValue value, CancellationToken cancellationToken)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            _ = await runtime.InvokeAsync<IJSVoidResult>(id, identifier, cancellationToken, [value], JSCallType.SetValue);
+        }
+#endif
     }
 }

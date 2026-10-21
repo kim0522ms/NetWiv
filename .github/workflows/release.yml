@@ -49,7 +49,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: native-*
@@ -58,7 +58,7 @@ jobs:
       - name: Pack the local feed
         shell: pwsh
         run: |
-          $sdk = ((dotnet --list-sdks | Where-Object { $_ -match '^8\.' } | Select-Object -Last 1) -split ' ')[0]
+          $sdk = ((dotnet --list-sdks | Where-Object { $_ -match '^10\.' } | Select-Object -Last 1) -split ' ')[0]
           @{ sdk = @{ version = $sdk; rollForward = 'disable'; allowPrerelease = $false } } |
             ConvertTo-Json | Set-Content global.json
           ./scripts/pack-integration.ps1 -Version $env:RELEASE_VERSION -OutputDirectory artifacts/release-feed

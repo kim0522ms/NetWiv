@@ -32,7 +32,11 @@ without arguments; an empty protocol body cannot bypass the hook.
 Wry registers an asynchronous IPC protocol. Fetch uses native request headers,
 WebView identity and document generation. Request injection exposes its JSON
 or raw body and headers. CSP/browser rejection switches to postMessage for the
-rest of that document, matching the pinned fallback's JSON byte-array behavior.
+subsequent calls in that document, retaining the pinned fallback's JSON byte-array
+behavior. The failing call itself rejects without replay because native execution
+may already have begun. This deliberately differs from the pinned upstream retry.
+The differential suite selects the fallback with a side-effect-free probe before
+comparing subsequent requests; it does not count that initial transition as parity.
 Headers instances fail structured cloning at the isolation boundary as in Tauri;
 use a plain header record for isolation invokes.
 

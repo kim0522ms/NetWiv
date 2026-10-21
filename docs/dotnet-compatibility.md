@@ -1,6 +1,8 @@
 # .NET SDK and runtime compatibility
 
-Current managed packages and default desktop applications target `net8.0`.
+Core managed packages and default desktop applications target `net8.0`.
+The optional `NetWiv.BlazorHybrid` package instead includes `net8.0`, `net9.0`
+and `net10.0` assets paired with matching Microsoft component package majors.
 The same packages can be referenced by `net8.0`, `net9.0` and `net10.0`
 applications. This is part of `main`, not a separate backport package line.
 Historical `0.1.0-beta.1` packages still require .NET 10; use a current matching
@@ -13,7 +15,7 @@ package set for .NET 8/9 applications.
   installation so child CLI processes cannot accidentally use a newer SDK.
 - Open/build `NetWiv.sln`. Generated applications also use `.sln`; SDK 8 cannot
   read `.slnx` files. C# 12 is the source-language baseline.
-- Libraries and the CLI target `net8.0`; the source generator remains
+- Core libraries and the CLI target `net8.0`; the source generator remains
   `netstandard2.0`. No separate package set is needed for each .NET version.
 - The CLI and generated managed desktop apps use `RollForward=Major`. They use
   .NET 8 when installed and can run on .NET 9/10 when .NET 8 is absent. Existing
@@ -21,10 +23,14 @@ package set for .NET 8/9 applications.
 - A generated desktop backend defaults to .NET 8. To publish with the .NET 9 or
   10 NativeAOT compiler, change its `TargetFramework` to `net9.0` or `net10.0`.
   The `blazor` WebAssembly starter uses the selected SDK's template target.
-  The separate `blazor-hybrid` starter targets .NET 8 and pins its Microsoft
-  component packages to 8.0.32. `NetWiv.BlazorHybrid` acceptance currently covers
-  Windows x64/.NET 8; the general SDK 9/10 checks below do not establish Hybrid
-  acceptance. See [Hybrid dependency and AOT limits](blazor-hybrid.md).
+  The separate `blazor-hybrid` starter defaults to .NET 8. Set
+  `NetWivBlazorTargetFramework` in its `Directory.Build.props` to `net9.0` or
+  `net10.0` to select matching packages across its shared UI and hosts.
+  Managed and experimental AOT Hybrid have selected physical Windows and macOS
+  native checks on all three targets and Linux WSLg X11/Wayland checks on .NET 9/10. See
+  [Hybrid dependency and validation limits](blazor-hybrid.md).
+- Source builds under SDK 8/9 include only Hybrid targets supported by that SDK.
+  Packing the release feed requires SDK 10 or later and includes all three.
 - NativeAOT applications still need no separately installed .NET runtime on an
   end user's machine. OS requirements and the native WebView adapter are
   unchanged; macOS still requires 12 or later.
@@ -41,7 +47,8 @@ SDK 8/9 need this explicitly for NativeAOT-safe `Services.Configure<T>` calls.
 ## Validation
 
 The existing desktop CI uses SDK 8 for Windows x64, Linux x64 and macOS arm64. Separate Linux jobs exercise SDK/runtime 9 and 10 with the same
-`net8.0` source libraries, managed tests and NativeAOT Core tests; they do not
+core `net8.0` libraries, managed tests, matching Hybrid assets, and NativeAOT
+Core/Hybrid protocol tests; they do not
 rebuild Rust. The `CI required` check includes these jobs.
 
 Release packaging builds one feed and reuses it in five separate consumer
@@ -66,14 +73,17 @@ the same GUI/IPC scenario.
 Each job then
 publishes/runs a package-only NativeAOT desktop consumer targeting `net8.0`,
 `net9.0` or `net10.0`, including configuration binding from the packaged Hosting
-dependency with warnings as errors. The draft Release job requires all six
+dependency with warnings as errors. Each job also publishes the matching Hybrid
+starter and runs package-only managed and experimental AOT native WebView checks.
+Known upstream Hybrid AOT warning codes remain visible in its experimental harness.
+The draft Release job requires all five
 consumer jobs to pass. No package is published to NuGet.org.
 
 These hosted validation jobs check process exit codes and behavioral assertions.
 Windows/macOS .NET 9/10 package consumers and
 macOS minimum-OS acceptance remain outside this bounded release matrix.
 
-To select a newer test runtime while keeping library/package targets at .NET 8:
+To select a newer test runtime while keeping core library targets at .NET 8:
 
 ```sh
 # First select the matching SDK; verify with dotnet --version.
@@ -88,7 +98,8 @@ Use `net10.0` for SDK 10, or omit the variable for the baseline. Test fixture
 applications follow the test runtime so nested `dotnet run/watch/publish`
 commands exercise that version too.
 
-The package gate's NativeAOT check is windowless startup. WSL/Xvfb runs are
+The core package gate's NativeAOT check is windowless startup; Hybrid has a
+separate native rendering/interop/lifecycle check. WSL/Xvfb runs are
 virtual/headless checks and do not establish physical desktop acceptance.
 Minimum-OS acceptance and Windows/macOS .NET 9/10 package consumers remain
 outside the release matrix.

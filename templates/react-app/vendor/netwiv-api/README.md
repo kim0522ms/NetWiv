@@ -59,3 +59,12 @@ Maintainers use `npm ci && npm test`; `npm pack` builds the distributable.
 Runtime JavaScript and declarations are copied privately under `lib/upstream`;
 plugin imports share the NetWiv facade's core objects. See `THIRD-PARTY-NOTICES.md`
 for versions, sources, license notices and modifications.
+
+## License and support
+
+Provided AS IS under [Apache-2.0](LICENSE-APACHE), subject to its warranty
+disclaimer and limitation of liability. Technical support descriptions and
+validation results do not offer additional warranties or a service-level
+agreement. No ongoing maintenance, security updates or response or resolution
+time is promised. Applicable legal requirements and any separate written
+agreement remain unaffected. Third-party components retain their own licenses.

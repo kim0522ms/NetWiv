@@ -129,7 +129,9 @@ a supplied package feed; replace both the feed path and `PACKAGE_VERSION`
 with actual values before running it. A fresh clone contains no prebuilt feed;
 maintainers can [create one from source](docs/development.md#create-a-local-package-feed).
 
-Current packages target `net8.0` and can be consumed by .NET 8, 9 and 10 applications.
+Core packages target `net8.0` and can be consumed by .NET 8, 9 and 10 applications.
+The optional `NetWiv.BlazorHybrid` package provides matching `net8.0`, `net9.0`
+and `net10.0` assets with pinned Microsoft component packages for each target.
 See [SDK compatibility](docs/dotnet-compatibility.md)
 for SDK selection, runtime behavior and validation limits.
 
@@ -261,7 +263,7 @@ These maintainer tests require the pinned Rust compiler and never launch a GUI.
 
 NuGet delivery includes RID-specific native libraries. Ordinary application
 restore/build/publish will not invoke Cargo or download libraries at runtime.
-Packing the framework requires native artifacts for all three supported RIDs to exist.
+Packing the framework requires SDK 10 or later and native artifacts for all three supported RIDs to exist.
 
 </details>
 

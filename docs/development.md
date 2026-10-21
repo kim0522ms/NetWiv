@@ -6,7 +6,8 @@ Run the commands below from the repository root.
 
 ## Prerequisites
 
-Use .NET SDK 8.0.406 or later (including 9 and 10) and the pinned Rust toolchain for native adapter builds. Windows
+Use .NET SDK 8.0.406 or later (including 9 and 10) and the pinned Rust toolchain for native adapter builds.
+Packing the complete feed requires SDK 10 or later for the three Blazor Hybrid targets. Windows
 requires WebView2, the C++ build tools and Windows SDK. The Linux baseline is
 Ubuntu 24.04 with GTK3, WebKitGTK 4.1 and NativeAOT/native linker dependencies.
 See [Linux X11 and Wayland](linux.md) for session requirements and feature limits.
@@ -197,6 +198,9 @@ transport and lifecycle harness. They publish and execute
 checks and `--native-webview`). Linux CI uses a nested X11 desktop; it does not
 establish physical Wayland acceptance. These checks do not establish IDE or
 arbitrary Razor-library acceptance. See the [Hybrid validation boundary](blazor-hybrid.md#validation-boundary).
+The SDK 9/10 jobs also run matching Hybrid managed tests and NativeAOT protocol
+tests without rebuilding Rust. Release package consumers run matching Hybrid
+native WebView tests on each job's target framework.
 API tests run on all three supported desktop RIDs. macOS x64 is excluded from
 both ordinary CI and tag releases; it is not a supported distribution target.
 

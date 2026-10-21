@@ -1,4 +1,3 @@
-using System.Reflection;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebView;
@@ -21,7 +20,9 @@ internal sealed class BlazorWebViewManager : WebViewManager
 
     private BlazorWebViewManager(IServiceProvider services, Dispatcher dispatcher, Uri appBaseUri,
         BlazorWebViewOptions options, HostFiles files, Action<Uri> navigate, Action<string> send)
-        : base(services, dispatcher, appBaseUri, files.Provider, new JSComponentConfigurationStore(), files.HostPage)
+        : base(services, dispatcher, appBaseUri,
+            new CompositeFileProvider(BlazorFrameworkFiles.Create(), files.Provider),
+            new JSComponentConfigurationStore(), files.HostPage)
     {
         _navigate = navigate;
         _send = send;
@@ -93,9 +94,8 @@ internal sealed class BlazorWebViewManager : WebViewManager
 
     internal static void EnsureSupportedFrameworkVersion()
     {
-        var version = typeof(WebViewManager).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        if (version?.Split('+')[0] != "8.0.32")
-            throw new NotSupportedException("NetWiv.BlazorHybrid requires Microsoft.AspNetCore.Components.WebView 8.0.32 because its document cleanup adapter uses that version's private transport.");
+        BlazorFrameworkVersion.Check(typeof(WebViewManager).Assembly);
+        BlazorFrameworkVersion.Check(typeof(Microsoft.JSInterop.JSRuntime).Assembly);
     }
 
     private sealed record HostFiles(IFileProvider Provider, string HostPage, bool Owned);

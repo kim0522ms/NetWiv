@@ -1,11 +1,10 @@
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
-using Microsoft.JSInterop.Infrastructure;
 
 namespace NetWiv.BlazorHybrid;
 
-// The lifecycle adapter is intentionally pinned to Microsoft's WebView 8.0.32
+// The lifecycle adapter is intentionally pinned to each target's Microsoft WebView
 // transport. Rendering and JS completion still run through Microsoft's runtime.
 internal sealed class BlazorSessionTransport(Action<string> send)
 {
@@ -13,7 +12,7 @@ internal sealed class BlazorSessionTransport(Action<string> send)
     private const string Prefix = "__bwv:";
     private readonly object _gate = new();
     private readonly HashSet<long> _pendingJs = [];
-    private readonly string _disconnectedMessage = "NetWiv Blazor document disconnected: " + Guid.NewGuid().ToString("N");
+    private readonly JSDisconnectedException _disconnected = new("The Blazor document has disconnected.");
     private BlazorWebViewManager? _manager;
     private JSRuntime? _jsRuntime;
     private bool _retired;
@@ -94,10 +93,10 @@ internal sealed class BlazorSessionTransport(Action<string> send)
             var errors = aggregate.Flatten().InnerExceptions;
             return errors.Count > 0 && errors.All(IsExpectedDisconnect);
         }
-        return error is JSException && error.Message == _disconnectedMessage;
+        return ReferenceEquals(error, _disconnected);
     }
 
-    private async Task CompleteDisconnectedAsync(long taskId)
+    private async Task CompleteDisconnectedAsync(long taskId, Exception? failure = null)
     {
         if (_jsRuntime is null)
             await _manager!.TryDispatchAsync(services => _jsRuntime = (JSRuntime)services.GetRequiredService<IJSRuntime>());
@@ -115,16 +114,16 @@ internal sealed class BlazorSessionTransport(Action<string> send)
         }
         // Keep the runtime reference, not its disposed service provider: callers
         // can still hold old IJSObjectReference/IJSRuntime instances after reload.
-        DotNetDispatcher.EndInvokeJS(_jsRuntime!,
-            JsonSerializer.Serialize(new object[] { taskId, false, _disconnectedMessage }, BlazorJsonContext.Default.ObjectArray));
+        ManagedJsCompletion.Fail(_jsRuntime, taskId, failure ?? _disconnected);
     }
 
     private async Task RejectOverflowAsync(long taskId)
     {
         // Reject the actual JSRuntime task too, without retaining its ID. The
         // admitted calls remain available for retirement and normal completion.
-        await CompleteDisconnectedAsync(taskId);
-        throw TrackingLimit();
+        var error = TrackingLimit();
+        await CompleteDisconnectedAsync(taskId, error);
+        throw error;
     }
 
     private static InvalidOperationException TrackingLimit() =>

@@ -10,8 +10,20 @@ The adapter targets **Windows x64 with WebView2**, **Linux x64 with
 GTK3/WebKitGTK 4.1** on X11 or Wayland, and **macOS arm64 with WKWebView**.
 Use the platform prerequisites in [Linux](linux.md) and [macOS](macos.md).
 Platform availability and the validation boundary below are separate claims.
-The optional package reuses `Microsoft.AspNetCore.Components.WebView` 8.0.32;
-it does not implement another Razor renderer or copy the framework JavaScript.
+The optional package has `net8.0`, `net9.0` and `net10.0` assets and reuses
+the corresponding `Microsoft.AspNetCore.Components.WebView` package. NuGet
+selects the asset for the application's target framework:
+
+| Application target | Pinned Microsoft component packages | Hosting |
+| --- | --- | --- |
+| `net8.0` | `8.0.32` | Managed; experimental NativeAOT opt-in |
+| `net9.0` | `9.0.21` | Managed; experimental NativeAOT opt-in |
+| `net10.0` | `10.0.13` | Managed; experimental NativeAOT opt-in |
+
+NetWiv does not implement another Razor renderer. For .NET 8/9 it uses
+Microsoft's embedded framework assets; for .NET 10 it embeds the unchanged
+`blazor.webview.js` and default module manifest from the pinned NuGet package,
+which now ships these as static web assets. No runtime download is required.
 An optional **experimental NativeAOT host** owns the WebView transport,
 generated JSON contracts and typed interop dispatch around that renderer.
 It is not a complete NativeAOT implementation of the Blazor API.
@@ -53,9 +65,17 @@ The [NativeAOT acceptance tests](../tests/NetWiv.BlazorHybrid.Aot.Tests/README.m
 execute the product adapter, including native WebView rendering and document
 replacement. They do not establish compatibility with arbitrary component libraries.
 The experimental host checks that the loaded Components, Components.Web,
-JSInterop and WebView assemblies are all 8.0.32. Do not combine it with a newer
-`Microsoft.AspNetCore.App` shared-framework reference; the .NET host runtime
-version and these pinned package versions are separate.
+JSInterop and WebView assemblies match the selected row above. Do not substitute
+them through a different `Microsoft.AspNetCore.App` shared-framework reference.
+The target framework selects the adapter; runtime roll-forward alone does not
+upgrade its Blazor implementation. Use a matching or newer SDK to build an app.
+Packing NetWiv itself requires SDK 10 or later to include all three assets.
+
+The sample and generated `blazor-hybrid` starter default to `net8.0`. Set
+`NetWivBlazorTargetFramework` in their `Directory.Build.props` to `net9.0` or
+`net10.0`, or pass `-p:NetWivBlazorTargetFramework=net10.0` to `dotnet`.
+This keeps the desktop, shared Razor UI, binding-generation build and
+WebAssembly project on the same framework and Microsoft package versions.
 
 Switching a configuration name alone is insufficient in a custom application.
 Its WebAssembly build must exclude the `NetWiv.BlazorHybrid` reference, the desktop
@@ -276,13 +296,22 @@ and service cleanup to continue. Active-page JS failures and unrelated component
 or disposal errors remain application failures. Do not rely on the old DOM or
 browser callbacks to release managed resources.
 
-The default managed `AddNetWivBlazorHybrid` path uses a cancellation adapter whose
-disconnection failures are marker `JSException` instances. It recognizes the
-pinned Microsoft WebView transport's JS invocation/completion messages.
+The default managed `AddNetWivBlazorHybrid` path also completes pending and future
+JS calls with `JSDisconnectedException` on retirement. Components can catch this
+exception around browser cleanup and then continue releasing managed resources;
+this includes module calls and disposal. Previously this path emitted a marker
+`JSException`; remove marker-string checks and catch `JSDisconnectedException`.
+Only exceptions created by the retiring page are treated as expected by the host.
+
+The managed adapter recognizes the pinned WebView transport's JS messages and
+uses private JSRuntime pending-task cleanup and completion members to retain the
+typed exception. Microsoft's wire failure completion only produces `JSException`.
+The completion helper is resolved from the already-loaded Microsoft assembly;
+this managed-only adapter is not used by the experimental NativeAOT host.
 The dependency uses the exact
-NuGet version constraint `[8.0.32]`; a startup check also rejects a substituted
-WebView assembly version. Updating that dependency requires reviewing the
-upstream private transport and rerunning the retirement, active-error, pending
+NuGet version constraint for each target in the table above; a startup check also rejects a substituted
+WebView or JSInterop assembly version. Updating that dependency requires reviewing
+the upstream private transport and task-completion members and rerunning the retirement, active-error, pending
 call and scope-disposal regressions. It does not make the upstream private
 wire format a supported application API.
 
@@ -370,6 +399,18 @@ after the debuggee exited; successful application debugging does not resolve
 that debugger limitation.
 
 ## Validation boundary
+
+The .NET 8/9/10 targets have matching-package checks and managed transport/lifecycle
+regressions. Windows x64 native WebView checks exercise both managed and experimental
+AOT hosts across these targets, including events, DTO/callback round trips, reload,
+history return and asynchronous scope cleanup. The .NET 10 checks additionally
+exercise global/object JS property access and constructor calls. The experimental
+host advertises interactive `WebView` renderer metadata on .NET 9/10.
+Linux WSLg X11 and native Wayland checks also pass for the .NET 9/10 managed and AOT targets.
+Physical macOS arm64 WKWebView checks pass for all three targets in both managed
+and AOT modes, including registered-scheme IPC, reload, history return and
+asynchronous scope cleanup. The debugger checks described above used the .NET 8
+target; they do not establish .NET 9/10 debugger acceptance.
 
 `tests/NetWiv.BlazorHybrid.Tests` covers asset routing, registration, origin checks
 and the managed adapter's page replacement, transport and asynchronous cleanup.

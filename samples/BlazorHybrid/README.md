@@ -11,6 +11,13 @@ The default host uses `AddNetWivBlazorHybrid` and Microsoft's ordinary
 `DotNetObjectReference` through the shared reference factory. Application
 components and callbacks do not need the experimental static registry.
 
+The default target is `net8.0`. Set `NetWivBlazorTargetFramework` in
+`Directory.Build.props` to `net9.0` or `net10.0`, or pass it to `dotnet`, for example:
+`dotnet run --project samples/BlazorHybrid/Desktop -p:NetWivBlazorTargetFramework=net10.0`.
+All projects and nested binding/WebAssembly builds then select matching Microsoft
+packages (8.0.32, 9.0.21 or 10.0.13). Generated bindings are separated by target
+and configuration. Managed and experimental AOT modes use the same selection.
+
 Run these commands from the repository root, with the repository's native
 artifacts for the current platform already built as described in `docs/development.md`:
 
@@ -54,6 +61,10 @@ guards are unsupported on this path. Explicitly copy additional Razor library
 `_content` assets; the experimental host does not discover Debug static-web-asset
 manifests. This path is not a general substitute for the managed Blazor host or
 a guarantee that an arbitrary Razor library supports NativeAOT.
+The opted-in sample keeps known upstream `IL2072`/`IL3050` diagnostics visible
+as warnings, with individual messages rather than assembly-level summaries.
+This setting is specific to the sample's registered graph and is not imposed
+on applications by the NetWiv package.
 
 Desktop build and restore outputs are separated by host flavor:
 `bin/Hybrid/`, `bin/HybridExperimentalAot/` and `bin/WebAssembly/`, with matching

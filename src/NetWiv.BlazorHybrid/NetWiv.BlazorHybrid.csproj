@@ -1,15 +1,36 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFramework />
+    <TargetFrameworks>net8.0</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(NETCoreSdkVersion)', '9.0'))">net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(NETCoreSdkVersion)', '10.0'))">net8.0;net9.0;net10.0</TargetFrameworks>
+    <BlazorFrameworkVersion Condition="'$(TargetFramework)' == 'net8.0'">8.0.32</BlazorFrameworkVersion>
+    <BlazorFrameworkVersion Condition="'$(TargetFramework)' == 'net9.0'">9.0.21</BlazorFrameworkVersion>
+    <BlazorFrameworkVersion Condition="'$(TargetFramework)' == 'net10.0'">10.0.13</BlazorFrameworkVersion>
     <PackageId>NetWiv.BlazorHybrid</PackageId>
     <Description>Managed Blazor Hybrid hosting for NetWiv on Windows, Linux and macOS, with an optional experimental NativeAOT host.</Description>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../NetWiv.Core/NetWiv.Core.csproj" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="[8.0.32]" />
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="[$(BlazorFrameworkVersion)]" GeneratePathProperty="true" />
+    <AssemblyMetadata Include="NetWivBlazorFrameworkVersion" Value="$(BlazorFrameworkVersion)" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="8.0.0" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="$(BlazorFrameworkVersion)" Condition="'$(TargetFramework)' != 'net8.0'" />
     <InternalsVisibleTo Include="NetWiv.BlazorHybrid.Tests" />
     <InternalsVisibleTo Include="NetWiv.BlazorHybrid.Aot.Tests" />
     <None Include="../../licenses/dotnet-runtime-MIT.txt" Pack="true" PackagePath="licenses/" />
     <None Include="buildTransitive/NetWiv.BlazorHybrid.targets" Pack="true" PackagePath="buildTransitive/NetWiv.BlazorHybrid.targets" />
+    <None Include="$(NuGetPackageRoot)microsoft.aspnetcore.components.webview/10.0.13/THIRD-PARTY-NOTICES.txt"
+          Pack="true" PackagePath="licenses/Microsoft.AspNetCore.Components.WebView.NOTICES.txt" />
   </ItemGroup>
+  <!-- .NET 10 ships these as static web assets instead of assembly resources.
+       Embed the pinned official assets so physical/custom providers and AOT
+       consumers do not depend on ASP.NET's static-web-assets host. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <EmbeddedResource Include="$(PkgMicrosoft_AspNetCore_Components_WebView)/staticwebassets/blazor.webview.js" LogicalName="NetWiv.BlazorHybrid._framework.blazor.webview.js" />
+    <EmbeddedResource Include="$(PkgMicrosoft_AspNetCore_Components_WebView)/staticwebassets/blazor.modules.json" LogicalName="NetWiv.BlazorHybrid._framework.blazor.modules.json" />
+  </ItemGroup>
+  <Target Name="RequireAllBlazorTargetsForPack" BeforeTargets="GenerateNuspec">
+    <Error Condition="'$(TargetFrameworks)' != 'net8.0;net9.0;net10.0'" Text="Packing NetWiv.BlazorHybrid requires SDK 10 or later and all three target frameworks." />
+  </Target>
 </Project>

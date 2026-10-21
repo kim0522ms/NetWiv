@@ -11,6 +11,7 @@ internal static class ProofGate
 
     internal static void AssertManagedHost()
     {
+        AssertFramework();
         Check(RuntimeFeature.IsDynamicCodeSupported && JsonSerializer.IsReflectionEnabledByDefault,
             "The Microsoft managed host test requires PublishAot=false and JsonSerializerIsReflectionEnabledByDefault=true.");
         Console.WriteLine("MODE Microsoft managed host; dynamic code and JSON reflection enabled");
@@ -18,9 +19,24 @@ internal static class ProofGate
 
     internal static void AssertRuntime(bool managed)
     {
+        AssertFramework();
         Check(!JsonSerializer.IsReflectionEnabledByDefault, "JSON reflection must remain disabled.");
         if (!managed) Check(!RuntimeFeature.IsDynamicCodeSupported, "The required proof must execute a NativeAOT artifact.");
         Console.WriteLine(managed ? "MODE managed debugging only" : "PASS native execution: dynamic code disabled; JSON reflection disabled");
+    }
+
+    private static void AssertFramework()
+    {
+#if NET10_0_OR_GREATER
+        const string expected = "10.0.13";
+#elif NET9_0_OR_GREATER
+        const string expected = "9.0.21";
+#else
+        const string expected = "8.0.32";
+#endif
+        Check(BlazorFrameworkVersion.Expected == expected, "The consumer selected the wrong Hybrid target.");
+        AotFrameworkVersion.EnsureSupported();
+        Console.WriteLine($"PASS matching Blazor framework {expected}");
     }
 
     internal static void Configure(BlazorAotOptions options)

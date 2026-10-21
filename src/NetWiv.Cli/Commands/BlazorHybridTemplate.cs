@@ -20,7 +20,6 @@ internal static class BlazorHybridTemplate
         var props = XDocument.Load(propsPath);
         props.Root!.Elements("Import").Remove();
         props.Root.AddFirst(new XElement("PropertyGroup",
-            new XElement("TargetFramework", "net8.0"),
             new XElement("LangVersion", "12.0"),
             new XElement("Nullable", "enable"),
             new XElement("ImplicitUsings", "enable"),
@@ -125,6 +124,11 @@ internal static class BlazorHybridTemplate
         `AddNetWivBlazorHybrid` and standard `DotNetObjectReference` through the
         shared reference factory. No static component or callback registry is
         needed for this default path.
+
+        The starter defaults to .NET 8. Set `NetWivBlazorTargetFramework` in
+        `Directory.Build.props` to `net9.0` or `net10.0` to select that target
+        and matching Microsoft packages across the desktop, shared UI and
+        WebAssembly projects. Install a matching or newer SDK.
 
         Set breakpoints in `Shared/App.razor`, `Shared/App.razor.cs` and
         `src-netwiv/GreetingCommands.cs` to follow a Razor event, generated typed

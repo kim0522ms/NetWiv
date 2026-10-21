@@ -25,6 +25,8 @@ if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.
     tests.Add(("retired-page JS disposal permits shutdown and scoped service cleanup", JsDisposalTests.RetiredPageInterop));
     tests.Add(("actual JS module disposal permits shutdown and scoped service cleanup", JsDisposalTests.ModuleReference));
     tests.Add(("reload cancels pending JS and rejects new calls from retired pages", RetirementTests.PendingAndFutureJs));
+    tests.Add(("standard disconnect catches resume rendering and cleanup without hiding disposal faults", RetirementTests.AfterRenderAndCleanupFailure));
+    tests.Add(("caller cancellation remains safe before and during page retirement", RetirementTests.CancellationDuringRetirement));
     tests.Add(("close releases a renderer with an unacknowledged render batch", RetirementTests.PendingRender));
     tests.Add(("rapid reload cancellation preserves the latest page's JS calls", RetirementTests.RapidReload));
 }

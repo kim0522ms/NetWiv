@@ -95,6 +95,7 @@ internal sealed class BlazorWebViewManager : WebViewManager
     internal static void EnsureSupportedFrameworkVersion()
     {
         BlazorFrameworkVersion.Check(typeof(WebViewManager).Assembly);
+        BlazorFrameworkVersion.Check(typeof(Microsoft.JSInterop.JSRuntime).Assembly);
     }
 
     private sealed record HostFiles(IFileProvider Provider, string HostPage, bool Owned);

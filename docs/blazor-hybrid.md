@@ -296,13 +296,22 @@ and service cleanup to continue. Active-page JS failures and unrelated component
 or disposal errors remain application failures. Do not rely on the old DOM or
 browser callbacks to release managed resources.
 
-The default managed `AddNetWivBlazorHybrid` path uses a cancellation adapter whose
-disconnection failures are marker `JSException` instances. It recognizes the
-pinned Microsoft WebView transport's JS invocation/completion messages.
+The default managed `AddNetWivBlazorHybrid` path also completes pending and future
+JS calls with `JSDisconnectedException` on retirement. Components can catch this
+exception around browser cleanup and then continue releasing managed resources;
+this includes module calls and disposal. Previously this path emitted a marker
+`JSException`; remove marker-string checks and catch `JSDisconnectedException`.
+Only exceptions created by the retiring page are treated as expected by the host.
+
+The managed adapter recognizes the pinned WebView transport's JS messages and
+uses private JSRuntime pending-task cleanup and completion members to retain the
+typed exception. Microsoft's wire failure completion only produces `JSException`.
+The completion helper is resolved from the already-loaded Microsoft assembly;
+this managed-only adapter is not used by the experimental NativeAOT host.
 The dependency uses the exact
 NuGet version constraint for each target in the table above; a startup check also rejects a substituted
-WebView assembly version. Updating that dependency requires reviewing the
-upstream private transport and rerunning the retirement, active-error, pending
+WebView or JSInterop assembly version. Updating that dependency requires reviewing
+the upstream private transport and task-completion members and rerunning the retirement, active-error, pending
 call and scope-disposal regressions. It does not make the upstream private
 wire format a supported application API.
 

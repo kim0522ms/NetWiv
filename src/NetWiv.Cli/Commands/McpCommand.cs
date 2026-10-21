@@ -22,7 +22,7 @@ internal static class McpCommand
     public static async Task<int> RunAsync(string[] args, TextWriter output, string workingDirectory, CancellationToken token)
     {
         var arguments = new CommandArguments(args);
-        if (arguments.TakeFlag("--help"))
+        if (arguments.TakeFlag("--help", "-h"))
         {
             await output.WriteLineAsync("""
                 Usage: netwiv mcp
@@ -55,8 +55,9 @@ internal static class McpCommand
         Handlers = new McpServerHandlers
         {
             ListToolsHandler = (_, _) => ValueTask.FromResult(new ListToolsResult { Tools = Tools }),
-            CallToolHandler = async (request, token) =>
+            CallToolHandler = (request, token) =>
             {
+                token.ThrowIfCancellationRequested();
                 var name = request.Params?.Name ?? "";
                 var args = request.Params?.Arguments;
                 try
@@ -65,16 +66,16 @@ internal static class McpCommand
                     {
                         "netwiv_docs_search" => DocsSearch(docs, args),
                         "netwiv_docs_read" => DocsRead(docs, args),
-                        "netwiv_project_info" => await ProjectInfo(Directory(workingDirectory, args), token),
+                        "netwiv_project_info" => ProjectInfo(Directory(workingDirectory, args)),
                         "netwiv_capabilities" => Capabilities(Directory(workingDirectory, args)),
                         "netwiv_commands" => Commands(Directory(workingDirectory, args)),
                         _ => throw new ArgumentException($"Unknown tool '{name}'.")
                     };
-                    return Result(text, false);
+                    return ValueTask.FromResult(Result(text, false));
                 }
                 catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException or NetWivConfigException or BadImageFormatException or NotSupportedException or JsonException or System.Xml.XmlException)
                 {
-                    return Result(exception.Message, true);
+                    return ValueTask.FromResult(Result(exception.Message, true));
                 }
             }
         }
@@ -87,9 +88,9 @@ internal static class McpCommand
             """{"type":"object","properties":{"query":{"type":"string","description":"Words to look for, such as 'capability permission' or 'NativeAOT Blazor Hybrid'."},"limit":{"type":"integer","minimum":1,"maximum":20,"description":"Maximum sections to return (default 8)."}},"required":["query"]}"""),
         Tool("netwiv_docs_read",
             "Read a NetWiv guide, or one section of it with its subsections. Call without a known name to get the list of guides.",
-            """{"type":"object","properties":{"name":{"type":"string","description":"Guide name, such as 'plugin-configuration' or 'blazor-hybrid'."},"section":{"type":"string","description":"Optional heading text of the section to read."}},"required":["name"]}"""),
+            """{"type":"object","properties":{"name":{"type":"string","description":"Guide name, such as 'plugin-configuration' or 'blazor-hybrid'. Omit to list guides."},"section":{"type":"string","description":"Optional heading text of the section to read."}}}"""),
         Tool("netwiv_project_info",
-            "Describe the NetWiv project in the working directory: CLI and .NET SDK versions, configuration file, identifiers, application project, NetWiv package version and frontend settings.",
+            "Describe the NetWiv project in the working directory: CLI version, configuration file, identifiers, application project, NetWiv package version and frontend settings.",
             DirectorySchema),
         Tool("netwiv_capabilities",
             "Show the project's capability files, inline capabilities and permission files, which decide which commands each window may call.",
@@ -117,7 +118,11 @@ internal static class McpCommand
     };
 
     private static string? Argument(IDictionary<string, JsonElement>? args, string name)
-        => args is not null && args.TryGetValue(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+    {
+        if (args is null || !args.TryGetValue(name, out var value)) return null;
+        return value.ValueKind == JsonValueKind.String ? value.GetString()
+            : throw new ArgumentException($"{name} must be a string.");
+    }
 
     private static string Directory(string workingDirectory, IDictionary<string, JsonElement>? args)
     {
@@ -141,23 +146,18 @@ internal static class McpCommand
 
     private static string DocsRead(McpDocs docs, IDictionary<string, JsonElement>? args)
     {
-        var name = Argument(args, "name") ?? throw new ArgumentException("name is required.");
+        if (docs.Names.Count == 0) throw new InvalidOperationException("This CLI build has no bundled guides.");
+        var name = Argument(args, "name");
+        if (string.IsNullOrWhiteSpace(name))
+            return "Available guides: " + string.Join(", ", docs.Names.Order(StringComparer.Ordinal));
         return docs.Read(name, Argument(args, "section"), out var error) ?? throw new ArgumentException(error);
     }
 
-    private static async Task<string> ProjectInfo(string directory, CancellationToken token)
+    private static string ProjectInfo(string directory)
     {
         var builder = new StringBuilder();
         builder.Append("NetWiv CLI: ").Append(CliApp.Version).Append('\n');
-        builder.Append(".NET SDK: ").Append(await DotnetVersion(directory, token)).Append('\n');
-        builder.Append("OS: ").Append(System.Runtime.InteropServices.RuntimeInformation.OSDescription)
-            .Append(" (").Append(System.Runtime.InteropServices.RuntimeInformation.OSArchitecture).Append(")\n");
-        ConfigDocument config;
-        try { config = ConfigLoader.Load(directory, BuildTarget.Resolve(null).Platform); }
-        catch (NetWivConfigException exception)
-        {
-            return builder.Append("Project: none found (").Append(exception.Message).Append(")\nCreate one with `netwiv new NAME -t TEMPLATE --source FEED`; see netwiv_docs_read { name: \"project-creation\" }.\n").ToString();
-        }
+        var config = ConfigLoader.Load(directory, BuildTarget.Resolve(null).Platform);
         builder.Append("Config: ").Append(config.BasePath).Append('\n');
         foreach (var source in config.Sources.Skip(1)) builder.Append("Merged: ").Append(source).Append('\n');
         foreach (var key in new[] { "productName", "version", "identifier", "mainBinaryName" })
@@ -170,7 +170,7 @@ internal static class McpCommand
             builder.Append("Application project: ").Append(project).Append('\n');
             var packages = NetWivPackages(project);
             foreach (var (package, version) in packages) builder.Append("Package ").Append(package).Append(": ").Append(version).Append('\n');
-            var versions = packages.Select(static item => item.Version).Where(static v => !v.Contains('$')).Distinct().ToArray();
+            var versions = packages.Select(static item => item.Version).Where(static v => !string.IsNullOrWhiteSpace(v) && !v.Contains('$')).Distinct().ToArray();
             if (versions.Length == 1 && versions[0] != CliApp.Version)
                 builder.Append("Note: the project uses NetWiv ").Append(versions[0]).Append(" but this CLI is ").Append(CliApp.Version)
                     .Append(". Run the project's own CLI (`dotnet tool run netwiv -- mcp`) so the guides match.\n");
@@ -182,26 +182,13 @@ internal static class McpCommand
         return builder.ToString();
     }
 
-    private static async Task<string> DotnetVersion(string directory, CancellationToken token)
-    {
-        try
-        {
-            var result = await ProcessRunner.RunAsync(new ProcessSpec("dotnet", ["--version"], directory, CaptureOutput: true), token);
-            return result.ExitCode == 0 ? result.StandardOutput.Trim() : "unavailable";
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception or IOException)
-        {
-            return "unavailable (" + exception.Message + ")";
-        }
-    }
-
     // NetWiv package references with their versions, resolving a NetWivVersion property when used.
     private static List<(string Package, string Version)> NetWivPackages(string project)
     {
         var document = XDocument.Load(project);
         var property = document.Descendants("NetWivVersion").Select(static element => element.Value.Trim()).FirstOrDefault();
         return document.Descendants("PackageReference")
-            .Select(static element => ((string?)element.Attribute("Include") ?? "", (string?)element.Attribute("Version") ?? ""))
+            .Select(static element => ((string?)element.Attribute("Include") ?? "", (string?)element.Attribute("Version") ?? element.Element("Version")?.Value ?? ""))
             .Where(static item => item.Item1.StartsWith("NetWiv.", StringComparison.Ordinal))
             .Select(item => (item.Item1, item.Item2 == "$(NetWivVersion)" && property is not null ? property : item.Item2))
             .ToList();
@@ -214,21 +201,22 @@ internal static class McpCommand
             .Append("See netwiv_docs_search \"capability permission\" for the rules.\n");
         if (config.Node("app", "security", "capabilities") is { } inline)
             builder.Append("\napp.security.capabilities in ").Append(Path.GetFileName(config.BasePath)).Append(":\n").Append(Indented(inline)).Append('\n');
-        AppendFiles(builder, Path.Combine(config.ConfigDirectory, "capabilities"), "Capability files", withContent: true);
-        AppendFiles(builder, Path.Combine(config.ConfigDirectory, "permissions"), "Application permission files", withContent: true);
+        AppendFiles(builder, Path.Combine(config.ConfigDirectory, "capabilities"), "Capability files", recursive: false);
+        AppendFiles(builder, Path.Combine(config.ConfigDirectory, "permissions"), "Application permission files", recursive: true);
         return builder.ToString();
     }
 
-    private static void AppendFiles(StringBuilder builder, string directory, string title, bool withContent)
+    private static void AppendFiles(StringBuilder builder, string directory, string title, bool recursive)
     {
         var files = System.IO.Directory.Exists(directory)
-            ? System.IO.Directory.EnumerateFiles(directory).Where(static path => Path.GetExtension(path) is ".json" or ".json5" or ".toml").Order(StringComparer.Ordinal).ToArray()
+            ? System.IO.Directory.EnumerateFiles(directory, "*", new EnumerationOptions { RecurseSubdirectories = recursive, AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = false })
+                .Where(static path => Path.GetExtension(path).ToLowerInvariant() is ".json" or ".json5" or ".toml").Order(StringComparer.Ordinal).ToArray()
             : [];
         builder.Append('\n').Append(title).Append(" (").Append(directory).Append("): ").Append(files.Length == 0 ? "none\n" : "\n");
         foreach (var file in files)
         {
-            builder.Append("\n### ").Append(Path.GetFileName(file)).Append('\n');
-            if (withContent) builder.Append(File.ReadAllText(file).TrimEnd()).Append('\n');
+            builder.Append("\n### ").Append(Path.GetRelativePath(directory, file)).Append('\n');
+            builder.Append(File.ReadAllText(file).TrimEnd()).Append('\n');
         }
     }
 
@@ -239,7 +227,7 @@ internal static class McpCommand
     {
         var config = ConfigLoader.Load(directory, BuildTarget.Resolve(null).Platform);
         var project = CommandConfig.Project(config);
-        var assembly = BuiltAssembly(project)
+        var assembly = BuiltAssembly(project, config.ProjectDirectory)
             ?? throw new InvalidOperationException($"No built assembly found for {Path.GetFileName(project)}. Build the app first (for example `dotnet build {Path.GetFileName(project)}`).");
         FrontendBindings bindings;
         try { bindings = FrontendBindings.Read(assembly); }
@@ -257,13 +245,13 @@ internal static class McpCommand
     }
 
     // The newest managed build of the application: bin/ of the project, then the CLI's target/ outputs.
-    private static string? BuiltAssembly(string project)
+    private static string? BuiltAssembly(string project, string projectRoot)
     {
         var document = XDocument.Load(project);
         var name = document.Descendants("AssemblyName").Select(static element => element.Value.Trim()).FirstOrDefault(static value => value.Length > 0 && !value.Contains('$'))
             ?? Path.GetFileNameWithoutExtension(project);
         var projectDirectory = Path.GetDirectoryName(project)!;
-        var roots = new[] { Path.Combine(projectDirectory, "bin"), Path.Combine(Path.GetDirectoryName(projectDirectory)!, "target") };
+        var roots = new[] { Path.Combine(projectDirectory, "bin"), Path.Combine(projectRoot, "target") };
         return roots.Where(System.IO.Directory.Exists)
             .SelectMany(root => System.IO.Directory.EnumerateFiles(root, name + ".dll", SearchOption.AllDirectories))
             // Reference assemblies and intermediate copies are not the application build.

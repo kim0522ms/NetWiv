@@ -159,6 +159,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("CLI reports unknown commands", UnknownCommand),
     ("mcp guides index sections and ranks searches", McpTests.Docs),
     ("mcp server lists read-only tools and answers over the protocol", McpTests.Protocol),
+    ("mcp stdio executable serves bundled guides and exits on EOF", McpTests.Stdio),
     ("asset protocol configuration retains strict scope types", AssetProtocolConfiguration),
     ("managed dev without watching overrides features and rejects invalid names", DevReloadTests.NoWatchFeatures),
     ("managed dev reloads permissions and overlays and cleans up children", () => DevReloadTests.Run(false)),

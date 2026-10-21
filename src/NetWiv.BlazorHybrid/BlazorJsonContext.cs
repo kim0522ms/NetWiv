@@ -3,9 +3,6 @@ using System.Text.Json.Serialization;
 namespace NetWiv.BlazorHybrid;
 
 [JsonSerializable(typeof(string))]
-[JsonSerializable(typeof(long))]
-[JsonSerializable(typeof(bool))]
-[JsonSerializable(typeof(object[]))]
 [JsonSerializable(typeof(BlazorNavigationRequest))]
 internal partial class BlazorJsonContext : JsonSerializerContext;
 

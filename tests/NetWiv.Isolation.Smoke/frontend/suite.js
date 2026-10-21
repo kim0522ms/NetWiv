@@ -75,6 +75,11 @@ try {
       policy.httpEquiv = 'Content-Security-Policy';
       policy.content = "connect-src 'none'";
       document.head.append(policy);
+      // Select the message transport before comparing subsequent requests.
+      // NetWiv rejects this first failed protocol call to avoid replaying side
+      // effects; the pinned upstream retries it. That difference is not a parity pass.
+      try { await invoke('echo', { value: 'select-message-transport' }); }
+      catch { /* NetWiv's transport rejection is covered by its replay regression. */ }
       const bytes = new Uint8Array([99, 1, 41, 65, 12, 78, 99]);
       for (const [kind, value] of [['ArrayBuffer', bytes.slice(1, 6).buffer], ['DataView', new DataView(bytes.buffer, 1, 5)], ['number array', [1, 41, 65, 12, 78]]]) {
         await test(`CSP fallback receives ${kind} as JSON bytes`, async () => {

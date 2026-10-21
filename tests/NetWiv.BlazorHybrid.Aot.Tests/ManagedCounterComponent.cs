@@ -7,6 +7,7 @@ namespace NetWiv.BlazorHybrid.Aot.Tests;
 
 public sealed partial class ManagedCounterComponent : ComponentBase, IAsyncDisposable
 {
+    private static readonly HashSet<ProofScope> CleanedComponents = [];
     private IJSObjectReference? _module;
     private DotNetObjectReference<InvokableReceiver>? _live;
     private DotNetObjectReference<InvokableReceiver>? _disposed;
@@ -70,11 +71,13 @@ public sealed partial class ManagedCounterComponent : ComponentBase, IAsyncDispo
             try { await _module.DisposeAsync(); }
             catch (JSDisconnectedException) { }
         }
+        lock (Scopes) CleanedComponents.Add(Scope);
     }
 
     internal static void AssertScopesDisposed(int expected)
     {
         lock (Scopes)
-            ProofGate.Check(Scopes.Count == expected && Scopes.All(scope => scope.Disposed), "Page scopes were reused or left alive.");
+            ProofGate.Check(Scopes.Count == expected && Scopes.All(scope => scope.Disposed && CleanedComponents.Contains(scope)),
+                "Page scopes or component cleanup after JS disconnection were left unfinished.");
     }
 }

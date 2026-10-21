@@ -28,6 +28,8 @@ internal static class JsDisposalTests
         await Check.ThrowsAsync<InvalidOperationException>(() => transport.SendAsync("__bwv:[\"BeginInvokeJS\",4098,\"test\"]"));
         transport.Retire();
         Check.True(!transport.IsExpectedDisconnect(new AggregateException()), "An unrelated empty aggregate was hidden during retirement.");
+        Check.True(!transport.IsExpectedDisconnect(new JSDisconnectedException("The Blazor document has disconnected.")),
+            "A foreign disconnect with the same message was hidden.");
     }
 
     internal static async Task InlineDispatcherFailure()
@@ -82,6 +84,7 @@ internal static class JsDisposalTests
             await run.WaitAsync(TimeSpan.FromSeconds(7));
             Check.True(state.Scope!.Disposed, "An actual JS module's disposal skipped scoped-service cleanup.");
             Check.True(state.DisposalStarted.Task.IsCompleted, "The module component was not disposed.");
+            Check.True(state.CleanupCompleted, "Module disposal prevented subsequent managed cleanup.");
             Check.Equal(0, native.ExitCodes.Count);
         }
         finally
@@ -155,6 +158,7 @@ internal static class JsDisposalTests
         internal TaskCompletionSource DisposalStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal CancellationTokenSource JsCancellation { get; } = new();
         internal ScopeProbe? Scope { get; set; }
+        internal bool CleanupCompleted { get; set; }
         public void Dispose() => JsCancellation.Dispose();
     }
 
@@ -196,7 +200,9 @@ internal static class JsDisposalTests
         public async ValueTask DisposeAsync()
         {
             State.DisposalStarted.TrySetResult();
-            if (_module is not null) await _module.DisposeAsync();
+            try { if (_module is not null) await _module.DisposeAsync(); }
+            catch (JSDisconnectedException) { }
+            State.CleanupCompleted = true;
         }
     }
 }

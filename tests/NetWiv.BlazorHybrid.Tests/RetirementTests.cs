@@ -9,6 +9,67 @@ using NetWiv.Runtime;
 
 internal static class RetirementTests
 {
+    internal static async Task CancellationDuringRetirement()
+    {
+        await using var fixture = new RetirementFixture();
+        var page = await fixture.Attach(1);
+        using var cancellation = new CancellationTokenSource();
+        var canceled = page.JS.InvokeAsync<string>("canceledBeforeReload", cancellation.Token).AsTask();
+        var canceledCall = await fixture.Message("BeginInvokeJS", 1, "canceledBeforeReload");
+        // Exercise reentrancy while JSRuntime's cancellation callback is still
+        // completing the task, before it removes its pending-task entry.
+        var reentrant = canceled.ContinueWith(_ => ManagedJsCompletion.Fail((JSRuntime)page.JS,
+            canceledCall[1].GetInt64(), new JSDisconnectedException("Retired during cancellation.")),
+            CancellationToken.None, TaskContinuationOptions.OnlyOnCanceled | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+        cancellation.Cancel();
+        await reentrant;
+        await Check.ThrowsAsync<OperationCanceledException>(async () => await canceled);
+
+        using var concurrentCancellation = new CancellationTokenSource();
+        var pending = new List<Task<string>>();
+        for (var index = 0; index < 64; index++)
+        {
+            pending.Add(page.JS.InvokeAsync<string>("canceledDuringReload", concurrentCancellation.Token).AsTask());
+            await fixture.Message("BeginInvokeJS", 1, "canceledDuringReload");
+        }
+        await Task.WhenAll(Task.Run(concurrentCancellation.Cancel), Task.Run(() => fixture.Change(2)));
+        foreach (var call in pending)
+        {
+            try { await call; throw new InvalidOperationException("A retired call completed successfully."); }
+            catch (OperationCanceledException) { }
+            catch (JSDisconnectedException) { }
+        }
+        await page.Scope.DisposedSignal.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        Check.True(page.CleanupCompleted, "Cancellation racing with retirement interrupted cleanup.");
+        Check.Equal(0, fixture.Native.ExitCodes.Count);
+    }
+
+    internal static async Task AfterRenderAndCleanupFailure()
+    {
+        await using (var fixture = new RetirementFixture())
+        {
+            var page = await fixture.Attach(1);
+            page.AfterRenderInterop = true;
+            await page.Render();
+            var batch = await fixture.Message("RenderBatch", 1);
+            fixture.Receive(1, $"__bwv:[\"OnRenderCompleted\",{batch[1].GetInt64()},null]");
+            await fixture.Message("BeginInvokeJS", 1, "afterRender");
+            fixture.Change(2);
+            await page.Scope.DisposedSignal.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            await page.AfterRenderFinished.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            Check.True(page.CleanupCompleted, "Managed cleanup after JS disconnection was skipped.");
+            Check.Equal(0, fixture.Native.ExitCodes.Count);
+        }
+        // An unrelated disposal fault must still reach the application's Run caller.
+        await Check.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            await using var fixture = new RetirementFixture();
+            var page = await fixture.Attach(1);
+            page.FailCleanup = true;
+        });
+    }
+
     internal static async Task PendingAndFutureJs()
     {
         await using var fixture = new RetirementFixture();
@@ -16,10 +77,11 @@ internal static class RetirementTests
         var pending = old.Invoke("pendingBeforeReload");
         var oldCall = await fixture.Message("BeginInvokeJS", 1, "pendingBeforeReload");
         fixture.Change(2);
-        await Check.ThrowsAsync<JSException>(async () => await pending.WaitAsync(TimeSpan.FromSeconds(2)));
+        await Check.ThrowsAsync<JSDisconnectedException>(async () => await pending.WaitAsync(TimeSpan.FromSeconds(2)));
         await old.Scope.DisposedSignal.Task;
+        Check.True(old.CleanupCompleted, "Standard disconnect handling did not resume managed component cleanup.");
         var oldSends = fixture.Native.Scripts.Count(script => script.Document == 1);
-        await Check.ThrowsAsync<JSException>(async () => await old.Invoke("calledAfterRetirement").WaitAsync(TimeSpan.FromSeconds(2)));
+        await Check.ThrowsAsync<JSDisconnectedException>(async () => await old.Invoke("calledAfterRetirement").WaitAsync(TimeSpan.FromSeconds(2)));
         Check.Equal(oldSends, fixture.Native.Scripts.Count(script => script.Document == 1));
 
         var current = await fixture.Attach(2, changeDocument: false);
@@ -29,6 +91,15 @@ internal static class RetirementTests
         Check.True(!fresh.IsCompleted, "A retired document completed the current page's JS call.");
         fixture.EndJs(2, currentCall[1].GetInt64(), "current result");
         Check.Equal("current result", await fresh);
+        var failed = current.JS.InvokeAsync<string>("activeFailure");
+        var failureCall = await fixture.Message("BeginInvokeJS", 2, "activeFailure");
+        fixture.EndJs(2, failureCall[1].GetInt64(), "active failure", success: false);
+        try { await failed; throw new InvalidOperationException("Active JS failure was lost."); }
+        catch (JSException error)
+        {
+            Check.True(error.GetType() == typeof(JSException), "An active failure became a disconnect.");
+            Check.Equal("active failure", error.Message);
+        }
         Check.Equal(0, fixture.Native.ExitCodes.Count);
     }
 
@@ -56,7 +127,7 @@ internal static class RetirementTests
         fixture.Change(3);
         fixture.Change(1, closed: true);
         var current = await fixture.Attach(3, changeDocument: false);
-        await Check.ThrowsAsync<JSException>(async () => await pending.WaitAsync(TimeSpan.FromSeconds(2)));
+        await Check.ThrowsAsync<JSDisconnectedException>(async () => await pending.WaitAsync(TimeSpan.FromSeconds(2)));
         var fresh = current.Invoke("currentAfterRapidReload");
         var call = await fixture.Message("BeginInvokeJS", 3, "currentAfterRapidReload");
         fixture.Receive(1, "invalid retired payload");
@@ -119,10 +190,10 @@ internal sealed class RetirementFixture : IAsyncDisposable
         }
     }
 
-    internal void EndJs(ulong document, long handle, string result)
+    internal void EndJs(ulong document, long handle, string result, bool success = true)
     {
-        var completion = JsonSerializer.Serialize(new object[] { handle, true, result });
-        Receive(document, "__bwv:" + JsonSerializer.Serialize(new object[] { "EndInvokeJS", handle, true, completion }));
+        var completion = JsonSerializer.Serialize(new object[] { handle, success, result });
+        Receive(document, "__bwv:" + JsonSerializer.Serialize(new object[] { "EndInvokeJS", handle, success, completion }));
     }
 
     public async ValueTask DisposeAsync()
@@ -143,12 +214,16 @@ internal sealed class PageCapture
     internal Channel<CapturedRoot> Pages { get; } = Channel.CreateUnbounded<CapturedRoot>();
 }
 
-internal sealed class CapturedRoot : IComponent
+internal sealed class CapturedRoot : IComponent, IHandleAfterRender, IAsyncDisposable
 {
     private RenderHandle _render;
     [Inject] public IJSRuntime JS { get; set; } = null!;
     [Inject] public ScopeProbe Scope { get; set; } = null!;
     [Inject] public PageCapture Capture { get; set; } = null!;
+    internal bool CleanupCompleted { get; private set; }
+    internal bool FailCleanup { get; set; }
+    internal bool AfterRenderInterop { get; set; }
+    internal TaskCompletionSource AfterRenderFinished { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public void Attach(RenderHandle renderHandle) => _render = renderHandle;
     public Task SetParametersAsync(ParameterView parameters)
     {
@@ -158,4 +233,18 @@ internal sealed class CapturedRoot : IComponent
     }
     internal Task<string> Invoke(string identifier) => _render.Dispatcher.InvokeAsync(() => JS.InvokeAsync<string>(identifier).AsTask());
     internal Task Render() => _render.Dispatcher.InvokeAsync(() => _render.Render(builder => builder.AddContent(0, "pending render")));
+    public async Task OnAfterRenderAsync()
+    {
+        if (!AfterRenderInterop) return;
+        try { await JS.InvokeVoidAsync("afterRender"); }
+        catch (JSDisconnectedException) { }
+        AfterRenderFinished.TrySetResult();
+    }
+    public async ValueTask DisposeAsync()
+    {
+        try { await JS.InvokeVoidAsync("releaseBrowser"); }
+        catch (JSDisconnectedException) { }
+        CleanupCompleted = true;
+        if (FailCleanup) throw new InvalidOperationException("Unrelated component cleanup fault.");
+    }
 }

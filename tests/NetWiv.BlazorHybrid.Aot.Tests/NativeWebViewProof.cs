@@ -31,6 +31,7 @@ internal static class NativeWebViewProof
         Exception? failure = null;
         var protocolCalls = 0;
         var commandCalls = 0;
+        var increments = 0;
         ulong provisionalDocument = 0;
         using var failedNavigation = OperatingSystem.IsLinux() ? new ProvisionalNavigationProbe() : null;
 
@@ -117,6 +118,8 @@ internal static class NativeWebViewProof
             using var app = new Builder().UseServiceProvider(services).UseBlazor(observed, options)
                 .Window("main", "NetWiv Hybrid acceptance", options.AppBaseUri.AbsoluteUri, 720, 480)
                 .RegisterCommand("failure_url", (_, _, _) => ValueTask.FromResult(JsonValue.From(failedNavigation!.Url)))
+                .RegisterCommand("transport_increment", (_, _, _) => ValueTask.FromResult(JsonValue.From(Interlocked.Increment(ref increments))))
+                .RegisterCommand("transport_count", (_, _, _) => ValueTask.FromResult(JsonValue.From(Volatile.Read(ref increments))))
                 .RegisterCommand("transport_echo", async (context, args, _) =>
                 {
                     var input = args.GetProperty("input").GetString();
@@ -143,10 +146,12 @@ internal static class NativeWebViewProof
         var expectedProtocolCalls = (backForward ? 3 : 2) + (OperatingSystem.IsLinux() ? 1 : 0);
         var expectedCommandCalls = (backForward ? 6 : 4) + (OperatingSystem.IsLinux() ? 3 : 0);
         ProofGate.Check(protocolCalls == expectedProtocolCalls && commandCalls == expectedCommandCalls, $"Native protocol and message command paths did not both execute on both documents (protocol={protocolCalls}, commands={commandCalls}).");
+        ProofGate.Check(increments == (backForward ? 3 : 2), "A failed protocol response replayed a native command.");
         if (System.Runtime.CompilerServices.RuntimeFeature.IsDynamicCodeSupported && managedHost) ManagedCounterComponent.AssertScopesDisposed(backForward ? 3 : 2);
         else CounterComponent.AssertScopesDisposed(backForward ? 3 : 2);
         Console.WriteLine("PASS genuine document reload, separate asynchronous scopes and process shutdown");
         Console.WriteLine("PASS foreign frame rejection, native protocol and message commands without credential disclosure");
+        Console.WriteLine("PASS protocol response failure rejects without replay, then subsequent calls use message IPC");
         if (OperatingSystem.IsLinux()) Console.WriteLine("PASS retained document commands and rendering across canceled provisional navigation");
         if (backForward) Console.WriteLine("PASS Hybrid history return creates a fresh native document and component scope");
         return 0;
@@ -164,7 +169,15 @@ internal static class NativeWebViewProof
                 else context.OnMessage(message);
             },
             OnDocumentChanged = change => { changed(change); context.OnDocumentChanged?.Invoke(change); },
-            InvokeProtocol = async request => { protocol(request); return await context.InvokeProtocol!(request); },
+            InvokeProtocol = async request =>
+            {
+                protocol(request);
+                var response = await context.InvokeProtocol!(request);
+                // Corrupt the response only after the real command has executed.
+                return request.Method == "POST" && request.Uri.AbsolutePath == "/transport_increment"
+                    ? response with { ContentType = "application/json", Body = "invalid JSON"u8.ToArray() }
+                    : response;
+            },
         });
         public void Dispatch(Action action) => inner.Dispatch(action);
         public Task<JsonElement> InvokeAsync(string command, JsonElement args, CancellationToken cancellationToken = default) => inner.InvokeAsync(command, args, cancellationToken);

@@ -27,6 +27,15 @@ filesystem scope. Generated application commands also require explicit permissio
 when an app manifest exists. Installing a frontend module grants no permissions.
 See [plugins](official-plugins.md) and [generated bindings](frontend-generator.md).
 
+If an `invoke()` protocol request or response-body read fails, that invocation
+rejects without automatic replay. The native command may already have executed
+or may still be running. Subsequent invocations use the message transport for
+that page; a host known to lack protocol IPC uses it from the start. Previously,
+protocol failure retried the same command over the message transport, which could
+duplicate side effects. Handle rejection explicitly and retry state-changing work
+only with application-level idempotency or a status check. This is not a guarantee
+against retries initiated by application code.
+
 ## Public modules
 
 Core modules: `app`, `core`, `dpi`, `event`, `image`, `menu`, `path`, `resources`,

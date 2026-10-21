@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.Extensions.FileProviders;
 using NetWiv.Runtime;
 
@@ -7,7 +6,7 @@ namespace NetWiv.BlazorHybrid.Aot;
 internal sealed class AotStaticFiles : IDisposable
 {
     private readonly IFileProvider _files;
-    private readonly ManifestEmbeddedFileProvider _framework = new(typeof(WebViewManager).Assembly);
+    private readonly IFileProvider _framework = BlazorFrameworkFiles.Create();
     private readonly IDisposable? _owned;
     private readonly string _hostPage;
     private readonly Uri _baseUri;

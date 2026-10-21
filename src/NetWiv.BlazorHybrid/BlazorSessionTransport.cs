@@ -5,7 +5,7 @@ using Microsoft.JSInterop.Infrastructure;
 
 namespace NetWiv.BlazorHybrid;
 
-// The lifecycle adapter is intentionally pinned to Microsoft's WebView 8.0.32
+// The lifecycle adapter is intentionally pinned to each target's Microsoft WebView
 // transport. Rendering and JS completion still run through Microsoft's runtime.
 internal sealed class BlazorSessionTransport(Action<string> send)
 {

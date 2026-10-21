@@ -22,7 +22,7 @@ foreach ($name in @('NetWiv.Plugin.CommandFixture', 'NetWiv.Desktop.Smoke', 'Net
     foreach ($setting in @{ TargetFramework=$TargetFramework; ImplicitUsings='enable'; Nullable='enable'; TreatWarningsAsErrors='true' }.GetEnumerator()) {
         $element = $project.CreateElement($setting.Key)
         $element.InnerText = $setting.Value
-        [void]$properties.AppendChild($element)
+        [void]$properties.PrependChild($element)
     }
     foreach ($reference in @($project.SelectNodes('//ProjectReference'))) {
         $id = [IO.Path]::GetFileNameWithoutExtension($reference.Include)

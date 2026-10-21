@@ -8,6 +8,33 @@ The source audit below records possible boundaries, not an approved
 implementation schedule or a claim of full AOT support.
 See [usage and current limits](blazor-hybrid.md).
 
+## Multi-target adapter assessment
+
+Extending the existing **experimental** contract to .NET 8/9/10 is a small
+adapter/build change and has been implemented without a fork. The reviewed
+package sources are ASP.NET Core `8.0.32` (`7413d24330774263a78a4f3837ca53493518455a`),
+`9.0.21` (`b4d87e3b9131a019bc3b51df99ff69ac79bef459`) and dotnet/dotnet
+`10.0.13` (`4099f83977f4d29604a9aeb971fb0a7bc1d5f699`).
+
+| Difference | Implemented adjustment | Cost boundary |
+| --- | --- | --- |
+| Target/package identity | One NuGet package with three TFM assets, exact dependency pins and runtime guards | Build/package maintenance; no per-version public host API |
+| .NET 9 renderer metadata | Interactive `WebView` `RendererInfo` | One conditional override |
+| .NET 10 framework assets | Embed the unchanged official script and default module manifest at build time | Small file-provider adapter; RCL initializer discovery remains outside the existing contract |
+| .NET 10 JS invocation kinds | Send the call-kind field and implement constructor/get/set operations for global and object targets | Existing typed serializer, pending calls and lifetime logic are reused |
+| Render batches and incoming IPC | Reviewed serializers/receiver are unchanged across these pins | No renderer/diff engine rewrite |
+
+The larger work is regression and package-consumer coverage: source builds under
+older SDKs must remain possible, while release packing must include all three
+targets. Native execution still checks that reflection JSON and dynamic code
+are disabled. The known upstream `IL2072`/`IL3050` diagnostics remain visible;
+the focused experimental test project and opted-in sample permit these codes
+without suppressing them. The package does not weaken consumer warning policy.
+This is not a warning-free or full Blazor NativeAOT implementation.
+Removing manual registration, supporting ordinary routing/streams and arbitrary
+Razor libraries is still the separate future work described below. Multi-targeting
+does not reduce that work to a package-version change.
+
 ## Objective and acceptance contract
 
 The objective is to preserve ordinary Blazor application code while publishing

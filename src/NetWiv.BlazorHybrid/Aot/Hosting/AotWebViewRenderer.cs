@@ -29,6 +29,10 @@ internal sealed class AotWebViewRenderer : Renderer
 
     public override Dispatcher Dispatcher => _dispatcher;
 
+#if NET9_0_OR_GREATER
+    protected override RendererInfo RendererInfo { get; } = new("WebView", isInteractive: true);
+#endif
+
     internal Task AddRootAsync([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] Type componentType,
         string selector, ParameterView parameters)
     {

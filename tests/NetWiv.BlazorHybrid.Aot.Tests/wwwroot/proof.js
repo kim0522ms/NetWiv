@@ -13,6 +13,7 @@
   let voidCalled = false;
   let receivedDto = false;
   window.proof = {
+    VersionBox: class { constructor(value) { this.value = value; } },
     dto(value) {
       assert(JSON.stringify(value) === JSON.stringify(input), "Generated DTO input differs.");
       receivedDto = true;

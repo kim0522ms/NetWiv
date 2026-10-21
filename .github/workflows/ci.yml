@@ -482,10 +482,17 @@ jobs:
           dotnet run --project tests/NetWiv.Cli.Tests -c Release
           dotnet test tests/NetWiv.Generators.Tests -c Release
           dotnet test tests/NetWiv.Api.Tests -c Release
+          dotnet run --project tests/NetWiv.BlazorHybrid.Tests -c Release
       - name: Publish and execute NativeAOT Core tests
         run: |
           dotnet publish tests/NetWiv.Core.Tests -c Release -r linux-x64 -p:PublishAot=true -o artifacts/sdk-core-aot
           ./artifacts/sdk-core-aot/NetWiv.Core.Tests
+      - name: Publish and execute experimental Hybrid protocol tests
+        run: |
+          # Protocol mode does not enter the native backend. Keep native GUI
+          # execution in desktop and package-consumer jobs, without rebuilding Rust here.
+          dotnet publish tests/NetWiv.BlazorHybrid.Aot.Tests -c Release -r linux-x64 -p:PublishAot=true -p:NetWivNativeRid=protocol-only -o artifacts/sdk-hybrid-aot
+          ./artifacts/sdk-hybrid-aot/NetWiv.BlazorHybrid.Aot.Tests
 
   required:
     name: CI required

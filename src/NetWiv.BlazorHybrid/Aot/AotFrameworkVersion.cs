@@ -18,10 +18,6 @@ internal static class AotFrameworkVersion
 
     private static void Check(Assembly assembly)
     {
-        var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        if (version?.Split('+')[0] != "8.0.32")
-            throw new NotSupportedException(
-                $"The statically configured Blazor host requires {assembly.GetName().Name} 8.0.32. " +
-                "Use the pinned package graph without a newer Microsoft.AspNetCore.App framework reference.");
+        BlazorFrameworkVersion.Check(assembly);
     }
 }

@@ -101,6 +101,7 @@ internal static class NewCommand
                     new XElement("add", new XAttribute("key", "nuget.org"), new XAttribute("value", "https://api.nuget.org/v3/index.json")));
                 await File.WriteAllTextAsync(Path.Combine(project, "NuGet.Config"), new XDocument(new XElement("configuration", sources)).ToString(), token);
             }
+            await AddAgentConfigAsync(project, token);
             token.ThrowIfCancellationRequested();
             EnsureEmptyDestination(destination);
             if (Directory.Exists(destination)) Directory.Delete(destination, recursive: false);
@@ -126,7 +127,34 @@ internal static class NewCommand
         });
         await output.WriteLineAsync($"IDE: open {name}.sln and run the {name} C# project.");
         await output.WriteLineAsync("Build: dotnet tool restore && dotnet tool run netwiv -- build --no-bundle (add --aot for NativeAOT)");
+        await output.WriteLineAsync("Coding agents: .mcp.json registers `netwiv mcp`; run dotnet tool restore once before the agent starts it.");
         return 0;
+    }
+
+    // Registers the project's own CLI as a read-only MCP server for coding agents, so the
+    // guides and project facts an agent sees match the NetWiv version this project uses.
+    internal const string AgentConfig = """
+        {
+          "mcpServers": {
+            "netwiv": {
+              "command": "dotnet",
+              "args": ["tool", "run", "netwiv", "--", "mcp"]
+            }
+          }
+        }
+
+        """;
+
+    private static async Task AddAgentConfigAsync(string project, CancellationToken token)
+    {
+        await File.WriteAllTextAsync(Path.Combine(project, ".mcp.json"), AgentConfig, token);
+        var readme = Path.Combine(project, "README.md");
+        if (File.Exists(readme))
+            await File.AppendAllTextAsync(readme, "\n## Coding agents\n\n" +
+                "`.mcp.json` registers `netwiv mcp`, a read-only MCP server from this project's local NetWiv CLI. It gives a coding agent " +
+                "the NetWiv guides for this version and this project's configuration, capabilities and commands. Run `dotnet tool restore` " +
+                "once, then open the folder in an agent that reads `.mcp.json`, such as Claude Code. See the NetWiv coding agents guide " +
+                "for other agents.\n", token);
     }
 
     private static async Task RunDotnet(string[] args, string cwd, CancellationToken token)

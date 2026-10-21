@@ -25,6 +25,7 @@ establish service commitments or additional warranties; see
 | [React development](react-development.md) | Development server, C# restarts and binding updates |
 | [Blazor Hybrid](blazor-hybrid.md) | Default managed desktop Razor hosting, experimental NativeAOT research and shared WebAssembly UI |
 | [Blazor Hybrid AOT future work](blazor-hybrid-aot-research.md) | Deferred research, library fork alternatives and acceptance gates |
+| [Coding agents](coding-agents.md) | `netwiv mcp` server for Claude Code, Codex, Cursor and other MCP agents |
 
 ## APIs and security
 

@@ -2,7 +2,7 @@ namespace NetWiv.Cli;
 
 internal static class CompletionsCommand
 {
-    private const string Commands = "new init dev build bindings bundle info add remove plugin icon signer completions permission capability inspect";
+    private const string Commands = "new init dev build bindings bundle info add remove plugin icon signer completions permission capability inspect mcp";
     public static async Task<int> RunAsync(string[] args, TextWriter output, string workingDirectory, CancellationToken cancellationToken)
     {
         var arguments = new CommandArguments(args);

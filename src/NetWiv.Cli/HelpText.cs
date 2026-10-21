@@ -23,6 +23,7 @@ Commands:
   permission    Manage application permissions
   capability    Manage application capabilities
   inspect       Inspect derived build values
+  mcp           Run a read-only MCP server for coding agents on stdio
 
 Options:
   -h, --help       Print help

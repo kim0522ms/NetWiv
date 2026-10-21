@@ -39,6 +39,7 @@ public static class CliApp
                 "permission" => await PermissionCommand.RunAsync(tail, output, workingDirectory, cancellationToken),
                 "capability" => await CapabilityCommand.RunAsync(tail, output, workingDirectory, cancellationToken),
                 "inspect" => await InspectCommand.RunAsync(tail, output, workingDirectory, cancellationToken),
+                "mcp" => await McpCommand.RunAsync(tail, output, workingDirectory, cancellationToken),
                 "plugin" => await PluginCommand.RunAsync(tail, output, workingDirectory, cancellationToken),
                 "add" => await PluginCommand.AddAsync(tail, output, workingDirectory, cancellationToken),
                 "remove" => await PluginCommand.RemoveAsync(tail, output, workingDirectory, cancellationToken),

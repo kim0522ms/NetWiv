@@ -227,7 +227,7 @@ internal static class McpCommand
     {
         var config = ConfigLoader.Load(directory, BuildTarget.Resolve(null).Platform);
         var project = CommandConfig.Project(config);
-        var assembly = BuiltAssembly(project, config.ProjectDirectory)
+        var assembly = BuiltAssembly(project, config.ProjectDirectory, config.String("mainBinaryName"))
             ?? throw new InvalidOperationException($"No built assembly found for {Path.GetFileName(project)}. Build the app first (for example `dotnet build {Path.GetFileName(project)}`).");
         FrontendBindings bindings;
         try { bindings = FrontendBindings.Read(assembly); }
@@ -245,15 +245,16 @@ internal static class McpCommand
     }
 
     // The newest managed build of the application: bin/ of the project, then the CLI's target/ outputs.
-    private static string? BuiltAssembly(string project, string projectRoot)
+    private static string? BuiltAssembly(string project, string projectRoot, string? mainBinaryName)
     {
         var document = XDocument.Load(project);
         var name = document.Descendants("AssemblyName").Select(static element => element.Value.Trim()).FirstOrDefault(static value => value.Length > 0 && !value.Contains('$'))
             ?? Path.GetFileNameWithoutExtension(project);
         var projectDirectory = Path.GetDirectoryName(project)!;
+        var names = new[] { name, mainBinaryName }.OfType<string>().Distinct(StringComparer.Ordinal).ToArray();
         var roots = new[] { Path.Combine(projectDirectory, "bin"), Path.Combine(projectRoot, "target") };
         return roots.Where(System.IO.Directory.Exists)
-            .SelectMany(root => System.IO.Directory.EnumerateFiles(root, name + ".dll", SearchOption.AllDirectories))
+            .SelectMany(root => names.SelectMany(candidate => System.IO.Directory.EnumerateFiles(root, candidate + ".dll", SearchOption.AllDirectories)))
             // Reference assemblies and intermediate copies are not the application build.
             .Where(static path => !path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(static part => part is "obj" or "ref" or "refint"))
             .OrderByDescending(File.GetLastWriteTimeUtc)

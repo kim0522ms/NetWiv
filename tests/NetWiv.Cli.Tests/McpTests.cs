@@ -46,10 +46,13 @@ internal static class McpTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         try
         {
-            File.WriteAllText(Path.Combine(root, "netwiv.conf.json"), """{"identifier":"dev.netwiv.mcp","app":{"security":{"capabilities":[{"identifier":"inline","permissions":[]}]}}}""");
+            File.WriteAllText(Path.Combine(root, "netwiv.conf.json"), """{"identifier":"dev.netwiv.mcp","mainBinaryName":"Renamed","app":{"security":{"capabilities":[{"identifier":"inline","permissions":[]}]}}}""");
             File.WriteAllText(Path.Combine(root, "Probe.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup></Project>");
             Directory.CreateDirectory(Path.Combine(root, "bin"));
             File.Copy(typeof(McpTests).Assembly.Location, Path.Combine(root, "bin", "Probe.dll"));
+            File.SetLastWriteTimeUtc(Path.Combine(root, "bin", "Probe.dll"), DateTime.UtcNow.AddDays(-1));
+            Directory.CreateDirectory(Path.Combine(root, "target", "release"));
+            File.Copy(typeof(McpTests).Assembly.Location, Path.Combine(root, "target", "release", "Renamed.dll"));
             var executable = Environment.GetEnvironmentVariable("NETWIV_MCP_TEST_EXECUTABLE");
             process.StartInfo = new ProcessStartInfo(executable ?? "dotnet")
             {
@@ -104,11 +107,12 @@ internal static class McpTests
                 Check(!result.TryGetProperty("isError", out var error) || !error.GetBoolean(), "stdio tool succeeds: " + name);
                 Check(result.GetProperty("content").GetArrayLength() > 0, "stdio returns tool content");
                 if (name == "netwiv_commands") Check(result.ToString().Contains("mcpProbe", StringComparison.Ordinal), "stdio reads actual generated command metadata");
+                if (name == "netwiv_commands") Check(result.ToString().Contains("Renamed.dll", StringComparison.Ordinal), "stdio selects the newer mainBinaryName output instead of stale bin metadata");
             }
             process.StandardInput.Close();
             await process.WaitForExitAsync(timeout.Token);
             Check(process.ExitCode == 0 && string.IsNullOrWhiteSpace(await errors), "stdin EOF shuts down cleanly without diagnostics");
-            Check(Directory.GetFiles(root, "*", SearchOption.AllDirectories).Length == 3, "MCP tools do not write into the project");
+            Check(Directory.GetFiles(root, "*", SearchOption.AllDirectories).Length == 4, "MCP tools do not write into the project");
         }
         finally
         {
@@ -182,6 +186,15 @@ internal static class McpTests
                 File.Copy(typeof(McpTests).Assembly.Location, Path.Combine(build, "Probe.dll"));
                 commands = await Call(client, "netwiv_commands", [], timeout.Token);
                 Check(commands.IsError != true && Text(commands).Contains("mcpProbe", StringComparison.Ordinal), "root-level projects find their own CLI target output and read PE metadata");
+                File.WriteAllText(Path.Combine(root, "netwiv.conf.json"), """{"identifier":"dev.netwiv.mcp","mainBinaryName":"Renamed"}""");
+                File.Move(Path.Combine(build, "Probe.dll"), Path.Combine(build, "Renamed.dll"));
+                foreach (var assemblyName in new[] { "", "<AssemblyName>Declared</AssemblyName>" })
+                {
+                    File.WriteAllText(Path.Combine(root, "Probe.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net8.0</TargetFramework>" + assemblyName + "</PropertyGroup></Project>");
+                    commands = await Call(client, "netwiv_commands", [], timeout.Token);
+                    Check(commands.IsError != true && Text(commands).Contains("Renamed.dll", StringComparison.Ordinal) && Text(commands).Contains("mcpProbe", StringComparison.Ordinal),
+                        "mainBinaryName output is found with implicit or explicit project assembly names");
+                }
                 var missing = await Call(client, "netwiv_docs_read", new() { ["name"] = "missing" }, timeout.Token);
                 Check(missing.IsError == true && Text(missing).Contains("Available", StringComparison.Ordinal), "tool errors are results, not protocol failures");
                 var outside = await Call(client, "netwiv_project_info", new() { ["directory"] = "no-such-dir" }, timeout.Token);

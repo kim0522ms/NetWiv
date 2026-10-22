@@ -108,6 +108,28 @@ Every starter also gets `.mcp.json`, which registers the project's local CLI as 
 read-only MCP server (`netwiv mcp`) for coding agents. Run `dotnet tool restore`
 once before an agent starts it; see [coding agents](coding-agents.md).
 
+### Blazor solution builds
+
+The Blazor WebAssembly starter's `.Frontend.esproj` references
+`frontend/NetWivUi.csproj` in the MSBuild project graph, then publishes its built
+output with `NoBuild=true` into `dist/wwwroot`. Other projects in the same solution
+may reference the frontend, for example to test its services. They share the build
+instead of launching a competing `dotnet publish` process against the same `obj/`.
+Desktop-only publish properties are removed from the frontend reference.
+The browser project also keeps its own assembly name and disables desktop
+`PublishAot` / `PublishSingleFile` during restore; browser AOT uses the separate
+Blazor `RunAOTCompilation` setting.
+
+Existing starters generated through 0.2.9 still contain `Exec dotnet publish`.
+Updating the CLI does not rewrite those projects. Generate a temporary Blazor
+starter with the updated CLI and apply its `.Frontend.esproj` project reference
+and `BuildFrontendAssets` target to the existing file, preserving custom settings.
+Apply the generated `frontend/NetWivUi.csproj`'s `TreatAsLocalProperty` and matching
+assembly/publish property group as well, so desktop flags cannot leak through restore.
+Remove the old publish `Exec`; retain both the project reference and the no-build
+publish task. Replacing only `Exec` with a second full MSBuild publish can still
+build the frontend twice under different global properties.
+
 ## Use the generated app
 
 Write `[Command]` C# methods in `src-netwiv/Program.cs`. JS/TS frontend code calls

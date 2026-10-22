@@ -236,6 +236,13 @@ internal static class NewCommand
 
         var frontendProject = Path.Combine(frontend, "NetWivUi.csproj");
         var ui = XDocument.Load(frontendProject);
+        // NuGet's restore graph does not honor ProjectReference.GlobalPropertiesToRemove.
+        // Keep desktop global publish flags from changing the browser project at restore time.
+        ui.Root!.SetAttributeValue("TreatAsLocalProperty", "AssemblyName;PublishAot;PublishSingleFile");
+        ui.Root.Add(new XElement("PropertyGroup",
+            new XElement("AssemblyName", "NetWivUi"),
+            new XElement("PublishAot", "false"),
+            new XElement("PublishSingleFile", "false")));
         ui.Root!.Add(new XElement("Import", new XAttribute("Project", "NetWiv.targets")));
         ui.Save(frontendProject);
         var startupPath = Path.Combine(frontend, "Program.cs");
@@ -270,14 +277,26 @@ internal static class NewCommand
         if (manager == "dotnet")
         {
             const string command = "dotnet watch --project frontend/NetWivUi.csproj run --urls http://127.0.0.1:5173";
-            const string build = "dotnet publish frontend/NetWivUi.csproj -c \"$(Configuration)\" -o dist";
             var frontProject = Directory.EnumerateFiles(project, "*.Frontend.esproj").Single();
             var document = XDocument.Load(frontProject);
             document.Descendants("StartupCommand").Single().Value = command;
-            document.Descendants("BuildCommand").Single().Value = build;
+            document.Descendants("BuildCommand").Single().Remove();
             document.Descendants("BuildOutputFolder").Single().Value = "$(MSBuildProjectDirectory)/dist/wwwroot";
             document.Descendants("Target").Single(target => (string?)target.Attribute("Name") == "RestoreFrontendDependencies").Remove();
-            document.Descendants("Target").Single(target => (string?)target.Attribute("Name") == "BuildFrontendAssets").Attribute("DependsOnTargets")?.Remove();
+            const string removeProperties = "TargetFramework;RuntimeIdentifier;RuntimeIdentifiers;SelfContained;PublishAot;PublishTrimmed;PublishSingleFile;AssemblyName;OutputPath;OutDir;PublishDir";
+            document.Root!.Add(new XElement("ItemGroup",
+                new XAttribute("Condition", "'$(ShouldRunBuildScript)' == 'true'"),
+                new XElement("ProjectReference", new XAttribute("Include", "frontend/NetWivUi.csproj"),
+                    new XAttribute("ReferenceOutputAssembly", "false"),
+                    new XAttribute("SkipGetTargetFrameworkProperties", "true"),
+                    new XAttribute("GlobalPropertiesToRemove", removeProperties))));
+            var buildTarget = document.Descendants("Target").Single(target => (string?)target.Attribute("Name") == "BuildFrontendAssets");
+            buildTarget.SetAttributeValue("DependsOnTargets", "ResolveProjectReferences");
+            buildTarget.Elements().Remove();
+            buildTarget.Add(new XElement("MSBuild", new XAttribute("Projects", "frontend/NetWivUi.csproj"),
+                new XAttribute("Targets", "Publish"),
+                new XAttribute("RemoveProperties", removeProperties.Replace(";PublishDir", "", StringComparison.Ordinal)),
+                new XAttribute("Properties", "Configuration=$(Configuration);NoBuild=true;BuildProjectReferences=false;PublishDir=$(MSBuildProjectDirectory)/dist/")));
             document.Save(frontProject);
             var appConfigPath = Path.Combine(project, "src-netwiv", "netwiv.conf.json");
             var appConfig = JsonNode.Parse(File.ReadAllText(appConfigPath))!.AsObject();

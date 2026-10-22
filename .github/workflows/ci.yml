@@ -273,6 +273,10 @@ jobs:
       - name: macOS NativeAOT WKWebView smoke
         if: runner.os == 'macOS'
         timeout-minutes: 8
+        env:
+          # Concurrent WebContent processes can block in Metal's disk-cache flock
+          # on macOS 15. Disable that cache in these XPC children, not GPU rendering.
+          __XPC_MTL_SHADER_CACHE_SIZE: '0'
         run: |
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --no-window-smoke
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --effects-smoke

@@ -145,10 +145,22 @@ internal static class NewProjectTests
             var created = await Run(["new", "Example", "-t", "blazor", "-o", app], root);
             Check(created.Code == 0, created.Error);
             var backend = Path.Combine(app, "src-netwiv/Example.csproj");
+            var browserProperties = await NetWiv.Build.Execution.ProcessRunner.RunAsync(new("dotnet",
+                ["msbuild", "frontend/NetWivUi.csproj", "-nologo", "-p:PublishAot=true", "-p:PublishSingleFile=true", "-p:AssemblyName=DesktopOnly",
+                    "-getProperty:AssemblyName,PublishAot,PublishSingleFile"], app, CaptureOutput: true));
+            Check(browserProperties.ExitCode == 0, browserProperties.StandardError + browserProperties.StandardOutput);
+            var browserValues = JsonNode.Parse(browserProperties.StandardOutput)!["Properties"]!;
+            Check(browserValues["AssemblyName"]!.GetValue<string>() == "NetWivUi" &&
+                browserValues["PublishAot"]!.GetValue<string>() == "false" && browserValues["PublishSingleFile"]!.GetValue<string>() == "false",
+                "Desktop publish flags changed the browser project's restore properties.");
             var bindingDirectory = XDocument.Load(backend).Descendants("NetWivCSharpBindingsDirectory").Single().Value;
             Check(bindingDirectory == "../frontend/obj/netwiv/$(Configuration)", "Generated clients share an output across configurations.");
-            var frontendBuild = XDocument.Load(Path.Combine(app, "Example.Frontend.esproj")).Descendants("BuildCommand").Single().Value;
-            Check(frontendBuild.Contains("-c \"$(Configuration)\"", StringComparison.Ordinal), "App build does not pass its configuration to the frontend publish.");
+            var frontendBuild = XDocument.Load(Path.Combine(app, "Example.Frontend.esproj"));
+            var publish = frontendBuild.Descendants("MSBuild").Single();
+            Check(publish.Attribute("Properties")!.Value.Contains("Configuration=$(Configuration);NoBuild=true", StringComparison.Ordinal),
+                "Frontend publish must use its configuration without starting another build.");
+            Check(frontendBuild.Descendants("ProjectReference").Single().Attribute("Include")!.Value == "frontend/NetWivUi.csproj" &&
+                !frontendBuild.Descendants("Exec").Any(), "Frontend must participate in the MSBuild graph.");
             Check(File.ReadAllLines(Path.Combine(app, ".gitignore")).Contains("**/obj/"), "Generated client directory is not ignored.");
             // Exercise the actual template targets with a deterministic exporter. Generator
             // semantics are tested separately; this fixture isolates MSBuild scheduling,
@@ -247,6 +259,22 @@ internal static class NewProjectTests
             Check(designTime["Items"]!["Compile"]!.AsArray().Any(item =>
                 item!["Identity"]!.GetValue<string>().Replace('\\', '/') == "obj/netwiv/Release/NetWivCommands.g.cs"),
                 "IDE design-time compilation omitted the existing client.");
+            // A solution consumer of the frontend shares its Build node with the esproj.
+            // Publish must reuse that output, without an out-of-process second build.
+            Directory.CreateDirectory(Path.Combine(app, "tests"));
+            File.WriteAllText(Path.Combine(app, "tests/Frontend.Tests.csproj"), """
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup>
+                  <ItemGroup><ProjectReference Include="../frontend/NetWivUi.csproj" /></ItemGroup>
+                </Project>
+                """);
+            await Execute("sln", "Example.sln", "add", "tests/Frontend.Tests.csproj");
+            for (int iteration = 0; iteration < 3; iteration++)
+            {
+                File.AppendAllText(Path.Combine(app, "frontend/Consumer.cs"), "\n// rebuild\n");
+                await Execute("build", "Example.sln", "-m:4", "-c", "Release", "--disable-build-servers", "-v:q", "-nologo");
+                Check(File.Exists(Path.Combine(app, "dist/NetWivUi.dll")), "Solution publish did not produce frontend assets in dist.");
+            }
         }
         finally { Directory.Delete(root, recursive: true); }
     }

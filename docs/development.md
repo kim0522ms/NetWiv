@@ -235,6 +235,15 @@ preinstalled bridge. Its watchdog names each guest still waiting and its last
 functional startup stage; these fixed labels are assertion state, not retained
 reports. The full scenario and its 180-second deadline remain unchanged.
 
+The macOS desktop smoke step sets `__XPC_MTL_SHADER_CACHE_SIZE=0` for its
+WebContent subprocesses. On macOS 15, Metal's shared shader disk cache can block
+a WebContent rendering thread in `flock`, preventing even the initial document
+request from reaching the app. This CI-only workaround bypasses that cache;
+GPU rendering, concurrent WebViews and all functional assertions remain enabled.
+It does not change the framework or consumer defaults, and is not a public
+NetWiv configuration option. Revalidate the workaround when changing the runner
+image or WebKit version.
+
 Core and CLI harnesses reuse their preceding builds with `--no-build`. NativeAOT
 publishes remain separate because they compile different executable targets;
 managed and NativeAOT execution both provide required coverage. Native caches

@@ -22,6 +22,7 @@ GeneratedCommandRegistry.Register("generated_selected", static registry =>
 
 var tests = new List<(string Name, Func<Task> Run)>
 {
+    ("legacy JSON metadata accepts nullable command members without relaxing value types", LegacyJsonTests.NullableMembers),
     ("runtime asset policy preserves configured CSP headers and isolation sources", AssetResponsePolicyTests.SharedPolicy),
     ("JSON text IPC preserves numeric precision through plain and isolation transport", JsonTextIpcTests.PrecisionAndIsolation),
     ("JSON text IPC enforces input authorization response and document boundaries", JsonTextIpcTests.Boundaries),

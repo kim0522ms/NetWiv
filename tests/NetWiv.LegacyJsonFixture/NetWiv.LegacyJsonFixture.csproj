@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Deliberately use the framework's STJ 8 generator, without a NetWiv reference. -->
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+</Project>

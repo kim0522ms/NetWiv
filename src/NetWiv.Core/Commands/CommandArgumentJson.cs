@@ -1,3 +1,6 @@
+using System.CodeDom.Compiler;
+using System.Collections.Concurrent;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
@@ -7,6 +10,8 @@ namespace NetWiv;
 /// <summary>Validates command input using only source-generated JSON metadata.</summary>
 public static class CommandArgumentJson
 {
+    private static readonly ConcurrentDictionary<Type, bool> LegacyContexts = new();
+
     public static T Deserialize<T>(JsonElement value, JsonTypeInfo<T> typeInfo, string command, string argument, bool nullable)
     {
         try
@@ -48,19 +53,21 @@ public static class CommandArgumentJson
                     }
             }
             // serde_json::Value uses a sorted object map in the pinned Tauri build.
+            bool legacyNullability = HasLegacyNullability(info);
             foreach (var field in value.EnumerateObject().OrderBy(static property => property.Name, StringComparer.Ordinal))
             {
                 var property = info.Properties.FirstOrDefault(property => !property.IsExtensionData && string.Equals(property.Name, field.Name,
                     info.Options.PropertyNameCaseInsensitive ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
                 if (property is null || !CanDeserialize(property, info) || property.CustomConverter is not null) continue;
                 var propertyInfo = info.Options.GetTypeInfo(property.PropertyType);
-                Validate(field.Value, propertyInfo, property.IsSetNullable,
+                Validate(field.Value, propertyInfo, property.IsSetNullable || legacyNullability && CanBeNull(property.PropertyType),
                     property.NumberHandling ?? info.NumberHandling ?? propertyInfo.NumberHandling);
             }
             foreach (var property in info.Properties)
             {
                 if (property.IsExtensionData || !CanDeserialize(property, info)) continue;
-                bool required = property.IsRequired || property.AssociatedParameter is { HasDefaultValue: false, IsNullable: false };
+                bool required = property.IsRequired || property.AssociatedParameter is { HasDefaultValue: false, IsNullable: false } &&
+                    !(legacyNullability && CanBeNull(property.PropertyType));
                 if (required && !value.EnumerateObject().Any(field => string.Equals(field.Name, property.Name,
                         info.Options.PropertyNameCaseInsensitive ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)))
                     throw new ArgumentShapeException($"missing field `{property.Name}`");
@@ -114,6 +121,19 @@ public static class CommandArgumentJson
             (property.ObjectCreationHandling ?? declaringType.PreferredPropertyObjectCreationHandling ??
                 declaringType.Options.PreferredObjectCreationHandling) == JsonObjectCreationHandling.Populate;
     }
+
+    private static bool CanBeNull(Type type) => !type.IsValueType || Nullable.GetUnderlyingType(type) is not null;
+
+    private static bool HasLegacyNullability(JsonTypeInfo info) => info.OriginatingResolver is JsonSerializerContext context &&
+        LegacyContexts.GetOrAdd(context.GetType(), static type =>
+        {
+            // STJ 8 constructor metadata defaults IsNullable to false even for string?.
+            // Read only the generator's version marker; never reflect over DTO members
+            // or replace the supplied source-generated serializer.
+            var generator = type.GetCustomAttribute<GeneratedCodeAttribute>();
+            return generator?.Tool == "System.Text.Json.SourceGeneration" &&
+                Version.TryParse(generator.Version, out var version) && version.Major < 9;
+        });
 
     private static string Expected(JsonTypeInfo info) => info.Kind switch
     {

@@ -4,6 +4,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../NetWiv.LegacyJsonFixture/NetWiv.LegacyJsonFixture.csproj" />
     <ProjectReference Include="../../src/NetWiv.Core/NetWiv.Core.csproj" />
     <ProjectReference Include="../../src/NetWiv.Hosting/NetWiv.Hosting.csproj" />
     <ProjectReference Include="../../src/NetWiv.Generators/NetWiv.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />

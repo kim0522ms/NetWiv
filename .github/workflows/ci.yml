@@ -497,6 +497,10 @@ jobs:
         run: |
           dotnet publish tests/NetWiv.Core.Tests -c Release -r linux-x64 -p:PublishAot=true -o artifacts/sdk-core-aot
           ./artifacts/sdk-core-aot/NetWiv.Core.Tests
+      - name: Compile desktop consumer with the SDK default language version
+        # Package consumers do not inherit the repository's C# 12 pin.
+        # Compile the same smoke source without rebuilding native assets here.
+        run: dotnet build tests/NetWiv.Desktop.Smoke -c Release -p:LangVersion=default -p:NetWivNativeRid=protocol-only
       - name: Publish and execute experimental Hybrid protocol tests
         run: |
           # Protocol mode does not enter the native backend. Keep native GUI

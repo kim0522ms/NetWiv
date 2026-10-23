@@ -32,7 +32,9 @@ internal static class DefaultIconSmoke
                 if (first.ResourceId == second.ResourceId) throw new InvalidOperationException("Icon calls share ownership.");
                 await first.CloseAsync();
                 var expected = await Image.FromBytesAsync(handle, encoded);
-                if (await second.SizeAsync() != await expected.SizeAsync() || !(await second.RgbaAsync()).SequenceEqual(await expected.RgbaAsync()))
+                var actualPixels = await second.RgbaAsync();
+                var expectedPixels = await expected.RgbaAsync();
+                if (await second.SizeAsync() != await expected.SizeAsync() || !actualPixels.SequenceEqual(expectedPixels))
                     throw new InvalidOperationException("Default icon differs from the embedded artwork.");
                 await expected.CloseAsync();
                 await second.CloseAsync();

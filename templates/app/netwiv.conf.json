@@ -22,7 +22,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icon.svg"],
+    "icon": ["icons/icon.png", "icons/icon.ico", "icons/icon.icns"],
     "license": "Apache-2.0",
     "shortDescription": "__APP_NAME__ desktop application"
   }

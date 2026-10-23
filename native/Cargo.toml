@@ -2,3 +2,15 @@
 members = ["netwiv-native"]
 resolver = "2"
 
+[profile.release]
+# Keep dynamic C ABI/Objective-C exports while removing local symbols.
+strip = "symbols"
+# Reduce adapter size at the cost of a slower native rebuild. No LTO is enabled.
+codegen-units = 1
+
+[profile.release.build-override]
+# Rust 1.95's automatic debuginfo stripping can misalign Mach-O LINKEDIT
+# in build-time proc macros, preventing them from loading on macOS 27.
+# https://github.com/rust-lang/rust/issues/157750
+strip = "none"
+

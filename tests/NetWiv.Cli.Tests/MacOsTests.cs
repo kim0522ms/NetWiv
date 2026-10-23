@@ -75,7 +75,8 @@ internal static class MacOsTests
             var publish = Path.Combine(root, "publish"); Directory.CreateDirectory(publish);
             File.WriteAllText(Path.Combine(root, "App.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\" />");
             File.WriteAllText(Path.Combine(root, "data.txt"), "resource fixture");
-            File.WriteAllText(Path.Combine(root, "icon.icns"), "icon fixture");
+            var starterIcon = Path.Combine(AppContext.BaseDirectory, "templates/react-app/src-netwiv/icons/icon.icns");
+            File.Copy(starterIcon, Path.Combine(root, "icon.icns"));
             File.WriteAllText(Path.Combine(root, "netwiv.conf.json"), """{"identifier":"dev.netwiv.mac","productName":"Mac App","mainBinaryName":"App","version":"1.2.3","build":{"dotnetProject":"App.csproj"},"bundle":{"resources":["data.txt"],"icon":["icon.icns"]}}""");
             var config = ConfigLoader.Load(root, "macos");
             var source = Path.Combine(root, "probe.c");
@@ -88,6 +89,11 @@ internal static class MacOsTests
             Check(original.SequenceEqual(File.ReadAllBytes(binary)));
             Check(File.ReadAllText(Path.Combine(app, "Contents/Resources/data.txt")) == "resource fixture");
             Check(File.Exists(Path.Combine(app, "Contents/Resources/icon.icns")));
+            Check(File.ReadAllBytes(starterIcon).SequenceEqual(File.ReadAllBytes(Path.Combine(app, "Contents/Resources/icon.icns"))));
+            Check(Entry(XDocument.Load(Path.Combine(app, "Contents/Info.plist")), "CFBundleIconFile") == "icon.icns");
+            var iconset = Path.Combine(root, "decoded.iconset");
+            await Run("/usr/bin/iconutil", ["-c", "iconset", "-o", iconset, Path.Combine(app, "Contents/Resources/icon.icns")], root);
+            Check(Directory.EnumerateFiles(iconset, "*.png").Any());
             await Run("/usr/bin/plutil", ["-lint", Path.Combine(app, "Contents/Info.plist")], root);
             var executed = await Run(Path.Combine(app, "Contents/MacOS/App"), [], root);
             Check(executed.Contains("__NETWIV_BUNDLE_TYPE_VAR_MAC", StringComparison.Ordinal));

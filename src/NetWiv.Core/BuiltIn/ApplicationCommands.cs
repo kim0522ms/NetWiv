@@ -11,8 +11,13 @@ internal static class ApplicationCommands
     {
         registry.Register("plugin:app|bundle_type", (_, _, _) => Value(ReadBundleType()));
         registry.Register("plugin:app|supports_multiple_windows", (_, _, _) => Value(JsonValue.From(true)));
-        registry.Register("plugin:app|default_window_icon", (_, _, _) => Value(app.DefaultWindowIcon is { } image
-            ? JsonValue.From(app.Resources.Add(image)) : JsonValue.Null));
+        registry.Register("plugin:app|default_window_icon", async (context, _, token) =>
+        {
+            if (app.DefaultWindowIcon is { } image) return JsonValue.From(app.Resources.Add(image));
+            if (app.EncodedDefaultWindowIcon is not { } bytes) return JsonValue.Null;
+            return await app.InvokeRuntimeDirectAsync("plugin:image|from_bytes", ApiJson.Arguments(null,
+                writer => Image.WriteBytes(writer, "bytes", bytes)), context, token);
+        });
         foreach (var command in new[] { "app_show", "app_hide", "fetch_data_store_identifiers" })
         {
             var nativeCommand = "plugin:app|" + command;

@@ -276,6 +276,10 @@ fn run_inner(shared: Arc<Shared>, config: RunConfig) -> Result<(), String> {
         Some(event_loop.create_proxy());
     let resources = NativeResources::new();
     let default_window_icon = resources.window_icon(config.default_window_icon.as_ref())?;
+    #[cfg(target_os = "macos")]
+    if let Some((rgba, width, height)) = resources.image_data(config.default_window_icon.as_ref())? {
+        crate::macos::set_application_icon(&rgba, width, height)?;
+    }
     // Tauri's explicit webview `dataDirectory` uses LocalData. The app-scoped value is
     // carried in the run contract for Core-owned paths, but does not override Wry's
     // default (None-keyed) browser context.

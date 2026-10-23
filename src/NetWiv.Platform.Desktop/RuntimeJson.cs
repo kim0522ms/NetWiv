@@ -27,6 +27,12 @@ internal static class RuntimeJson
             writer.WritePropertyName("defaultWindowIcon");
             WriteImage(writer, icon);
         }
+        else if (context.EncodedDefaultWindowIcon is { } bytes)
+        {
+            writer.WriteStartArray("defaultWindowIcon");
+            foreach (var value in bytes.Span) writer.WriteNumberValue(value);
+            writer.WriteEndArray();
+        }
         writer.WriteStartArray("windows");
         foreach (var window in context.Windows)
         {

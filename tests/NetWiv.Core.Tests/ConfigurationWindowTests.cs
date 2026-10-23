@@ -2,6 +2,41 @@ using NetWiv;
 
 internal static class ConfigurationWindowTests
 {
+    internal static async Task Icons()
+    {
+        using var stream = typeof(ConfigurationWindowTests).Assembly.GetManifestResourceStream("netwiv.default-icon")!;
+        using var bytes = new MemoryStream();
+        stream.CopyTo(bytes);
+        var expected = bytes.ToArray();
+        var runtime = new FakeRuntime { InvokeHandler = (command, args) =>
+        {
+            Assert.Equal("plugin:image|from_bytes", command);
+            Assert.True(args.GetProperty("bytes").EnumerateArray().Select(value => value.GetByte()).SequenceEqual(expected), "Encoded icon changed.");
+            return JsonValue.From(7);
+        }};
+        using (var app = new Builder().UseRuntime(runtime).UseEmbeddedConfig(assembly: typeof(ConfigurationWindowTests).Assembly, resourceName: "no-windows.json").Build())
+        {
+            app.Run();
+            Assert.True(runtime.Context!.EncodedDefaultWindowIcon!.Value.Span.SequenceEqual(expected), "Icon was not passed to the runtime.");
+            Assert.Equal(7u, (await AppApi.DefaultWindowIconAsync(app.Handle))!.ResourceId);
+        }
+        var explicitIcon = new ImageData([255, 0, 0, 255], 1, 1);
+        foreach (var before in new[] { true, false })
+        {
+            var builder = new Builder().UseRuntime(runtime);
+            if (before) builder.DefaultWindowIcon(explicitIcon);
+            builder.UseEmbeddedConfig(assembly: typeof(ConfigurationWindowTests).Assembly, resourceName: "no-windows.json");
+            if (!before) builder.DefaultWindowIcon(explicitIcon);
+            using var app = builder.Build();
+            app.Run();
+            Assert.True(runtime.Context!.EncodedDefaultWindowIcon is null, "Explicit RGBA icon did not take precedence.");
+            Assert.True(ReferenceEquals(explicitIcon, runtime.Context.DefaultWindowIcon), "Explicit icon changed.");
+        }
+        using var empty = new Builder().UseRuntime(runtime).Build();
+        empty.Run();
+        Assert.True(runtime.Context!.EncodedDefaultWindowIcon is null, "Unconfigured apps acquired an icon.");
+    }
+
     internal static Task DefaultsAndDeferred()
     {
         var runtime = new FakeRuntime();

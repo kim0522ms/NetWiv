@@ -19,6 +19,9 @@ public sealed record RuntimeContext(
     IReadOnlyList<string>? UriSchemeProtocols = null,
     Func<AssetRequest, ValueTask<AssetResponse?>>? ResolveUriScheme = null)
 {
+    /// <summary>Encoded PNG/ICO default icon, used when DefaultWindowIcon is unset.</summary>
+    public ReadOnlyMemory<byte>? EncodedDefaultWindowIcon { get; init; }
+
     /// <summary>
     /// Applies the application's configured response headers and CSP to bundled content
     /// supplied by a runtime integration. Apply once before returning that content;

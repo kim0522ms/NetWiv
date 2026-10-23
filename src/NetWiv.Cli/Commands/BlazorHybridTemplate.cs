@@ -47,7 +47,11 @@ internal static class BlazorHybridTemplate
                 if (attribute is not null)
                     attribute.Value = attribute.Value.Replace("../Desktop/Desktop.csproj", "../src-netwiv/" + name + ".csproj", StringComparison.Ordinal);
             }
-            if (path == desktopProject) document.Descendants("AssemblyName").Single().Value = name;
+            if (path == desktopProject)
+            {
+                document.Descendants("AssemblyName").Single().Value = name;
+                document.Root!.Elements("PropertyGroup").First().Add(new XElement("NetWivConfigPath", "$(MSBuildProjectDirectory)/netwiv.conf.json"));
+            }
             document.Save(path);
         }
 
@@ -59,9 +63,10 @@ internal static class BlazorHybridTemplate
             ["version"] = "0.1.0",
             ["identifier"] = "dev.netwiv.blazorsample",
             ["build"] = new JsonObject { ["dotnetProject"] = name + ".csproj" },
-            ["bundle"] = new JsonObject { ["active"] = false },
+            ["bundle"] = new JsonObject { ["active"] = false, ["icon"] = new JsonArray("icons/icon.png", "icons/icon.ico", "icons/icon.icns") },
         };
         await File.WriteAllTextAsync(Path.Combine(project, "src-netwiv", "netwiv.conf.json"), config.ToJsonString(), token);
+        StarterIcons.CopyTo(Path.Combine(project, "src-netwiv"));
         var tools = new JsonObject
         {
             ["version"] = 1,
@@ -76,6 +81,7 @@ internal static class BlazorHybridTemplate
         await File.WriteAllTextAsync(Path.Combine(project, ".gitignore"), "**/bin/\n**/obj/\n**/target/\n**/dist/\n.vs/\n", token);
         var programPath = Path.Combine(project, "src-netwiv", "Program.cs");
         var program = await File.ReadAllTextAsync(programPath, token);
+        program = program.Replace("using var app = builder.Build();", "builder.Desktop.UseEmbeddedConfig();\n\n        using var app = builder.Build();", StringComparison.Ordinal);
         await File.WriteAllTextAsync(programPath, program.Replace("\"NetWiv shared Blazor sample\"", JsonValue.Create(name)!.ToJsonString(), StringComparison.Ordinal), token);
         await File.WriteAllTextAsync(Path.Combine(project, name + ".sln"), Solution(name), token);
         await File.WriteAllTextAsync(Path.Combine(project, "README.md"), Readme(name), token);
@@ -124,6 +130,10 @@ internal static class BlazorHybridTemplate
         `AddNetWivBlazorHybrid` and standard `DotNetObjectReference` through the
         shared reference factory. No static component or callback registry is
         needed for this default path.
+
+        `src-netwiv/icons` contains default NetWiv PNG, ICO and ICNS artwork.
+        Replace these files with your application's icons. `bundle.icon` selects
+        them for runtime window/Dock icons, Windows executables and macOS bundles.
 
         The starter defaults to .NET 8. Set `NetWivBlazorTargetFramework` in
         `Directory.Build.props` to `net9.0` or `net10.0` to select that target

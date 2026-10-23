@@ -42,6 +42,7 @@ internal static class Program
         if (args is ["--expect-startup-error", var expected]) return CheckStartupError(expected);
         if (args is ["--origin-probe-smoke"]) { OriginProbe.CheckIdleConnectionAsync().GetAwaiter().GetResult(); return 0; }
         if (args is ["--no-window-smoke"]) return CheckNoWindows();
+        if (args is ["--default-icon-smoke"]) return DefaultIconSmoke.Run();
         if (args.Length != 0) throw new ArgumentException("Unknown smoke-test arguments.");
         using var probe = new OriginProbe();
         using var asset = new SmokeAsset();

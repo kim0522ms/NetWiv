@@ -477,9 +477,23 @@ internal static class NewProjectTests
         finally { Directory.Delete(root, true); }
     }
 
+    internal static void CheckIcons(string destination)
+    {
+        var backend = Path.Combine(destination, "src-netwiv");
+        var config = JsonNode.Parse(File.ReadAllText(Path.Combine(backend, "netwiv.conf.json")))!;
+        var icons = config["bundle"]!["icon"]!.AsArray().Select(value => value!.GetValue<string>()).ToArray();
+        Check(icons.SequenceEqual(["icons/icon.png", "icons/icon.ico", "icons/icon.icns"]), "Starter icon configuration is incomplete.");
+        foreach (var icon in icons)
+        {
+            var expected = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "templates/react-app/src-netwiv", icon));
+            Check(File.ReadAllBytes(Path.Combine(backend, icon)).SequenceEqual(expected), "Starter icon bytes were modified: " + icon);
+        }
+    }
+
     // Every starter registers its own local CLI as the coding-agent MCP server.
     private static void CheckAgentConfig(string destination, string output, string template)
     {
+        CheckIcons(destination);
         var agent = JsonNode.Parse(File.ReadAllText(Path.Combine(destination, ".mcp.json")))!["mcpServers"]!["netwiv"]!;
         Check(agent["command"]!.GetValue<string>() == "dotnet" &&
             agent["args"]!.AsArray().Select(static item => item!.GetValue<string>()).SequenceEqual(["tool", "run", "netwiv", "--", "mcp"]),

@@ -63,6 +63,7 @@ var tests = new (string Name, Func<Task> Run)[]
         else Console.WriteLine("SKIP Windows packaging tools: Windows only");
     }),
     ("new project creates a personalized package-only React application", NewProjectTests.CreateReact),
+    ("application icons embed configured bytes and respect overlays and overrides", ApplicationIconTests.BuildSelection),
     ("new project defaults keep matching SDK and CLI versions", NewProjectTests.Defaults),
     ("new project covers every starter template and manager choice", NewProjectTests.TemplateMatrix),
     ("new Blazor Hybrid project defaults to managed hosting and gates experimental AOT", NewProjectTests.BlazorHybrid),
@@ -438,6 +439,11 @@ static Task InitPackages() => Temp(async root =>
     True(source.Contains("new DesktopRuntime()", StringComparison.Ordinal) && source.Contains("GenerateFrontendBindings", StringComparison.Ordinal));
     True(File.ReadAllText(Path.Combine(dir, "README.md")).Contains("not affiliated with, endorsed by, or officially approved by", StringComparison.Ordinal));
     True(source.Contains("#if NETWIV_DEV", StringComparison.Ordinal));
+    NewProjectTests.CheckIcons(root);
+    var customIcon = Path.Combine(dir, "icons", "icon.png");
+    File.WriteAllText(customIcon, "custom artwork");
+    Equal(0, await CliApp.RunAsync(["init", "--ci", "--force", "--directory", root], output, error, Directory.GetCurrentDirectory()));
+    Equal("custom artwork", File.ReadAllText(customIcon));
 });
 
 static Task PluginScaffold() => Temp(async root =>

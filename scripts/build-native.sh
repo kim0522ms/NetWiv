@@ -17,6 +17,18 @@ cargo +1.95.0 build --release --locked \
   --target "$triple" --target-dir "$target_directory"
 mkdir -p -- "$destination"
 cp -- "$target_directory/$triple/release/$library" "$destination/"
+# The release profile strips symbols; the C ABI exports must survive it.
+expected=$(grep -oE 'netwiv_[a-z0-9_]+\(' "$repository/native/netwiv-native/include/netwiv.h" | tr -d '(' | sort -u)
+if [[ "$rid" == osx-* ]]; then
+  exported=$(nm -gU "$destination/$library" | awk '$3 ~ /^_netwiv_/ { print substr($3, 2) }' | sort -u)
+else
+  exported=$(nm -D --defined-only "$destination/$library" | awk '$3 ~ /^netwiv_/ { print $3 }' | sort -u)
+fi
+if [[ "$exported" != "$expected" ]]; then
+  echo "$library exports do not match netwiv.h:" >&2
+  diff <(echo "$expected") <(echo "$exported") >&2 || true
+  exit 1
+fi
 if [[ "$rid" == osx-* ]]; then
   install_name_tool -id "@rpath/$library" "$destination/$library"
   codesign --force --sign - "$destination/$library"

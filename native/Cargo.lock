@@ -2699,6 +2699,7 @@ dependencies = [
  "notify-rust",
  "objc2",
  "objc2-app-kit",
+ "objc2-foundation",
  "png 0.17.16",
  "rfd",
  "rust-argon2 2.1.0",

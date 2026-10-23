@@ -116,8 +116,21 @@ The app layout contains native executables and dylibs in `Contents/MacOS`,
 resources in `Contents/Resources`, and generated metadata in `Contents/Info.plist`.
 `PathApi.ResourceDirectoryAsync` resolves the latter in an app bundle and the
 executable directory during unbundled development. `bundle.resources` mappings,
-category and a configured `.icns` icon are included. Supply an `.icns` icon;
-the existing icon command does not yet generate that format.
+category and a configured `.icns` icon are included. New projects include a
+NetWiv `.icns` icon in `src-netwiv/icons`; replace it for your application.
+The existing icon command does not yet generate that format. During unbundled
+development, `UseEmbeddedConfig()` uses the PNG/ICO embedded by `NetWiv.Build`
+from `bundle.icon` as the Dock icon. Changing an individual window icon does
+not change the process-wide Dock icon.
+
+The native release profile strips local symbols from the shipped adapter and
+uses one codegen unit to reduce its size. Build dependencies retain symbols:
+the pinned Rust toolchain's `debuginfo` stripping path can produce misaligned
+Mach-O `LINKEDIT` data rejected by macOS 27, including in build-time proc macros
+([upstream issue](https://github.com/rust-lang/rust/issues/157750)). The committed
+`profile.release.build-override.strip = "none"` avoids that path while the
+adapter uses `strip = "symbols"`. For local symbolized backtraces, override
+`CARGO_PROFILE_RELEASE_STRIP=none`, not `debuginfo`.
 
 Supported `bundle.macOS` keys are `minimumSystemVersion`, `bundleVersion`,
 `signingIdentity`, `entitlements`, `infoPlist` and `appStore`. Other non-null macOS bundle options fail
@@ -498,9 +511,9 @@ test-owned WebViews are destroyed. Keep the display awake during the ordinary
 monitor-geometry smoke; a sleeping display can report no active monitors.
 For the pinned Rust toolchain's macOS 27
 [Mach-O strip alignment issue](https://github.com/rust-lang/rust/issues/157750),
-pass `--config 'profile.release.build-override.strip="none"'` to Cargo for
-the affected native build. This disables stripping of build dependencies without
-changing the committed release profile.
+the workspace release profile already sets
+`profile.release.build-override.strip = "none"`; no local Cargo override is
+needed for build dependencies.
 The ordinary NativeAOT desktop smoke also runs on hosted macOS 15 arm64.
 macOS 12/13 execution remains unverified.
 

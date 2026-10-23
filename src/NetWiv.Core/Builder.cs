@@ -17,6 +17,7 @@ public sealed class Builder
     private readonly HashSet<string> _appManifestCommands = new(StringComparer.Ordinal);
     private bool _hasAppCommandManifest;
     private bool _hasEmbeddedConfiguration;
+    private byte[]? _encodedDefaultWindowIcon;
     private readonly List<Action<App>> _setup = [];
     private readonly List<Action<AppHandle, MenuEvent>> _menuEventHandlers = [];
     private readonly List<Action<AppHandle, TrayIconEvent>> _trayEventHandlers = [];
@@ -128,6 +129,16 @@ public sealed class Builder
     {
         assembly ??= Assembly.GetEntryAssembly() ?? throw new InvalidOperationException("The entry assembly is unavailable.");
         var config = EmbeddedConfiguration.Load(assembly, resourceName, _metadata, mode);
+        _encodedDefaultWindowIcon = null;
+        using (var icon = assembly.GetManifestResourceStream("netwiv.default-icon"))
+        {
+            if (icon is not null)
+            {
+                using var bytes = new MemoryStream();
+                icon.CopyTo(bytes);
+                _encodedDefaultWindowIcon = bytes.ToArray();
+            }
+        }
         _metadata = config.Metadata;
         _hasEmbeddedConfiguration = true;
         if (config.HasWindowList)
@@ -196,6 +207,7 @@ public sealed class Builder
                 _hasAppCommandManifest, CreateAssetResolver(fileAssets, isolation, responsePolicy), plugins, _freezePrototype, _setup.ToArray(),
                 new Dictionary<string, Func<UriSchemeContext, AssetRequest, Task<AssetResponse>>>(_uriSchemeProtocols, StringComparer.Ordinal));
             app.Handle.DefaultWindowIcon = _defaultWindowIcon;
+            app.Handle.EncodedDefaultWindowIcon = _defaultWindowIcon is null ? _encodedDefaultWindowIcon : null;
             app.Handle.ConfigureServices(_services, _loggerFactory);
             var entryAssembly = Assembly.GetEntryAssembly();
             var debugMetadata = entryAssembly?.GetCustomAttributes<AssemblyMetadataAttribute>()

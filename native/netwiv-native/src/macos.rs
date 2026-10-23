@@ -9,6 +9,24 @@ use tao::{
 use tauri_utils::{TitleBarStyle, WindowEffect, WindowEffectState, config::WindowEffectsConfig};
 use window_vibrancy::{NSVisualEffectMaterial as Material, NSVisualEffectState as State};
 
+pub(crate) fn set_application_icon(rgba: &[u8], width: u32, height: u32) -> Result<(), String> {
+    use image::ImageEncoder;
+    use objc2::{AnyThread, MainThreadMarker};
+    use objc2_app_kit::{NSApplication, NSImage};
+    use objc2_foundation::NSData;
+
+    let main = MainThreadMarker::new().ok_or("Application icons require the main thread.")?;
+    let mut png = Vec::new();
+    image::codecs::png::PngEncoder::new(&mut png)
+        .write_image(rgba, width, height, image::ExtendedColorType::Rgba8)
+        .map_err(|error| error.to_string())?;
+    let image = NSImage::initWithData(NSImage::alloc(), &NSData::from_vec(png))
+        .ok_or("AppKit could not decode the application icon.")?;
+    // A window icon is ignored by Tao on macOS; the Dock uses the process icon.
+    unsafe { NSApplication::sharedApplication(main).setApplicationIconImage(Some(&image)); }
+    Ok(())
+}
+
 pub(crate) fn invoke_data_store(
     command: &str,
     args: &Value,

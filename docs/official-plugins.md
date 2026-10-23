@@ -198,7 +198,37 @@ responsiveness/lifecycle checks from interactive selection and scope checks.
 These checks do not establish complete upstream plugin equivalence.
 
 HTTP requests require an explicit allowed URL scope in the capability. Clipboard `default` grants no commands; specify permissions such as `clipboard-manager:allow-read-text` as needed.
-Shell execution requires a scope containing `name`, `cmd`, and `args` on `shell:allow-execute` or `shell:allow-spawn`. `sidecar` is not yet supported.
+Shell execution requires a scope containing `name`, `cmd`, and `args` on
+`shell:allow-execute` or `shell:allow-spawn`. Bundled sidecars instead use a
+scope with `name`, `sidecar: true`, and `args`; they do not use `cmd`.
+
+```json
+{
+  "identifier": "shell:allow-execute",
+  "allow": [{ "name": "helpers/tool", "sidecar": true, "args": ["--version"] }]
+}
+```
+
+```ts
+import { Command } from '@netwiv/api/plugins/shell'
+
+const result = await Command.sidecar('helpers/tool', ['--version']).execute()
+```
+
+Declare the binary in [`bundle.externalBin`](bundle-resources.md#external-executable-binaries)
+for packaging and `netwiv dev` staging. An unchanged staged binary is reused;
+if the source binary changes, remove the previous generated copy and restart dev.
+At runtime the logical
+relative name resolves to its basename beside the application executable
+(`tool.exe` on Windows, `tool` on Linux/macOS). macOS app bundles use
+`Contents/MacOS`, including managed bundles whose apphost is in `Contents/Resources`.
+The name must not contain empty,
+`.` or `..` segments, and a symbolic link must resolve to that same directory.
+The normal command and sidecar scopes are separate; neither grants access to the
+other. Argument rules and deny precedence apply to both. Spawned sidecars retain
+the originating document's process ownership and are terminated when that
+document is replaced or closed, or when the app shuts down. Cancelling an
+`execute()` invocation terminates its process tree.
 
 Support for official guest call formats does not establish full behavioral parity.
 See the [API status table](api-status.md) for platform-specific features that remain

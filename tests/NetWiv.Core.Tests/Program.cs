@@ -166,6 +166,8 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("official HTTP guest enforces URL scope and streams a response", HttpPluginTests.Fetch),
     ("official clipboard guest requires explicit grants and forwards to native", ClipboardPluginTests.PermissionsAndForwarding),
     ("official shell guest executes only scoped aliases", ShellPluginTests.ScopedExecute),
+    ("official shell sidecars enforce bundled paths argument scopes ownership and kill", ShellSidecarTests.ScopedSidecars),
+    ("shell spawn rejects navigation during process startup", ShellLifetimeTests.NavigationDuringSpawn),
     ("SQLite competing processes serialize migration history and rollback failed migrations", SqlMigrationTests.ConcurrentProcessLoads),
     ("official window-state guest saves and restores selected window flags", WindowStatePluginTests.SaveAndRestore),
     ("official websocket guest connects and relays a local text frame", WebsocketPluginTests.LocalEcho),

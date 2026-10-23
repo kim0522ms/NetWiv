@@ -4,6 +4,48 @@ using NetWiv.Plugin.Shell;
 
 internal static class ShellLifetimeTests
 {
+    internal static async Task NavigationDuringSpawn()
+    {
+        foreach (var closed in new[] { false, true })
+        {
+            var runtime = new FakeRuntime();
+            Process? child = null;
+            var source = OperatingSystem.IsWindows()
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe") : "/bin/sh";
+            var arguments = OperatingSystem.IsWindows() ? new[] { "/d", "/c", "set /p value=" } : ["-c", "read value"];
+            var values = "[" + string.Join(',', arguments.Select(value => JsonValue.From(value).GetRawText())) + "]";
+            var scope = JsonValue.Parse("{\"name\":\"wait\",\"cmd\":" + JsonValue.From(source).GetRawText() + ",\"args\":" + values + "}");
+            try
+            {
+                using var app = new Builder().UseRuntime(runtime).Plugin(new ShellPlugin(_ => { }, start: (info, token) =>
+                {
+                    var process = Process.Start(info)!;
+                    child = Process.GetProcessById(process.Id);
+                    runtime.Context!.OnDocumentChanged!(new("main", closed ? 1UL : 2UL, closed));
+                    Assert.True(token.IsCancellationRequested, "Document invalidation did not cancel the spawning invocation.");
+                    return process;
+                }))
+                    .Capability(new("main", ["shell:allow-spawn"], Windows: ["main"],
+                        PermissionScopes: [new("shell:allow-spawn", [scope], [])])).Build();
+                app.Run();
+                runtime.Context!.OnDocumentChanged!(new("main", 1, false));
+                var response = await GuestIpc.Invoke(runtime, "plugin:shell|spawn",
+                    "{\"program\":\"wait\",\"args\":" + values + ",\"onEvent\":\"__CHANNEL__:81\"}", 1);
+                Assert.Equal("error", response.Headers!["Tauri-Response"]);
+                Assert.True(child is not null, "Spawn did not reach the document invalidation boundary.");
+                await child!.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
+            }
+            finally
+            {
+                if (child is not null)
+                {
+                    if (!child.HasExited) { child.Kill(true); await child.WaitForExitAsync(); }
+                    child.Dispose();
+                }
+            }
+        }
+    }
+
     internal static async Task<int> Probe(string root, string role)
     {
         if (role == "parent")

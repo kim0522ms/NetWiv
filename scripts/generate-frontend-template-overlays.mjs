@@ -10,7 +10,7 @@ import path from 'node:path';
 const root = path.resolve('templates/frontends');
 const reactApp = path.resolve('templates/react-app');
 const api = { '@netwiv/api': 'file:vendor/netwiv-api' };
-const vite = { vite: '8.2.2' };
+const vite = { vite: '8.2.4' };
 const typescript = { typescript: '6.0.3' };
 
 // Ship the unpublished API with every generated project. This path is relative
@@ -413,7 +413,7 @@ ${fileMap('react', '            ')}
 // Vue
 
 await save(path.join(root, 'vue'), {
-  'package.json': manifest('vue', 'vue-tsc --noEmit', { vue: '3.5.13' }, { '@vitejs/plugin-vue': '6.0.7', 'vue-tsc': '3.1.0' }),
+  'package.json': manifest('vue', 'vue-tsc --noEmit', { vue: '3.5.42' }, { '@vitejs/plugin-vue': '6.0.7', 'vue-tsc': '3.1.0' }),
   'vite.config.js': viteConfig("import vue from '@vitejs/plugin-vue';", 'vue()'),
   'tsconfig.json': tsconfig(),
   'index.html': html('NetWiv + Vue', '/src/main.ts'),
@@ -629,8 +629,8 @@ await save(path.join(root, 'angular'), {
       'desktop:dev': 'dotnet tool restore && dotnet tool run netwiv -- dev -- --dev',
       'desktop:build': 'dotnet tool restore && dotnet tool run netwiv -- build --no-bundle',
     },
-    dependencies: { ...api, '@angular/common': '21.2.0', '@angular/compiler': '21.2.0', '@angular/core': '21.2.0', '@angular/forms': '21.2.0', '@angular/platform-browser': '21.2.0', rxjs: '7.8.2', tslib: '2.8.1' },
-    devDependencies: { '@angular/build': '21.2.0', '@angular/cli': '21.2.0', '@angular/compiler-cli': '21.2.0', typescript: '5.9.3' },
+    dependencies: { ...api, '@angular/common': '21.2.25', '@angular/compiler': '21.2.25', '@angular/core': '21.2.25', '@angular/forms': '21.2.25', '@angular/platform-browser': '21.2.25', rxjs: '7.8.2', tslib: '2.8.1' },
+    devDependencies: { '@angular/build': '21.2.28', '@angular/cli': '21.2.28', '@angular/compiler-cli': '21.2.25', typescript: '5.9.3' },
   }, null, 2),
   'angular.json': JSON.stringify({
     $schema: './node_modules/@angular/cli/lib/config/schema.json', version: 1,

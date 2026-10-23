@@ -66,9 +66,11 @@ app.Run();
 Minimized windows count as visible, so the example restores its main window on
 every request instead of using that flag as a universal restoration condition.
 Multi-window apps can use it to choose their own policy. NetWiv does not select
-or restore a window automatically. Destroying the last window still exits the
-runtime; this hook does not add a windowless keep-alive policy or single-instance
-forwarding for independently launched processes.
+or restore a window automatically. Destroying the last window exits by default.
+Use `Builder.ExitOnLastWindowClose(false)` to keep `DesktopRuntime` resident and
+create a replacement window in the reopen handler. See [application lifetime and
+URL/file activation](application-lifetime.md). Independently launched processes
+use the single-instance plugin for argument forwarding.
 
 Handlers start on the native event-loop thread. Await window operations rather
 than blocking with `.Wait()` or `.Result`. Async invocations may overlap, and

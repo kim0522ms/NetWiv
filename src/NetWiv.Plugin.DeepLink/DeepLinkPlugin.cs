@@ -13,7 +13,7 @@ public sealed class DeepLinkPlugin(IReadOnlyList<string>? arguments = null) : IP
     private readonly HashSet<string> _schemes = new(StringComparer.Ordinal);
     private readonly object _gate = new();
     private AppHandle? _app;
-    private string? _current;
+    private string[]? _current;
     private IDisposable? _secondInstanceListener;
 
     public string Name => "deep-link";
@@ -62,14 +62,28 @@ public sealed class DeepLinkPlugin(IReadOnlyList<string>? arguments = null) : IP
 
     public void Dispose() => _secondInstanceListener?.Dispose();
 
+    public void OnEvent(AppHandle app, NetWiv.Runtime.RuntimeEvent runtimeEvent)
+    {
+        if (runtimeEvent.EventName != "netwiv://opened") return;
+        var urls = runtimeEvent.Payload.GetProperty("urls").EnumerateArray()
+            .Select(item => item.GetString()).Where(item => Uri.TryCreate(item, UriKind.Absolute, out var url) && _schemes.Contains(url.Scheme))
+            .Select(item => new Uri(item!, UriKind.Absolute).AbsoluteUri).ToArray();
+        if (urls.Length > 0) OpenUrls(urls);
+    }
+
     /// <summary>Pass the second process's argv here from SingleInstancePlugin's callback.</summary>
     public void HandleLaunchArguments(IReadOnlyList<string> arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments);
         if (arguments.Count != 2 || !Uri.TryCreate(arguments[1], UriKind.Absolute, out var url) ||
             !_schemes.Contains(url.Scheme)) return;
-        lock (_gate) _current = url.AbsoluteUri;
-        var payload = UrlArray(url.AbsoluteUri);
+        OpenUrls([url.AbsoluteUri]);
+    }
+
+    private void OpenUrls(string[] urls)
+    {
+        lock (_gate) _current = urls;
+        var payload = UrlArray(urls);
         _app?.Emit("deep-link://new-url", payload);
     }
 
@@ -82,12 +96,14 @@ public sealed class DeepLinkPlugin(IReadOnlyList<string>? arguments = null) : IP
         }
     }
 
-    private static JsonElement UrlArray(string url)
+    private static JsonElement UrlArray(IReadOnlyList<string> urls)
     {
         var buffer = new ArrayBufferWriter<byte>();
         using (var writer = new Utf8JsonWriter(buffer))
         {
-            writer.WriteStartArray(); writer.WriteStringValue(url); writer.WriteEndArray();
+            writer.WriteStartArray();
+            foreach (var url in urls) writer.WriteStringValue(url);
+            writer.WriteEndArray();
         }
         using var document = JsonDocument.Parse(buffer.WrittenMemory);
         return document.RootElement.Clone();

@@ -23,6 +23,8 @@ GeneratedCommandRegistry.Register("generated_selected", static registry =>
 var tests = new List<(string Name, Func<Task> Run)>
 {
     ("macOS reopen delivers native-only notifications and observes application lifetime", ReopenTests.DeliveryAndLifetime),
+    ("native opened delivers URL batches and observes resident application lifetime", OpenedTests.DeliveryAndLifetime),
+    ("native opened observes sync and async failures and disposal", OpenedTests.FailuresAndDisposal),
     ("macOS reopen observes sync and async failures without blocking later handlers", ReopenTests.FailuresAndDisposal),
     ("legacy JSON metadata accepts nullable command members without relaxing value types", LegacyJsonTests.NullableMembers),
     ("runtime asset policy preserves configured CSP headers and isolation sources", AssetResponsePolicyTests.SharedPolicy),
@@ -171,6 +173,7 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("single instance forwards a second launch's arguments to the first app", SingleInstancePluginTests.ForwardsSecondLaunch),
     ("single instance forwards arguments between separate desktop processes", SingleInstancePluginTests.ForwardsAcrossProcesses),
     ("deep link accepts configured launch URL and emits second launch event", DeepLinkPluginTests.CurrentAndEvent),
+    ("deep link filters native opened URL batches and ignores application emitted events", DeepLinkPluginTests.NativeOpenedUrls),
     ("deep link registration uses per-user desktop protocol storage", DeepLinkPluginTests.Registration),
     ("deep link consumes the single-instance forwarded URL", DeepLinkPluginTests.SecondInstanceOpensUrl),
     ("localhost serves embedded assets and stops accepting requests on disposal", LocalhostPluginTests.ServesAssets),

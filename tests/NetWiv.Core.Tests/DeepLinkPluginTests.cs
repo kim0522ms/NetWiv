@@ -5,6 +5,35 @@ using System.Text;
 
 internal static class DeepLinkPluginTests
 {
+    internal static async Task NativeOpenedUrls()
+    {
+        var runtime = new FakeRuntime();
+        using var app = new Builder().UseRuntime(runtime)
+            .UseEmbeddedConfig(resourceName: "plugins-deep-link.json")
+            .Plugin(new DeepLinkPlugin(["app"])).Build();
+        app.Run();
+        var calls = 0;
+        using var listener = app.Handle.Events.Listen("deep-link://new-url", info =>
+        {
+            Assert.Equal(2, info.Payload.GetArrayLength());
+            Assert.Equal("netwiv-test://first/path", info.Payload[0].GetString());
+            Assert.Equal("netwiv-test://second/path", info.Payload[1].GetString());
+            calls++;
+        });
+        var payload = JsonValue.Parse("""{"urls":["file:///test/selected.txt","netwiv-test://first/path","https://unconfigured.example/","netwiv-test://second/path"]}""");
+        app.Handle.Emit("netwiv://opened", payload);
+        Assert.Equal(0, calls);
+        runtime.Context!.OnEvent(new("netwiv://opened", null, payload, NetWiv.Runtime.RuntimeEventTarget.App));
+        Assert.Equal(1, calls);
+        var current = await app.Handle.InvokeAsync("plugin:deep-link|get_current", JsonValue.EmptyObject);
+        Assert.Equal(2, current.GetArrayLength());
+        Assert.Equal("netwiv-test://second/path", current[1].GetString());
+        runtime.Context.OnEvent(new("netwiv://opened", null, JsonValue.Parse("""{"urls":["https://unconfigured.example/"]}""")));
+        Assert.Equal(1, calls);
+        current = await app.Handle.InvokeAsync("plugin:deep-link|get_current", JsonValue.EmptyObject);
+        Assert.Equal(2, current.GetArrayLength());
+    }
+
     internal static async Task CurrentAndEvent()
     {
         var plugin = new DeepLinkPlugin(["app", "netwiv-test://initial/path"]);

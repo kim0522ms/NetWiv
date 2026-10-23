@@ -20,6 +20,8 @@ public sealed record RuntimeContext(
     Func<AssetRequest, ValueTask<AssetResponse?>>? ResolveUriScheme = null)
 {
     internal bool UsesDefaultAppIdentifier { get; init; }
+    /// <summary>Exits after the last window is closed or destroyed. Resident applications require DesktopRuntime.</summary>
+    public bool ExitOnLastWindowClose { get; init; } = true;
 
     /// <summary>Encoded PNG/ICO default icon, used when DefaultWindowIcon is unset.</summary>
     public ReadOnlyMemory<byte>? EncodedDefaultWindowIcon { get; init; }

@@ -32,6 +32,7 @@ public sealed partial class AppHandle : IDisposable
     private ILogger _ipcLogger = NullLogger.Instance;
     private ILogger _commandLogger = NullLogger.Instance;
     internal bool DebugAssertions { get; set; }
+    internal bool ExitOnLastWindowClose { get; set; } = true;
 
     internal AppHandle(
         IDesktopRuntime runtime,
@@ -292,6 +293,7 @@ public sealed partial class AppHandle : IDisposable
         _uriSchemeProtocols.Keys.ToArray(), ResolveUriSchemeAsync)
         {
             UsesDefaultAppIdentifier = string.Equals(Metadata.Identifier, AppMetadata.Default.Identifier, StringComparison.OrdinalIgnoreCase),
+            ExitOnLastWindowClose = ExitOnLastWindowClose,
             ApplyAssetPolicy = AssetResponsePolicy,
             EncodedDefaultWindowIcon = EncodedDefaultWindowIcon is { } icon ? new ReadOnlyMemory<byte>(icon) : (ReadOnlyMemory<byte>?)null
         };

@@ -26,7 +26,11 @@ pub(crate) struct RunConfig {
     pub uri_scheme_protocols: Vec<String>,
     #[serde(default)]
     pub track_webview_parents: bool,
+    #[serde(default = "default_exit_on_last_window_close")]
+    pub exit_on_last_window_close: bool,
 }
+
+fn default_exit_on_last_window_close() -> bool { true }
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -201,6 +205,19 @@ pub(crate) fn rid_arg(value: &Value) -> Result<u32, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn last_window_exit_defaults_to_true_and_accepts_explicit_opt_out() {
+        let value = serde_json::json!({"initializationScript":"", "windows":[]});
+        let config: RunConfig = serde_json::from_value(value.clone()).unwrap();
+        assert!(config.exit_on_last_window_close);
+        let mut value = value;
+        value["exitOnLastWindowClose"] = false.into();
+        let config: RunConfig = serde_json::from_value(value.clone()).unwrap();
+        assert!(!config.exit_on_last_window_close);
+        value["exitOnLastWindowClose"] = "false".into();
+        assert!(serde_json::from_value::<RunConfig>(value).is_err());
+    }
 
     #[test]
     fn windowless_config_still_validates_protocols() {

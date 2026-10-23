@@ -15,6 +15,7 @@ internal static class RuntimeJson
         writer.WriteBoolean("ipcProtocolEnabled", context.InvokeProtocol is not null &&
             context.UriSchemeProtocols?.Contains("ipc", StringComparer.Ordinal) != true);
         writer.WriteBoolean("trackWebviewParents", true);
+        writer.WriteBoolean("exitOnLastWindowClose", context.ExitOnLastWindowClose);
         writer.WriteString("localDataDirectory", context.LocalDataDirectory);
         writer.WriteString("appLocalDataDirectory", context.AppLocalDataDirectory);
         if (OperatingSystem.IsWindows())

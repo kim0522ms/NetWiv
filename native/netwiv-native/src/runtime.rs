@@ -211,6 +211,7 @@ struct LocalRuntime {
     ipc_protocol_enabled: bool,
     uri_scheme_protocols: Vec<String>,
     track_webview_parents: bool,
+    exit_on_last_window_close: bool,
     default_window_icon: Option<tao::window::Icon>,
     app_theme: Option<Theme>,
     app_menu: Option<muda::Menu>,
@@ -293,6 +294,7 @@ fn run_inner(shared: Arc<Shared>, config: RunConfig) -> Result<(), String> {
         ipc_protocol_enabled: config.ipc_protocol_enabled,
         uri_scheme_protocols: config.uri_scheme_protocols,
         track_webview_parents: config.track_webview_parents,
+        exit_on_last_window_close: config.exit_on_last_window_close,
         default_window_icon,
         app_theme: None,
         app_menu: None,
@@ -360,6 +362,10 @@ impl LocalRuntime {
         control_flow: &mut ControlFlow,
     ) -> Result<(), String> {
         match event {
+            Event::Opened { urls } => {
+                self.event("netwiv://opened", None, json!({"urls":urls.iter().map(|url| url.as_str()).collect::<Vec<_>>()}), "App");
+                Ok(())
+            }
             Event::Reopen { has_visible_windows, .. } => {
                 self.event("netwiv://reopen", None, json!({"hasVisibleWindows":has_visible_windows}), "App");
                 Ok(())
@@ -429,7 +435,7 @@ impl LocalRuntime {
                         );
                     }
                 }
-                if had_windows && self.windows.is_empty() {
+                if self.exit_on_last_window_close && had_windows && self.windows.is_empty() {
                     self.shutdown(control_flow);
                 }
                 Ok(())
@@ -499,7 +505,7 @@ impl LocalRuntime {
                 let prevent = self.shared.callback(CALLBACK_EVENT, 0, &json!({"eventName":"tauri://close-requested","label":label,"payload":null,"target":{"kind":"Window","label":label}}), &[]) == 1;
                 if !prevent {
                     let _ = self.remove_window(&label);
-                    if self.windows.is_empty() {
+                    if self.exit_on_last_window_close && self.windows.is_empty() {
                         self.shutdown(control_flow);
                     }
                 }

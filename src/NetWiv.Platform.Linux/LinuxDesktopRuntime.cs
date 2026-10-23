@@ -36,6 +36,7 @@ public sealed unsafe class LinuxDesktopRuntime : IDesktopRuntime
     public void Run(RuntimeContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
+        if (!context.ExitOnLastWindowClose) throw new NotSupportedException("Resident applications require DesktopRuntime.");
         if (context.AssetProtocolEnabled) throw new NotSupportedException("The scoped asset protocol requires DesktopRuntime.");
         if (context.Windows.Count == 0)
         {

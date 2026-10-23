@@ -115,6 +115,12 @@ internal static class MacOsReopenProbe
     }
 
     internal static int SendReopen(int processId)
+        => SendActivation(processId, opened: false);
+
+    internal static int SendOpened(int processId)
+        => SendActivation(processId, opened: true);
+
+    private static int SendActivation(int processId, bool opened)
     {
         if (!OperatingSystem.IsMacOS()) throw new PlatformNotSupportedException("This probe requires macOS.");
         var foundation = NativeLibrary.Load("/System/Library/Frameworks/Foundation.framework/Foundation");
@@ -126,8 +132,15 @@ internal static class MacOsReopenProbe
                 var type = GetClass("NSAppleEventDescriptor");
                 var target = ProcessDescriptor(type, Selector("descriptorWithProcessIdentifier:"), processId);
                 var descriptor = CreateEvent(type, Selector("appleEventWithEventClass:eventID:targetDescriptor:returnID:transactionID:"),
-                    0x61657674, 0x72617070, target, -1, 0); // 'aevt', 'rapp'
+                    opened ? 0x4755524cu : 0x61657674u, opened ? 0x4755524cu : 0x72617070u, target, -1, 0); // 'GURL'/'GURL' or 'aevt'/'rapp'
+                if (opened)
+                {
+                    var url = SendString(GetClass("NSString"), Selector("stringWithUTF8String:"), "netwiv-test://opened/path");
+                    var value = SendArgument(type, Selector("descriptorWithString:"), url);
+                    SetParameter(descriptor, Selector("setParamDescriptor:forKeyword:"), value, 0x2d2d2d2d); // '----'
+                }
                 SendEvent(descriptor, Selector("sendEventWithOptions:timeout:error:"), 1, 10, out var error);
+                if (error != 0) Console.Error.WriteLine($"AppleEvent send failed with error code {(long)Send(error, Selector("code"))}.");
                 return error == 0 ? 0 : 1;
             }
             finally { Send(pool, Selector("drain")); }
@@ -141,6 +154,12 @@ internal static class MacOsReopenProbe
     private static extern nint Selector(string name);
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
     private static extern nint Send(nint receiver, nint selector);
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern nint SendArgument(nint receiver, nint selector, nint argument);
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern nint SendString(nint receiver, nint selector, [MarshalAs(UnmanagedType.LPUTF8Str)] string argument);
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern void SetParameter(nint receiver, nint selector, nint descriptor, uint keyword);
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
     private static extern nint ProcessDescriptor(nint receiver, nint selector, int processId);
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]

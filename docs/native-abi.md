@@ -92,6 +92,11 @@ Callback kinds:
    and an `App` target. Its callback return value does not control AppKit's
    default behavior; Tao retains ownership of that delegate decision. Core
    invokes typed reopen handlers only for native delivery, not app/guest emits.
+   On macOS, `netwiv://opened` carries `{urls:[string,...]}`, a null label and an
+   `App` target for URL/file activation. Its return value is ignored. Typed
+   opened handlers likewise require native delivery. The `exitOnLastWindowClose`
+   run-config flag defaults to true; false retains the event loop after the
+   final close/destroy. Explicit exit is unaffected.
    With `trackWebviewParents`, `netwiv://webview-reparented` has the WebView label
    and `{windowLabel}` payload. Core consumes this adapter-only notification
    without emitting a guest or plugin event. It precedes operation completion.

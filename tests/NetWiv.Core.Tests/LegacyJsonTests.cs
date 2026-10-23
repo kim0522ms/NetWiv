@@ -16,9 +16,11 @@ internal static class LegacyJsonTests
                 return ValueTask.FromResult(JsonValue.From(request.Note ?? "(no note)"));
             }).Build();
         app.Run();
-        foreach (var json in new[] { "{\"id\":\"a\"}", "{\"id\":\"a\",\"note\":null}", "{\"id\":\"a\",\"note\":\"x\"}", "{\"id\":\"a\",\"optionalCount\":null}" })
+        foreach (var json in new[] { "{}", "{\"id\":null}", "{\"id\":\"a\"}", "{\"id\":\"a\",\"note\":null}", "{\"id\":\"a\",\"note\":\"x\"}", "{\"id\":\"a\",\"optionalCount\":null}" })
         {
             var expected = JsonSerializer.Deserialize(json, LegacyJson.Default.LegacyRequest)!;
+            var actual = CommandArgumentJson.Deserialize(JsonValue.Parse(json), LegacyJson.Default.LegacyRequest, "legacy_echo", "request", false);
+            Assert.Equal(JsonSerializer.Serialize(expected, LegacyJson.Default.LegacyRequest), JsonSerializer.Serialize(actual, LegacyJson.Default.LegacyRequest));
             var result = await app.Handle.InvokeAsync("legacy_echo", JsonValue.Parse("{\"request\":" + json + "}"));
             Assert.Equal(expected.Note ?? "(no note)", result.GetString());
         }
@@ -31,5 +33,19 @@ internal static class LegacyJsonTests
         Assert.Throws<InvokeException>(() => CommandArgumentJson.Deserialize(JsonValue.Parse("{}"), LegacyJson.Default.LegacyRequired, "legacy", "request", false));
         foreach (var json in new[] { "null", "{\"id\":\"a\",\"note\":42}", "{\"id\":\"a\",\"count\":null}" })
             Assert.Throws<InvokeException>(() => CommandArgumentJson.Deserialize(JsonValue.Parse(json), LegacyJson.Default.LegacyRequest, "legacy", "request", false));
+        foreach (var json in new[] {
+            """{"requiredNote":null}""",
+            """{"requiredNote":null,"request":null,"label":null,"values":null}""",
+            """{"requiredNote":"present","request":{"id":null},"values":["value"]}""" })
+        {
+            var expected = JsonSerializer.Deserialize(json, LegacyJson.Default.LegacyEnvelope)!;
+            var actual = CommandArgumentJson.Deserialize(JsonValue.Parse(json), LegacyJson.Default.LegacyEnvelope, "legacy", "envelope", false);
+            Assert.Equal(JsonSerializer.Serialize(expected, LegacyJson.Default.LegacyEnvelope), JsonSerializer.Serialize(actual, LegacyJson.Default.LegacyEnvelope));
+        }
+        foreach (var json in new[] { "{}", """{"requiredNote":null,"request":{"count":null}}""" })
+        {
+            Assert.Throws<JsonException>(() => JsonSerializer.Deserialize(json, LegacyJson.Default.LegacyEnvelope));
+            Assert.Throws<InvokeException>(() => CommandArgumentJson.Deserialize(JsonValue.Parse(json), LegacyJson.Default.LegacyEnvelope, "legacy", "envelope", false));
+        }
     }
 }

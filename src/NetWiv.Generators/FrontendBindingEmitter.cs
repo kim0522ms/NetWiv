@@ -36,11 +36,13 @@ internal sealed class FrontendBindingEmitter
     private readonly bool _stringEnums;
     private readonly int _numberHandling;
     private readonly bool _includeFields;
+    private readonly bool _legacyNullability;
     private readonly string _contextIdentity;
 
     private FrontendBindingEmitter(INamedTypeSymbol? context)
     {
         _contextIdentity = ContextIdentity(context);
+        _legacyNullability = IsLegacyNullabilityContext(context);
         var options = Attribute(context, "JsonSourceGenerationOptionsAttribute");
         if (options?.ConstructorArguments.FirstOrDefault().Value is { } defaults)
         {
@@ -376,13 +378,18 @@ internal sealed class FrontendBindingEmitter
                     throw new NotSupportedException(type.Name + " has colliding JSON property " + wireName);
                 }
                 var required = member is IPropertySymbol { IsRequired: true } or IFieldSymbol { IsRequired: true };
-                var optional = input ? !required && Attribute(member, "JsonRequiredAttribute") is null && !RequiresConstructorParameter(constructor, member)
+                var optional = input ? !required && Attribute(member, "JsonRequiredAttribute") is null &&
+                    (!RequiresConstructorParameter(constructor, member) || _legacyNullability && memberType.IsReferenceType)
                     : ignore is null && _defaultIgnoreCondition == 4 || ignoreCondition == 2 || ignoreCondition == 3 && (memberType.IsReferenceType || memberType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T);
                 var memberHandling = NumberHandling(member);
                 if (memberHandling is > 0 && !NumberHandlingApplies(memberType))
                     throw new NotSupportedException(type.Name + "." + member.Name + " applies number handling to a non-numeric property");
-                members.Add(wireName, "  " + Quote(wireName) + (optional ? "?: " : ": ") + (stringEnumMember ? StringEnum(enumType!) + (nullableEnum ? " | null" : "") :
-                    Type(memberType, input, numberHandling: memberHandling ?? NumberHandling(type))) + ";");
+                var memberTypeScript = stringEnumMember ? StringEnum(enumType!) + (nullableEnum ? " | null" : "") :
+                    Type(memberType, input, numberHandling: memberHandling ?? NumberHandling(type));
+                // Core permits null at a legacy object-member boundary when STJ 8 omitted setter nullability metadata.
+                if (input && _legacyNullability && memberType.IsReferenceType && memberType.NullableAnnotation == NullableAnnotation.NotAnnotated)
+                    memberTypeScript += " | null";
+                members.Add(wireName, "  " + Quote(wireName) + (optional ? "?: " : ": ") + memberTypeScript + ";");
                 selectedMembers.Add(wireName, member);
             }
         }
@@ -498,6 +505,17 @@ internal sealed class FrontendBindingEmitter
         var constructors = type.InstanceConstructors.Where(constructor => constructor.DeclaredAccessibility == Accessibility.Public).ToArray();
         return constructors.FirstOrDefault(constructor => constructor.Parameters.Length == 0)
             ?? (constructors.Length == 1 ? constructors[0] : null);
+    }
+
+    private static bool IsLegacyNullabilityContext(INamedTypeSymbol? context)
+    {
+        var generatedCode = context?.GetAttributes().FirstOrDefault(attribute =>
+            attribute.AttributeClass?.ToDisplayString() == "System.CodeDom.Compiler.GeneratedCodeAttribute");
+        if (generatedCode is null || generatedCode.ConstructorArguments.Length != 2 ||
+            generatedCode.ConstructorArguments[0].Value is not "System.Text.Json.SourceGeneration" ||
+            generatedCode.ConstructorArguments[1].Value is not string version)
+            return false;
+        return Version.TryParse(version, out var parsedVersion) && parsedVersion.Major < 9;
     }
 
     private static ITypeSymbol? JsonMemberType(ISymbol member) => member switch

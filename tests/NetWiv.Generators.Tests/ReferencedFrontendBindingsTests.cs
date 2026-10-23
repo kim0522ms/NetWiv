@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using NetWiv.Build.Frontend;
+using NetWiv.LegacyJsonFixture;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
@@ -47,6 +48,7 @@ public sealed class ReferencedFrontendBindingsTests
         Assert.Contains("invoke(\"plugin:catalog|item.fetch\", args, options)", bindings.JavaScript);
         Assert.Contains("\"app.external\"", bindings.TypeScript);
         Assert.Contains("\"display_name\": string;", bindings.TypeScript);
+        Assert.DoesNotContain("\"display_name\": string | null;", bindings.TypeScript);
         Assert.Contains("\"count\": number | string;", bindings.TypeScript);
         Assert.Contains("\"count\": string;", bindings.TypeScript);
         Assert.Contains("\"input_only\"?: string;", bindings.TypeScript);
@@ -57,6 +59,46 @@ public sealed class ReferencedFrontendBindingsTests
         var output = bindings.TypeScript.Split("export interface ItemOutput")[1].Split("}")[0];
         Assert.DoesNotContain("output_only", input);
         Assert.DoesNotContain("input_only", output);
+    }
+
+    [Fact]
+    public void Stj8ReferencedContextEmitsTheLegacyInputContract()
+    {
+        var fixture = MetadataReference.CreateFromFile(typeof(LegacyJson).Assembly.Location);
+        var producer = Generate("LegacyConsumer", """
+            using NetWiv;
+            using NetWiv.LegacyJsonFixture;
+            [assembly: GenerateFrontendBindings]
+            [assembly: CommandJsonContext(typeof(LegacyJson))]
+            public static class Commands {
+                [Command] public static LegacyRequest Echo(LegacyRequest value) => value;
+                [Command] public static LegacyRequired Required(LegacyRequired value) => value;
+                [Command] public static LegacyEnvelope Envelope(LegacyEnvelope value) => value;
+            }
+            """, fixture);
+        Assert.Empty(producer.Errors);
+
+        var types = Read(producer.Compilation).TypeScript;
+        var requestInput = types.Split("export interface LegacyRequestInput")[1].Split('}')[0];
+        var requestOutput = types.Split("export interface LegacyRequestOutput")[1].Split('}')[0];
+        var requiredInput = types.Split("export interface LegacyRequiredInput")[1].Split('}')[0];
+
+        Assert.Contains("\"id\"?: string | null", requestInput);
+        Assert.Contains("\"note\"?: string | null", requestInput);
+        Assert.Contains("\"id\": string", requestOutput);
+        Assert.Contains("\"note\": string | null", requestOutput);
+        Assert.Contains("\"note\": string | null", requiredInput);
+        Assert.DoesNotContain("\"note\"?:", requiredInput);
+        Assert.Contains("\"value\": LegacyRequestInput", types);
+        Assert.DoesNotContain("\"value\": LegacyRequestInput | null", types);
+        var envelopeInput = types.Split("export interface LegacyEnvelopeInput")[1].Split('}')[0];
+        var envelopeOutput = types.Split("export interface LegacyEnvelopeOutput")[1].Split('}')[0];
+        Assert.Contains("\"label\"?: string | null", envelopeInput);
+        Assert.Contains("\"request\"?: LegacyRequestInput | null", envelopeInput);
+        Assert.Contains("\"values\"?: Array<string> | null", envelopeInput);
+        Assert.Contains("\"requiredNote\": string | null", envelopeInput);
+        Assert.DoesNotContain("\"requiredNote\"?:", envelopeInput);
+        Assert.Contains("\"label\": string;", envelopeOutput);
     }
 
     [Fact]

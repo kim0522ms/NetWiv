@@ -110,6 +110,7 @@
       return
     }
 
+    const clientGeneration = event.data.__NETWIV_CLIENT_GENERATION__
     let data = event.data
 
     if (typeof window.__TAURI_ISOLATION_HOOK__ === 'function') {
@@ -123,6 +124,7 @@
     message.error = data.error
     message.options = data.options
     message.__NETWIV_JSON__ = data.__NETWIV_JSON__ === true
+    message.__NETWIV_CLIENT_GENERATION__ = clientGeneration
     message.payload = await encrypt(data.payload)
     sendMessage(message)
   }

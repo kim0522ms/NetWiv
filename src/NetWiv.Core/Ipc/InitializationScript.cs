@@ -17,6 +17,24 @@ internal static class InitializationScript
           {{(freezePrototype ? "Object.freeze(Object.prototype);" : string.Empty)}}
           const callbacks = new Map();
           const eventCallbacks = new Map();
+          const pendingInvocations = new Map();
+          let documentActive = true;
+          let clientGeneration = 0;
+          const documentHiddenError = () => {
+            const error = new Error('The originating document was hidden.');
+            error.name = 'AbortError';
+            return error;
+          };
+          window.addEventListener('pagehide', () => {
+            documentActive = false;
+            clientGeneration++;
+            const error = documentHiddenError();
+            for (const reject of pendingInvocations.values()) reject(error);
+            pendingInvocations.clear();
+            callbacks.clear();
+            eventCallbacks.clear();
+          });
+          window.addEventListener('pageshow', () => { documentActive = true; });
           const transformCallback = (callback, once = false) => {
             let id;
             do { id = crypto.getRandomValues(new Uint32Array(1))[0]; } while (callbacks.has(id));
@@ -41,11 +59,14 @@ internal static class InitializationScript
           };
           let protocolIpcFailed = false;
           const sendToNative = message => {
+            // Isolation can finish preparing a message after its document retired.
+            if (message.__NETWIV_CLIENT_GENERATION__ !== clientGeneration || !pendingInvocations.has(message.error)) return;
             let payload = message.payload;
             const binary = ArrayBuffer.isView(payload) || payload instanceof ArrayBuffer || Array.isArray(payload);
             // JSON text must stay opaque to JavaScript, including on protocol-enabled hosts.
             if (bridge.protocolIpc && !message.__NETWIV_JSON__) {
               if (!protocolIpcFailed) {
+                const generation = clientGeneration;
                 const headers = new Headers(message.options?.headers || {});
                 headers.set('Content-Type', binary ? 'application/octet-stream' : 'application/json');
                 headers.set('Tauri-Callback', message.callback);
@@ -59,7 +80,10 @@ internal static class InitializationScript
                   const value = type === 'application/json' ? await response.json() :
                     type === 'text/plain' ? await response.text() : await response.arrayBuffer();
                   return [callback, value];
-                }).then(([callback, value]) => runCallback(callback, value), error => {
+                }).then(([callback, value]) => {
+                  if (generation === clientGeneration) runCallback(callback, value);
+                }, error => {
+                  if (generation !== clientGeneration) return;
                   protocolIpcFailed = true;
                   // A lost response can follow successful native dispatch. Never
                   // replay this command; use the message transport for future calls.
@@ -86,14 +110,16 @@ internal static class InitializationScript
           let sendIpc = sendToNative;
           {{(isolationScheme is null ? string.Empty : IsolationPattern.TransportScript(isolationScheme))}}
           const invoke = (cmd, args = {}, options, json = false) => new Promise((resolve, reject) => {
+            if (!documentActive) { reject(documentHiddenError()); return; }
             let callback;
             let error;
-            callback = transformCallback(value => { callbacks.delete(error); resolve(value); }, true);
-            error = transformCallback(value => { callbacks.delete(callback); reject(value); }, true);
+            callback = transformCallback(value => { callbacks.delete(error); pendingInvocations.delete(error); resolve(value); }, true);
+            error = transformCallback(value => { callbacks.delete(callback); pendingInvocations.delete(error); reject(value); }, true);
+            pendingInvocations.set(error, reject);
             try {
-              sendIpc({ cmd, callback, error, payload: args, options, __NETWIV_JSON__: json });
+              sendIpc({ cmd, callback, error, payload: args, options, __NETWIV_JSON__: json, __NETWIV_CLIENT_GENERATION__: clientGeneration });
             } catch (exception) {
-              callbacks.delete(callback); callbacks.delete(error); reject(exception);
+              callbacks.delete(callback); callbacks.delete(error); pendingInvocations.delete(error); reject(exception);
             }
           });
           const internals = window.__TAURI_INTERNALS__ || {};

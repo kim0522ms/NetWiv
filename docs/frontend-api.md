@@ -36,6 +36,17 @@ duplicate side effects. Handle rejection explicitly and retry state-changing wor
 only with application-level idempotency or a status check. This is not a guarantee
 against retries initiated by application code.
 
+When the document receives `pagehide`, pending `invoke()` and `invokeJson()`
+calls reject with an error named `AbortError`. Their callbacks are removed;
+queued isolation messages and late preparation results cannot dispatch those calls.
+New calls also reject until `pageshow` resumes admission. This is a document
+lifetime policy; native origin, nonce and epoch checks still authorize delivery.
+Protocol completion and isolation preparation retain their original client
+generation, so a restored page cannot attribute retired work to a reused callback ID.
+This also applies when `pagehide` marks a page for the back/forward cache.
+Rejection does not undo native work that already started. These lifetime rules
+do not establish browser cache restoration support.
+
 ## Public modules
 
 Core modules: `app`, `core`, `dpi`, `event`, `image`, `menu`, `path`, `resources`,

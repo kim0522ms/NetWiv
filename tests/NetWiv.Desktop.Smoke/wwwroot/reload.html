@@ -1,18 +1,33 @@
 <!doctype html><html><head><meta charset="utf-8"><title>Reload probe</title></head><body>Reload probe
 <script type="module">
-import { invoke, Channel } from './core.js';
+import { invoke, invokeJson, Channel, SERIALIZE_TO_IPC_FN } from './core.js';
 try {
   const previous = sessionStorage.getItem('netwiv-old-callbacks');
   if (!previous) {
     const channel = new Channel();
-    void invoke('pending_reload', {channel});
+    // Keep this call pending through pagehide despite earlier browser fetch cancellation.
+    void invokeJson('pending_reload', JSON.stringify({channel: channel[SERIALIZE_TO_IPC_FN]()})).catch(error => {
+      sessionStorage.setItem('netwiv-pagehide-rejection', error?.name || String(error));
+    });
     // This smoke-only instrumentation observes whether any obsolete callback is
     // delivered. Application compatibility does not include private internals.
     const ids = [...window.__TAURI_INTERNALS__.callbacks.keys()];
     await invoke('reload_barrier');
+    window.addEventListener('pagehide', () => {
+      void invoke('echo', {input: 'retired'}).catch(error => {
+        sessionStorage.setItem('netwiv-late-pagehide-rejection', error?.name || String(error));
+      });
+      sessionStorage.setItem('netwiv-pagehide-callbacks', String(window.__TAURI_INTERNALS__.callbacks.size));
+    }, { once: true });
     sessionStorage.setItem('netwiv-old-callbacks', JSON.stringify(ids));
     location.reload();
   } else {
+    if (sessionStorage.getItem('netwiv-pagehide-rejection') !== 'AbortError') throw Error('pagehide pending rejection=' + sessionStorage.getItem('netwiv-pagehide-rejection') + ', late rejection=' + sessionStorage.getItem('netwiv-late-pagehide-rejection') + ', callbacks=' + sessionStorage.getItem('netwiv-pagehide-callbacks'));
+    if (sessionStorage.getItem('netwiv-late-pagehide-rejection') !== 'AbortError') throw Error('pagehide admitted a new invoke');
+    if (sessionStorage.getItem('netwiv-pagehide-callbacks') !== '0') throw Error('pagehide retained callbacks');
+    sessionStorage.removeItem('netwiv-pagehide-rejection');
+    sessionStorage.removeItem('netwiv-late-pagehide-rejection');
+    sessionStorage.removeItem('netwiv-pagehide-callbacks');
     const ids = new Set(JSON.parse(previous));
     const run = window.__TAURI_INTERNALS__.runCallback;
     let stale = false;

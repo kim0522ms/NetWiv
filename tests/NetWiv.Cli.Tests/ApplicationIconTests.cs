@@ -9,6 +9,7 @@ internal static class ApplicationIconTests
     {
         var repository = Directory.GetCurrentDirectory();
         var configuration = typeof(ApplicationIconTests).Assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()!.Configuration;
+        var framework = $"net{Environment.Version.Major}.0";
         var root = Directory.CreateTempSubdirectory("netwiv-icon-build-").FullName;
         try
         {
@@ -18,9 +19,9 @@ internal static class ApplicationIconTests
             var config = Path.Combine(root, "effective.json");
             var project = Path.Combine(root, "IconProbe.csproj");
             new XDocument(new XElement("Project", new XAttribute("Sdk", "Microsoft.NET.Sdk"),
-                new XElement("PropertyGroup", new XElement("OutputType", "Exe"), new XElement("TargetFramework", "net8.0"),
-                    new XElement("NetWivConfigPath", config), new XElement("NetWivResourceBaseDirectory", icons),
-                    new XElement("_NetWivBindingsTaskAssembly", Path.Combine(repository, "src/NetWiv.Build.Tasks/bin", configuration, "net8.0/NetWiv.Build.Tasks.dll"))),
+                new XElement("PropertyGroup", new XElement("OutputType", "Exe"), new XElement("TargetFramework", framework),
+                    new XElement("Configuration", configuration),
+                    new XElement("NetWivConfigPath", config), new XElement("NetWivResourceBaseDirectory", icons)),
                 new XElement("Import", new XAttribute("Project", Path.Combine(repository, "src/NetWiv.Build/buildTransitive/NetWiv.Build.targets")))))
                 .Save(project);
             File.WriteAllText(Path.Combine(root, "Program.cs"), """
@@ -38,8 +39,9 @@ internal static class ApplicationIconTests
             })
             {
                 File.WriteAllText(config, json);
-                var result = await Run("msbuild", project, "-nologo", "-t:NetWivResolveApplicationIcon", "-getProperty:ApplicationIcon", "-getItem:EmbeddedResource");
+                var result = await Run("msbuild", project, "-nologo", "-t:NetWivResolveApplicationIcon", "-getProperty:ApplicationIcon,Configuration", "-getItem:EmbeddedResource");
                 var values = JsonNode.Parse(result.StandardOutput)!;
+                Check(values["Properties"]!["Configuration"]!.GetValue<string>() == configuration, "Icon probe used a different build configuration from the test harness.");
                 var embedded = values["Items"]!["EmbeddedResource"]!.AsArray()
                     .Where(item => item?["LogicalName"]?.GetValue<string>() == "netwiv.default-icon").ToArray();
                 Check(runtime.Length == 0 ? embedded.Length == 0 : embedded.Length == 1 &&
@@ -50,12 +52,13 @@ internal static class ApplicationIconTests
             var overridden = await Run("msbuild", project, "-nologo", "-t:NetWivResolveApplicationIcon", "-p:ApplicationIcon=custom.ico", "-getProperty:ApplicationIcon");
             Check(overridden.StandardOutput.Trim() == "custom.ico", "Explicit ApplicationIcon was overwritten.");
             await Run("build", project, "-nologo", "-v:q");
-            var executed = await Run(Path.Combine(root, "bin/Debug/net8.0/IconProbe.dll"));
+            var probe = Path.Combine(root, "bin", configuration, framework, "IconProbe.dll");
+            var executed = await Run(probe);
             var expected = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(Path.Combine(icons, "icon.png"))));
             Check(executed.StandardOutput.Trim() == expected, "Compiled resource differs from the configured icon.");
             File.WriteAllText(config, "{}");
             await Run("build", project, "-nologo", "-v:q");
-            Check((await Run(Path.Combine(root, "bin/Debug/net8.0/IconProbe.dll"))).StandardOutput.Trim() == "none", "Incremental build retained a removed icon.");
+            Check((await Run(probe)).StandardOutput.Trim() == "none", "Incremental build retained a removed icon.");
             File.WriteAllText(config, """{"bundle":{"icon":["missing.png"]}}""");
             var missing = await ProcessRunner.RunAsync(new("dotnet", ["msbuild", project, "-nologo", "-t:NetWivResolveApplicationIcon"], root, CaptureOutput: true));
             Check(missing.ExitCode != 0 && missing.StandardOutput.Contains("Configured application icon is missing.", StringComparison.Ordinal), "Missing icon was silently ignored.");

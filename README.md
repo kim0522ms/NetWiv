@@ -173,6 +173,13 @@ For Razor UI development and deployment, see the optional desktop
 [Blazor Hybrid host](docs/blazor-hybrid.md). Managed Hybrid is the default; experimental NativeAOT requires explicit opt-in.
 Its shared UI can also run in WebAssembly.
 
+Managed Hybrid development restarts the app after watched C#/Razor changes;
+component Hot Reload is not promised. Standard Razor library assets use the
+Razor SDK's build and publish pipeline. For background desktop applications, see
+[resident lifetime and cooperative quit](docs/application-lifetime.md).
+[Bundled sidecars](docs/bundle-resources.md) can be staged by the CLI and invoked
+through separately scoped Shell plugin permissions.
+
 ## Current status
 
 Desktop targets are **Windows x64**, **Linux x64 on Ubuntu 24.04 / WSLg**, and

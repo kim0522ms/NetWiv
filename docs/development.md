@@ -280,8 +280,11 @@ By default local template tests cover the full matrix. Set
 unknown values fail. Use separate checkouts to measure concurrent groups.
 Report the measured command scope, cold/warm cache distinction and excluded
 steps. A local parallel replay is not GitHub runner throughput or queue time.
-Do not run the Windows installer acceptance script on a normal working machine;
-it temporarily changes system runtime registration. No benchmark reports,
+The default Windows installer acceptance mode and `-AllowLocalMachine` temporarily
+change runtime registration; use a dedicated validation machine for those modes.
+The bounded, non-elevated `-CurrentUserOnly` mode leaves runtime registration
+unchanged; see [its prerequisites and limits](windows-installers.md).
+No benchmark reports,
 environment inventories or measurement helpers belong in the repository or CI.
 
 The existing desktop-only ignored Rust test and optional external MIME corpus

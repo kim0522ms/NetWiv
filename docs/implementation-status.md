@@ -28,12 +28,12 @@ framework-maintainer task. See [native architecture](native-architecture.md).
 
 | Area | Available behavior | Limits |
 | --- | --- | --- |
-| C# SDK | Commands, state, events, channels, windows, WebViews and managed resources. | Applications must follow cancellation, concurrency and ownership contracts. |
+| C# SDK | Commands, state, events, channels, windows, WebViews and managed resources; opt-in resident lifetime, cooperative save/quit and native macOS URL activation. | Applications must follow cancellation, concurrency and ownership contracts. Cooperative exit does not intercept OS shutdown or force quit. See [application lifetime](application-lifetime.md). |
 | Frontend SDK | Desktop `@netwiv/api` modules, initially delegating to pinned official Tauri code. New bindings and starters use this facade. | Mobile APIs are excluded. Independent frontend transport is not implemented; direct upstream guests are no longer a supported entry point; plugin guests use `/plugins/*`. See [frontend SDK](frontend-api.md). |
 | Frontend bindings | Generated JS calls and TS declarations from local and opted-in referenced C# commands and supported JSON metadata. | Explicit tagged polymorphic roots and sealed variants are supported; custom converters, fallback polymorphism and other advanced JSON mappings remain incomplete. Referenced producers need compatible generated metadata; arbitrary dependency discovery is not supported. |
 | Project creation | Six starters through `netwiv new`: React, Vue, Svelte and Angular with TypeScript, Blazor WebAssembly, and Blazor Hybrid; a matching local CLI manifest and SDK references. | Template availability does not establish GUI acceptance for every frontend/toolchain combination. See [Hybrid platform validation](blazor-hybrid.md#validation-boundary). |
 | Blazor Hybrid | Optional `NetWiv.BlazorHybrid` has matching .NET 8/9/10 assets and defaults to managed Razor hosting through Microsoft's WebView services on Windows x64, Linux x64 and macOS arm64. Selected managed/experimental NativeAOT native checks passed on physical Windows/macOS and Linux under WSLg on X11 and native Wayland. | Physical Linux, minimum-macOS, Rider/Visual Studio UI acceptance and arbitrary Razor-library compatibility remain unverified. The separately opted-in NativeAOT host is experimental, requires static registrations and retains upstream AOT warnings. See [Hybrid support and limitations](blazor-hybrid.md). |
-| Development | Frontend updates and C# binding regeneration with backend restart. | Rider and Visual Studio solution loading/debugging require further interactive validation. |
+| Development | Frontend updates and C# binding regeneration with backend restart. Managed Hybrid watches shared C#/Razor sources and uses full process restart; generated Blazor solutions include the real frontend build graph. | Component Hot Reload is not promised. Rider and Visual Studio solution loading/debugging require further interactive validation. |
 | NativeAOT | Release publication for Windows/Linux x64 and macOS arm64. | Successful compilation alone does not verify a working desktop session. |
 | Plugins | Managed packages for 24 desktop plugin areas. | Individual commands, permissions and platform behavior remain partial; the updater runtime is excluded from project scope. |
 
@@ -41,6 +41,29 @@ Use the [C# contract](csharp-api.md), [binding contract](frontend-generator.md),
 [API status table](api-status.md) and [plugin guide](official-plugins.md)
 for feature-specific details. API implementation and comparison coverage are
 separate measurements; declaration counts are not completion percentages.
+
+Managed Hybrid has focused Router, EditForm, JS module and scoped-disposal
+checks using a separate Razor library and the standard static-asset pipeline.
+Selected Windows .NET 8/9/10, macOS .NET 8 and virtual-X11 Linux .NET 8 runs
+passed, as did a generated Windows app using a packed Razor library. This does
+not establish arbitrary Razor-library compatibility or debugger acceptance;
+experimental NativeAOT retains its separate limits.
+Fresh packaged Blazor WebAssembly checks build and rebuild Debug/Release,
+regenerate a renamed command and shared DTO, and execute managed/NativeAOT
+backend publications. SDK fingerprinted bootstrap assets are checked as part of
+the published output.
+
+On physical macOS, managed and NativeAOT app bundles passed URL-scheme launch
+through LaunchServices, subsequent running/resident activation, window recreation,
+shutdown completion and cleanup of their own registrations. The fixture uses a
+fresh application directory and unique schemes. File associations, Finder/Dock
+interaction and general installed-app lifecycle remain separate acceptance work.
+
+Windows default WebView storage uses an application identity beneath local app
+data instead of the executable directory. Explicit data directories retain their
+behavior; unconfigured default identities are isolated by entry assembly and
+location. Existing profiles are not automatically migrated. See [deployment](deployment.md).
+
 The [core reclassification](api-status.md#implementation-decisions-and-validation-backlog)
 separates execution paths, declarations, mobile-only gaps and intentional
 differences. Existing macOS adapters with pending GUI checks are not classified
@@ -139,6 +162,18 @@ Packaging requires the corresponding platform tools. Distribute the complete
 publish output, including native DLL/SO/dylib files and required license notices.
 Installed applications do not need Node.js, Vite or the .NET SDK.
 
+`bundle.externalBin` stages target-specific helpers for development and package
+payloads. Scoped Shell sidecar execution is separate from ordinary command
+permissions. macOS places executable helpers in `Contents/MacOS` and generates
+configured URL schemes in `Info.plist`. Payload generation, signing and helper
+execution do not establish install/upgrade/uninstall acceptance for every format.
+See [bundle resources](bundle-resources.md) and [application lifetime](application-lifetime.md).
+
+Selected non-elevated Windows NSIS/MSI checks passed install, shortcut execution,
+upgrade, relocation, uninstall and unrelated-data preservation. They used an
+existing WebView2 runtime and do not establish clean-machine prerequisite setup
+or per-machine installation acceptance for these changes.
+
 Focused integration checks have exercised package-only NativeAOT React apps on
 Windows and Linux X11, and Windows NSIS/MSI installation, execution and removal.
 Apple Silicon checks additionally exercised source-built NativeAOT WKWebView and
@@ -181,7 +216,11 @@ only. Direct upstream imports and private internals are outside the supported
 public API surface. Deliberate C# differences are documented separately.
 
 IPC authorization, document/resource ownership, isolation and remote URL patterns
-have implementation and focused tests. Complete coverage across arguments,
+have implementation and focused tests. Frontend calls still pending at page hide
+are rejected and their callbacks retired; late protocol responses and asynchronous
+isolation preparation cannot settle a later document generation's calls. A browser
+transport may fail before page hide, so this is not a guarantee that every
+navigation-related failure has the same error type. Complete coverage across arguments,
 errors, permissions, origins and lifecycle transitions remains incomplete.
 Consult [`implementation-evidence.json`](../compatibility/implementation-evidence.json)
 and [upstream test coverage](upstream-business-tests.md) for the reviewed scope.

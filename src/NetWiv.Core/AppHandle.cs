@@ -262,6 +262,7 @@ public sealed partial class AppHandle : IDisposable
             }
             SynchronizeWindowRegistry(runtimeEvent);
             PublishNativeEvent(runtimeEvent);
+            if (_disposed) return;
             foreach (var plugin in _plugins) plugin.OnEvent(this, runtimeEvent);
             var target = runtimeEvent.Target ?? (runtimeEvent.Label is null ? RuntimeEventTarget.Any : new("AnyLabel", runtimeEvent.Label));
             if (target.Kind == "Window" && runtimeEvent.EventName is

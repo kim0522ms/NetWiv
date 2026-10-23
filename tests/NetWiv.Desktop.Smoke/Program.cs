@@ -43,6 +43,8 @@ internal static class Program
         if (args is ["--origin-probe-smoke"]) { OriginProbe.CheckIdleConnectionAsync().GetAwaiter().GetResult(); return 0; }
         if (args is ["--no-window-smoke"]) return CheckNoWindows();
         if (args is ["--default-icon-smoke"]) return DefaultIconSmoke.Run();
+        if (args is ["--reopen-smoke"]) return MacOsReopenProbe.Run();
+        if (args is ["--send-reopen-event", var processId]) return MacOsReopenProbe.SendReopen(int.Parse(processId, System.Globalization.CultureInfo.InvariantCulture));
         if (args.Length != 0) throw new ArgumentException("Unknown smoke-test arguments.");
         using var probe = new OriginProbe();
         using var asset = new SmokeAsset();

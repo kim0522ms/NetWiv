@@ -33,6 +33,61 @@ native backend locally and use project references to the SDK, then publish with
 This architecture retirement does not change the macOS 12 deployment minimum
 for the supported arm64 target.
 
+## Reopening a resident application
+
+`Builder.OnReopen`, `App.OnReopen` and `AppHandle.OnReopen` receive macOS
+Dock/Finder requests to reopen a running application. The native backend forwards
+Tao's existing notification; no Objective-C delegate replacement is needed.
+Other platforms do not raise this notification. Both synchronous and `Task`-returning
+handlers are supported. For a single-window app that hides instead of quitting:
+
+```csharp
+using var app = new Builder()
+    .UseRuntime(new NetWiv.Platform.Desktop.DesktopRuntime())
+    .UseEmbeddedAssets()
+    .Window("main", "My app", "index.html")
+    .Setup(app => app.GetWindow("main")!.OnCloseRequested(async request =>
+    {
+        request.PreventDefault();
+        await app.GetWindow("main")!.HideAsync();
+    }))
+    .OnReopen(async (app, notification) =>
+    {
+        if (app.GetWindow("main") is not { } window) return;
+        await window.ShowAsync();
+        await window.UnminimizeAsync();
+        await window.SetFocusAsync();
+    })
+    .Build();
+app.Run();
+```
+
+`ReopenEvent.HasVisibleWindows` is AppKit's value, not a NetWiv visibility query.
+Minimized windows count as visible, so the example restores its main window on
+every request instead of using that flag as a universal restoration condition.
+Multi-window apps can use it to choose their own policy. NetWiv does not select
+or restore a window automatically. Destroying the last window still exits the
+runtime; this hook does not add a windowless keep-alive policy or single-instance
+forwarding for independently launched processes.
+
+Handlers start on the native event-loop thread. Await window operations rather
+than blocking with `.Wait()` or `.Result`. Async invocations may overlap, and
+started tasks are not automatically cancelled or awaited on shutdown. Applications
+must manage any longer-lived work. Synchronous and asynchronous failures are
+reported through `AppHandle.EventHandlerFailed` (standard error if unsubscribed).
+Disposal removes registrations and prevents subsequent handlers from starting.
+
+The underlying app-targeted notification is `netwiv://reopen`, with payload
+`{"hasVisibleWindows":false}` or `true`. General event listeners may observe it,
+but application/guest emission of that name cannot invoke the typed `OnReopen`
+handlers. Use the typed hook when native origin matters.
+
+The desktop smoke host's `--reopen-smoke` mode launches a sender child to deliver
+a reopen AppleEvent to the test app and checks close prevention, hidden/visible/
+minimized payloads, repeat delivery and application-controlled restoration. This
+exercises AppKit/Tao delivery but does not establish manual Dock click or Finder
+acceptance. Run it in both managed and NativeAOT builds.
+
 ## Framework source build
 
 From the repository root:

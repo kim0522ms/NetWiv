@@ -43,6 +43,10 @@ public sealed partial class App : IDisposable
     public bool Unmanage<T>([System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out T value) where T : notnull => Handle.Unmanage(out value);
     public void OnMenuEvent(Action<AppHandle, MenuEvent> handler) => Handle.OnMenuEvent(handler);
     public void OnTrayIconEvent(Action<AppHandle, TrayIconEvent> handler) => Handle.OnTrayIconEvent(handler);
+    /// <inheritdoc cref="AppHandle.OnReopen(Func{AppHandle, ReopenEvent, Task})"/>
+    public void OnReopen(Func<AppHandle, ReopenEvent, Task> handler) => Handle.OnReopen(handler);
+    /// <inheritdoc cref="AppHandle.OnReopen(Func{AppHandle, ReopenEvent, Task})"/>
+    public void OnReopen(Action<AppHandle, ReopenEvent> handler) => Handle.OnReopen(handler);
 
     public void Run()
     {

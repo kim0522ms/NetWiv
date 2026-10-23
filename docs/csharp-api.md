@@ -241,6 +241,16 @@ named guest event does not invoke these native-only hooks. Menu IDs retain the
 application-supplied identifier. Tray positions retain fractional native
 coordinates.
 
+`Builder.OnReopen`, `App.OnReopen` and `AppHandle.OnReopen` accept synchronous
+or `Task`-returning handlers for macOS Dock/Finder reopen notifications.
+`ReopenEvent.HasVisibleWindows` comes from AppKit and includes minimized windows.
+These native-only hooks do not restore a window automatically or extend process
+lifetime after the last window is destroyed. Handlers start on the event-loop
+thread and must not block it; asynchronous handlers may overlap and their errors
+use `AppHandle.EventHandlerFailed`. Registrations last until app disposal; already
+started tasks are not automatically cancelled or awaited. See the
+[resident app example](macos.md#reopening-a-resident-application).
+
 `Window.OnCloseRequested` accepts synchronous or asynchronous handlers. Native
 closing is deferred while subscribed; the handler may call `PreventDefault`.
 After a successful handler completes, the SDK destroys the window unless

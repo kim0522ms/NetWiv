@@ -5,11 +5,33 @@ namespace NetWiv;
 
 public sealed record MenuEvent(string Id);
 
+/// <summary>A macOS request to reopen the running application.</summary>
+/// <param name="HasVisibleWindows">The value reported by AppKit; minimized windows also count as visible.</param>
+public sealed record ReopenEvent(bool HasVisibleWindows);
+
 public sealed partial class AppHandle
 {
     private readonly object _nativeEventGate = new();
     private readonly List<Action<AppHandle, MenuEvent>> _menuEventHandlers = [];
     private readonly List<Action<AppHandle, TrayIconEvent>> _trayEventHandlers = [];
+    private readonly List<Func<AppHandle, ReopenEvent, Task>> _reopenHandlers = [];
+
+    /// <summary>Handles macOS Dock/Finder reopen requests. Other platforms do not raise this event.</summary>
+    /// <remarks>No window is restored automatically. Handlers start on the event-loop thread and must not
+    /// block it. Async handlers may overlap; failures are reported through EventHandlerFailed.
+    /// Application-emitted events with the same name do not invoke these handlers.</remarks>
+    public void OnReopen(Func<AppHandle, ReopenEvent, Task> handler)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        lock (_nativeEventGate) { ObjectDisposedException.ThrowIf(_disposed, this); _reopenHandlers.Add(handler); }
+    }
+
+    /// <inheritdoc cref="OnReopen(Func{AppHandle, ReopenEvent, Task})"/>
+    public void OnReopen(Action<AppHandle, ReopenEvent> handler)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        OnReopen((app, value) => { handler(app, value); return Task.CompletedTask; });
+    }
 
     public void OnMenuEvent(Action<AppHandle, MenuEvent> handler)
     {
@@ -26,7 +48,19 @@ public sealed partial class AppHandle
     private void PublishNativeEvent(RuntimeEvent value)
     {
         if (_disposed) return;
-        if (value.EventName == "menu-action")
+        if (value.EventName == "netwiv://reopen")
+        {
+            var reopen = new ReopenEvent(value.Payload.GetProperty("hasVisibleWindows").GetBoolean());
+            Func<AppHandle, ReopenEvent, Task>[] handlers;
+            lock (_nativeEventGate) handlers = _reopenHandlers.ToArray();
+            var notification = new AppEvent(0, value.EventName, null, value.Payload);
+            foreach (var handler in handlers)
+            {
+                if (_disposed) return;
+                RunEventHandler(notification, () => handler(this, reopen));
+            }
+        }
+        else if (value.EventName == "menu-action")
         {
             var menuEvent = new MenuEvent(value.Payload.GetProperty("id").GetString()!);
             Action<AppHandle, MenuEvent>[] handlers;
@@ -75,6 +109,6 @@ public sealed partial class AppHandle
 
     private void ClearNativeEventHandlers()
     {
-        lock (_nativeEventGate) { _menuEventHandlers.Clear(); _trayEventHandlers.Clear(); }
+        lock (_nativeEventGate) { _menuEventHandlers.Clear(); _trayEventHandlers.Clear(); _reopenHandlers.Clear(); }
     }
 }

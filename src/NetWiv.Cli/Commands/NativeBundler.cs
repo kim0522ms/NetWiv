@@ -36,7 +36,7 @@ internal static partial class NativeBundler
         {
             var artifact = format switch
             {
-                "app" => await BuildMacAppAsync(config, publishDirectory, binary, noSign, cancellationToken),
+                "app" => await BuildMacAppAsync(config, publishDirectory, binary, noSign, cancellationToken, target: target),
                 "dmg" => await BuildDmgAsync(config, target, publishDirectory, binary, noSign, cancellationToken),
                 "app-store" => await BuildMacAppStoreAsync(config, target, publishDirectory, binary, noSign, cancellationToken),
                 "nsis" => await BuildNsisAsync(config, publishDirectory, binary, noSign, cancellationToken),
@@ -85,8 +85,12 @@ internal static partial class NativeBundler
         var script = Path.Combine(directory, "installer.nsi");
         var payload = FreshStaging(directory, "payload");
         CopyTree(publishDirectory, payload);
+        var sidecars = ExternalBinaryStager.Resolve(config, BuildTarget.Resolve("win-x64"), Path.GetFileName(binary));
+        ExternalBinaryStager.Stage(sidecars, payload);
         PatchBundleType(Path.Combine(payload, Path.GetRelativePath(publishDirectory, binary)), "NSS");
         if (!noSign) await SignWindowsAsync(config, Path.Combine(payload, Path.GetRelativePath(publishDirectory, binary)), cancellationToken);
+        if (!noSign)
+            foreach (var sidecar in sidecars) await SignWindowsAsync(config, Path.Combine(payload, sidecar.DestinationName), cancellationToken);
         File.WriteAllText(script, RenderNsis(config, payload, Path.GetFileName(binary), output), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
         await RequireSuccess(tool, ["/V2", script], directory, cancellationToken);
         return RequireArtifact(output);
@@ -105,8 +109,12 @@ internal static partial class NativeBundler
         var output = Path.Combine(directory, $"{SafeName(product)}_{version}_x64_en-US.msi");
         var payload = FreshStaging(directory, "payload");
         CopyTree(publishDirectory, payload);
+        var sidecars = ExternalBinaryStager.Resolve(config, BuildTarget.Resolve("win-x64"), Path.GetFileName(binary));
+        ExternalBinaryStager.Stage(sidecars, payload);
         PatchBundleType(Path.Combine(payload, Path.GetRelativePath(publishDirectory, binary)), "MSI");
         if (!noSign) await SignWindowsAsync(config, Path.Combine(payload, Path.GetRelativePath(publishDirectory, binary)), cancellationToken);
+        if (!noSign)
+            foreach (var sidecar in sidecars) await SignWindowsAsync(config, Path.Combine(payload, sidecar.DestinationName), cancellationToken);
         File.WriteAllText(wxs, RenderMsi(config, payload, Path.GetFileName(binary)));
         await RequireSuccess(candle, ["-nologo", "-arch", "x64", "-out", wixobj, wxs], directory, cancellationToken);
         // WixUI's built-in en-US localization otherwise overrides Product.Codepage with 1252.
@@ -134,6 +142,8 @@ internal static partial class NativeBundler
             var root = Path.Combine(staging, "root"); Directory.CreateDirectory(root);
             var appDir = Path.Combine(root, "usr", "lib", product);
             CopyTree(publishDirectory, appDir);
+            var sidecars = ExternalBinaryStager.Resolve(config, BuildTarget.Resolve("linux-x64"), Path.GetFileName(binary));
+            ExternalBinaryStager.Stage(sidecars, appDir);
             var appBinary = Path.Combine(appDir, Path.GetRelativePath(publishDirectory, binary));
             PatchBundleType(appBinary, "DEB");
             var binDir = Path.Combine(root, "usr", "bin"); Directory.CreateDirectory(binDir);
@@ -144,7 +154,7 @@ internal static partial class NativeBundler
             InstallLinuxIcon(config, root, product);
             var debian = Path.Combine(root, "DEBIAN"); Directory.CreateDirectory(debian);
             File.WriteAllText(Path.Combine(debian, "control"), $"Package: {product}\nVersion: {version}\nArchitecture: amd64\nMaintainer: {Publisher(config)}\nDepends: libwebkit2gtk-4.1-0, libgtk-3-0\nDescription: {Description(config)}\n");
-            NormalizeUnixTree(root, appBinary, launcher);
+            NormalizeUnixTree(root, [appBinary, launcher, .. sidecars.Select(sidecar => Path.Combine(appDir, sidecar.DestinationName))]);
             await RequireSuccess(tool, ["--root-owner-group", "--build", root, output], directory, cancellationToken);
             return RequireArtifact(output);
         }
@@ -164,13 +174,15 @@ internal static partial class NativeBundler
             var top = Path.Combine(staging, "rpmbuild");
             foreach (var item in new[] { "BUILD", "BUILDROOT", "RPMS", "SOURCES", "SPECS", "SRPMS" }) Directory.CreateDirectory(Path.Combine(top, item));
             var source = Path.Combine(top, "SOURCES", product); CopyTree(publishDirectory, source);
+            var sidecars = ExternalBinaryStager.Resolve(config, BuildTarget.Resolve("linux-x64"), Path.GetFileName(binary));
+            ExternalBinaryStager.Stage(sidecars, source);
             var appBinary = Path.Combine(source, Path.GetRelativePath(publishDirectory, binary));
             PatchBundleType(appBinary, "RPM");
             File.WriteAllText(Path.Combine(source, product + ".desktop"), DesktopEntry(config, product));
             var rpmIcon = ResolveIcon(config);
             var rpmIconName = rpmIcon is null ? null : product + Path.GetExtension(rpmIcon);
             if (rpmIcon is not null) File.Copy(rpmIcon, Path.Combine(source, rpmIconName!), true);
-            NormalizeUnixTree(source, appBinary);
+            NormalizeUnixTree(source, [appBinary, .. sidecars.Select(sidecar => Path.Combine(source, sidecar.DestinationName))]);
             var rpmIconInstall = rpmIconName is null ? string.Empty : $"mkdir -p $RPM_BUILD_ROOT/usr/share/icons/hicolor/scalable/apps\ncp \"{source}/{rpmIconName}\" $RPM_BUILD_ROOT/usr/share/icons/hicolor/scalable/apps/{rpmIconName}";
             var rpmIconFiles = rpmIconName is null ? string.Empty : $"/usr/share/icons/hicolor/scalable/apps/{rpmIconName}";
             var spec = Path.Combine(top, "SPECS", product + ".spec");
@@ -224,6 +236,8 @@ cp "{source}/{product}.desktop" $RPM_BUILD_ROOT/usr/share/applications/{product}
         {
             var root = Path.Combine(staging, product + ".AppDir"); Directory.CreateDirectory(root);
             var appDir = Path.Combine(root, "usr", "lib", product); CopyTree(publishDirectory, appDir);
+            var sidecars = ExternalBinaryStager.Resolve(config, BuildTarget.Resolve("linux-x64"), Path.GetFileName(binary));
+            ExternalBinaryStager.Stage(sidecars, appDir);
             var appBinary = Path.Combine(appDir, Path.GetRelativePath(publishDirectory, binary));
             PatchBundleType(appBinary, "APP");
             var binDir = Path.Combine(root, "usr", "bin"); Directory.CreateDirectory(binDir);
@@ -235,7 +249,7 @@ cp "{source}/{product}.desktop" $RPM_BUILD_ROOT/usr/share/applications/{product}
             File.WriteAllText(Path.Combine(root, product + ".desktop"), DesktopEntry(config, launcherName));
             var icon = ResolveIcon(config) ?? throw new NetWivConfigException("AppImage bundling requires bundle.icon to contain an existing desktop icon.");
             File.Copy(icon, Path.Combine(root, launcherName + Path.GetExtension(icon)), true);
-            NormalizeUnixTree(root, appBinary, appRun, launcher);
+            NormalizeUnixTree(root, [appBinary, appRun, launcher, .. sidecars.Select(sidecar => Path.Combine(appDir, sidecar.DestinationName))]);
             await RequireSuccess(tool, ["--runtime-file", runtime, root, output], directory, cancellationToken);
             return RequireArtifact(output);
         }

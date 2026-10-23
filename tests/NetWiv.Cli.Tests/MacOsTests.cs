@@ -84,6 +84,11 @@ internal static class MacOsTests
             var binary = Path.Combine(publish, "App");
             await Run("/usr/bin/cc", [source, "-o", binary], root);
             await Run("/usr/bin/cc", ["-dynamiclib", source, "-o", Path.Combine(publish, "libfixture.dylib")], root);
+            var sidecarSource = Path.Combine(root, "helper.c");
+            File.WriteAllText(sidecarSource, "#include <stdio.h>\nint main(void) { puts(\"helper fixture\"); return 0; }\n");
+            var helper = Path.Combine(root, "helper-" + (BuildTarget.Resolve(null).Architecture == "aarch64" ? "aarch64" : "x86_64") + "-apple-darwin");
+            await Run("/usr/bin/cc", [sidecarSource, "-o", helper], root);
+            config.Root["bundle"]!["externalBin"] = new JsonArray("helper");
             var original = File.ReadAllBytes(binary);
             var app = await NativeBundler.BuildMacAppAsync(config, publish, binary, true, CancellationToken.None);
             Check(original.SequenceEqual(File.ReadAllBytes(binary)));
@@ -97,6 +102,9 @@ internal static class MacOsTests
             await Run("/usr/bin/plutil", ["-lint", Path.Combine(app, "Contents/Info.plist")], root);
             var executed = await Run(Path.Combine(app, "Contents/MacOS/App"), [], root);
             Check(executed.Contains("__NETWIV_BUNDLE_TYPE_VAR_MAC", StringComparison.Ordinal));
+            Check(!File.Exists(Path.Combine(app, "Contents/Resources/helper")));
+            Check((await Run(Path.Combine(app, "Contents/MacOS/helper"), [], root)).Contains("helper fixture", StringComparison.Ordinal));
+            await Run("/usr/bin/codesign", ["--verify", "--strict", Path.Combine(app, "Contents/MacOS/helper")], root);
             await NativeBundler.BundleAsync(config, BuildTarget.Resolve(null), publish, "dmg", true, TextWriter.Null, CancellationToken.None);
             var dmg = Directory.GetFiles(Path.Combine(publish, "bundle/dmg"), "*.dmg").Single();
             await Run("/usr/bin/hdiutil", ["verify", dmg], root);

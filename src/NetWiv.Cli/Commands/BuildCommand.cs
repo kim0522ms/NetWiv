@@ -1,4 +1,5 @@
 using NetWiv.Build.Execution;
+using NetWiv.Build.Packaging;
 
 namespace NetWiv.Cli;
 
@@ -75,13 +76,14 @@ internal static class BuildCommand
         if (result.ExitCode != 0) return result.ExitCode;
         // MSBuild project references may produce the frontend during publish.
         ValidateFrontend(config);
-        EnsureBinary(config, project, publishDirectory);
+        var binary = EnsureBinary(config, project, publishDirectory);
 
         if (!noBundle && (active || bundles is not null))
         {
             await HookRunner.RunAsync(config, "beforeBundleCommand", environment, cancellationToken);
             return await NativeBundler.BundleAsync(config, target, publishDirectory, bundles, noSign, output, cancellationToken);
         }
+        ExternalBinaryStager.Stage(ExternalBinaryStager.Resolve(config, target, Path.GetFileName(binary)), publishDirectory);
         await output.WriteLineAsync($"Published: {publishDirectory}");
         return 0;
     }

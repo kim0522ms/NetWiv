@@ -41,6 +41,10 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Blazor mode experimental AOT requires explicit deployment and Hybrid selection", BlazorModeTests.ExperimentalValidation),
     ("Windows installer options validate before hooks and tools", WindowsInstallerTests.Validation),
     ("Windows installer options render scope lifecycle and literal arguments", WindowsInstallerTests.Rendering),
+    ("external binaries resolve target inputs and preserve payload ownership", ExternalBinaryTests.ResolutionAndStaging),
+    ("external binaries reject source and destination link escapes", ExternalBinaryTests.RejectsLinks),
+    ("managed dev stages and executes sidecars without overwriting changed outputs", () => ExternalBinaryDevelopmentTests.Run(false)),
+    ("AOT dev stages and executes sidecars without overwriting changed outputs", () => ExternalBinaryDevelopmentTests.Run(true)),
     ("macOS targets configuration and metadata", MacOsTests.Configuration),
     ("macOS application and dmg packaging with real signing tools", MacOsTests.Packaging),
     ("macOS App Store configuration and Info.plist validation", MacAppStoreTests.Configuration),
@@ -171,6 +175,8 @@ var tests = new (string Name, Func<Task> Run)[]
 // variables, current directories and referenced project outputs.
 var lifecycleNames = new HashSet<string>(StringComparer.Ordinal)
 {
+    "managed dev stages and executes sidecars without overwriting changed outputs",
+    "AOT dev stages and executes sidecars without overwriting changed outputs",
     "consumer publish managed self-contained and bundled execution",
     "consumer publish framework-dependent and bundled execution",
     "consumer publish NativeAOT embeds absent frontend output",

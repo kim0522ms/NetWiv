@@ -16,7 +16,7 @@ internal static partial class NativeBundler
     }
 
     internal static async Task<string> BuildMacAppAsync(ConfigDocument config, string publishDirectory, string binary, bool noSign, CancellationToken cancellationToken,
-        MacAppStoreSettings? store = null, string? storeEntitlements = null)
+        MacAppStoreSettings? store = null, string? storeEntitlements = null, BuildTarget? target = null)
     {
         if (!OperatingSystem.IsMacOS()) throw new PlatformNotSupportedException("macOS applications must be bundled on macOS.");
         var minimum = MacMinimumVersion(config);
@@ -40,6 +40,11 @@ internal static partial class NativeBundler
         // Keep managed runtime data in Resources. A launcher preserves the apphost's
         // sibling DLL/runtime resolution without treating JSON and DLLs as bundle code.
         var payload = PayloadStager.Stage(publishDirectory, resourcesDirectory);
+        var sidecars = ExternalBinaryStager.Resolve(config, target ?? BuildTarget.Resolve(null), Path.GetFileName(binary));
+        ExternalBinaryStager.Stage(sidecars, resourcesDirectory);
+        // Managed apphosts execute from Resources; helpers are code and belong in MacOS.
+        foreach (var sidecar in sidecars)
+            File.Move(Path.Combine(resourcesDirectory, sidecar.DestinationName), Path.Combine(executables, sidecar.DestinationName));
         var binaryRelative = Path.GetRelativePath(publishDirectory, binary);
         foreach (var relative in payload.Where(path => !managed && (path == binaryRelative || path.EndsWith(".dylib", StringComparison.OrdinalIgnoreCase))))
         {
@@ -78,6 +83,7 @@ internal static partial class NativeBundler
         foreach (var library in Directory.EnumerateFiles(managed ? resourcesDirectory : executables, "*.dylib", SearchOption.AllDirectories))
             await Sign(library, false);
         if (managed) await Sign(payloadBinary, true);
+        foreach (var sidecar in sidecars) await Sign(Path.Combine(executables, sidecar.DestinationName), true);
         await Sign(appBinary, true);
         await Sign(app, true);
         await RequireSuccess("/usr/bin/codesign", ["--verify", "--deep", "--strict", app], directory, cancellationToken);
@@ -182,7 +188,7 @@ internal static partial class NativeBundler
             // AMFI's entitlement parser is stricter than a general XML parser
             // (for example, it rejects the XML writer's spaced empty elements).
             await RequireSuccess("/usr/bin/plutil", ["-convert", "xml1", entitlements], temporary, cancellationToken);
-            var app = await BuildMacAppAsync(config, publishDirectory, binary, noSign, cancellationToken, settings, entitlements);
+            var app = await BuildMacAppAsync(config, publishDirectory, binary, noSign, cancellationToken, settings, entitlements, target);
             var directory = Path.GetDirectoryName(app)!;
             if (!noSign && decodedProfile is not null)
             {
@@ -203,7 +209,7 @@ internal static partial class NativeBundler
 
     private static async Task<string> BuildDmgAsync(ConfigDocument config, BuildTarget target, string publishDirectory, string binary, bool noSign, CancellationToken cancellationToken)
     {
-        var app = await BuildMacAppAsync(config, publishDirectory, binary, noSign, cancellationToken);
+        var app = await BuildMacAppAsync(config, publishDirectory, binary, noSign, cancellationToken, target: target);
         var directory = BundleDirectory(publishDirectory, "dmg");
         var staging = FreshStaging(directory, "payload");
         await RequireSuccess("/usr/bin/ditto", [app, Path.Combine(staging, Path.GetFileName(app))], directory, cancellationToken);

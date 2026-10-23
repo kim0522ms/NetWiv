@@ -29,6 +29,7 @@ internal static class BundleSigningTests
     {
         var directory = Environment.CurrentDirectory;
         Verify(Path.Combine(directory, "payload", "Probe.exe"), Environment.GetEnvironmentVariable("NETWIV_BUNDLE_SIGNED") == "1");
+        Verify(Path.Combine(directory, "payload", "helper.exe"), Environment.GetEnvironmentVariable("NETWIV_BUNDLE_SIGNED") == "1");
         string output;
         if (args.Contains("/V2")) output = Regex.Match(File.ReadAllText(args[^1]), "OutFile \"([^\"]+)\"").Groups[1].Value;
         else output = args[Array.IndexOf(args, "-out") + 1];
@@ -71,6 +72,8 @@ internal static class BundleSigningTests
                 { ["cmd"] = host, ["args"] = new JsonArray("--bundle-sign-probe", "%1") } } }
             }.ToJsonString());
             var config = ConfigLoader.Load(root, "windows", []);
+            File.WriteAllText(Path.Combine(root, "helper-x86_64-pc-windows-msvc.exe"), "helper executable");
+            config.Root["bundle"]!["externalBin"] = new JsonArray("helper");
             foreach (var noSign in new[] { false, true })
             {
                 Environment.SetEnvironmentVariable("NETWIV_BUNDLE_SIGNED", noSign ? "0" : "1");
@@ -78,6 +81,8 @@ internal static class BundleSigningTests
                 await NativeBundler.BundleAsync(config, BuildTarget.Resolve("win-x64"), publish, "nsis,msi", noSign, TextWriter.Null, CancellationToken.None);
                 Verify(Path.Combine(publish, "bundle", "nsis", "Probe_1.0.0_x64-setup.exe"), !noSign);
                 Verify(Path.Combine(publish, "bundle", "msi", "Probe_1.0.0_x64_en-US.msi"), !noSign);
+                if (File.ReadAllText(Path.Combine(root, "helper-x86_64-pc-windows-msvc.exe")) != "helper executable")
+                    throw new Exception("Sidecar signing modified the configured source.");
                 if (installationChecks)
                 {
                     var nsis = File.ReadAllText(Path.Combine(publish, "bundle", "nsis", "installer.nsi"));

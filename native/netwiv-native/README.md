@@ -44,6 +44,22 @@ binary then requires the system libsodium runtime on consumer machines.
 Published NetWiv packages include the built library, so application builds
 do not run Cargo or require the source archive.
 
+The workspace release profile strips symbols (`strip = "symbols"`) and uses
+one codegen unit, trading a slower native rebuild for a smaller adapter. Dynamic
+exports stay: `scripts/build-native.sh` fails when the `netwiv_*` exports differ
+from `include/netwiv.h`, and macOS signs the dylib after stripping. Caught
+panics still return their message through `netwiv_last_error`, and the default
+panic hook and test harness still print the source location, but release
+backtraces, including `cargo test --release`, no longer name Rust frames. Set
+`CARGO_PROFILE_RELEASE_STRIP=none` for a local build that needs symbolized
+backtraces; do not ship that build.
+
+Build dependencies retain their symbols via `profile.release.build-override`.
+This avoids the pinned toolchain's `debuginfo` stripping path, which can produce
+misaligned Mach-O data in proc macros on macOS 27; see the
+[macOS guide](../../docs/macos.md). The shipped adapter still uses `symbols`
+stripping. Do not substitute `debuginfo` as a macOS debugging workaround.
+
 ## Linux tray validation
 
 The pinned `tray-icon` 0.25.1 `libappindicator` backend uses

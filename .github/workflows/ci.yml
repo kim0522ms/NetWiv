@@ -137,7 +137,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             artifacts/native-target
-          key: native-${{ matrix.os }}-${{ matrix.rid }}-${{ hashFiles('native/Cargo.lock', 'native/dependency-lock.json', 'native/rust-toolchain.toml') }}
+          key: native-${{ matrix.os }}-${{ matrix.rid }}-${{ hashFiles('native/Cargo.toml', 'native/Cargo.lock', 'native/dependency-lock.json', 'native/rust-toolchain.toml') }}
           restore-keys: |
             native-${{ matrix.os }}-${{ matrix.rid }}-
 

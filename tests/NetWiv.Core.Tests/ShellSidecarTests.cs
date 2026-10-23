@@ -19,6 +19,8 @@ internal static class ShellSidecarTests
         var target = Path.Combine(directory, filename);
         var source = windows ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe") : "/bin/sh";
         var echo = windows ? new[] { "/d", "/c", "echo sidecar" } : ["-c", "printf sidecar"];
+        var failure = windows ? new[] { "/d", "/c", "echo sidecar-out & echo sidecar-err 1>&2 & exit /b 17" }
+            : ["-c", "printf sidecar-out; printf sidecar-err >&2; exit 17"];
         var wait = windows ? new[] { "/d", "/c", "set /p value=" } : ["-c", "read value"];
         static string Array(string[] values) => "[" + string.Join(',', values.Select(value => JsonValue.From(value).GetRawText())) + "]";
         static string Payload(string name, string[] values, bool sidecar = true) =>
@@ -32,21 +34,13 @@ internal static class ShellSidecarTests
         Process? child = null;
         try
         {
-            File.Copy(source, target);
-            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(target, File.GetUnixFileMode(source));
-            if (OperatingSystem.IsMacOS())
+            if (windows) File.Copy(source, target);
+            else
             {
-                var signing = new ProcessStartInfo("/usr/bin/codesign")
-                {
-                    UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true,
-                    ArgumentList = { "--force", "--sign", "-", target }
-                };
-                using var signer = Process.Start(signing) ?? throw new Exception("Could not sign the macOS sidecar fixture.");
-                var output = signer.StandardOutput.ReadToEndAsync();
-                var error = signer.StandardError.ReadToEndAsync();
-                await signer.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
-                await Task.WhenAll(output, error);
-                Assert.Equal(0, signer.ExitCode);
+                // Execute the installed interpreter without relocating or re-signing an OS binary.
+                // exec preserves the spawned PID and stdin ownership used by the lifetime checks below.
+                await File.WriteAllTextAsync(target, "#!/bin/sh\nexec /bin/sh \"$@\"\n");
+                File.SetUnixFileMode(target, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
             }
             using var app = new Builder().UseRuntime(runtime).Plugin(new ShellPlugin(_ => { }, appDirectory))
                 .Window("main", "Main", "index.html")
@@ -56,7 +50,16 @@ internal static class ShellSidecarTests
             app.Run();
             var result = await GuestIpc.Invoke(runtime, "plugin:shell|execute", Payload("helpers/tool", echo));
             Assert.Equal("ok", result.Headers!["Tauri-Response"]);
-            Assert.Contains("sidecar", JsonValue.Parse(GuestIpc.Body(result)).GetProperty("stdout").GetString()!);
+            var executed = JsonValue.Parse(GuestIpc.Body(result));
+            Assert.True(executed.GetProperty("code").GetInt32() == 0 && executed.GetProperty("stderr").GetString()!.Length == 0,
+                "Sidecar echo failed: " + Outcome(executed));
+            Assert.True(executed.GetProperty("stdout").GetString()!.Trim() == "sidecar", "Sidecar echo did not forward expected stdout.");
+            var failed = await GuestIpc.Invoke(runtime, "plugin:shell|execute", Payload("helpers/tool", failure));
+            Assert.Equal("ok", failed.Headers!["Tauri-Response"]);
+            var failureResult = JsonValue.Parse(GuestIpc.Body(failed));
+            Assert.True(failureResult.GetProperty("code").GetInt32() == 17, "Sidecar exit status was not forwarded: " + Outcome(failureResult));
+            Assert.True(failureResult.GetProperty("stdout").GetString()!.Trim() == "sidecar-out", "Nonzero sidecar did not forward expected stdout.");
+            Assert.True(failureResult.GetProperty("stderr").GetString()!.Trim() == "sidecar-err", "Nonzero sidecar did not forward expected stderr: " + Outcome(failureResult));
             foreach (var payload in new[] { Payload("helpers/tool", ["denied"]), Payload("helpers/tool", echo, false), Payload("normal", echo),
                 Payload("../tool", echo), Payload(target, echo) })
             {
@@ -112,4 +115,8 @@ internal static class ShellSidecarTests
             Directory.Delete(root, true);
         }
     }
+
+    private static string Outcome(System.Text.Json.JsonElement result) =>
+        "exit " + result.GetProperty("code").GetInt32() + "; stderr " +
+        (result.GetProperty("stderr").GetString()!.Length == 0 ? "empty" : "non-empty");
 }

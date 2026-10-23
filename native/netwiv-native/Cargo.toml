@@ -49,7 +49,8 @@ window-vibrancy = "=0.6.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "=0.6.4"
-objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["NSApplication", "NSResponder", "NSScreen", "NSWindow", "NSView"] }
+objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["NSApplication", "NSImage", "NSResponder", "NSScreen", "NSWindow", "NSView"] }
+objc2-foundation = { version = "=0.3.2", default-features = false, features = ["NSData"] }
 window-vibrancy = "=0.6.0"
 
 [target.'cfg(target_os = "windows")'.build-dependencies]

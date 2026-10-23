@@ -2,6 +2,10 @@
 
 This application uses the NetWiv desktop framework.
 
+Replace the NetWiv artwork in `icons` with your application's PNG, ICO and ICNS
+files. `bundle.icon` selects them for runtime window/Dock icons, Windows
+executables and macOS app bundles.
+
 `netwiv build` publishes self-contained .NET by default. Use `--framework-dependent`
 for an installed .NET runtime or `--aot` to opt into NativeAOT. Distribute the
 complete output directory, including DLLs and runtime files. NativeAOT requires

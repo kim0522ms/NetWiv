@@ -11,6 +11,22 @@
   <UsingTask TaskName="NetWiv.Build.Tasks.ExportFrontendBindings" AssemblyFile="$(_NetWivBindingsTaskAssembly)" />
   <UsingTask TaskName="NetWiv.Build.Tasks.GetIsolationAssets" AssemblyFile="$(_NetWivBindingsTaskAssembly)" />
   <UsingTask TaskName="NetWiv.Build.Tasks.GetApplicationVersion" AssemblyFile="$(_NetWivBindingsTaskAssembly)" />
+  <UsingTask TaskName="NetWiv.Build.Tasks.GetApplicationIcon" AssemblyFile="$(_NetWivBindingsTaskAssembly)" />
+  <Target Name="NetWivResolveApplicationIcon" BeforeTargets="AssignTargetPaths;_CoreCollectWatchItems"
+          Condition="'$(NetWivConfigPath)' != '' and '$(NetWivBindingsOnly)' != 'true' and '$(DesignTimeBuild)' != 'true'">
+    <NetWiv.Build.Tasks.GetApplicationIcon ConfigPath="$(NetWivConfigPath)" BaseDirectory="$(NetWivResourceBaseDirectory)">
+      <Output TaskParameter="RuntimeIcon" ItemName="_NetWivRuntimeIcon" />
+      <Output TaskParameter="WindowsIcon" PropertyName="_NetWivWindowsIcon" />
+    </NetWiv.Build.Tasks.GetApplicationIcon>
+    <ItemGroup>
+      <EmbeddedResource Include="@(_NetWivRuntimeIcon)" />
+      <Watch Include="@(_NetWivRuntimeIcon)" />
+      <Watch Include="$(_NetWivWindowsIcon)" Condition="'$(_NetWivWindowsIcon)' != ''" />
+    </ItemGroup>
+    <PropertyGroup>
+      <ApplicationIcon Condition="'$(ApplicationIcon)' == '' and '$(_NetWivWindowsIcon)' != ''">$(_NetWivWindowsIcon)</ApplicationIcon>
+    </PropertyGroup>
+  </Target>
   <UsingTask TaskName="NetWiv.Build.Tasks.GetBundleResources" AssemblyFile="$(_NetWivBindingsTaskAssembly)" />
   <UsingTask TaskName="NetWiv.Build.Tasks.StageBundleResources" AssemblyFile="$(_NetWivBindingsTaskAssembly)" />
   <Target Name="NetWivResolveBundleResources" BeforeTargets="AssignTargetPaths;_CoreCollectWatchItems"

@@ -12,6 +12,7 @@
     <ProjectReference Include="../../src/NetWiv.Plugin.Stronghold/NetWiv.Plugin.Stronghold.csproj" />
     <ProjectReference Include="../../src/NetWiv.Plugin.GlobalShortcut/NetWiv.Plugin.GlobalShortcut.csproj" />
     <EmbeddedResource Include="asset-config.json" LogicalName="netwiv.config.json" />
+    <EmbeddedResource Include="../../templates/react-app/src-netwiv/icons/icon.png" LogicalName="netwiv.default-icon" />
     <EmbeddedResource Include="../NetWiv.Core.Tests/fixtures/no-windows.json" LogicalName="netwiv.no-windows.json" />
     <EmbeddedResource Include="wwwroot/**/*" LogicalName="netwiv.assets.%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="../../templates/frontends/shared/vendor/@netwiv/api/**/*.js" LogicalName="netwiv.assets.%(RecursiveDir)%(Filename)%(Extension)" />

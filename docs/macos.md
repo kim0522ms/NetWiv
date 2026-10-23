@@ -116,8 +116,12 @@ The app layout contains native executables and dylibs in `Contents/MacOS`,
 resources in `Contents/Resources`, and generated metadata in `Contents/Info.plist`.
 `PathApi.ResourceDirectoryAsync` resolves the latter in an app bundle and the
 executable directory during unbundled development. `bundle.resources` mappings,
-category and a configured `.icns` icon are included. Supply an `.icns` icon;
-the existing icon command does not yet generate that format.
+category and a configured `.icns` icon are included. New projects include a
+NetWiv `.icns` icon in `src-netwiv/icons`; replace it for your application.
+The existing icon command does not yet generate that format. During unbundled
+development, `UseEmbeddedConfig()` uses the PNG/ICO embedded by `NetWiv.Build`
+from `bundle.icon` as the Dock icon. Changing an individual window icon does
+not change the process-wide Dock icon.
 
 Supported `bundle.macOS` keys are `minimumSystemVersion`, `bundleVersion`,
 `signingIdentity`, `entitlements`, `infoPlist` and `appStore`. Other non-null macOS bundle options fail

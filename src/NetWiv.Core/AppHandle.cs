@@ -73,6 +73,7 @@ public sealed partial class AppHandle : IDisposable
 
     public AppMetadata Metadata { get; }
     public ImageData? DefaultWindowIcon { get; internal set; }
+    internal byte[]? EncodedDefaultWindowIcon { get; set; }
     internal bool AssetProtocolEnabled { get; set; }
     internal IsolationPattern? Isolation { get; set; }
     internal Func<AssetRequest, AssetResponse, AssetResponse>? AssetResponsePolicy { get; set; }
@@ -288,7 +289,7 @@ public sealed partial class AppHandle : IDisposable
         BuiltInCommands.ResolveDirectory((int)BaseDirectory.LocalData, Metadata.Identifier),
         BuiltInCommands.ResolveDirectory((int)BaseDirectory.AppLocalData, Metadata.Identifier), AssetProtocolEnabled, Isolation?.Scheme, OnProtocolInvokeAsync,
         _uriSchemeProtocols.Keys.ToArray(), ResolveUriSchemeAsync)
-        { ApplyAssetPolicy = AssetResponsePolicy };
+        { ApplyAssetPolicy = AssetResponsePolicy, EncodedDefaultWindowIcon = EncodedDefaultWindowIcon is { } icon ? new ReadOnlyMemory<byte>(icon) : (ReadOnlyMemory<byte>?)null };
 
     private async ValueTask<AssetResponse?> ResolveUriSchemeAsync(AssetRequest request)
     {

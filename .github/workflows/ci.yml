@@ -206,7 +206,9 @@ jobs:
       - name: Windows NativeAOT WebView smoke
         if: runner.os == 'Windows'
         timeout-minutes: 5
-        run: ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe
+        run: |
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe --default-icon-smoke
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe
 
       - name: Managed Blazor Hybrid native WebView
         timeout-minutes: 10
@@ -242,6 +244,8 @@ jobs:
         if: runner.os == 'Linux'
         timeout-minutes: 5
         run: |
+          xvfb-run -a -s '-screen 0 1280x800x24' \
+            bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke)" x11 --default-icon-smoke
           xvfb-run -a -s '-screen 0 1280x800x24' \
             bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke)" x11
 
@@ -279,6 +283,7 @@ jobs:
           __XPC_MTL_SHADER_CACHE_SIZE: '0'
         run: |
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --no-window-smoke
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --default-icon-smoke
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --effects-smoke
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --webview-options-smoke
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke

@@ -37,6 +37,7 @@
     <EmbeddedResource Include="fixtures/routing/**/*" Exclude="fixtures/routing/exact.txt" LogicalName="netwiv.routing.%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="fixtures/routing/exact.txt" LogicalName="netwiv.routing.route" />
     <EmbeddedResource Include="fixtures/netwiv.config.json" LogicalName="netwiv.config.json" />
+    <EmbeddedResource Include="../../templates/react-app/src-netwiv/icons/icon.png" LogicalName="netwiv.default-icon" />
     <EmbeddedResource Include="fixtures/invalid-config.json" LogicalName="netwiv.invalid.config.json" />
     <EmbeddedResource Include="fixtures/acl-*.json" LogicalName="%(Filename).json" />
     <EmbeddedResource Include="fixtures/plugins-*.json" LogicalName="%(Filename).json" />

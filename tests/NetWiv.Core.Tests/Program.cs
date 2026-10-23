@@ -104,6 +104,7 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("numeric command arguments match pinned serde JSON values", CommandNumberTests.PinnedArguments),
     ("numeric error formatting matches 100000 pinned float bit patterns", CommandNumberTests.FormatOracle),
     ("configured startup windows preserve defaults and defer create:false", ConfigurationWindowTests.DefaultsAndDeferred),
+    ("embedded default icons reach runtime and explicit icons take precedence", ConfigurationWindowTests.Icons),
     ("empty configured windows suppress implicit UI and allow explicit later windows", ConfigurationWindowTests.EmptyAndProgrammatic),
     ("manager lookups return nullable snapshots across document and window lifecycles", ManagerLookupTests.Lifecycle),
     ("manager reparent updates retained handles and combined-window membership without guest events", ManagerLookupTests.ParentChanges),

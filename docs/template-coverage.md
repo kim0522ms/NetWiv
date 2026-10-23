@@ -19,6 +19,17 @@ only `dotnet`. Default npm projects include lockfiles; other package managers
 create their own lockfiles on first installation. No starter requires Rust or
 Cargo.
 
+All starters include NetWiv artwork in `src-netwiv/icons`: PNG for runtime and
+Linux icons, ICO for the Windows executable, and ICNS for the macOS app bundle.
+`bundle.icon` selects these files. Replace them with your own artwork before
+distribution. `NetWiv.Build` embeds the first PNG (or ICO if no PNG is listed);
+`UseEmbeddedConfig()` loads it for window icons and the macOS Dock, including
+unbundled development and NativeAOT. An explicit `DefaultWindowIcon(...)` takes
+precedence at runtime. The macOS bundle still uses its configured ICNS file.
+`netwiv init` supplies the same assets and preserves existing icon files even
+with `--force`. Existing projects need to add the files and `bundle.icon` entries
+themselves; updating the CLI does not rewrite an existing project.
+
 Install the CLI and prepare `$feed` using the [quickstart](integration-quickstart.md),
 then select a template:
 

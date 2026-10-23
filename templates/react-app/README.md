@@ -9,6 +9,11 @@ later uses the system WKWebView and AppKit. Rust is not required.
 registry release is needed. Core modules are `@netwiv/api/*` and plugin modules
 are `@netwiv/api/plugins/*`.
 
+`src-netwiv/icons` contains the default NetWiv PNG, ICO and ICNS artwork selected
+by `bundle.icon`. Replace these files with your application's icons. The PNG is
+embedded for runtime window/Dock icons; ICO and ICNS serve Windows executables
+and macOS app bundles respectively.
+
 Add your NetWiv package folder to the project's `NuGet.Config`. Every NetWiv
 package must match the `NetWivVersion` in `src-netwiv/ReactExample.csproj`. You
 can also create this project from the template package:

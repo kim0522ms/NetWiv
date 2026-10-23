@@ -64,6 +64,7 @@ internal static class InitCommand
             foreach (var replacement in replacements) contents = contents.Replace(replacement.Key, replacement.Value, StringComparison.Ordinal);
             File.WriteAllText(destinationFile, contents);
         }
+        StarterIcons.CopyTo(target);
         await output.WriteLineAsync($"Initialized NetWiv application in {target}");
         if (verbose) await output.WriteLineAsync($"Configuration: {Path.Combine(target, "netwiv.conf.json")}");
         return 0;

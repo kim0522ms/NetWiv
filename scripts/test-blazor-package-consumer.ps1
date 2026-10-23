@@ -46,16 +46,19 @@ try {
     }
 
     # Application test projects reference both the executable and shared contracts.
+    $sdk = & dotnet --version
+    if ($LASTEXITCODE -ne 0 -or $sdk -notmatch '^(\d+)\.') { throw 'Could not select the consumer test SDK.' }
+    $testFramework = 'net' + $Matches[1] + '.0'
     New-Item -ItemType Directory consumer-tests | Out-Null
     @'
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><TreatWarningsAsErrors>true</TreatWarningsAsErrors></PropertyGroup>
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>__TARGET_FRAMEWORK__</TargetFramework><ImplicitUsings>enable</ImplicitUsings><TreatWarningsAsErrors>true</TreatWarningsAsErrors></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../src-netwiv/BlazorExample.csproj" />
     <ProjectReference Include="../contracts/Contracts.csproj" />
   </ItemGroup>
 </Project>
-'@ | Set-Content consumer-tests/Consumer.Tests.csproj
+'@.Replace('__TARGET_FRAMEWORK__', $testFramework) | Set-Content consumer-tests/Consumer.Tests.csproj
     @'
 using System.Text.Json;
 var greeting = new Greeting("shared", 1, "updated");
@@ -88,7 +91,7 @@ Console.WriteLine("PASS packaged Blazor test project: backend " + nameof(Command
         if ($published.Count -ne 1) { throw 'Expected one published Blazor apphost.' }
         $binary = $published[0].FullName
         if ($IsWindows) {
-            # Give each run its own WebView profile while the next mode cleans target/.
+            # Run a separate payload copy while the next mode replaces target/.
             $execution = Join-Path (Split-Path $Destination) "blazor-$mode"
             Copy-Item -LiteralPath (Split-Path $binary) -Destination $execution -Recurse
             $binary = Join-Path $execution $binaryName

@@ -101,6 +101,10 @@ All five consumer jobs also generate and publish a matching-target managed
 ordinary Microsoft managed host and experimental NativeAOT host. The fixture
 checks native DOM events, interop, reload and page-scope cleanup. Linux runs
 these checks in a nested X11 desktop; native Wayland needs separate validation.
+Generated managed starters also reference an ordinary Razor library and must
+publish its static asset through the SDK's standard `_content` graph. The Linux
+SDK 10 consumer additionally executes that library's routes, forms, JavaScript
+module and DI-scope cleanup in the managed host.
 All five must pass before the draft Release job runs.
 See [SDK compatibility](dotnet-compatibility.md).
 

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>NetWiv desktop plugin smoke</title>
+<style>
+  body { font: 16px system-ui; margin: 32px; max-width: 720px; }
+  section { border-top: 1px solid #bbb; padding: 16px 0; }
+  button { padding: 10px 14px; margin: 4px; }
+  p { min-height: 1.5em; }
+</style>
+<h1>Desktop plugin smoke</h1>
+<p>Run each action in a logged-in desktop session. Results show fixed status text only.</p>
+<section>
+  <h2>Clipboard text roundtrip</h2>
+  <label><input type="checkbox" id="clipboard-ready"> I placed disposable text on the clipboard and understand the probe restores text only; other clipboard formats are not preserved.</label>
+  <p id="clipboard-status">Not run.</p>
+  <button id="clipboard">Run clipboard check</button>
+</section>
+<section>
+  <h2>Native dialog</h2>
+  <p>Choose the generated selection.txt file, then cancel the second picker.</p>
+  <p id="dialog-select-status">Selection: not run.</p>
+  <p id="dialog-cancel-status">Cancellation: not run.</p>
+  <button id="select">Select synthetic file</button>
+  <button id="cancel">Cancel picker</button>
+</section>
+<section>
+  <h2>Notification</h2>
+  <p>Transport success means the plugin command returned. Confirming visibility is a separate manual check.</p>
+  <p id="notification-status">Not run.</p>
+  <button id="notify">Send synthetic notification</button>
+  <label><input type="checkbox" id="notification-visible" disabled> I observed the notification.</label>
+  <p id="visibility-status">Visibility not confirmed.</p>
+</section>
+<button id="finish" disabled>Finish checks</button>
+<p id="finish-status">Close the app window after the checks are complete.</p>
+<script type="module" src="probe.js"></script>
+</html>

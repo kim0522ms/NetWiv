@@ -257,6 +257,11 @@ URL/file activation with an `OpenedEvent.Urls` batch. Their threading, failure
 and disposal behavior matches `OnReopen`. See [application lifetime and
 activation](application-lifetime.md) for resident windows and deep-link routing.
 
+`App.RequestExitAsync` and `AppHandle.RequestExitAsync` await the synchronous or
+async `OnExitRequested` handlers registered on the builder, app or handle.
+This cooperative quit path supports saving, veto and caller cancellation;
+existing force exit, restart and automatic last-window behavior are unchanged.
+
 `Window.OnCloseRequested` accepts synchronous or asynchronous handlers. Native
 closing is deferred while subscribed; the handler may call `PreventDefault`.
 After a successful handler completes, the SDK destroys the window unless

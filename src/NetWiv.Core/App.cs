@@ -47,6 +47,12 @@ public sealed partial class App : IDisposable
     public void OnOpened(Func<AppHandle, OpenedEvent, Task> handler) => Handle.OnOpened(handler);
     /// <inheritdoc cref="AppHandle.OnOpened(Func{AppHandle, OpenedEvent, Task})"/>
     public void OnOpened(Action<AppHandle, OpenedEvent> handler) => Handle.OnOpened(handler);
+    /// <inheritdoc cref="AppHandle.OnExitRequested(Func{AppHandle, ExitRequestedEvent, Task})"/>
+    public void OnExitRequested(Func<AppHandle, ExitRequestedEvent, Task> handler) => Handle.OnExitRequested(handler);
+    /// <inheritdoc cref="AppHandle.OnExitRequested(Func{AppHandle, ExitRequestedEvent, Task})"/>
+    public void OnExitRequested(Action<AppHandle, ExitRequestedEvent> handler) => Handle.OnExitRequested(handler);
+    /// <inheritdoc cref="AppHandle.RequestExitAsync"/>
+    public Task<bool> RequestExitAsync(int exitCode = 0, CancellationToken cancellationToken = default) => Handle.RequestExitAsync(exitCode, cancellationToken);
     /// <inheritdoc cref="AppHandle.OnReopen(Func{AppHandle, ReopenEvent, Task})"/>
     public void OnReopen(Func<AppHandle, ReopenEvent, Task> handler) => Handle.OnReopen(handler);
     /// <inheritdoc cref="AppHandle.OnReopen(Func{AppHandle, ReopenEvent, Task})"/>

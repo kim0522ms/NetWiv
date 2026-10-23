@@ -47,6 +47,7 @@ internal static class Program
             return WindowsWebviewProfileSmoke.Run(profileIdentifier, profileExpected, profileNext, profileDirectory);
         if (args is ["--reopen-smoke"]) return MacOsReopenProbe.Run();
         if (args is ["--lifetime-smoke", "resident"]) return ApplicationLifetimeSmoke.Run(resident: true);
+        if (args is ["--exit-request-smoke"]) return ExitRequestSmoke.Run();
         if (args is ["--lifetime-smoke", "default"]) return ApplicationLifetimeSmoke.Run(resident: false);
         if (args is ["--opened-smoke"]) return MacOsOpenedProbe.Run();
         if (args is ["--send-opened-event", var openedProcessId]) return MacOsReopenProbe.SendOpened(int.Parse(openedProcessId, System.Globalization.CultureInfo.InvariantCulture));

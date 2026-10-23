@@ -23,6 +23,7 @@ public sealed class Builder
     private readonly List<Action<AppHandle, TrayIconEvent>> _trayEventHandlers = [];
     private readonly List<Func<AppHandle, ReopenEvent, Task>> _reopenHandlers = [];
     private readonly List<Func<AppHandle, OpenedEvent, Task>> _openedHandlers = [];
+    private readonly List<Func<AppHandle, ExitRequestedEvent, Task>> _exitRequestedHandlers = [];
     private bool _exitOnLastWindowClose = true;
     private Func<AssetRequest, AssetResponse?> _assetResolver = static _ => null;
     private Func<IReadOnlyList<string>> _globalScriptHashes = static () => [];
@@ -106,6 +107,14 @@ public sealed class Builder
     public Builder Setup(Action<App> setup) { _setup.Add(setup); return this; }
     /// <summary>Controls whether closing or destroying the last window exits DesktopRuntime. Defaults to true.</summary>
     public Builder ExitOnLastWindowClose(bool exit = true) { _exitOnLastWindowClose = exit; return this; }
+    /// <inheritdoc cref="AppHandle.OnExitRequested(Func{AppHandle, ExitRequestedEvent, Task})"/>
+    public Builder OnExitRequested(Func<AppHandle, ExitRequestedEvent, Task> handler) { ArgumentNullException.ThrowIfNull(handler); _exitRequestedHandlers.Add(handler); return this; }
+    /// <inheritdoc cref="AppHandle.OnExitRequested(Func{AppHandle, ExitRequestedEvent, Task})"/>
+    public Builder OnExitRequested(Action<AppHandle, ExitRequestedEvent> handler)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        return OnExitRequested((app, value) => { handler(app, value); return Task.CompletedTask; });
+    }
     /// <inheritdoc cref="AppHandle.OnOpened(Func{AppHandle, OpenedEvent, Task})"/>
     public Builder OnOpened(Func<AppHandle, OpenedEvent, Task> handler) { ArgumentNullException.ThrowIfNull(handler); _openedHandlers.Add(handler); return this; }
     /// <inheritdoc cref="AppHandle.OnOpened(Func{AppHandle, OpenedEvent, Task})"/>
@@ -243,6 +252,7 @@ public sealed class Builder
             foreach (var handler in _trayEventHandlers) app.OnTrayIconEvent(handler);
             foreach (var handler in _reopenHandlers) app.OnReopen(handler);
             foreach (var handler in _openedHandlers) app.OnOpened(handler);
+            foreach (var handler in _exitRequestedHandlers) app.OnExitRequested(handler);
             app.Handle.ExitOnLastWindowClose = _exitOnLastWindowClose;
             return app;
         }

@@ -210,7 +210,11 @@ public sealed partial class AppHandle : IDisposable
 
     public void Dispatch(Action action) => _runtime.Dispatch(action);
     public void EvaluateScript(string webviewLabel, string script) => _runtime.EvaluateScript(webviewLabel, script);
-    public void Exit(int exitCode = 0) => _runtime.Exit(exitCode);
+    public void Exit(int exitCode = 0)
+    {
+        lock (_nativeEventGate) _exitRequestGeneration++;
+        _runtime.Exit(exitCode);
+    }
 
     public Task<string> ResolveDirectoryAsync(int directory, string? path = null, CancellationToken cancellationToken = default) =>
         _runtime.ResolveDirectoryAsync(directory, path, Metadata.Identifier, cancellationToken);

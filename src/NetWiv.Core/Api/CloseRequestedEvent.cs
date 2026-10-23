@@ -44,15 +44,20 @@ public sealed partial class AppHandle
         try { await handler().ConfigureAwait(false); }
         catch (Exception error)
         {
-            try
-            {
-                if (EventHandlerFailed is { } report) report(value, error);
-                else Console.Error.WriteLine($"NetWiv event '{value.Name}' for '{value.Label}' failed: {error}");
-            }
-            catch (Exception reportingError)
-            {
-                Console.Error.WriteLine($"NetWiv event error reporting failed: {reportingError}; original error: {error}");
-            }
+            ReportEventHandlerFailure(value, error);
+        }
+    }
+
+    private void ReportEventHandlerFailure(AppEvent value, Exception error)
+    {
+        try
+        {
+            if (EventHandlerFailed is { } report) report(value, error);
+            else Console.Error.WriteLine($"NetWiv event '{value.Name}' for '{value.Label}' failed: {error}");
+        }
+        catch (Exception reportingError)
+        {
+            Console.Error.WriteLine($"NetWiv event error reporting failed: {reportingError}; original error: {error}");
         }
     }
 }

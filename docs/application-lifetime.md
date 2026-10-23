@@ -35,6 +35,44 @@ use `using` or the hosting integration as before. The legacy managed Windows and
 Linux adapters reject this opt-in; use `NetWiv.Platform.Desktop.DesktopRuntime`.
 Existing apps need no migration unless they choose resident behavior.
 
+## Cooperative save and quit
+
+Use `App.RequestExitAsync()` or `AppHandle.RequestExitAsync()` for an
+application-owned quit action that must save or ask for confirmation:
+
+```csharp
+builder.OnExitRequested(async (handle, request) =>
+{
+    await SaveAsync(request.CancellationToken);
+    if (!CanQuit()) request.PreventDefault();
+});
+```
+
+The matching `App.OnExitRequested` and `AppHandle.OnExitRequested` hooks can
+also register handlers. They run sequentially in registration order; a veto
+stops later handlers and returns `false`. Approval submits exit with the requested
+exit code and returns `true`. Handlers have no UI-thread affinity; use async
+window APIs or `Dispatch` for UI work. Concurrent requests fail with
+`InvalidOperationException` rather than sharing cancellation ownership.
+Each request snapshots its handlers before running them. Registrations added by
+a handler apply to the next request; all registrations end on app disposal.
+
+Caller cancellation throws `OperationCanceledException` and prevents a stale
+exit if an ignoring handler later resumes. Save failures leave the app running,
+are reported through `EventHandlerFailed`, and propagate to the request caller.
+Force exit or app disposal invalidates a pending request and prevents later
+handlers or a second exit after the pending handler finishes. Already started
+handler work remains application-owned.
+Cancellation and invalidation apply before approval; they cannot retract an
+exit that has already been approved for native submission.
+
+This hook is only for cooperative application requests. `Exit`, `Restart`, host
+shutdown, automatic last-window exit, OS session end and force quit retain their
+existing behavior and do not await or consult these handlers. A resident app can
+call `RequestExitAsync` from its quit command; existing force-exit callers need
+to switch explicitly if they want save/veto behavior. Dispose the app after
+`Run` returns as before.
+
 ## macOS URL and file activation
 
 `Builder.OnOpened`, `App.OnOpened` and `AppHandle.OnOpened` receive
@@ -74,3 +112,5 @@ destroyed, checking typed delivery, the deep-link event and `getCurrent()`.
 Run the affected modes in managed and NativeAOT builds on each target OS.
 These checks do not establish Finder/Dock interactions, packaged startup URL/file
 activation, file association registration or installed-app acceptance.
+The `--exit-request-smoke` mode additionally exercises native async operations
+during a cooperative request, a veto, and the following approved request.

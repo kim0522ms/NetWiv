@@ -143,6 +143,11 @@ public sealed partial class AppHandle
 
     private void ClearNativeEventHandlers()
     {
-        lock (_nativeEventGate) { _menuEventHandlers.Clear(); _trayEventHandlers.Clear(); _reopenHandlers.Clear(); _openedHandlers.Clear(); }
+        lock (_nativeEventGate)
+        {
+            _menuEventHandlers.Clear(); _trayEventHandlers.Clear(); _reopenHandlers.Clear(); _openedHandlers.Clear();
+            _exitRequestedHandlers.Clear();
+            _exitRequestGeneration++;
+        }
     }
 }

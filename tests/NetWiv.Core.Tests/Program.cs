@@ -24,6 +24,10 @@ var tests = new List<(string Name, Func<Task> Run)>
 {
     ("macOS reopen delivers native-only notifications and observes application lifetime", ReopenTests.DeliveryAndLifetime),
     ("native opened delivers URL batches and observes resident application lifetime", OpenedTests.DeliveryAndLifetime),
+    ("cooperative exit requests await handlers and preserve veto ordering", ExitRequestTests.ApprovalVetoAndOrdering),
+    ("cooperative exit requests reject reentry and snapshot handler registrations", ExitRequestTests.ReentrancyAndHandlerSnapshot),
+    ("cooperative exit requests cancel without stale exits and observe failures", ExitRequestTests.CancellationAndFailures),
+    ("cooperative exit requests are invalidated by force exit and disposal", ExitRequestTests.ForceExitAndDisposalInvalidatePending),
     ("native opened observes sync and async failures and disposal", OpenedTests.FailuresAndDisposal),
     ("macOS reopen observes sync and async failures without blocking later handlers", ReopenTests.FailuresAndDisposal),
     ("legacy JSON metadata accepts nullable command members without relaxing value types", LegacyJsonTests.NullableMembers),

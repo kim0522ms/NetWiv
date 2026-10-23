@@ -47,6 +47,8 @@ var tests = new (string Name, Func<Task> Run)[]
     ("external binaries reject source and destination link escapes", ExternalBinaryTests.RejectsLinks),
     ("managed dev stages and executes sidecars without overwriting changed outputs", () => ExternalBinaryDevelopmentTests.Run(false)),
     ("AOT dev stages and executes sidecars without overwriting changed outputs", () => ExternalBinaryDevelopmentTests.Run(true)),
+    ("managed public Shell consumer executes scoped sidecars in dev and packages", () => ShellSidecarConsumerTests.Run(false)),
+    ("AOT public Shell consumer executes scoped sidecars in dev and packages", () => ShellSidecarConsumerTests.Run(true)),
     ("macOS targets configuration and metadata", MacOsTests.Configuration),
     ("macOS deep link configuration generates validated bundle URL declarations", MacDeepLinkPackagingTests.Configuration),
     ("macOS application and dmg packaging with real signing tools", MacOsTests.Packaging),
@@ -180,6 +182,8 @@ var lifecycleNames = new HashSet<string>(StringComparer.Ordinal)
 {
     "managed dev stages and executes sidecars without overwriting changed outputs",
     "AOT dev stages and executes sidecars without overwriting changed outputs",
+    "managed public Shell consumer executes scoped sidecars in dev and packages",
+    "AOT public Shell consumer executes scoped sidecars in dev and packages",
     "consumer publish managed self-contained and bundled execution",
     "consumer publish framework-dependent and bundled execution",
     "consumer publish NativeAOT embeds absent frontend output",

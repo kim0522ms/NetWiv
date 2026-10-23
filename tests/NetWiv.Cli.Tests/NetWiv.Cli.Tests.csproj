@@ -7,6 +7,8 @@
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="fixtures/upstream-resources.json" LogicalName="upstream-resources.json" />
+    <Compile Remove="fixtures/SidecarConsumer.cs" />
+    <EmbeddedResource Include="fixtures/SidecarConsumer.cs" LogicalName="sidecar-consumer.cs" />
     <EmbeddedResource Include="fixtures/upstream-categories.json" LogicalName="upstream-categories.json" />
     <ProjectReference Include="..\..\src\NetWiv.Build\NetWiv.Build.csproj" />
     <ProjectReference Include="..\..\src\NetWiv.Cli\NetWiv.Cli.csproj" />

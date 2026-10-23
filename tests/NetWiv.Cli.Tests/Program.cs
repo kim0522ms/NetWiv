@@ -46,6 +46,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("managed dev stages and executes sidecars without overwriting changed outputs", () => ExternalBinaryDevelopmentTests.Run(false)),
     ("AOT dev stages and executes sidecars without overwriting changed outputs", () => ExternalBinaryDevelopmentTests.Run(true)),
     ("macOS targets configuration and metadata", MacOsTests.Configuration),
+    ("macOS deep link configuration generates validated bundle URL declarations", MacDeepLinkPackagingTests.Configuration),
     ("macOS application and dmg packaging with real signing tools", MacOsTests.Packaging),
     ("macOS App Store configuration and Info.plist validation", MacAppStoreTests.Configuration),
     ("macOS App Store provisioning profiles and signing separation", MacAppStoreTests.ProfilesAndSigning),

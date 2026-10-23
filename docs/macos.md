@@ -378,6 +378,16 @@ and [Tauri's App Store guide](https://tauri.app/distribute/app-store/).
 
 ## Runtime paths and macOS behavior
 
+App bundles declare `plugins.deep-link.desktop` schemes in `CFBundleURLTypes`.
+Use an object such as `{ "schemes": ["myapp"] }`, or an array of those objects.
+Schemes follow the URI scheme grammar and are normalized to lowercase. Invalid
+entries fail before bundle hooks run. If this configuration is present, a custom
+`bundle.macOS.infoPlist` cannot also set `CFBundleURLTypes`; remove one declaration
+source. A custom plist remains supported when no desktop schemes are configured.
+This declares the bundled application's URL handlers; runtime registration and
+unregistration remain unsupported on macOS. Actual launch and running-app URL
+delivery need separate platform verification.
+
 The shared Core path resolver uses these macOS roots:
 
 | API directory | Path |

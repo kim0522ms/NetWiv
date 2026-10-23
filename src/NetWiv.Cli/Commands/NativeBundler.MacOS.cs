@@ -119,6 +119,7 @@ internal static partial class NativeBundler
 
     internal static XDocument MacInfoPlist(ConfigDocument config, string executable, string minimum)
     {
+        var urlTypes = MacUrlTypes(config);
         var values = new Dictionary<string, string>
         {
             ["CFBundleExecutable"] = executable,
@@ -139,14 +140,47 @@ internal static partial class NativeBundler
             var additions = MacPropertyList.Load(Path.GetFullPath(infoPlist, config.ConfigDirectory)).Root!.Element("dict")!;
             foreach (var key in additions.Elements("key"))
             {
-                if (key.Value is "CFBundleExecutable" or "CFBundleIdentifier" or "CFBundlePackageType" or "CFBundleShortVersionString" or "CFBundleVersion" or "LSMinimumSystemVersion" or "CFBundleIconFile")
+                if (key.Value is "CFBundleExecutable" or "CFBundleIdentifier" or "CFBundlePackageType" or "CFBundleShortVersionString" or "CFBundleVersion" or "LSMinimumSystemVersion" or "CFBundleIconFile" ||
+                    key.Value == "CFBundleURLTypes" && urlTypes is not null)
                     throw new NetWivConfigException($"Info.plist cannot override generated {key.Value}; use the corresponding bundle configuration.");
                 MacPropertyList.Set(dictionary, key.Value, key.ElementsAfterSelf().First());
             }
         }
+        if (urlTypes is not null) MacPropertyList.Set(dictionary, "CFBundleURLTypes", urlTypes);
         return new XDocument(new XDeclaration("1.0", "UTF-8", null),
             new XDocumentType("plist", "-//Apple//DTD PLIST 1.0//EN", "http://www.apple.com/DTDs/PropertyList-1.0.dtd", null),
             new XElement("plist", new XAttribute("version", "1.0"), dictionary));
+    }
+
+    private static XElement? MacUrlTypes(ConfigDocument config)
+    {
+        var plugin = config.Node("plugins", "deep-link");
+        if (plugin is null) return null;
+        if (plugin is not JsonObject owner) throw new NetWivConfigException("plugins.deep-link must be an object.");
+        if (!owner.ContainsKey("desktop")) return null;
+        var entries = owner["desktop"] switch
+        {
+            JsonObject one => new JsonNode?[] { one },
+            JsonArray array => array.ToArray(),
+            _ => throw new NetWivConfigException("plugins.deep-link.desktop must be an object or array of objects.")
+        };
+        var result = new XElement("array");
+        foreach (var entry in entries)
+        {
+            if (entry is not JsonObject protocol || protocol["schemes"] is not JsonArray schemes)
+                throw new NetWivConfigException("Deep link desktop configuration requires a schemes array.");
+            var declared = new XElement("array");
+            foreach (var scheme in schemes)
+            {
+                if (scheme is not JsonValue value || !value.TryGetValue<string>(out var name) || string.IsNullOrEmpty(name) ||
+                    !char.IsAsciiLetter(name[0]) || name.Skip(1).Any(character => !(char.IsAsciiLetterOrDigit(character) || character is '+' or '-' or '.')))
+                    throw new NetWivConfigException("Invalid deep link protocol in plugins.deep-link.desktop.");
+                declared.Add(new XElement("string", name.ToLowerInvariant()));
+            }
+            result.Add(new XElement("dict", new XElement("key", "CFBundleURLName"), new XElement("string", config.String("identifier")),
+                new XElement("key", "CFBundleURLSchemes"), declared));
+        }
+        return result;
     }
 
     internal static IReadOnlyList<string> MacSignArguments(string identity, string path, string? entitlements, bool appStore)

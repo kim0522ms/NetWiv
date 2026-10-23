@@ -160,6 +160,62 @@ internal static class SqlMigrationTests
         Assert.Equal(2, (await Select(second, "SELECT COUNT(*) AS count FROM __netwiv_migrations"))[0].GetProperty("count").GetInt32());
     }
 
+    internal static async Task ConcurrentProcessLoads()
+    {
+        var root = Directory.CreateTempSubdirectory("netwiv-sql-process-").FullName;
+        var profileDirectories = new List<(string Path, string Identifier)>();
+        var profilesGate = new object();
+        try
+        {
+            var identifier = "dev.netwiv.sql-process-" + Guid.NewGuid().ToString("N");
+            foreach (var result in await SqlMigrationProcessTests.RunCompetingProbes(root, identifier,
+                         path => RecordProfileDirectory(identifier, path)))
+                Assert.Equal(0, result);
+            var verified = await SqlMigrationProcessTests.RunProbe(root, identifier, "verify",
+                path => RecordProfileDirectory(identifier, path));
+            Assert.Equal(0, verified);
+
+            var rollbackIdentifier = identifier + "-rollback";
+            var failed = await SqlMigrationProcessTests.RunProbe(root, rollbackIdentifier, "fail",
+                path => RecordProfileDirectory(rollbackIdentifier, path));
+            Assert.Equal(0, failed);
+            var retried = await SqlMigrationProcessTests.RunProbe(root, rollbackIdentifier, "retry",
+                path => RecordProfileDirectory(rollbackIdentifier, path));
+            Assert.Equal(0, retried);
+            Assert.Equal(3, profileDirectories.Count(profile => profile.Identifier == identifier));
+            Assert.Equal(2, profileDirectories.Count(profile => profile.Identifier == rollbackIdentifier));
+        }
+        finally
+        {
+            try
+            {
+                (string Path, string Identifier)[] paths;
+                lock (profilesGate) paths = [.. profileDirectories];
+                foreach (var (path, identifier) in paths)
+                {
+                    if (!SqlMigrationProcessTests.IsExpectedProfileDirectory(path, root, identifier)) continue;
+                    FileAttributes attributes;
+                    try { attributes = File.GetAttributes(path); }
+                    catch (IOException error) when (error is FileNotFoundException or DirectoryNotFoundException) { continue; }
+                    if (attributes.HasFlag(FileAttributes.ReparsePoint))
+                        throw new InvalidOperationException("SQLite migration app config directory unexpectedly became a reparse point.");
+                    if (!attributes.HasFlag(FileAttributes.Directory))
+                        throw new InvalidOperationException("SQLite migration app config path is not a directory.");
+                    Directory.Delete(path, true);
+                }
+            }
+            finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+        }
+
+        void RecordProfileDirectory(string identifier, string path)
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (!SqlMigrationProcessTests.IsExpectedProfileDirectory(fullPath, root, identifier))
+                throw new InvalidOperationException("SQLite migration probe resolved an unexpected app config directory.");
+            lock (profilesGate) profileDirectories.Add((fullPath, identifier));
+        }
+    }
+
     internal static async Task Cancellation()
     {
         using var fixture = new DatabaseFixture();

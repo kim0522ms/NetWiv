@@ -675,7 +675,7 @@ static Task IsolationWatchFolders() => Temp(root =>
     return Task.CompletedTask;
 });
 
-static Task AdditionalWatchFolders() => Temp(root =>
+static Task AdditionalWatchFolders() => Temp(async root =>
 {
     var dir = Path.Combine(root, "src-netwiv"); var configured = Path.Combine(root, "configured"); var selected = Path.Combine(root, "selected");
     Directory.CreateDirectory(dir); Directory.CreateDirectory(configured); Directory.CreateDirectory(selected);
@@ -686,7 +686,26 @@ static Task AdditionalWatchFolders() => Temp(root =>
     Throws<DirectoryNotFoundException>(() => DevCommand.ResolveWatchFolders(config, ["../missing"]));
     File.WriteAllText(Path.Combine(dir, "netwiv.conf.json"), "{\"identifier\":\"com.test.app\",\"build\":{\"additionalWatchFolders\":[1]}}");
     Throws<NetWivConfigException>(() => ConfigLoader.Load(root, "windows"));
-    return Task.CompletedTask;
+    var first = Path.Combine(configured, "component.razor");
+    var second = Path.Combine(selected, "module.js");
+    File.WriteAllText(first, "<p>Watched component</p>");
+    File.WriteAllText(second, "export const watched = true;");
+    foreach (var output in new[] { "bin", "obj", "target", ".git" })
+    {
+        var ignored = Directory.CreateDirectory(Path.Combine(configured, output));
+        File.WriteAllText(Path.Combine(ignored.FullName, "generated.cs"), "// build output");
+    }
+    var probe = Path.Combine(root, "WatchProbe.csproj");
+    new System.Xml.Linq.XDocument(new System.Xml.Linq.XElement("Project",
+        new System.Xml.Linq.XElement("Import", new System.Xml.Linq.XAttribute("Project",
+            Path.Combine(Directory.GetCurrentDirectory(), "src/NetWiv.Build/buildTransitive/NetWiv.Build.targets")))))
+        .Save(probe);
+    var result = await ProcessRunner.RunAsync(new("dotnet", ["msbuild", probe, "-nologo", "-getItem:Watch",
+        "-p:NetWivAdditionalWatchItems=" + Path.Combine(configured, "**", "*") + "%3B" + Path.Combine(selected, "**", "*")], root, CaptureOutput: true));
+    Equal(0, result.ExitCode);
+    var watched = System.Text.Json.Nodes.JsonNode.Parse(result.StandardOutput)!["Items"]!["Watch"]!.AsArray()
+        .Select(item => Path.GetFullPath(item!["Identity"]!.GetValue<string>())).Order().ToArray();
+    Equal(string.Join('|', new[] { first, second }.Order()), string.Join('|', watched));
 });
 
 static Task BuiltInDevelopmentServer() => Temp(async root =>

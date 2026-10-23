@@ -27,6 +27,17 @@ dotnet run --project samples/BlazorHybrid/Desktop -c Release
 dotnet publish samples/BlazorHybrid/Desktop -c Release -r win-x64 --self-contained true -p:PublishAot=false
 ```
 
+For managed iteration with automatic rebuild and process restart, run:
+
+```powershell
+dotnet watch --no-hot-reload --project samples/BlazorHybrid/Desktop/Desktop.csproj run -c Debug
+```
+
+The watch list includes the shared Razor project and its linked `Shared/Assets`
+files, including `netwiv.js` and the local `@netwiv/api` modules. A watched edit
+restarts the desktop process, so in-memory component and backend state starts
+over. This path disables Hot Reload.
+
 The publish commands use the Windows RID. Substitute `linux-x64` on Linux or
 `osx-arm64` on macOS, and publish on the target OS. Linux needs an available X11
 or Wayland desktop session; set `GDK_BACKEND=x11` or `GDK_BACKEND=wayland` to

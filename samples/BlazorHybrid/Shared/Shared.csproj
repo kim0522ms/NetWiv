@@ -7,12 +7,13 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="$(BlazorFrameworkVersion)" />
     <ProjectReference Include="../Contracts/Contracts.csproj" />
     <Compile Include="obj/netwiv/$(Configuration)/$(TargetFramework)/NetWivCommands.g.cs"
+             Watch="false"
              Condition="Exists('obj/netwiv/$(Configuration)/$(TargetFramework)/NetWivCommands.g.cs')" />
   </ItemGroup>
   <Target Name="GenerateSampleCommands" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true'">
     <Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)/../Desktop/Desktop.csproj&quot; -c &quot;$(Configuration)&quot; -p:NetWivBlazorTargetFramework=$(TargetFramework) -p:NetWivBindingsOnly=true -p:PublishAot=false -p:NetWivBlazorMode=WebAssembly --disable-build-servers -nologo -v:q" />
     <ItemGroup>
-      <Compile Include="obj/netwiv/$(Configuration)/$(TargetFramework)/NetWivCommands.g.cs" Exclude="@(Compile)" />
+      <Compile Include="obj/netwiv/$(Configuration)/$(TargetFramework)/NetWivCommands.g.cs" Exclude="@(Compile)" Watch="false" />
     </ItemGroup>
   </Target>
 </Project>

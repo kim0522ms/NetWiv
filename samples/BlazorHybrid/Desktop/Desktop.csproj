@@ -1,8 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>NetWiv.BlazorHybrid.Desktop</AssemblyName>
     <RootNamespace>NetWiv.BlazorHybrid.Desktop</RootNamespace>
+    <EnableDefaultContentItems>false</EnableDefaultContentItems>
     <RollForward>Major</RollForward>
     <JsonSerializerIsReflectionEnabledByDefault Condition="'$(NetWivBlazorExperimentalAot)' == 'true'">false</JsonSerializerIsReflectionEnabledByDefault>
     <NetWivCSharpBindingsDirectory>../Shared/obj/netwiv/$(Configuration)/$(TargetFramework)</NetWivCSharpBindingsDirectory>
@@ -28,6 +29,7 @@
     <Content Include="wwwroot/**/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../Shared/Assets/**/*" Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../../templates/frontends/shared/vendor/@netwiv/api/**/*" Link="wwwroot/vendor/@netwiv/api/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Watch Include="@(Content)" />
   </ItemGroup>
   <Import Project="../../../src/NetWiv.Build/buildTransitive/NetWiv.Build.targets" />
   <Target Name="ValidateBlazorMode" BeforeTargets="PrepareForBuild">

@@ -128,6 +128,36 @@ Explicit AOT development modes use separate `dev-aot-hybrid-experimental` and
 with `--release`), so switching modes does not reuse the other UI's assets.
 Without `--blazor-mode`, the existing `dev-aot` directory is retained.
 
+### Managed edit loop
+
+The default `netwiv dev` path runs `dotnet watch` with `--no-hot-reload`.
+Watched edits rebuild and restart the managed desktop process. In the generated
+starter, the watch inputs include the shared Razor UI, contracts, WebAssembly
+project and shared assets, including the local `@netwiv/api` modules. The source
+sample includes its linked shared assets in the watch list as well. This gives
+Razor and desktop C# changes a repeatable managed development loop, but it is a
+full process restart: in-memory component and backend state starts over, and
+Hot Reload is not part of this path.
+
+For a generated starter, restore its local CLI tool once, then run from the
+generated project root:
+
+```powershell
+dotnet tool restore
+dotnet tool run netwiv -- dev
+```
+
+For the repository source sample, run from the repository root:
+
+```powershell
+dotnet watch --no-hot-reload --project samples/BlazorHybrid/Desktop/Desktop.csproj run -c Debug
+```
+
+Use a normal application close or browser reload when checking Hybrid page and
+application cleanup. The adapter's normal shutdown and page-retirement paths
+are described in [Page lifetime and cleanup](#page-lifetime-and-cleanup); a
+forced debugger stop does not establish that asynchronous disposal completed.
+
 ## Register a Hybrid webview
 
 Reference `NetWiv.BlazorHybrid`, `NetWiv.Hosting` and `NetWiv.Platform.Desktop` at
@@ -209,6 +239,13 @@ provider is an application trust boundary: include only files intended for
 the frontend. The statically registered host does not discover Debug
 `.staticwebassets.runtime.json` manifests. Copy Razor class library `_content`
 assets into the output explicitly, as the shared sample does.
+
+For the default managed host, use `Microsoft.NET.Sdk.Razor` in the desktop
+project, as the starter does. The Razor SDK creates the entry assembly's static
+web asset manifest for development and stages referenced library assets under
+`wwwroot/_content` for publication. Microsoft's managed WebView manager reads
+that development manifest automatically. A plain `Microsoft.NET.Sdk` desktop
+project does not consolidate the referenced library asset graph.
 
 ## Keep shared UI and desktop services separate
 
@@ -370,6 +407,14 @@ implementations. Component registration alone does not resolve these warnings.
 ## Debug the managed development host
 
 Build and run `Debug` in `Hybrid` mode with matching source and portable PDBs.
+Use an SDK supported by the selected IDE. The generated solution does not pin
+an SDK; an ancestor `global.json` and installed SDKs can select a newer SDK than
+the IDE's MSBuild supports, even when the application targets .NET 8. If project
+loading reports that mismatch, select an installed compatible SDK in the app's
+own `global.json`, or use a compatible IDE. This is separate from selecting
+`NetWivBlazorTargetFramework`; see Microsoft's
+[SDK and Visual Studio version requirements](https://learn.microsoft.com/dotnet/core/porting/versioning-sdk-msbuild-vs).
+
 Open `samples/BlazorHybrid/Desktop/Desktop.csproj` as the startup application
 in Visual Studio or Rider and use a normal managed .NET launch configuration.
 Alternatively, start it with the first command above, then attach the managed
@@ -432,6 +477,18 @@ application close. Managed source breakpoints, locals, watch expressions,
 stack inspection and continuation were exercised with NetCoreDbg separately.
 The shared WebAssembly UI also has selected packaged NativeAOT desktop checks.
 These are selected scenarios, not full Razor-library or IDE acceptance.
+
+The managed-only Razor class library fixture additionally exercises assembly
+route discovery, data-annotation `EditForm` validation, a library `_content`
+JavaScript module and asynchronous component/module/scope disposal after reload
+and close. These checks passed on Windows x64 for .NET 8, 9 and 10. The fixture
+uses the Razor SDK's asset graph and is excluded from experimental NativeAOT
+publication. It does not establish arbitrary component-library acceptance.
+An installed CLI also generated a fresh .NET 8 consumer referencing that library
+as a NuGet package. Its Debug output and managed publish both passed the selected
+route, invalid/valid form and module checks through NetWiv's asset provider,
+followed by normal close and component/module/scope cleanup. No test-only asset
+copy target was used.
 
 The portable source harness covers native rendering, input events,
 DTO/object-reference interop, document replacement and async scope cleanup in

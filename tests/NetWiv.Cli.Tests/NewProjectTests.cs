@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
+using NetWiv.Build.Configuration;
 using NetWiv.Cli;
 
 internal static class NewProjectTests
@@ -17,7 +18,24 @@ internal static class NewProjectTests
             Check(config["identifier"]!.GetValue<string>() == "com.example.hybrid" &&
                 config["build"]!["dotnetProject"]!.GetValue<string>() == "Example.csproj",
                 "Hybrid application metadata was not personalized.");
+            var watchConfig = ConfigLoader.Load(destination, OperatingSystem.IsWindows() ? "windows" : "linux");
+            var watchFolders = DevCommand.ResolveWatchFolders(watchConfig, []);
+            Check(watchFolders.SequenceEqual(new[] { "Shared", "Contracts", "WebAssembly" }
+                .Select(folder => Path.Combine(destination, folder)), StringComparer.OrdinalIgnoreCase),
+                "Hybrid development must watch the sibling Razor UI, assets, contracts and WebAssembly host.");
+            using (var watcher = DevCommand.CreateWatcher(watchConfig,
+                Path.Combine(destination, "src-netwiv/Example.csproj"), watchFolders, includeFrontend: false))
+            {
+                var sharedModule = Path.Combine(destination, "Shared/Assets/netwiv.js");
+                File.AppendAllText(sharedModule, "\n// watch regression\n");
+                await watcher.WaitAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+            }
             var backend = XDocument.Load(Path.Combine(destination, "src-netwiv/Example.csproj"));
+            Check((string?)backend.Root!.Attribute("Sdk") == "Microsoft.NET.Sdk.Razor" &&
+                backend.Descendants("EnableDefaultContentItems").Single().Value == "false",
+                "Hybrid desktop must resolve Razor library assets while preserving its explicit mode-specific content.");
+            Check(backend.Descendants("Watch").Any(item => (string?)item.Attribute("Include") == "@(Content)"),
+                "Direct dotnet watch must include the shared JavaScript assets.");
             var hybrid = backend.Descendants("PackageReference").Single(item => (string?)item.Attribute("Include") == "NetWiv.BlazorHybrid");
             Check(hybrid.Parent!.Attribute("Condition")!.Value.Contains("NetWivBlazorMode", StringComparison.Ordinal),
                 "Hybrid dependency is unconditional.");
@@ -43,6 +61,16 @@ internal static class NewProjectTests
             Check(!props.Descendants("Import").Any() && props.Descendants("NetWivBlazorMode").Single().Value == "Hybrid",
                 "Generated mode configuration is not standalone or does not default to Hybrid.");
             var shared = XDocument.Load(Path.Combine(destination, "Shared/Shared.csproj"));
+            Check(shared.Descendants("Compile").All(item => (string?)item.Attribute("Watch") == "false"),
+                "Generated command clients must not trigger another development restart.");
+            var browserProperties = await NetWiv.Build.Execution.ProcessRunner.RunAsync(new("dotnet",
+                ["msbuild", "WebAssembly/WebAssembly.csproj", "-nologo", "-getProperty:PublishAot,PublishSingleFile,UseAppHost",
+                 "-p:PublishAot=true", "-p:PublishSingleFile=true", "-p:UseAppHost=true"], destination, CaptureOutput: true));
+            Check(browserProperties.ExitCode == 0, browserProperties.StandardOutput + browserProperties.StandardError);
+            var browserValues = JsonNode.Parse(browserProperties.StandardOutput)!["Properties"]!;
+            Check(new[] { "PublishAot", "PublishSingleFile", "UseAppHost" }
+                .All(property => browserValues[property]!.GetValue<string>() == "false"),
+                "Desktop publish properties changed the browser deployment graph.");
             foreach (var (target, version) in new[] { ("net8.0", "8.0.32"), ("net9.0", "9.0.21"), ("net10.0", "10.0.13") })
             {
                 using var selectionTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));

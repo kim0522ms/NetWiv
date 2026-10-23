@@ -110,6 +110,7 @@
     <EmbeddedResource Include="$(NetWivConfigPath)" LogicalName="netwiv.config.json" />
   </ItemGroup>
   <ItemGroup Condition="'$(NetWivAdditionalWatchItems)' != ''">
-    <Watch Include="$(NetWivAdditionalWatchItems)" />
+    <Watch Include="$([MSBuild]::Unescape('$(NetWivAdditionalWatchItems)'))"
+           Exclude="**/bin/**;**/obj/**;**/target/**;**/.git/**" />
   </ItemGroup>
 </Project>

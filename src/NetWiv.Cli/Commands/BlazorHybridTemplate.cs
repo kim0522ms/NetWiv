@@ -62,7 +62,11 @@ internal static class BlazorHybridTemplate
             ["productName"] = name,
             ["version"] = "0.1.0",
             ["identifier"] = "dev.netwiv.blazorsample",
-            ["build"] = new JsonObject { ["dotnetProject"] = name + ".csproj" },
+            ["build"] = new JsonObject
+            {
+                ["dotnetProject"] = name + ".csproj",
+                ["additionalWatchFolders"] = new JsonArray("../Shared", "../Contracts", "../WebAssembly"),
+            },
             ["bundle"] = new JsonObject { ["active"] = false, ["icon"] = new JsonArray("icons/icon.png", "icons/icon.ico", "icons/icon.icns") },
         };
         await File.WriteAllTextAsync(Path.Combine(project, "src-netwiv", "netwiv.conf.json"), config.ToJsonString(), token);
@@ -131,6 +135,10 @@ internal static class BlazorHybridTemplate
         shared reference factory. No static component or callback registry is
         needed for this default path.
 
+        Keep the desktop project's Razor SDK: it supplies referenced Razor
+        library static assets through the managed development manifest and
+        stages them under `wwwroot/_content` when publishing.
+
         `src-netwiv/icons` contains default NetWiv PNG, ICO and ICNS artwork.
         Replace these files with your application's icons. `bundle.icon` selects
         them for runtime window/Dock icons, Windows executables and macOS bundles.
@@ -139,6 +147,9 @@ internal static class BlazorHybridTemplate
         `Directory.Build.props` to `net9.0` or `net10.0` to select that target
         and matching Microsoft packages across the desktop, shared UI and
         WebAssembly projects. Install a matching or newer SDK.
+        The IDE must also support that SDK. If an installed newer SDK prevents
+        project loading, select an IDE-compatible SDK in an app-local
+        `global.json`; the starter does not pin SDK selection.
 
         Set breakpoints in `Shared/App.razor`, `Shared/App.razor.cs` and
         `src-netwiv/GreetingCommands.cs` to follow a Razor event, generated typed
@@ -148,8 +159,16 @@ internal static class BlazorHybridTemplate
         dotnet run --project src-netwiv -c Debug
         dotnet run --project src-netwiv -c Release
         dotnet tool restore
+        dotnet tool run netwiv -- dev
         dotnet tool run netwiv -- build --no-bundle
         ```
+
+        `netwiv dev` rebuilds and restarts the managed desktop process after
+        source changes; it disables Hot Reload. The configured watch folders
+        include the shared Razor UI, its JavaScript assets, contracts and the
+        WebAssembly host. A restart resets UI and backend process state. Use a
+        normal IDE Debug launch for managed breakpoints, and stop and restart
+        that launch after edits. IDE Hot Reload has not been validated.
 
         Choose the separate WebAssembly UI explicitly. NativeAOT then applies
         only to the desktop backend; that graph excludes the Hybrid package:

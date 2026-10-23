@@ -1,7 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly" TreatAsLocalProperty="AssemblyName">
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly" TreatAsLocalProperty="AssemblyName;PublishAot;PublishSingleFile;UseAppHost">
   <PropertyGroup>
     <AssemblyName>NetWiv.BlazorHybrid.WebAssembly</AssemblyName>
     <RootNamespace>NetWiv.BlazorHybrid.WebAssembly</RootNamespace>
+    <PublishAot>false</PublishAot>
+    <PublishSingleFile>false</PublishSingleFile>
+    <UseAppHost>false</UseAppHost>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="$(BlazorFrameworkVersion)" />

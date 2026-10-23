@@ -105,6 +105,7 @@ internal static class DevCommand
                 processArgs.AddRange(["-c", release ? "Release" : "Debug", "--property:NetWivFeatures=\"" + string.Join("%3B", features) + "\""]);
                 processArgs.Add("--property:NetWivDevelopment=true");
                 processArgs.Add("--property:NetWivStageDevelopmentExternalBinaries=true");
+                processArgs.Add($"--property:NetWivDevelopmentRootProject={project}");
                 processArgs.Add($"--property:NetWivExternalBinaryTarget={target.RuntimeIdentifier}");
                 if (blazorMode is not null) processArgs.Add($"--property:NetWivBlazorMode={blazorMode}");
                 processArgs.Add("--property:NetWivBlazorExperimentalAot=false");

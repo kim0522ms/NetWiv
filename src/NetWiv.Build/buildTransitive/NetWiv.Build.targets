@@ -47,7 +47,7 @@
   </Target>
   <UsingTask TaskName="NetWiv.Build.Tasks.StageExternalBinaries" AssemblyFile="$(_NetWivBindingsTaskAssembly)" />
   <Target Name="NetWivStageDevelopmentExternalBinaries" AfterTargets="CopyFilesToOutputDirectory"
-          Condition="'$(NetWivStageDevelopmentExternalBinaries)' == 'true' and '$(NetWivConfigPath)' != '' and '$(DesignTimeBuild)' != 'true' and ('$(OutputType)' == 'Exe' or '$(OutputType)' == 'WinExe')">
+          Condition="'$(NetWivStageDevelopmentExternalBinaries)' == 'true' and '$(MSBuildProjectFullPath)' == '$(NetWivDevelopmentRootProject)' and '$(NetWivBindingsOnly)' != 'true' and '$(NetWivConfigPath)' != '' and '$(DesignTimeBuild)' != 'true' and ('$(OutputType)' == 'Exe' or '$(OutputType)' == 'WinExe')">
     <NetWiv.Build.Tasks.StageExternalBinaries ConfigPath="$(NetWivConfigPath)" BaseDirectory="$(NetWivResourceBaseDirectory)" OutputDirectory="$(TargetDir)" ApplicationName="$(TargetName)" Target="$(NetWivExternalBinaryTarget)" />
   </Target>
   <Target Name="NetWivGenerateBuildMetadata" BeforeTargets="GetAssemblyAttributes;_CoreCollectWatchItems">

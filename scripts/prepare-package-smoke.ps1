@@ -8,9 +8,9 @@ $ErrorActionPreference = 'Stop'
 $repository = Split-Path $PSScriptRoot -Parent
 $Destination = [IO.Path]::GetFullPath($Destination)
 
-# The external plugin remains a separate consumer assembly. Only framework
-# references become packages; the test-only fixture is never a published package.
-foreach ($name in @('NetWiv.Plugin.CommandFixture', 'NetWiv.Desktop.Smoke', 'NetWiv.BlazorHybrid.Aot.Tests')) {
+# Test-only plugin and Razor library references remain separate consumer projects.
+# Only framework references become packages; the fixtures are never published packages.
+foreach ($name in @('NetWiv.Plugin.CommandFixture', 'NetWiv.Desktop.Smoke', 'NetWiv.BlazorHybrid.Managed.Fixture', 'NetWiv.BlazorHybrid.Aot.Tests')) {
     $source = Join-Path $repository "tests/$name"
     $directory = Join-Path $Destination $name
     New-Item -ItemType Directory -Path $directory | Out-Null
@@ -26,8 +26,8 @@ foreach ($name in @('NetWiv.Plugin.CommandFixture', 'NetWiv.Desktop.Smoke', 'Net
     }
     foreach ($reference in @($project.SelectNodes('//ProjectReference'))) {
         $id = [IO.Path]::GetFileNameWithoutExtension($reference.Include)
-        if ($id -eq 'NetWiv.Plugin.CommandFixture') {
-            $reference.SetAttribute('Include', '../NetWiv.Plugin.CommandFixture/NetWiv.Plugin.CommandFixture.csproj')
+        if ($id -in @('NetWiv.Plugin.CommandFixture', 'NetWiv.BlazorHybrid.Managed.Fixture')) {
+            $reference.SetAttribute('Include', "../$id/$id.csproj")
             continue
         }
         $package = $project.CreateElement('PackageReference')

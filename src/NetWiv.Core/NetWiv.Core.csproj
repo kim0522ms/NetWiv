@@ -13,6 +13,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
     <InternalsVisibleTo Include="NetWiv.Core.Tests" />
     <InternalsVisibleTo Include="NetWiv.Hosting" />
+    <InternalsVisibleTo Include="NetWiv.Platform.Desktop" />
     <EmbeddedResource Include="Assets/bundle-type.txt" LogicalName="netwiv.bundle.type" />
     <EmbeddedResource Include="Security/Isolation/*.js" LogicalName="netwiv.isolation-runtime.%(Filename)%(Extension)" />
     <None Include="../../THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="" />

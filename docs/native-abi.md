@@ -18,6 +18,7 @@ native allocations. Submission accepted does not imply operation succeeded.
 Run config is `{windows:[{label,title,url,width,height,extraConfig,webviews}],
 initializationScript:string,defaultWindowIcon?:{width,height,rgba},
 localDataDirectory?:string,appLocalDataDirectory?:string,assetProtocolEnabled?:bool,
+defaultWebviewDataDirectory?:string,
 isolationProtocol?:string,ipcProtocolEnabled?:bool,uriSchemeProtocols?:string[],
 trackWebviewParents?:bool}`.
 The optional asset switch defaults to false; Core owns the file scope and HTTP
@@ -30,6 +31,11 @@ fields rather than silently running without the requested protocol.
 Core resolves the two
 data roots separately: the first is the OS local data root, the second includes
 the app identifier. They must not be interchanged when applying TAURI® config.
+`defaultWebviewDataDirectory` supplies the Windows browser profile when a webview's
+`dataDirectory` is absent or null. Desktop computes it separately from the app data
+roots so unconfigured applications can have isolated browser profiles. Explicit
+`dataDirectory` values retain their existing LocalData/label resolution; other
+platforms ignore this default-profile field.
 The optional
 icon contains RGBA bytes as JSON integers and is copied during initialization.
 Webview entries are
@@ -86,6 +92,11 @@ Callback kinds:
    and an `App` target. Its callback return value does not control AppKit's
    default behavior; Tao retains ownership of that delegate decision. Core
    invokes typed reopen handlers only for native delivery, not app/guest emits.
+   On macOS, `netwiv://opened` carries `{urls:[string,...]}`, a null label and an
+   `App` target for URL/file activation. Its return value is ignored. Typed
+   opened handlers likewise require native delivery. The `exitOnLastWindowClose`
+   run-config flag defaults to true; false retains the event loop after the
+   final close/destroy. Explicit exit is unaffected.
    With `trackWebviewParents`, `netwiv://webview-reparented` has the WebView label
    and `{windowLabel}` payload. Core consumes this adapter-only notification
    without emitting a guest or plugin event. It precedes operation completion.

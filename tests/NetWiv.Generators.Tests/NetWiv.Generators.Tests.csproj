@@ -16,6 +16,7 @@
     <ProjectReference Include="..\..\src\NetWiv.Generators\NetWiv.Generators.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="true" />
+    <ProjectReference Include="..\NetWiv.LegacyJsonFixture\NetWiv.LegacyJsonFixture.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../Shared/InstanceCommandScenarios.cs" Link="InstanceCommandScenarios.cs" />

@@ -209,6 +209,20 @@ jobs:
         run: |
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe --default-icon-smoke
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe --lifetime-smoke default
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe --lifetime-smoke resident
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe --exit-request-smoke
+
+      - name: Windows managed lifetime and persistent WebView profiles
+        if: runner.os == 'Windows'
+        timeout-minutes: 5
+        run: |
+          dotnet publish tests/NetWiv.Desktop.Smoke -c Release -r win-x64 -p:PublishAot=false -p:PublishTrimmed=false --self-contained false -o artifacts/ci/desktop-managed
+          ./artifacts/ci/desktop-managed/NetWiv.Desktop.Smoke.exe
+          ./artifacts/ci/desktop-managed/NetWiv.Desktop.Smoke.exe --lifetime-smoke default
+          ./artifacts/ci/desktop-managed/NetWiv.Desktop.Smoke.exe --lifetime-smoke resident
+          ./artifacts/ci/desktop-managed/NetWiv.Desktop.Smoke.exe --exit-request-smoke
+          pwsh -NoProfile -File scripts/test-windows-webview-profile.ps1 -ManagedDirectory artifacts/ci/desktop-managed -AotDirectory artifacts/ci/desktop-aot
 
       - name: Managed Blazor Hybrid native WebView
         timeout-minutes: 10
@@ -217,11 +231,13 @@ jobs:
           executable="$PWD/artifacts/ci/blazor-managed/NetWiv.BlazorHybrid.Aot.Tests${{ matrix.exe }}"
           if [[ "$RUNNER_OS" == Linux ]]; then
             xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/run-linux-smoke-desktop.sh "$executable" x11 --managed-host --native-webview --back-forward
+            xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/run-linux-smoke-desktop.sh "$executable" x11 --managed-rcl --native-webview
             xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/run-linux-smoke-desktop.sh "$executable" x11 --transport-navigation
             xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/run-linux-smoke-desktop.sh "$executable" x11 --registered-ipc
             xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/run-linux-smoke-desktop.sh "$executable" x11 --hostless-ipc
           else
             "$executable" --managed-host --native-webview --back-forward
+            "$executable" --managed-rcl --native-webview
             "$executable" --registered-ipc
           fi
 
@@ -248,6 +264,12 @@ jobs:
             bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke)" x11 --default-icon-smoke
           xvfb-run -a -s '-screen 0 1280x800x24' \
             bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke)" x11
+          for mode in default resident; do
+            xvfb-run -a -s '-screen 0 1280x800x24' \
+              bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke)" x11 --lifetime-smoke "$mode"
+          done
+          xvfb-run -a -s '-screen 0 1280x800x24' \
+            bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke)" x11 --exit-request-smoke
 
       - name: Build Linux managed dialog regression host
         if: runner.os == 'Linux'
@@ -288,6 +310,9 @@ jobs:
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --reopen-smoke
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --webview-options-smoke
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --lifetime-smoke default
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --lifetime-smoke resident
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --exit-request-smoke
 
       - name: Publish macOS isolation smoke with NativeAOT
         if: runner.os == 'macOS'
@@ -362,6 +387,9 @@ jobs:
       - name: Prepare pinned CLI test tools
         if: matrix.group == 'contracts'
         run: node scripts/prepare-test-tools.mjs
+      - name: Prepare pinned NSIS for sidecar package consumers
+        if: runner.os == 'Windows' && matrix.group == 'lifecycle'
+        run: node scripts/prepare-nsis.mjs
       - name: Build CLI tests
         run: dotnet build tests/NetWiv.Cli.Tests -c Release
       - name: Check CLI group completeness

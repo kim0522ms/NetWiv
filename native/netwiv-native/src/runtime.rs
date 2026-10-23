@@ -136,6 +136,8 @@ pub(crate) enum UserEvent {
     DialogDocumentChanged { webview_label: String, document_id: u64 },
     #[cfg(target_os = "macos")]
     DataStoreCompletion { request_id: u64, result: Result<Value, String> },
+    #[cfg(windows)]
+    NotificationCompletion { request_id: u64, result: Result<Value, String> },
     AssetResponse { id: u64, response: Response<Vec<u8>> },
     Submit {
         request_id: u64,
@@ -205,11 +207,13 @@ struct LocalRuntime {
     shared: Arc<Shared>,
     initialization_script: String,
     local_data_directory: Option<PathBuf>,
+    default_webview_data_directory: Option<PathBuf>,
     asset_protocol_enabled: bool,
     isolation_protocol: Option<String>,
     ipc_protocol_enabled: bool,
     uri_scheme_protocols: Vec<String>,
     track_webview_parents: bool,
+    exit_on_last_window_close: bool,
     default_window_icon: Option<tao::window::Icon>,
     app_theme: Option<Theme>,
     app_menu: Option<muda::Menu>,
@@ -280,19 +284,19 @@ fn run_inner(shared: Arc<Shared>, config: RunConfig) -> Result<(), String> {
     if let Some((rgba, width, height)) = resources.image_data(config.default_window_icon.as_ref())? {
         crate::macos::set_application_icon(&rgba, width, height)?;
     }
-    // Tauri's explicit webview `dataDirectory` uses LocalData. The app-scoped value is
-    // carried in the run contract for Core-owned paths, but does not override Wry's
-    // default (None-keyed) browser context.
+    // Core-owned app data and the browser profile can differ for an unconfigured app.
     let _app_local_data_directory = config.app_local_data_directory;
     let mut runtime = LocalRuntime {
         shared: shared.clone(),
         initialization_script: config.initialization_script,
         local_data_directory: config.local_data_directory,
+        default_webview_data_directory: config.default_webview_data_directory,
         asset_protocol_enabled: config.asset_protocol_enabled,
         isolation_protocol: config.isolation_protocol,
         ipc_protocol_enabled: config.ipc_protocol_enabled,
         uri_scheme_protocols: config.uri_scheme_protocols,
         track_webview_parents: config.track_webview_parents,
+        exit_on_last_window_close: config.exit_on_last_window_close,
         default_window_icon,
         app_theme: None,
         app_menu: None,
@@ -360,6 +364,10 @@ impl LocalRuntime {
         control_flow: &mut ControlFlow,
     ) -> Result<(), String> {
         match event {
+            Event::Opened { urls } => {
+                self.event("netwiv://opened", None, json!({"urls":urls.iter().map(|url| url.as_str()).collect::<Vec<_>>()}), "App");
+                Ok(())
+            }
             Event::Reopen { has_visible_windows, .. } => {
                 self.event("netwiv://reopen", None, json!({"hasVisibleWindows":has_visible_windows}), "App");
                 Ok(())
@@ -402,7 +410,7 @@ impl LocalRuntime {
                     .map_err(|e| format!("invalid submission: {e}"))
                     .and_then(|submission| self.invoke(target, &submission, &binary, request_id));
                 match result {
-                    #[cfg(any(target_os = "macos", target_os = "linux"))]
+                    #[cfg(any(target_os = "macos", target_os = "linux", windows))]
                     Ok(InvokeResult::Pending) => {}
                     Ok(InvokeResult::Json(value)) => {
                         self.shared.callback(
@@ -429,7 +437,7 @@ impl LocalRuntime {
                         );
                     }
                 }
-                if had_windows && self.windows.is_empty() {
+                if self.exit_on_last_window_close && had_windows && self.windows.is_empty() {
                     self.shutdown(control_flow);
                 }
                 Ok(())
@@ -454,6 +462,15 @@ impl LocalRuntime {
             }
             #[cfg(target_os = "macos")]
             UserEvent::DataStoreCompletion { request_id, result } => {
+                let payload = match result {
+                    Ok(value) => json!({"ok":true,"value":value,"isBinary":false}),
+                    Err(error) => json!({"ok":false,"error":error}),
+                };
+                self.shared.callback(CALLBACK_COMPLETION, request_id, &payload, &[]);
+                Ok(())
+            }
+            #[cfg(windows)]
+            UserEvent::NotificationCompletion { request_id, result } => {
                 let payload = match result {
                     Ok(value) => json!({"ok":true,"value":value,"isBinary":false}),
                     Err(error) => json!({"ok":false,"error":error}),
@@ -499,7 +516,7 @@ impl LocalRuntime {
                 let prevent = self.shared.callback(CALLBACK_EVENT, 0, &json!({"eventName":"tauri://close-requested","label":label,"payload":null,"target":{"kind":"Window","label":label}}), &[]) == 1;
                 if !prevent {
                     let _ = self.remove_window(&label);
-                    if self.windows.is_empty() {
+                    if self.exit_on_last_window_close && self.windows.is_empty() {
                         self.shutdown(control_flow);
                     }
                 }
@@ -685,7 +702,7 @@ impl LocalRuntime {
 }
 
 enum InvokeResult {
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", windows))]
     Pending,
     Json(Value),
     #[allow(dead_code)]

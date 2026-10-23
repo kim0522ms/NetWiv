@@ -104,6 +104,9 @@ internal static class DevCommand
                 else processArgs.AddRange(["run", "--project", project]);
                 processArgs.AddRange(["-c", release ? "Release" : "Debug", "--property:NetWivFeatures=\"" + string.Join("%3B", features) + "\""]);
                 processArgs.Add("--property:NetWivDevelopment=true");
+                processArgs.Add("--property:NetWivStageDevelopmentExternalBinaries=true");
+                processArgs.Add($"--property:NetWivDevelopmentRootProject={project}");
+                processArgs.Add($"--property:NetWivExternalBinaryTarget={target.RuntimeIdentifier}");
                 if (blazorMode is not null) processArgs.Add($"--property:NetWivBlazorMode={blazorMode}");
                 processArgs.Add("--property:NetWivBlazorExperimentalAot=false");
                 if (!noWatch && watchFolders.Count > 0) processArgs.Add("--property:NetWivAdditionalWatchItems=" + string.Join("%3B", watchFolders.Select(path => Path.Combine(path, "**", "*"))));
@@ -201,6 +204,7 @@ internal static class DevCommand
                 continue;
             }
             if (!File.Exists(binary)) throw new FileNotFoundException($"NativeAOT publish succeeded but application binary was not found: {binary}");
+            ExternalBinaryStager.Stage(ExternalBinaryStager.Resolve(config, target, Path.GetFileName(binary)), outputDirectory);
             await output.WriteLineAsync($"Running AOT development build {binary}...");
             var process = ProcessRunner.Start(new ProcessSpec(binary, appArgs, config.ProjectDirectory, environment));
             var exit = await WaitForExitOrChangeAsync(process, changes, cancellationToken);

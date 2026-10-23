@@ -1,0 +1,12 @@
+@namespace NetWiv.BlazorHybrid.Managed.Fixture
+@using Microsoft.AspNetCore.Components.Routing
+
+<a id="rcl-route-link" href="library-route">Open library route</a>
+<Router AppAssembly="@typeof(FixtureRoot).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" />
+    </Found>
+    <NotFound>
+        <p id="rcl-route-missing">No RCL route matched.</p>
+    </NotFound>
+</Router>

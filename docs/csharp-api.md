@@ -245,11 +245,22 @@ coordinates.
 or `Task`-returning handlers for macOS Dock/Finder reopen notifications.
 `ReopenEvent.HasVisibleWindows` comes from AppKit and includes minimized windows.
 These native-only hooks do not restore a window automatically or extend process
-lifetime after the last window is destroyed. Handlers start on the event-loop
+lifetime by themselves. `Builder.ExitOnLastWindowClose(false)` opts `DesktopRuntime`
+into resident behavior after the last window is destroyed. Handlers start on the event-loop
 thread and must not block it; asynchronous handlers may overlap and their errors
 use `AppHandle.EventHandlerFailed`. Registrations last until app disposal; already
 started tasks are not automatically cancelled or awaited. See the
 [resident app example](macos.md#reopening-a-resident-application).
+
+`Builder.OnOpened`, `App.OnOpened` and `AppHandle.OnOpened` observe macOS native
+URL/file activation with an `OpenedEvent.Urls` batch. Their threading, failure
+and disposal behavior matches `OnReopen`. See [application lifetime and
+activation](application-lifetime.md) for resident windows and deep-link routing.
+
+`App.RequestExitAsync` and `AppHandle.RequestExitAsync` await the synchronous or
+async `OnExitRequested` handlers registered on the builder, app or handle.
+This cooperative quit path supports saving, veto and caller cancellation;
+existing force exit, restart and automatic last-window behavior are unchanged.
 
 `Window.OnCloseRequested` accepts synchronous or asynchronous handlers. Native
 closing is deferred while subscribed; the handler may call `PreventDefault`.

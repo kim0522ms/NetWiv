@@ -82,9 +82,8 @@ internal static class ManagedRuntimeProbe
                 throw "Generated $mode application has an unexpected runtime deployment policy."
             }
             if ($IsWindows) {
-                # WebView2 can retain profile locks briefly after the app exits.
-                # Execute each deployment from its own copy so the next build
-                # can clean its output without racing browser shutdown.
+                # Execute a separate payload copy while the next deployment
+                # replaces the original build output.
                 $executionDirectory = Join-Path $workspace "managed-$mode"
                 Copy-Item -LiteralPath (Split-Path $managed) -Destination $executionDirectory -Recurse
                 $managed = Join-Path $executionDirectory (Split-Path $managed -Leaf)
@@ -116,6 +115,12 @@ internal static class ManagedRuntimeProbe
                 }
                 Write-Output "PASS bundled managed ${mode}: GUI/IPC"
             }
+        }
+
+        # Exercise the real Razor/WASM solution once on SDK 10, including its HTML
+        # fingerprint/import-map pipeline, without multiplying the OS/SDK matrix.
+        if ($IsLinux -and $major -eq '10') {
+            & "$PSScriptRoot/test-blazor-package-consumer.ps1" -Cli $cli -Feed $Feed -Destination (Join-Path $workspace 'BlazorExample')
         }
 
         # Generate package consumers, retaining the test plugin as a separate assembly.
@@ -154,10 +159,21 @@ internal sealed class PackageOptions { public string Value { get; set; } = ""; }
 
         & $cli new HybridExample --template blazor-hybrid --source $Feed
         if ($LASTEXITCODE -ne 0) { throw 'Packaged Hybrid starter generation failed.' }
+        $sharedPath = Join-Path $workspace 'HybridExample/Shared/Shared.csproj'
+        $shared = [xml](Get-Content $sharedPath -Raw)
+        $group = $shared.CreateElement('ItemGroup')
+        $reference = $shared.CreateElement('ProjectReference')
+        $reference.SetAttribute('Include', '../../NetWiv.BlazorHybrid.Managed.Fixture/NetWiv.BlazorHybrid.Managed.Fixture.csproj')
+        [void]$group.AppendChild($reference)
+        [void]$shared.Project.AppendChild($group)
+        $shared.Save($sharedPath)
         & dotnet publish HybridExample/src-netwiv -c Release "-p:NetWivBlazorTargetFramework=$TargetFramework" -p:PublishAot=false --disable-build-servers -o hybrid-starter
         if ($LASTEXITCODE -ne 0) { throw 'Packaged managed Hybrid starter publish failed.' }
         if (!(Test-Path hybrid-starter/wwwroot/index.html) -or !(Test-Path hybrid-starter/NetWiv.BlazorHybrid.dll)) {
             throw 'Packaged Hybrid starter omitted its host or browser assets.'
+        }
+        if (!(Test-Path hybrid-starter/wwwroot/_content/NetWiv.BlazorHybrid.Managed.Fixture/fixture.js)) {
+            throw 'Packaged Hybrid starter omitted a referenced Razor library static asset.'
         }
 
         $hybridProject = Join-Path $workspace 'NetWiv.BlazorHybrid.Aot.Tests/NetWiv.BlazorHybrid.Aot.Tests.csproj'
@@ -180,6 +196,16 @@ internal sealed class PackageOptions { public string Value { get; set; } = ""; }
             }
             else { & $hybridExecutable @hybridArguments }
             if ($LASTEXITCODE -ne 0) { throw "Package-only Hybrid $flavor native WebView checks failed." }
+            if (!$aot) {
+                if (!(Test-Path (Join-Path $hybridOutput 'wwwroot/_content/NetWiv.BlazorHybrid.Managed.Fixture/fixture.js'))) {
+                    throw 'Package-only managed Hybrid omitted its Razor library static asset.'
+                }
+                # One existing SDK 10 job exercises the added Razor library path.
+                if ($IsLinux -and $major -eq '10') {
+                    & xvfb-run -a bash (Join-Path $repository 'scripts/run-linux-smoke-desktop.sh') $hybridExecutable x11 --managed-rcl --native-webview
+                    if ($LASTEXITCODE -ne 0) { throw 'Package-only managed Hybrid Razor library checks failed.' }
+                }
+            }
             if ($IsLinux) {
                 & xvfb-run -a bash (Join-Path $repository 'scripts/run-linux-smoke-desktop.sh') $hybridExecutable x11 --registered-ipc
             }

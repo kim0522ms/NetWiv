@@ -162,6 +162,34 @@ fn late_protocol_completion_after_shutdown_does_not_reenter_callbacks() {
     assert_eq!(CALLS.load(std::sync::atomic::Ordering::Relaxed), 0);
 }
 
+#[cfg(windows)]
+#[test]
+fn late_notification_worker_completion_after_shutdown_does_not_reenter_callbacks() {
+    use std::sync::{Arc, mpsc::channel, atomic::Ordering};
+    use std::time::Duration;
+    unsafe extern "C" fn callback(_: *mut std::ffi::c_void, _: u32, _: u64,
+        _: *const u8, _: usize, _: *const u8, _: usize) -> i32 {
+        panic!("late notification callback must be discarded");
+    }
+    let shared = Arc::new(super::Shared::new(callback, std::ptr::null_mut()));
+    shared.state.store(super::STATE_RUNNING, Ordering::Release);
+    let worker_shared = shared.clone();
+    let (release, waiting) = channel();
+    let (complete, result) = channel();
+    let worker = crate::notification::spawn_notification(move || {
+        waiting.recv_timeout(Duration::from_secs(5)).unwrap();
+        Ok(serde_json::Value::Null)
+    }, move |outcome| {
+        complete.send(worker_shared.enqueue(super::UserEvent::NotificationCompletion {
+            request_id: 42, result: outcome,
+        })).unwrap();
+    });
+    shared.state.store(super::STATE_STOPPED, Ordering::Release);
+    release.send(()).unwrap();
+    assert_eq!(result.recv_timeout(Duration::from_secs(5)).unwrap().unwrap_err(), "native runtime is not running");
+    worker.join().unwrap();
+}
+
 #[cfg(target_os = "macos")]
 #[test]
 fn late_data_store_completion_after_shutdown_does_not_reenter_callbacks() {
@@ -341,14 +369,36 @@ fn prevent_overflow_reduces_inner_size_by_outer_excess() {
 #[test]
 fn data_directory_matches_pinned_from_config_resolution() {
     let root = Path::new("local-data");
+    let default = Path::new("app-data");
     assert_eq!(
-        resolve_webview_data_directory(Some(root), "main", Some(&json!("profile"))).unwrap(),
+        resolve_webview_data_directory(Some(root), Some(default), "main", Some(&json!("profile"))).unwrap(),
         Some(root.join("main").join("profile"))
     );
     assert_eq!(
-        resolve_webview_data_directory(Some(root), "main", Some(&json!("../shared"))).unwrap(),
+        resolve_webview_data_directory(Some(root), Some(default), "main", Some(&json!("../shared"))).unwrap(),
         Some(PathBuf::from("../shared"))
     );
+    let absolute = std::env::temp_dir().join("netwiv-explicit-profile");
+    assert_eq!(
+        resolve_webview_data_directory(Some(root), Some(default), "main", Some(&json!(absolute))).unwrap(),
+        Some(absolute)
+    );
+    assert!(resolve_webview_data_directory(Some(root), Some(default), "main", Some(&json!(12))).is_err());
+}
+
+#[test]
+fn default_data_directory_is_windows_only_and_app_scoped() {
+    let first = Path::new("app-data/first");
+    let second = Path::new("app-data/second");
+    let expected = if cfg!(target_os = "windows") { Some(first.to_path_buf()) } else { None };
+    for value in [None, Some(json!(null))] {
+        assert_eq!(resolve_webview_data_directory(None, Some(first), "main", value.as_ref()).unwrap(), expected);
+        assert_eq!(resolve_webview_data_directory(None, Some(first), "child", value.as_ref()).unwrap(), expected);
+    }
+    let other = resolve_webview_data_directory(None, Some(second), "main", None).unwrap();
+    if cfg!(target_os = "windows") { assert_ne!(other, expected); }
+    else { assert_eq!(other, None); }
+    assert_eq!(resolve_webview_data_directory(None, None, "main", None).unwrap(), None);
 }
 
 #[test]

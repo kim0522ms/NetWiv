@@ -87,11 +87,24 @@ windowless startup and configuration binding. The .NET 8 baseline jobs additiona
 publish and execute the default managed self-contained React app, checking its
 bundled runtime policy and GUI/IPC behavior. The macOS job also bundles and
 executes the managed `.app` in both deployment modes through the GUI/IPC smoke flow.
+The Linux .NET 10 job additionally builds and rebuilds a real generated Blazor
+WebAssembly solution in Debug and Release. It changes a shared DTO and command,
+then recompiles the Razor frontend in both configurations without manually
+exporting bindings. An ordinary test project references the app and shared
+contracts and checks the shared JSON context. Finally it publishes and executes that starter in
+framework-dependent managed and NativeAOT modes through its generated-client
+GUI/IPC smoke flow. SDK 10 also exercises the HTML fingerprint/import-map pipeline.
+This selected starter check does not cover every OS/SDK
+combination.
 All five consumer jobs also generate and publish a matching-target managed
 `blazor-hybrid` starter, then execute a package-only Hybrid fixture in the
 ordinary Microsoft managed host and experimental NativeAOT host. The fixture
 checks native DOM events, interop, reload and page-scope cleanup. Linux runs
 these checks in a nested X11 desktop; native Wayland needs separate validation.
+Generated managed starters also reference an ordinary Razor library and must
+publish its static asset through the SDK's standard `_content` graph. The Linux
+SDK 10 consumer additionally executes that library's routes, forms, JavaScript
+module and DI-scope cleanup in the managed host.
 All five must pass before the draft Release job runs.
 See [SDK compatibility](dotnet-compatibility.md).
 

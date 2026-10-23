@@ -32,6 +32,7 @@ public sealed partial class AppHandle : IDisposable
     private ILogger _ipcLogger = NullLogger.Instance;
     private ILogger _commandLogger = NullLogger.Instance;
     internal bool DebugAssertions { get; set; }
+    internal bool ExitOnLastWindowClose { get; set; } = true;
 
     internal AppHandle(
         IDesktopRuntime runtime,
@@ -209,7 +210,11 @@ public sealed partial class AppHandle : IDisposable
 
     public void Dispatch(Action action) => _runtime.Dispatch(action);
     public void EvaluateScript(string webviewLabel, string script) => _runtime.EvaluateScript(webviewLabel, script);
-    public void Exit(int exitCode = 0) => _runtime.Exit(exitCode);
+    public void Exit(int exitCode = 0)
+    {
+        lock (_nativeEventGate) _exitRequestGeneration++;
+        _runtime.Exit(exitCode);
+    }
 
     public Task<string> ResolveDirectoryAsync(int directory, string? path = null, CancellationToken cancellationToken = default) =>
         _runtime.ResolveDirectoryAsync(directory, path, Metadata.Identifier, cancellationToken);
@@ -290,7 +295,12 @@ public sealed partial class AppHandle : IDisposable
         BuiltInCommands.ResolveDirectory((int)BaseDirectory.LocalData, Metadata.Identifier),
         BuiltInCommands.ResolveDirectory((int)BaseDirectory.AppLocalData, Metadata.Identifier), AssetProtocolEnabled, Isolation?.Scheme, OnProtocolInvokeAsync,
         _uriSchemeProtocols.Keys.ToArray(), ResolveUriSchemeAsync)
-        { ApplyAssetPolicy = AssetResponsePolicy, EncodedDefaultWindowIcon = EncodedDefaultWindowIcon is { } icon ? new ReadOnlyMemory<byte>(icon) : (ReadOnlyMemory<byte>?)null };
+        {
+            UsesDefaultAppIdentifier = string.Equals(Metadata.Identifier, AppMetadata.Default.Identifier, StringComparison.OrdinalIgnoreCase),
+            ExitOnLastWindowClose = ExitOnLastWindowClose,
+            ApplyAssetPolicy = AssetResponsePolicy,
+            EncodedDefaultWindowIcon = EncodedDefaultWindowIcon is { } icon ? new ReadOnlyMemory<byte>(icon) : (ReadOnlyMemory<byte>?)null
+        };
 
     private async ValueTask<AssetResponse?> ResolveUriSchemeAsync(AssetRequest request)
     {

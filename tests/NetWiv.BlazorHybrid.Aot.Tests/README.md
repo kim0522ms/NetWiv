@@ -54,7 +54,16 @@ For the default Microsoft managed host:
 
 ```powershell
 dotnet run --project tests/NetWiv.BlazorHybrid.Aot.Tests -c Release -p:PublishAot=false -p:JsonSerializerIsReflectionEnabledByDefault=true -- --managed-host --native-webview --back-forward
+dotnet run --project tests/NetWiv.BlazorHybrid.Aot.Tests -c Release -p:PublishAot=false -p:JsonSerializerIsReflectionEnabledByDefault=true -- --managed-rcl --native-webview
 ```
+
+The separate `--managed-rcl` process hosts the test Razor class library through
+the default managed adapter. It discovers its routed component, submits invalid
+and valid data-annotation forms, imports a library `_content` module and checks
+asynchronous component, module and page-scope cleanup after reload and close.
+Its asset uses the Razor SDK's standard build and publish asset graph.
+This fixture is excluded from experimental NativeAOT publication; these managed
+library checks do not establish arbitrary library or NativeAOT compatibility.
 
 On Linux and macOS, publish with `-r linux-x64` or `-r osx-arm64` and run
 `./artifacts/blazor-aot-tests/NetWiv.BlazorHybrid.Aot.Tests` with the same arguments.

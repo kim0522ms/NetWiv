@@ -179,6 +179,22 @@ The explicit local flag is required outside CI. The test temporarily changes the
 WebView2 `pv` values, then restores their original value/type and removes registry
 keys created by the test, including on failure. Use a dedicated test machine.
 
+For a bounded current-user NSIS/MSI lifecycle check, use the same build tools
+from a **non-elevated** PowerShell 7 terminal and keep an actual WebView2 runtime
+installed:
+
+```powershell
+dotnet build src/NetWiv.Cli -c Release
+./scripts/test-windows-installers.ps1 -CurrentUserOnly
+```
+
+This mode uses fresh test identities and directories, reads runtime registration
+without changing it, and checks current-user installation, shortcuts, upgrades,
+relocation, uninstall and unrelated-file preservation. It does not test shared
+runtime installation/removal, per-machine installation or a clean machine.
+Successful runs remove their generated test files. If an ownership or cleanup
+check fails, remaining test files are preserved instead of forcing removal.
+
 ---
 
 TAURI® is a trademark of The Tauri Programme within the Commons Conservancy.

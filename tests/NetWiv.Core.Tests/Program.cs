@@ -5,6 +5,7 @@ using NetWiv.Runtime;
 using NetWiv.Plugin.SingleInstance;
 
 if (args is ["--shell-execution-probe", var shellRoot, var shellRole]) return await ShellLifetimeTests.Probe(shellRoot, shellRole);
+if (args is ["--sql-migration-probe", var configRoot, var identifier, var role]) return await SqlMigrationProcessTests.Probe(configRoot, identifier, role);
 if (args is ["--restart-probe", var restartRoot]) return RestartLifecycleTests.Probe(restartRoot);
 if (args is ["--hosted-restart-probe", var hostedRoot]) return HostingTests.RestartProbe(hostedRoot);
 
@@ -23,6 +24,12 @@ GeneratedCommandRegistry.Register("generated_selected", static registry =>
 var tests = new List<(string Name, Func<Task> Run)>
 {
     ("macOS reopen delivers native-only notifications and observes application lifetime", ReopenTests.DeliveryAndLifetime),
+    ("native opened delivers URL batches and observes resident application lifetime", OpenedTests.DeliveryAndLifetime),
+    ("cooperative exit requests await handlers and preserve veto ordering", ExitRequestTests.ApprovalVetoAndOrdering),
+    ("cooperative exit requests reject reentry and snapshot handler registrations", ExitRequestTests.ReentrancyAndHandlerSnapshot),
+    ("cooperative exit requests cancel without stale exits and observe failures", ExitRequestTests.CancellationAndFailures),
+    ("cooperative exit requests are invalidated by force exit and disposal", ExitRequestTests.ForceExitAndDisposalInvalidatePending),
+    ("native opened observes sync and async failures and disposal", OpenedTests.FailuresAndDisposal),
     ("macOS reopen observes sync and async failures without blocking later handlers", ReopenTests.FailuresAndDisposal),
     ("legacy JSON metadata accepts nullable command members without relaxing value types", LegacyJsonTests.NullableMembers),
     ("runtime asset policy preserves configured CSP headers and isolation sources", AssetResponsePolicyTests.SharedPolicy),
@@ -35,6 +42,7 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("generated plugin commands require capability and respect deny precedence", GeneratedPluginCommandTests.Permissions),
     ("generated plugin commands reject invalid owners selections and registrations", GeneratedPluginCommandTests.InvalidSelection),
     ("runtime identity rejects a Tauri version through guest IPC", RuntimeIdentity),
+    ("browser profile identity preserves app data roots and distinguishes reserved identifiers", BrowserProfileIdentityTests.RuntimeContext),
     ("Document-owned resource close rejects other windows and preserves backend sharing", ResourceOwnershipTests.CloseRequiresOwner),
     ("IPC boundary replacement rejects late resources and waits for async scope disposal", IpcBoundaryLifetimeTests.ReplacementWaitsForScopeAndRejectsLateResources),
     ("IPC boundary reparent preserves in-flight channels and rechecks destination ACL", IpcBoundaryLifetimeTests.ReparentPreservesInFlightDocumentAndRechecksAcl),
@@ -158,6 +166,9 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("official HTTP guest enforces URL scope and streams a response", HttpPluginTests.Fetch),
     ("official clipboard guest requires explicit grants and forwards to native", ClipboardPluginTests.PermissionsAndForwarding),
     ("official shell guest executes only scoped aliases", ShellPluginTests.ScopedExecute),
+    ("official shell sidecars enforce bundled paths argument scopes ownership and kill", ShellSidecarTests.ScopedSidecars),
+    ("shell spawn rejects navigation during process startup", ShellLifetimeTests.NavigationDuringSpawn),
+    ("SQLite competing processes serialize migration history and rollback failed migrations", SqlMigrationTests.ConcurrentProcessLoads),
     ("official window-state guest saves and restores selected window flags", WindowStatePluginTests.SaveAndRestore),
     ("official websocket guest connects and relays a local text frame", WebsocketPluginTests.LocalEcho),
     ("official upload guest streams files and reports HTTP failures", UploadPluginTests.Transfer),
@@ -170,6 +181,7 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("single instance forwards a second launch's arguments to the first app", SingleInstancePluginTests.ForwardsSecondLaunch),
     ("single instance forwards arguments between separate desktop processes", SingleInstancePluginTests.ForwardsAcrossProcesses),
     ("deep link accepts configured launch URL and emits second launch event", DeepLinkPluginTests.CurrentAndEvent),
+    ("deep link filters native opened URL batches and ignores application emitted events", DeepLinkPluginTests.NativeOpenedUrls),
     ("deep link registration uses per-user desktop protocol storage", DeepLinkPluginTests.Registration),
     ("deep link consumes the single-instance forwarded URL", DeepLinkPluginTests.SecondInstanceOpensUrl),
     ("localhost serves embedded assets and stops accepting requests on disposal", LocalhostPluginTests.ServesAssets),

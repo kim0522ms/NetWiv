@@ -67,6 +67,43 @@ a managed deployment still requires a vendor DLL that supports the chosen .NET
 runtime and Windows architecture. No WMX or other equipment SDK compatibility is
 claimed by these tests.
 
+## Windows browser profiles
+
+On Windows, a webview with no `dataDirectory` (or `null`) stores its WebView2
+profile in the application's local data directory, `%LOCALAPPDATA%/<identifier>`.
+Give each application a unique configured `identifier` or `AppMetadata.Identifier`.
+That identity keeps browser state across managed DLL, apphost and NativeAOT launches
+and across deployment locations. Applications using the reserved default identifier
+`com.netwiv.app` instead use an isolated `webview/<hash>` subdirectory. The hash is
+derived locally from the entry assembly's simple name and the canonical application
+directory, with Windows casing normalized; it is not reported or uploaded. Such an
+unconfigured application's state follows its application directory, so moving it
+starts a separate profile. Linux and macOS defaults are unchanged.
+These defaults apply to applications built through `Builder`. An integration that
+calls `DesktopRuntime.Run` with its own `RuntimeContext` must supply an app-specific
+`AppLocalDataDirectory` or an explicit webview `dataDirectory`; it owns that
+lower-level identity choice.
+
+Earlier NetWiv versions on Windows left the default profile location to WebView2, which can
+place it beside the host executable. This fails when that directory is not writable,
+including managed DLL launches through a protected `dotnet` installation. The new
+default does not move or delete an existing profile; existing cookies and browser
+storage may therefore appear empty after upgrading. To retain an existing profile,
+set `dataDirectory` to its absolute path explicitly and ensure that location is
+writable. A safe relative `dataDirectory` continues to resolve under
+`%LOCALAPPDATA%/<webview-label>/`; explicit directories keep their existing sharing
+behavior and override the new default.
+
+The Windows regression can be run with managed and NativeAOT desktop smoke publish
+directories:
+
+```powershell
+./scripts/test-windows-webview-profile.ps1 -ManagedDirectory artifacts/desktop-managed -AotDirectory artifacts/desktop-aot
+```
+
+It uses synthetic storage to check persistence across launch modes and locations,
+separate app identities, unconfigured app isolation, and explicit profile paths.
+
 ## Bundles and output
 
 All CLI modes use `target/<requested-target>/release/` (or `debug/`). Each build

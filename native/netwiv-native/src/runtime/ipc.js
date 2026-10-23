@@ -17,14 +17,16 @@
   let pending = [];
   window.addEventListener('pagehide', () => {
     capability = undefined;
+    const queued = pending;
     pending = [];
+    for (const item of queued) item.cancel?.();
     nonce = createNonce();
   });
   const send = message => {
     const payload = typeof message === 'string' ? message : stringify(message);
     const deliver = () => post(stringify({ __proto__: null, capability, documentId, payload }));
     if (capability) deliver();
-    else pending.push(deliver);
+    else pending.push({ deliver });
   };
   const fetchIpc = (url, options) => new Promise((resolve, reject) => {
     if (!protocolIpc) {
@@ -49,7 +51,14 @@
       } catch (error) { reject(error); }
     };
     if (capability) deliver();
-    else pending.push(deliver);
+    else pending.push({
+      deliver,
+      cancel: () => {
+        const error = new Error('The document was hidden before IPC became available.');
+        error.name = 'AbortError';
+        reject(error);
+      }
+    });
   });
   Object.defineProperty(window, '__NETWIV_IPC_NONCE__', { value: () => nonce });
   Object.defineProperty(window, '__NETWIV_ACTIVATE_IPC__', {
@@ -60,7 +69,7 @@
       documentId = epoch;
       const queued = pending;
       pending = [];
-      for (const deliver of queued) deliver();
+      for (const item of queued) item.deliver();
     }
   });
   Object.defineProperty(window, '__NETWIV_DOCUMENT_TRANSPORT__', { value: Object.freeze({ send, fetchIpc }) });

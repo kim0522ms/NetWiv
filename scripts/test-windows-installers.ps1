@@ -1,22 +1,41 @@
-# Prerequisite tests temporarily change WebView2 registration and restore it in finally.
-# Local execution requires an explicit opt-in on a dedicated elevated validation machine.
-param([switch]$AllowLocalMachine)
+# The full suite changes WebView2 registration and requires a dedicated elevated validation machine.
+# -CurrentUserOnly uses an existing runtime read-only and requires a non-elevated process.
+param([switch]$AllowLocalMachine, [switch]$CurrentUserOnly)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
-if (-not $IsWindows -or ($env:CI -ne 'true' -and -not $AllowLocalMachine)) { throw 'Use a Windows CI runner or explicitly pass -AllowLocalMachine on a dedicated validation machine.' }
+function Assert($condition, [string]$message) { if (-not $condition) { throw $message } }
+if (-not $IsWindows -or (-not $CurrentUserOnly -and $env:CI -ne 'true' -and -not $AllowLocalMachine)) { throw 'Use a Windows CI runner, -CurrentUserOnly, or explicitly pass -AllowLocalMachine on a dedicated validation machine.' }
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-if (-not ([Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+if (-not $CurrentUserOnly -and -not ([Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     throw 'Per-machine installer acceptance requires an elevated runner.'
 }
 $repo = Split-Path $PSScriptRoot -Parent
 $root = Join-Path $repo 'artifacts/ci/windows-installers'
+if ($CurrentUserOnly) {
+    if (-not [Environment]::Is64BitProcess) { throw 'Current-user x64 installer acceptance requires a 64-bit PowerShell process.' }
+    if (([Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Current-user acceptance requires a non-elevated process.' }
+    $runId = [Guid]::NewGuid().ToString('N')
+    $root = Join-Path ([IO.Path]::GetTempPath()) "netwiv-installer-$runId"
+    if (Test-Path -LiteralPath $root) { throw 'The current-user validation directory must not already exist.' }
+    $runRoot = [IO.Path]::GetFullPath($root).TrimEnd('\')
+    function Assert-OwnedPath([string]$path) {
+        $full = [IO.Path]::GetFullPath($path).TrimEnd('\')
+        Assert ($full -eq $runRoot -or $full.StartsWith($runRoot + '\', [StringComparison]::OrdinalIgnoreCase)) 'Test path escaped the fresh validation directory.'
+        for ($probe = $full; $probe; $probe = Split-Path $probe -Parent) {
+            if (Test-Path -LiteralPath $probe) {
+                if ((Get-Item -LiteralPath $probe -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Test paths cannot contain reparse points.' }
+            }
+        }
+    }
+    Assert-OwnedPath $runRoot
+}
 New-Item -ItemType Directory -Path $root -Force | Out-Null
 $cli = Join-Path $repo 'src/NetWiv.Cli/bin/Release/net8.0/netwiv.dll'
 $fixture = Join-Path $root 'fixture'
 New-Item -ItemType Directory -Path $fixture -Force | Out-Null
 @'
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><PublishAot>true</PublishAot></PropertyGroup>
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><PublishAot>true</PublishAot><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>
   <ItemGroup><EmbeddedResource Include="marker.txt" LogicalName="bundle-marker" /></ItemGroup>
 </Project>
 '@ | Set-Content (Join-Path $fixture 'InstallerProbe.csproj')
@@ -41,9 +60,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Probe NativeAOT publish failed.' }
 New-Item -ItemType Directory -Path (Join-Path $payload 'data') -Force | Out-Null
 Set-Content (Join-Path $payload 'data/seed.txt') 'installed payload'
 
-function Assert($condition, [string]$message) { if (-not $condition) { throw $message } }
 function Execute([string]$exe, [string]$arguments, [int[]]$codes = @(0)) {
-    $process = Start-Process -FilePath $exe -ArgumentList $arguments -PassThru -Wait
+    $process = Start-Process -FilePath $exe -ArgumentList $arguments -WindowStyle Hidden -PassThru -Wait
     Assert ($process.ExitCode -in $codes) "$exe returned $($process.ExitCode): $arguments"
 }
 function Wait-Until([scriptblock]$test, [string]$message) {
@@ -87,6 +105,157 @@ function Get-MsiProductCode([string]$package) {
         [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($database)
     }
 }
+if ($CurrentUserOnly) {
+    # This bounded path never enters the prerequisite-registration mutation suite below.
+    $runtimePresent = $false
+    foreach ($hive in @([Microsoft.Win32.RegistryHive]::CurrentUser, [Microsoft.Win32.RegistryHive]::LocalMachine)) {
+        $base = [Microsoft.Win32.RegistryKey]::OpenBaseKey($hive, [Microsoft.Win32.RegistryView]::Registry32)
+        $runtime = $base.OpenSubKey('Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', $false)
+        try { if ($runtime -and $runtime.GetValue('pv') -and $runtime.GetValue('pv') -ne '0.0.0.0') { $runtimePresent = $true } }
+        finally { if ($runtime) { $runtime.Dispose() }; $base.Dispose() }
+    }
+    Assert $runtimePresent 'Current-user acceptance requires an already installed WebView2 runtime.'
+    Assert-OwnedPath $runRoot
+    $windowsInstaller = New-Object -ComObject WindowsInstaller.Installer
+    $keys = [Collections.Generic.List[string]]::new()
+    $links = [Collections.Generic.List[string]]::new()
+    $codes = [Collections.Generic.HashSet[string]]::new()
+    $uninstallers = @{}
+    function Assert-OwnedUninstaller([string]$directory) {
+        Assert-OwnedPath $directory
+        $exe = Join-Path $directory 'uninstall.exe'
+        Assert ($uninstallers.ContainsKey($exe) -and (Test-Path -LiteralPath $exe)) 'No known owned uninstaller exists at the expected path.'
+        Assert ((Get-FileHash -LiteralPath $exe).Hash -eq $uninstallers[$exe]) 'The owned uninstaller changed unexpectedly.'
+    }
+    try {
+        foreach ($format in @('nsis', 'msi')) {
+            $product = "NetWiv-Local-$runId-$format"
+            $identifier = "dev.netwiv.local.$runId.$format"
+            $upgradeCode = [Guid]::NewGuid().ToString('D').ToUpperInvariant()
+            $key = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\$identifier"
+            Assert (-not (Test-Path -LiteralPath $key)) 'The unique test registration must not already exist.'
+            Assert (@($windowsInstaller.RelatedProducts('{' + $upgradeCode + '}')).Count -eq 0) 'The unique upgrade identity must not already exist.'
+            $keys.Add($key)
+            $initial = Join-Path $root "$format initial"
+            $relocated = Join-Path $root "$format relocated"
+            foreach ($directory in @($initial, $relocated)) { Assert-OwnedPath $directory; Assert (-not (Test-Path -LiteralPath $directory)) 'Test install directories must not already exist.' }
+            $identityText = if ($format -eq 'nsis') { $identifier + ':HKCU' } else { $upgradeCode }
+            $suffix = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($identityText))).Substring(0, 16)
+            $destination = "$product ($suffix)"
+            $shortcut = "$product Tool"
+            $desktopLink = Join-Path ([Environment]::GetFolderPath('DesktopDirectory')) "$shortcut.lnk"
+            $menuDirectory = Join-Path ([Environment]::GetFolderPath('Programs')) $destination
+            $menuLink = Join-Path $menuDirectory "$shortcut.lnk"
+            foreach ($path in @($desktopLink, $menuDirectory)) { Assert (-not (Test-Path -LiteralPath $path)) 'Test shortcut paths must not already exist.' }
+            $links.Add($desktopLink); $links.Add($menuDirectory)
+            New-Item -ItemType Directory -Path $initial | Out-Null
+            $inside = Join-Path $initial 'unrelated-user-file.txt'
+            $relocatedInside = Join-Path $relocated 'unrelated-user-file.txt'
+            $outside = Join-Path $root "$format-user-data.txt"
+            Set-Content -LiteralPath $inside 'keep unrelated files'
+            Set-Content -LiteralPath $outside 'keep application data'
+            $report = Join-Path $root "$format-launch.json"
+            $expected = @('space value', '한글', '')
+            $installed = $false
+            $directory = $initial
+            $package = $null
+            function Assert-OwnRegistration {
+                if ($format -eq 'nsis') {
+                    $registration = Get-ItemProperty -LiteralPath $key
+                    Assert ([IO.Path]::GetFullPath($registration.InstallLocation).TrimEnd('\') -eq $directory) 'Owned registration points outside the expected install directory.'
+                    Assert-OwnedUninstaller $directory
+                } else {
+                    $entry = @($windowsInstaller.ProductsEx((Get-MsiProductCode $package), '', 2))
+                    Assert ($entry.Count -eq 1 -and $entry[0].InstallProperty('InstallLocation').TrimEnd('\') -eq $directory) 'Owned MSI is not installed in the expected current-user directory.'
+                }
+            }
+            try {
+                foreach ($version in @('1.0.0', '1.0.1', '1.0.2')) {
+                    if ($installed) { Assert-OwnRegistration }
+                    $next = if ($version -eq '1.0.2') { $relocated } else { $initial }
+                    Assert-OwnedPath $next
+                    if ($version -eq '1.0.2') { New-Item -ItemType Directory -Path $relocated | Out-Null; Set-Content -LiteralPath $relocatedInside 'keep relocated unrelated files' }
+                    $obsolete = Join-Path $payload 'obsolete.txt'
+                    if ($version -eq '1.0.0') { Set-Content -LiteralPath $obsolete 'owned obsolete payload' } elseif (Test-Path -LiteralPath $obsolete) { Remove-Item -LiteralPath $obsolete }
+                    @{
+                        productName = $product; identifier = $identifier; version = $version
+                        build = @{ dotnetProject = 'InstallerProbe.csproj' }
+                        bundle = @{ windows = @{ wix = @{ upgradeCode = $upgradeCode }; installer = @{
+                            scope = 'currentUser'; shortcuts = @{ desktop = $true; name = $shortcut; workingDirectory = 'data'; arguments = @($report) + $expected }
+                        } } }
+                    } | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $fixture 'netwiv.conf.json')
+                    Push-Location $fixture
+                    try { & dotnet $cli bundle -t win-x64 -b $format --no-sign; Assert ($LASTEXITCODE -eq 0) 'Current-user bundle failed.' }
+                    finally { Pop-Location }
+                    $pattern = if ($format -eq 'nsis') { "${product}_${version}_x64-setup.exe" } else { "${product}_${version}_x64_en-US.msi" }
+                    $package = Join-Path $payload "bundle/$format/$pattern"
+                    Assert-OwnedPath $package
+                    if ($format -eq 'nsis') {
+                        $script = Get-Content -LiteralPath (Join-Path $payload 'bundle/nsis/installer.nsi') -Raw
+                        Assert ($script -match '(?m)^RequestExecutionLevel user\r?$' -and $script -notmatch '(?m)^RequestExecutionLevel (admin|highest)') 'Current-user NSIS must not request elevation.'
+                    } else {
+                        [xml]$wix = Get-Content -LiteralPath (Join-Path $payload 'bundle/msi/main.wxs') -Raw
+                        Assert ($wix.Wix.Product.Package.InstallScope -eq 'perUser') 'Current-user MSI must not request machine installation.'
+                    }
+                    if ($format -eq 'msi') {
+                        $code = Get-MsiProductCode $package
+                        Assert (@($windowsInstaller.ProductsEx($code, '', 7)).Count -eq 0) 'The new MSI product identity must not already exist.'
+                        [void]$codes.Add($code)
+                    }
+                    Install $package $format $(if ($version -eq '1.0.1') { '' } else { $next })
+                    $installed = $true; $directory = $next
+                    if ($format -eq 'nsis') { $uninstallers[(Join-Path $directory 'uninstall.exe')] = (Get-FileHash -LiteralPath (Join-Path $directory 'uninstall.exe')).Hash }
+                    Assert-OwnRegistration
+                    Assert (Test-Path -LiteralPath (Join-Path $directory 'InstallerProbe.exe')) 'Installed payload is missing.'
+                    Assert ((Test-Path -LiteralPath (Join-Path $directory 'obsolete.txt')) -eq ($version -eq '1.0.0')) 'Upgrade left obsolete payload.'
+                    foreach ($link in @($desktopLink, $menuLink)) {
+                        Assert (Test-Path -LiteralPath $link) 'The owned shortcut is missing.'
+                        Remove-Item -LiteralPath $report -ErrorAction SilentlyContinue
+                        $launch = [Diagnostics.ProcessStartInfo]::new()
+                        $launch.FileName = $link; $launch.UseShellExecute = $true; $launch.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden
+                        $process = [Diagnostics.Process]::Start($launch)
+                        if ($process) {
+                            try {
+                                if (-not $process.WaitForExit(30000)) {
+                                    $expectedExecutable = Join-Path $directory 'InstallerProbe.exe'
+                                    Assert-OwnedPath $expectedExecutable
+                                    Assert ([string]::Equals($process.MainModule.FileName, $expectedExecutable, [StringComparison]::OrdinalIgnoreCase)) 'Refusing to stop a process outside the owned fixture path.'
+                                    $process.Kill($true)
+                                    Assert ($process.WaitForExit(10000)) 'Owned shortcut process did not stop after timeout.'
+                                    throw 'Owned shortcut timed out.'
+                                }
+                                Assert ($process.ExitCode -eq 0) 'Owned shortcut failed.'
+                            } finally { $process.Dispose() }
+                        }
+                        Wait-Until { Test-Path -LiteralPath $report } 'Owned shortcut did not launch.'
+                        $actual = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
+                        Assert ($actual.cwd -eq (Join-Path $directory 'data') -and $actual.args.Count -eq $expected.Count) 'Shortcut working directory or argument count changed.'
+                        for ($i = 0; $i -lt $expected.Count; $i++) { Assert ($actual.args[$i] -ceq $expected[$i]) 'Shortcut argument changed.' }
+                        Remove-Item -LiteralPath $report
+                    }
+                }
+                Assert-OwnRegistration
+                Remove-Installation $package $format $directory
+                $installed = $false
+                Assert (-not (Test-Path -LiteralPath (Join-Path $directory 'InstallerProbe.exe'))) 'Uninstall left the application.'
+                Assert ((Get-Content -LiteralPath $inside) -eq 'keep unrelated files' -and (Get-Content -LiteralPath $relocatedInside) -eq 'keep relocated unrelated files' -and (Get-Content -LiteralPath $outside) -eq 'keep application data') 'Uninstall removed unrelated data.'
+                Write-Output "PASS currentUser ${format}: install, shortcut execution, upgrade, relocation, uninstall and data preservation"
+            } finally {
+                if ($installed) { Assert-OwnRegistration; Remove-Installation $package $format $directory }
+            }
+        }
+    } finally {
+        $registered = @($keys | Where-Object { Test-Path -LiteralPath $_ })
+        $registered += @($codes | Where-Object { @($windowsInstaller.ProductsEx($_, '', 7)).Count -gt 0 })
+        $remainingLinks = @($links | Where-Object { Test-Path -LiteralPath $_ })
+        if ($registered.Count -or $remainingLinks.Count) { throw 'Current-user cleanup is incomplete; owned test files were preserved for cleanup.' }
+        Assert-OwnedPath $runRoot
+        Assert (@(Get-ChildItem -LiteralPath $runRoot -Recurse -Force | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }).Count -eq 0) 'Refusing cleanup of a validation tree containing reparse points.'
+        Remove-Item -LiteralPath $runRoot -Recurse -Force
+    }
+    return
+}
+
 $runtimeSubkey = 'Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
 $userBase = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::CurrentUser, [Microsoft.Win32.RegistryView]::Registry32)
 $machineBase = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, [Microsoft.Win32.RegistryView]::Registry32)

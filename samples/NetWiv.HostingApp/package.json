@@ -10,5 +10,5 @@
     "test": "node --test frontend/smoke.test.mjs"
   },
   "dependencies": { "@netwiv/api": "file:vendor/netwiv-api" },
-  "devDependencies": { "vite": "8.2.2" }
+  "devDependencies": { "vite": "8.2.4" }
 }

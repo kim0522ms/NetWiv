@@ -66,9 +66,11 @@ app.Run();
 Minimized windows count as visible, so the example restores its main window on
 every request instead of using that flag as a universal restoration condition.
 Multi-window apps can use it to choose their own policy. NetWiv does not select
-or restore a window automatically. Destroying the last window still exits the
-runtime; this hook does not add a windowless keep-alive policy or single-instance
-forwarding for independently launched processes.
+or restore a window automatically. Destroying the last window exits by default.
+Use `Builder.ExitOnLastWindowClose(false)` to keep `DesktopRuntime` resident and
+create a replacement window in the reopen handler. See [application lifetime and
+URL/file activation](application-lifetime.md). Independently launched processes
+use the single-instance plugin for argument forwarding.
 
 Handlers start on the native event-loop thread. Await window operations rather
 than blocking with `.Wait()` or `.Result`. Async invocations may overlap, and
@@ -377,6 +379,19 @@ For account, certificate and submission steps, consult
 and [Tauri's App Store guide](https://tauri.app/distribute/app-store/).
 
 ## Runtime paths and macOS behavior
+
+App bundles declare `plugins.deep-link.desktop` schemes in `CFBundleURLTypes`.
+Use an object such as `{ "schemes": ["myapp"] }`, or an array of those objects.
+Schemes follow the URI scheme grammar and are normalized to lowercase. Invalid
+entries fail before bundle hooks run. If this configuration is present, a custom
+`bundle.macOS.infoPlist` cannot also set `CFBundleURLTypes`; remove one declaration
+source. A custom plist remains supported when no desktop schemes are configured.
+Each generated URL declaration includes the required `CFBundleTypeRole` as
+`Editor`. Runtime registration and unregistration remain unsupported on macOS.
+The opt-in [packaged URL lifecycle check](application-lifetime.md#validation-scope)
+validates managed and NativeAOT cold-start, running-window and resident URL
+delivery on selected physical macOS arm64. File associations and minimum-OS
+execution remain outside that validation.
 
 The shared Core path resolver uses these macOS roots:
 

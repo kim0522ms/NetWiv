@@ -7,6 +7,17 @@ internal static class Program
     {
         try
         {
+#if NETWIV_MANAGED_RCL_TEST
+            if (args.Contains("--managed-rcl", StringComparer.Ordinal))
+            {
+                if (!args.Contains("--native-webview", StringComparer.Ordinal))
+                    throw new ArgumentException("--managed-rcl requires --native-webview.");
+                return ManagedRclWebViewProof.Run();
+            }
+#else
+            if (args.Contains("--managed-rcl", StringComparer.Ordinal))
+                throw new PlatformNotSupportedException("The RCL proof requires a managed build with JSON reflection enabled.");
+#endif
             if (args.Contains("--hostless-ipc", StringComparer.Ordinal)) return HostlessIpcProof.Run();
             if (args.Contains("--registered-ipc", StringComparer.Ordinal)) return RegisteredIpcProof.Run();
             if (args.Contains("--transport-navigation", StringComparer.Ordinal)) return TransportNavigationProof.Run();

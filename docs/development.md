@@ -88,6 +88,15 @@ alone is not a GUI test. See [conformance](../tests/conformance/README.md),
 [isolation](isolation.md) and [consumer verification](frontend-generator.md#verification)
 for separate validation paths.
 
+On Windows, run the managed and NativeAOT desktop smoke executables with
+`--notification-smoke` to exercise a windowless native notification request and
+await the pinned backend's `show()` result. The Windows command reports backend
+errors asynchronously without joining its worker on the UI thread. A successful
+result means the OS call was accepted; it does not establish banner visibility,
+installed app identity registration or notification-center delivery. Notifications
+already admitted to the native runtime retain their result after caller cancellation,
+like other UI mutations; document retirement suppresses stale guest replies.
+
 On Linux, select the display backend explicitly. For a logged-in Wayland
 desktop, run both the managed and published NativeAOT smoke hosts:
 
@@ -271,8 +280,11 @@ By default local template tests cover the full matrix. Set
 unknown values fail. Use separate checkouts to measure concurrent groups.
 Report the measured command scope, cold/warm cache distinction and excluded
 steps. A local parallel replay is not GitHub runner throughput or queue time.
-Do not run the Windows installer acceptance script on a normal working machine;
-it temporarily changes system runtime registration. No benchmark reports,
+The default Windows installer acceptance mode and `-AllowLocalMachine` temporarily
+change runtime registration; use a dedicated validation machine for those modes.
+The bounded, non-elevated `-CurrentUserOnly` mode leaves runtime registration
+unchanged; see [its prerequisites and limits](windows-installers.md).
+No benchmark reports,
 environment inventories or measurement helpers belong in the repository or CI.
 
 The existing desktop-only ignored Rust test and optional external MIME corpus

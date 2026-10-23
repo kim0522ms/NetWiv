@@ -45,6 +45,11 @@
           Condition="'$(NetWivConfigPath)' != '' and '$(NetWivBindingsOnly)' != 'true' and '$(DesignTimeBuild)' != 'true'">
     <NetWiv.Build.Tasks.StageBundleResources Resources="@(_NetWivBundleResources)" BaseDirectory="$(_NetWivResourceBaseDirectory)" OutputDirectory="$(PublishDir)" />
   </Target>
+  <UsingTask TaskName="NetWiv.Build.Tasks.StageExternalBinaries" AssemblyFile="$(_NetWivBindingsTaskAssembly)" />
+  <Target Name="NetWivStageDevelopmentExternalBinaries" AfterTargets="CopyFilesToOutputDirectory"
+          Condition="'$(NetWivStageDevelopmentExternalBinaries)' == 'true' and '$(MSBuildProjectFullPath)' == '$(NetWivDevelopmentRootProject)' and '$(NetWivBindingsOnly)' != 'true' and '$(NetWivConfigPath)' != '' and '$(DesignTimeBuild)' != 'true' and ('$(OutputType)' == 'Exe' or '$(OutputType)' == 'WinExe')">
+    <NetWiv.Build.Tasks.StageExternalBinaries ConfigPath="$(NetWivConfigPath)" BaseDirectory="$(NetWivResourceBaseDirectory)" OutputDirectory="$(TargetDir)" ApplicationName="$(TargetName)" Target="$(NetWivExternalBinaryTarget)" />
+  </Target>
   <Target Name="NetWivGenerateBuildMetadata" BeforeTargets="GetAssemblyAttributes;_CoreCollectWatchItems">
     <NetWiv.Build.Tasks.GetApplicationVersion ConfigPath="$(NetWivConfigPath)" Condition="'$(NetWivConfigPath)' != '' and Exists('$(NetWivConfigPath)')">
       <Output TaskParameter="FileVersion" PropertyName="_NetWivFileVersion" />
@@ -105,6 +110,7 @@
     <EmbeddedResource Include="$(NetWivConfigPath)" LogicalName="netwiv.config.json" />
   </ItemGroup>
   <ItemGroup Condition="'$(NetWivAdditionalWatchItems)' != ''">
-    <Watch Include="$(NetWivAdditionalWatchItems)" />
+    <Watch Include="$([MSBuild]::Unescape('$(NetWivAdditionalWatchItems)'))"
+           Exclude="**/bin/**;**/obj/**;**/target/**;**/.git/**" />
   </ItemGroup>
 </Project>

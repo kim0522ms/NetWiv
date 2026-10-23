@@ -113,6 +113,20 @@ test('a restored document queues calls and rejects grants from its retired activ
   assert.deepEqual(page.posts, [{ capability: 'current', documentId: 3, payload: 'restored' }]);
 });
 
+test('pagehide rejects queued protocol fetches and prevents their late delivery', async () => {
+  const page = document();
+  page.window.__NETWIV_DOCUMENT_TRANSPORT__.send('retired send');
+  const pending = page.window.__NETWIV_DOCUMENT_TRANSPORT__.fetchIpc('ipc://localhost/echo', {});
+  page.listeners.pagehide();
+  await assert.rejects(pending, error => error.name === 'AbortError');
+  page.window.__NETWIV_ACTIVATE_IPC__(page.nonce, 1, 'retired');
+  page.window.__NETWIV_ACTIVATE_IPC__(page.window.__NETWIV_IPC_NONCE__(), 2, 'current');
+  assert.equal(page.requests.length, 0);
+  assert.equal(page.posts.length, 0);
+  page.window.__NETWIV_DOCUMENT_TRANSPORT__.send('fresh send');
+  assert.deepEqual(page.posts, [{ capability: 'current', documentId: 2, payload: 'fresh send' }]);
+});
+
 test('protocol capability stays on the private IPC authority and cannot follow redirects', async () => {
   const page = document();
   page.window.__NETWIV_ACTIVATE_IPC__(page.nonce, 4, 'secret');

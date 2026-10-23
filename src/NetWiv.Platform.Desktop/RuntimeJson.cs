@@ -1,3 +1,6 @@
+using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using NetWiv.Runtime;
 
@@ -12,8 +15,11 @@ internal static class RuntimeJson
         writer.WriteBoolean("ipcProtocolEnabled", context.InvokeProtocol is not null &&
             context.UriSchemeProtocols?.Contains("ipc", StringComparer.Ordinal) != true);
         writer.WriteBoolean("trackWebviewParents", true);
+        writer.WriteBoolean("exitOnLastWindowClose", context.ExitOnLastWindowClose);
         writer.WriteString("localDataDirectory", context.LocalDataDirectory);
         writer.WriteString("appLocalDataDirectory", context.AppLocalDataDirectory);
+        if (OperatingSystem.IsWindows())
+            writer.WriteString("defaultWebviewDataDirectory", DefaultWebviewDataDirectory(context));
         writer.WriteBoolean("assetProtocolEnabled", context.AssetProtocolEnabled);
         if (context.UriSchemeProtocols is { Count: > 0 } protocols)
         {
@@ -104,6 +110,17 @@ internal static class RuntimeJson
             writer.WriteStartArray(); foreach (var value in args.EnumerateArray()) WriteArguments(writer, value, resolveResource); writer.WriteEndArray();
         }
         else Element(writer, args);
+    }
+
+    private static string? DefaultWebviewDataDirectory(RuntimeContext context)
+    {
+        if (!context.UsesDefaultAppIdentifier || context.AppLocalDataDirectory is not { } directory)
+            return context.AppLocalDataDirectory;
+        var name = (Assembly.GetEntryAssembly()?.GetName().Name ?? "application").ToUpperInvariant();
+        var location = Path.GetFullPath(AppContext.BaseDirectory)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).ToUpperInvariant();
+        var discriminator = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(name + "\n" + location)));
+        return Path.Combine(directory, "webview", discriminator);
     }
 
     private static void Element(Utf8JsonWriter writer, JsonElement value)

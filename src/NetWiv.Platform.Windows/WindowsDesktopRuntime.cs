@@ -39,6 +39,7 @@ public sealed class WindowsDesktopRuntime : IDesktopRuntime
     public unsafe void Run(RuntimeContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
+        if (!context.ExitOnLastWindowClose) throw new NotSupportedException("Resident applications require DesktopRuntime.");
         if (context.AssetProtocolEnabled) throw new NotSupportedException("The scoped asset protocol requires DesktopRuntime.");
         if (!OperatingSystem.IsWindows())
         {

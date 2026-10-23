@@ -9,6 +9,7 @@
   const queue = [];
   let frame;
   let ready = false;
+  window.addEventListener('pagehide', () => { queue.length = 0; });
   function serializePayload(data) {
     if (data !== null && typeof data === 'object') {
       if (data.constructor === Array) return data.map(serializePayload);

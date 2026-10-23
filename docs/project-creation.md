@@ -112,12 +112,14 @@ once before an agent starts it; see [coding agents](coding-agents.md).
 
 The Blazor WebAssembly starter's `.Frontend.esproj` references
 `frontend/NetWivUi.csproj` in the MSBuild project graph, then publishes its built
-output with `NoBuild=true` into `dist/wwwroot`. Other projects in the same solution
+output into `dist/wwwroot` through the SDK's incremental build and publish pipeline,
+including HTML fingerprints and import maps. Project references are already built
+and are not rebuilt by that publish call. Other projects in the same solution
 may reference the frontend, for example to test its services. They share the build
 instead of launching a competing `dotnet publish` process against the same `obj/`.
 Desktop-only publish properties are removed from the frontend reference.
 The browser project also keeps its own assembly name and disables desktop
-`PublishAot` / `PublishSingleFile` during restore; browser AOT uses the separate
+`PublishAot` / `PublishSingleFile` / `UseAppHost` during restore; browser AOT uses the separate
 Blazor `RunAOTCompilation` setting.
 
 Existing starters generated through 0.2.9 still contain `Exec dotnet publish`.

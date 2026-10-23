@@ -11,9 +11,22 @@ public sealed class ShellPlugin : IPlugin
     private readonly Dictionary<int, Child> _children = [];
     private readonly object _gate = new();
     private readonly Action<ProcessStartInfo> _open;
+    private readonly Func<ProcessStartInfo, CancellationToken, Process?> _start;
+    private readonly string _sidecarDirectory;
 
     public ShellPlugin() : this(StartOpen) { }
-    internal ShellPlugin(Action<ProcessStartInfo> launch) => _open = launch;
+    internal ShellPlugin(Action<ProcessStartInfo> launch, string? sidecarDirectory = null,
+        Func<ProcessStartInfo, CancellationToken, Process?>? start = null)
+    {
+        _open = launch;
+        _start = start ?? ((info, _) => System.Diagnostics.Process.Start(info));
+        var directory = new DirectoryInfo(Path.GetFullPath(sidecarDirectory ?? AppContext.BaseDirectory));
+        // Managed app bundles keep their apphost in Resources behind a MacOS launcher.
+        if (OperatingSystem.IsMacOS() && directory.Name == "Resources" && directory.Parent?.Name == "Contents" &&
+            directory.Parent.Parent?.Extension == ".app")
+            directory = new DirectoryInfo(Path.Combine(directory.Parent.FullName, "MacOS"));
+        _sidecarDirectory = directory.ResolveLinkTarget(true)?.FullName ?? directory.FullName;
+    }
 
     public string Name => "shell";
 
@@ -89,9 +102,8 @@ public sealed class ShellPlugin : IPlugin
             ? values.EnumerateArray().Select(value => value.GetString() ?? throw new InvokeException("Shell argument must be a string.")).ToArray()
             : [];
         var options = args.TryGetProperty("options", out var configured) && configured.ValueKind == JsonValueKind.Object ? configured : default;
-        if (options.ValueKind == JsonValueKind.Object && options.TryGetProperty("sidecar", out var sidecar) && sidecar.ValueKind == JsonValueKind.True)
-            throw new InvokeException("Shell sidecars are not implemented.");
-        var executable = ResolveProgram(context, program, arguments);
+        var sidecar = options.ValueKind == JsonValueKind.Object && options.TryGetProperty("sidecar", out var bundled) && bundled.ValueKind == JsonValueKind.True;
+        var executable = ResolveProgram(context, program, arguments, sidecar);
         var info = new ProcessStartInfo(executable)
         {
             UseShellExecute = false, RedirectStandardInput = command == "spawn", RedirectStandardOutput = true,
@@ -116,7 +128,7 @@ public sealed class ShellPlugin : IPlugin
             encoding.ValueKind == JsonValueKind.String && encoding.GetString() is not ("raw" or "utf-8" or "utf8"))
             throw new InvokeException("Only UTF-8 and raw shell output encodings are supported.");
         var channel = command == "spawn" ? Channel.FromJson(context, args.GetProperty("onEvent")) : null;
-        var process = System.Diagnostics.Process.Start(info) ?? throw new InvokeException("The shell process did not start.");
+        var process = _start(info, token) ?? throw new InvokeException("The shell process did not start.");
         if (command == "execute")
         {
             using (process)
@@ -143,7 +155,20 @@ public sealed class ShellPlugin : IPlugin
         }
         var child = new Child(process, channel!, context.WebviewLabel, context.DocumentId);
         var pid = process.Id;
-        lock (_gate) _children.Add(pid, child);
+        try
+        {
+            lock (_gate)
+            {
+                // Document invalidation cancels invocations before removing their children.
+                token.ThrowIfCancellationRequested();
+                _children.Add(pid, child);
+            }
+        }
+        catch
+        {
+            child.Dispose(kill: true);
+            throw;
+        }
         _ = Pump(child, raw);
         return JsonValue.From(pid);
     }
@@ -202,12 +227,13 @@ public sealed class ShellPlugin : IPlugin
         return doc.RootElement.Clone();
     }
 
-    private static string ResolveProgram(InvokeContext context, string name, string[] args)
+    private string ResolveProgram(InvokeContext context, string name, string[] args, bool sidecar)
     {
-        if (context.IsTrusted) return name;
-        static bool Match(JsonElement entry, string program, string[] arguments)
+        if (context.IsTrusted) return sidecar ? ResolveSidecar(name) : name;
+        static bool Match(JsonElement entry, string program, string[] arguments, bool isSidecar)
         {
             if (entry.ValueKind != JsonValueKind.Object || !entry.TryGetProperty("name", out var label) || label.GetString() != program) return false;
+            if ((entry.TryGetProperty("sidecar", out var configured) && configured.ValueKind == JsonValueKind.True) != isSidecar) return false;
             if (!entry.TryGetProperty("args", out var allowed) || allowed.ValueKind == JsonValueKind.Null) return arguments.Length == 0;
             if (allowed.ValueKind == JsonValueKind.True) return true;
             if (allowed.ValueKind != JsonValueKind.Array || allowed.GetArrayLength() != arguments.Length) return false;
@@ -222,11 +248,31 @@ public sealed class ShellPlugin : IPlugin
             }
             return true;
         }
-        if (context.Scope.Deny.Any(entry => Match(entry, name, args))) throw new InvokeException("Shell command is denied by scope.");
-        var configured = context.Scope.Allow.FirstOrDefault(entry => Match(entry, name, args));
-        if (configured.ValueKind != JsonValueKind.Object || !configured.TryGetProperty("cmd", out var cmd) || cmd.ValueKind != JsonValueKind.String)
+        if (context.Scope.Deny.Any(entry => Match(entry, name, args, sidecar))) throw new InvokeException("Shell command is denied by scope.");
+        var configured = context.Scope.Allow.FirstOrDefault(entry => Match(entry, name, args, sidecar));
+        if (configured.ValueKind != JsonValueKind.Object)
+            throw new InvokeException("Shell command is not allowed by scope.");
+        if (sidecar) return ResolveSidecar(name);
+        if (!configured.TryGetProperty("cmd", out var cmd) || cmd.ValueKind != JsonValueKind.String)
             throw new InvokeException("Shell command is not allowed by scope.");
         return cmd.GetString()!;
+    }
+
+    private string ResolveSidecar(string name)
+    {
+        var segments = name.Replace('\\', '/').Split('/');
+        if (segments.Any(segment => string.IsNullOrWhiteSpace(segment) || segment is "." or ".." ||
+            segment.IndexOfAny(['\0', ':', '<', '>', '"', '|', '?', '*']) >= 0))
+            throw new InvokeException("Shell sidecar must be a relative bundled binary name.");
+        var filename = segments[^1];
+        if (OperatingSystem.IsWindows() && !filename.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) filename += ".exe";
+        var path = Path.Combine(_sidecarDirectory, filename);
+        if (!File.Exists(path)) throw new InvokeException("Shell sidecar was not found beside the application executable.");
+        var resolved = new FileInfo(path).ResolveLinkTarget(true)?.FullName ?? path;
+        if (!string.Equals(Path.GetDirectoryName(resolved), Path.TrimEndingDirectorySeparator(_sidecarDirectory),
+            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            throw new InvokeException("Shell sidecar must remain beside the application executable.");
+        return resolved;
     }
 
     private void Open(JsonElement args)

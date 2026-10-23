@@ -351,6 +351,12 @@ constructor member from missing nullability metadata. Explicit `required` /
 and JSON shape/range checks still apply. The supplied serializer always performs
 the final deserialization. Modern contexts retain their annotated null checks.
 This also permits the default generated C# client's explicit null members.
+For a referenced context carrying the STJ 8 generator's version marker,
+generated TypeScript input members reflect that permissiveness: reference members
+admit `null`, and reference constructor members are optional unless explicitly
+required. Root command arguments retain their annotations, collection elements
+retain their declared annotations, and output declarations are unchanged.
+Contexts without that marker retain the annotation-based declarations.
 
 Applications needing strict reference-member null checks should compile their
 contracts/context project against the modern System.Text.Json package used by

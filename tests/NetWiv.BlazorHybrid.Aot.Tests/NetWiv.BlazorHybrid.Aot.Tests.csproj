@@ -9,6 +9,7 @@
     <!-- Upstream experimental diagnostics stay visible; runtime gates require
          generated JSON and dynamic-code-disabled native execution. -->
     <WarningsNotAsErrors>$(WarningsNotAsErrors);IL2072;IL3050</WarningsNotAsErrors>
+    <DefineConstants Condition="'$(PublishAot)' != 'true'">$(DefineConstants);NETWIV_MANAGED_RCL_TEST</DefineConstants>
     <DependencyInjectionVersion>8.0.1</DependencyInjectionVersion>
     <DependencyInjectionVersion Condition="'$(TargetFramework)' == 'net9.0'">9.0.21</DependencyInjectionVersion>
     <DependencyInjectionVersion Condition="'$(TargetFramework)' == 'net10.0'">10.0.13</DependencyInjectionVersion>
@@ -17,7 +18,10 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(DependencyInjectionVersion)" />
     <ProjectReference Include="../../src/NetWiv.BlazorHybrid/NetWiv.BlazorHybrid.csproj" />
     <ProjectReference Include="../../src/NetWiv.Platform.Desktop/NetWiv.Platform.Desktop.csproj" />
+    <ProjectReference Include="../NetWiv.BlazorHybrid.Managed.Fixture/NetWiv.BlazorHybrid.Managed.Fixture.csproj" Condition="'$(PublishAot)' != 'true'" />
     <Content Update="wwwroot/**/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Remove="wwwroot/managed-rcl-*" Condition="'$(PublishAot)' == 'true'" />
+    <Compile Remove="ManagedRclWebViewProof.cs" Condition="'$(PublishAot)' == 'true'" />
     <None Include="../../licenses/dotnet-runtime-MIT.txt" Link="native-tests-MIT.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

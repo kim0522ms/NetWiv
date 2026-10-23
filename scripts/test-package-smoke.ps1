@@ -5,17 +5,17 @@ try {
     foreach ($framework in @('net8.0', 'net9.0', 'net10.0')) {
         $destination = Join-Path $root $framework
         & "$PSScriptRoot/prepare-package-smoke.ps1" -Destination $destination -Version '0.1.0-test' -TargetFramework $framework
-        foreach ($name in @('NetWiv.Desktop.Smoke', 'NetWiv.Plugin.CommandFixture', 'NetWiv.BlazorHybrid.Aot.Tests')) {
+        foreach ($name in @('NetWiv.Desktop.Smoke', 'NetWiv.Plugin.CommandFixture', 'NetWiv.BlazorHybrid.Managed.Fixture', 'NetWiv.BlazorHybrid.Aot.Tests')) {
             $path = Join-Path $destination "$name/$name.csproj"
             $project = [xml](Get-Content $path -Raw)
             if ($project.Project.PropertyGroup.TargetFramework -ne $framework) { throw 'Incorrect target framework.' }
             $packages = @($project.SelectNodes('//PackageReference'))
             if (@($packages | Group-Object Include | Where-Object Count -gt 1).Count) { throw 'Duplicate package references.' }
             if (@($packages | Where-Object { $_.Include -like 'NetWiv.*' -and $_.Version -ne '0.1.0-test' }).Count) { throw 'Incorrect package version.' }
-            if ($name -ne 'NetWiv.BlazorHybrid.Aot.Tests' -and @($packages | Where-Object Include -eq 'NetWiv.Generators').Count -ne 1) { throw 'Expected one analyzer package per project.' }
-            if (@($packages | Where-Object Include -eq 'NetWiv.Plugin.CommandFixture').Count) { throw 'The fixture is not a published package.' }
+            if ($name -in @('NetWiv.Desktop.Smoke', 'NetWiv.Plugin.CommandFixture') -and @($packages | Where-Object Include -eq 'NetWiv.Generators').Count -ne 1) { throw 'Expected one analyzer package per command project.' }
+            if (@($packages | Where-Object Include -in @('NetWiv.Plugin.CommandFixture', 'NetWiv.BlazorHybrid.Managed.Fixture')).Count) { throw 'The fixtures are not published packages.' }
             foreach ($reference in $project.SelectNodes('//ProjectReference')) {
-                if ($reference.Include -ne '../NetWiv.Plugin.CommandFixture/NetWiv.Plugin.CommandFixture.csproj') {
+                if ($reference.Include -notin @('../NetWiv.Plugin.CommandFixture/NetWiv.Plugin.CommandFixture.csproj', '../NetWiv.BlazorHybrid.Managed.Fixture/NetWiv.BlazorHybrid.Managed.Fixture.csproj')) {
                     throw "Framework source reference escaped conversion: $($reference.Include)"
                 }
                 if (!(Test-Path ([IO.Path]::GetFullPath($reference.Include, (Split-Path $path))))) { throw 'Fixture project missing.' }
@@ -23,7 +23,14 @@ try {
         }
         $hybridDirectory = Join-Path $destination 'NetWiv.BlazorHybrid.Aot.Tests'
         $hybrid = [xml](Get-Content (Join-Path $hybridDirectory 'NetWiv.BlazorHybrid.Aot.Tests.csproj') -Raw)
-        if (@($hybrid.SelectNodes('//ProjectReference')).Count) { throw 'Hybrid consumer still references framework sources.' }
+        $library = $hybrid.SelectNodes('//ProjectReference')
+        if ($library.Count -ne 1 -or $library[0].Include -ne '../NetWiv.BlazorHybrid.Managed.Fixture/NetWiv.BlazorHybrid.Managed.Fixture.csproj' -or
+            $library[0].Condition -ne "'`$(PublishAot)' != 'true'") { throw 'Hybrid consumer lost its managed-only Razor library reference.' }
+        $libraryRoot = Join-Path $destination 'NetWiv.BlazorHybrid.Managed.Fixture'
+        $libraryProject = [xml](Get-Content (Join-Path $libraryRoot 'NetWiv.BlazorHybrid.Managed.Fixture.csproj') -Raw)
+        if ($libraryProject.Project.Sdk -ne 'Microsoft.NET.Sdk.Razor' -or !(Test-Path (Join-Path $libraryRoot 'wwwroot/fixture.js'))) {
+            throw 'Packaged Hybrid consumer omitted its ordinary Razor library or static asset.'
+        }
         foreach ($id in @('NetWiv.BlazorHybrid', 'NetWiv.Platform.Desktop')) {
             if (!$hybrid.SelectSingleNode("//PackageReference[@Include='$id']")) { throw "Missing $id package probe." }
         }
@@ -56,7 +63,7 @@ try {
             }
         }
         if (!(Test-Path (Join-Path $destination 'NetWiv.Plugin.CommandFixture/ExternalCommandPlugin.cs'))) { throw 'Fixture source missing.' }
-        Write-Output "PASS $framework package consumer project: unique dependencies, separate plugin assembly, no framework source references"
+        Write-Output "PASS $framework package consumer project: unique dependencies, separate fixture assemblies, no framework source references"
     }
 }
 finally { if (Test-Path $root) { Remove-Item $root -Recurse -Force } }

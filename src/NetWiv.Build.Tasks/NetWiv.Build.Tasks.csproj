@@ -12,6 +12,11 @@
     <Compile Include="../NetWiv.Build/Frontend/FrontendBindings.cs" Link="FrontendBindings.cs" />
     <Compile Include="../NetWiv.Build/Configuration/WindowsFileVersion.cs" Link="WindowsFileVersion.cs" />
     <Compile Include="../NetWiv.Build/Configuration/ApplicationVersion.cs" Link="ApplicationVersion.cs" />
+    <Compile Include="../NetWiv.Build/Configuration/ConfigDocument.cs" Link="ConfigDocument.cs" />
+    <Compile Include="../NetWiv.Build/Configuration/NetWivConfigException.cs" Link="NetWivConfigException.cs" />
+    <Compile Include="../NetWiv.Build/Configuration/WindowsInstallerOptions.cs" Link="WindowsInstallerOptions.cs" />
+    <Compile Include="../NetWiv.Build/Execution/BuildTarget.cs" Link="BuildTarget.cs" />
+    <Compile Include="../NetWiv.Build/Packaging/ExternalBinaryStager.cs" Link="ExternalBinaryStager.cs" />
     <Compile Include="../NetWiv.Build/Packaging/ResourcePaths.cs" Link="ResourcePaths.cs" />
     <Compile Include="../NetWiv.Build/Packaging/ResourceStager.cs" Link="ResourceStager.cs" />
     <Compile Include="../NetWiv.Core/Security/LabelPattern.cs" Link="LabelPattern.cs" />

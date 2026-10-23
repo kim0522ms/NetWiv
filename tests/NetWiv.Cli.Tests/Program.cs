@@ -18,6 +18,12 @@ if (args is ["--frontend-consumer", var consumer])
     return 0;
 }
 
+if (args is ["--launchservices-smoke"])
+{
+    await MacLaunchServicesTests.Run();
+    return 0;
+}
+
 if (Environment.GetEnvironmentVariable("NETWIV_RUNNER_PROBE_OUTPUT") is { } runnerProbe)
 {
     var record = new System.Text.Json.Nodes.JsonObject { ["cwd"] = Environment.CurrentDirectory,
@@ -40,8 +46,17 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Blazor mode validates before project or runner processing", BlazorModeTests.Validation),
     ("Blazor mode experimental AOT requires explicit deployment and Hybrid selection", BlazorModeTests.ExperimentalValidation),
     ("Windows installer options validate before hooks and tools", WindowsInstallerTests.Validation),
+    ("Windows installer identity rejects missing and unsafe identifiers", WindowsInstallerIdentityTests.Validation),
+    ("Windows installer identity compiles with NSIS and WiX", WindowsInstallerIdentityTests.Compilation),
     ("Windows installer options render scope lifecycle and literal arguments", WindowsInstallerTests.Rendering),
+    ("external binaries resolve target inputs and preserve payload ownership", ExternalBinaryTests.ResolutionAndStaging),
+    ("external binaries reject source and destination link escapes", ExternalBinaryTests.RejectsLinks),
+    ("managed dev stages and executes sidecars without overwriting changed outputs", () => ExternalBinaryDevelopmentTests.Run(false)),
+    ("AOT dev stages and executes sidecars without overwriting changed outputs", () => ExternalBinaryDevelopmentTests.Run(true)),
+    ("managed public Shell consumer executes scoped sidecars in dev and packages", () => ShellSidecarConsumerTests.Run(false)),
+    ("AOT public Shell consumer executes scoped sidecars in dev and packages", () => ShellSidecarConsumerTests.Run(true)),
     ("macOS targets configuration and metadata", MacOsTests.Configuration),
+    ("macOS deep link configuration generates validated bundle URL declarations", MacDeepLinkPackagingTests.Configuration),
     ("macOS application and dmg packaging with real signing tools", MacOsTests.Packaging),
     ("macOS App Store configuration and Info.plist validation", MacAppStoreTests.Configuration),
     ("macOS App Store provisioning profiles and signing separation", MacAppStoreTests.ProfilesAndSigning),
@@ -171,6 +186,10 @@ var tests = new (string Name, Func<Task> Run)[]
 // variables, current directories and referenced project outputs.
 var lifecycleNames = new HashSet<string>(StringComparer.Ordinal)
 {
+    "managed dev stages and executes sidecars without overwriting changed outputs",
+    "AOT dev stages and executes sidecars without overwriting changed outputs",
+    "managed public Shell consumer executes scoped sidecars in dev and packages",
+    "AOT public Shell consumer executes scoped sidecars in dev and packages",
     "consumer publish managed self-contained and bundled execution",
     "consumer publish framework-dependent and bundled execution",
     "consumer publish NativeAOT embeds absent frontend output",
@@ -668,7 +687,7 @@ static Task IsolationWatchFolders() => Temp(root =>
     return Task.CompletedTask;
 });
 
-static Task AdditionalWatchFolders() => Temp(root =>
+static Task AdditionalWatchFolders() => Temp(async root =>
 {
     var dir = Path.Combine(root, "src-netwiv"); var configured = Path.Combine(root, "configured"); var selected = Path.Combine(root, "selected");
     Directory.CreateDirectory(dir); Directory.CreateDirectory(configured); Directory.CreateDirectory(selected);
@@ -679,7 +698,26 @@ static Task AdditionalWatchFolders() => Temp(root =>
     Throws<DirectoryNotFoundException>(() => DevCommand.ResolveWatchFolders(config, ["../missing"]));
     File.WriteAllText(Path.Combine(dir, "netwiv.conf.json"), "{\"identifier\":\"com.test.app\",\"build\":{\"additionalWatchFolders\":[1]}}");
     Throws<NetWivConfigException>(() => ConfigLoader.Load(root, "windows"));
-    return Task.CompletedTask;
+    var first = Path.Combine(configured, "component.razor");
+    var second = Path.Combine(selected, "module.js");
+    File.WriteAllText(first, "<p>Watched component</p>");
+    File.WriteAllText(second, "export const watched = true;");
+    foreach (var output in new[] { "bin", "obj", "target", ".git" })
+    {
+        var ignored = Directory.CreateDirectory(Path.Combine(configured, output));
+        File.WriteAllText(Path.Combine(ignored.FullName, "generated.cs"), "// build output");
+    }
+    var probe = Path.Combine(root, "WatchProbe.csproj");
+    new System.Xml.Linq.XDocument(new System.Xml.Linq.XElement("Project",
+        new System.Xml.Linq.XElement("Import", new System.Xml.Linq.XAttribute("Project",
+            Path.Combine(Directory.GetCurrentDirectory(), "src/NetWiv.Build/buildTransitive/NetWiv.Build.targets")))))
+        .Save(probe);
+    var result = await ProcessRunner.RunAsync(new("dotnet", ["msbuild", probe, "-nologo", "-getItem:Watch",
+        "-p:NetWivAdditionalWatchItems=" + Path.Combine(configured, "**", "*") + "%3B" + Path.Combine(selected, "**", "*")], root, CaptureOutput: true));
+    Equal(0, result.ExitCode);
+    var watched = System.Text.Json.Nodes.JsonNode.Parse(result.StandardOutput)!["Items"]!["Watch"]!.AsArray()
+        .Select(item => Path.GetFullPath(item!["Identity"]!.GetValue<string>())).Order().ToArray();
+    Equal(string.Join('|', new[] { first, second }.Order()), string.Join('|', watched));
 });
 
 static Task BuiltInDevelopmentServer() => Temp(async root =>

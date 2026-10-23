@@ -1,0 +1,10 @@
+{
+  "productName": "NetWiv Plugin Smoke",
+  "version": "1.0.0",
+  "identifier": "dev.netwiv.plugin-smoke",
+  "app": {
+    "security": {
+      "assetProtocol": { "enable": true, "scope": [] }
+    }
+  }
+}

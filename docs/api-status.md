@@ -5,7 +5,7 @@ The classification checks dispatch paths, platform adapters, options and test
 definitions. It does not establish full desktop acceptance or every argument/error
 combination; feature-specific execution checks and limits are noted separately.
 Plugin rows remain feature-group inventories, not method-by-method audits.
-The plugin implementation notes and status explanations were reviewed on **2026-10-20**.
+The plugin implementation notes and status explanations were reviewed on **2026-10-24**.
 Targets: **Windows x64 / Linux x64 / macOS arm64**. Reference inventory: `@tauri-apps/api@2.11.1`.
 This is a source-based feature inventory, not a declaration of complete TAURI® equivalence or release acceptance.
 
@@ -15,10 +15,10 @@ the upstream compatibility surface, not the facade's public exports. Mobile-only
 entries remain visible here as unsupported even though the facade excludes them.
 See [Linux X11/Wayland](linux.md) for runtime support and compositor limits.
 
-The managed SDK also exposes macOS Dock/Finder reopen notifications through
-`Builder`, `App` and `AppHandle.OnReopen`. This is a NetWiv lifecycle API outside
-the frontend reference counts. It does not add last-window keep-alive behavior;
-see [reopening a resident application](macos.md#reopening-a-resident-application).
+The managed SDK also exposes resident application lifetime, cooperative save/quit,
+and native macOS reopen/URL notifications. These NetWiv lifecycle APIs are outside
+the frontend reference counts. See [application lifetime](application-lifetime.md)
+for `ExitOnLastWindowClose(false)`, `RequestExitAsync`, `OnReopen` and `OnOpened`.
 
 Implementation, declaration availability and validation are separate. Counts below
 are derived from the individual core rows, not from CI results or a completion score.
@@ -53,21 +53,21 @@ The following feature groups cover official desktop plugins and NetWiv extension
 | Feature ID | Feature | Status | Scope and alternatives |
 | --- | --- | --- | --- |
 | EXT-UPDATER | Update checks, downloads and installation | **Not implemented** | Excluded from project work scope; not deferred. CLI signing support does not provide an updater runtime. |
-| EXT-DIALOG | Native open/save and message dialogs | **Partial** | `NetWiv.Plugin.Dialog` uses asynchronous GTK responses on Linux and rfd on Windows/macOS. Linux pending requests support caller cancellation and parent/WebView/document/app cleanup. Selected managed/NativeAOT file/folder/save, message and cancellation checks passed on Ubuntu 22.04 GNOME Wayland. See the [dialog probe](../tests/NetWiv.Dialog.Smoke/README.md) and [validation scope](implementation-status.md#wayland-validation). Windows/macOS GUI selection and cancellation, portal/compositor coverage and full upstream equivalence remain unverified. |
+| EXT-DIALOG | Native open/save and message dialogs | **Partial** | `NetWiv.Plugin.Dialog` uses asynchronous GTK responses on Linux and rfd on Windows/macOS. Linux pending requests support caller cancellation and parent/WebView/document/app cleanup. Selected managed/NativeAOT file/folder/save, message and cancellation checks passed on Ubuntu 22.04 GNOME Wayland. See the [dialog probe](../tests/NetWiv.Dialog.Smoke/README.md) and [validation scope](implementation-status.md#wayland-validation). Selected Windows managed/NativeAOT file selection and picker cancellation also passed. macOS GUI selection and cancellation, portal/compositor coverage and full upstream equivalence remain unverified. |
 | EXT-FS | Frontend file and directory read/write APIs | **Partial** | Main commands, scopes and binary IPC are implemented. Desktop `watch`/`watchImmediate` use scoped, document-owned filesystem watchers with batching and cleanup. Recursive monitoring is bounded to 128 directory registrations; Windows holds directory move/delete locks until close. See [filesystem watching](filesystem-watch.md). Full file-option/metadata coverage, live guest acceptance and exact upstream event parity remain incomplete. |
 | EXT-OS | OS information, hostname and locale | **Partial** | `NetWiv.Plugin.Os` reports macOS and its product version with process architecture. Windows x64 and Apple Silicon managed/NativeAOT payload and ACL tests passed. Unchanged official OS guest and minimum-macOS comparison remain unverified; see [OS information](official-plugins.md). |
 | EXT-PROCESS | Exit and restart | **Planned** | Permission, exit and restart paths are implemented in `NetWiv.Plugin.Process`. Installed-app restart validation remains incomplete. |
 | EXT-HTTP | Native HTTP client API | **Planned** | `NetWiv.Plugin.Http` implements official fetch IPC, binary response streaming, URL scopes and redirect checks. Proxy and unsafe TLS options, and upstream error/cookie/cancellation comparisons remain incomplete. |
-| EXT-SHELL | Process execution and sidecar management APIs | **Planned** | `NetWiv.Plugin.Shell` implements scoped `execute`, `spawn`, stdin, kill and events. macOS `open` uses `/usr/bin/open` for permitted URL schemes. Sidecars, `openWith`, full encoding support and OS-specific termination-signal comparison remain incomplete. |
+| EXT-SHELL | Process execution and sidecar management APIs | **Partial** | `NetWiv.Plugin.Shell` implements scoped `execute`, `spawn`, stdin, kill, events and bundled sidecars. Sidecar permissions are separate from ordinary commands; document changes cancel owned children, including startup races. The CLI stages configured `bundle.externalBin` helpers for development and packaging. See [sidecars](official-plugins.md) and [bundle resources](bundle-resources.md). `openWith`, full encoding support, installed lifecycle acceptance and OS-specific termination-signal comparison remain incomplete. |
 | EXT-OPENER | Open URLs and paths in external browsers or default apps | **Planned** | `NetWiv.Plugin.Opener` implements URL/path opening, reveal-in-folder and URL scopes. macOS uses `/usr/bin/open` for URL/path opening and `open -R` for Finder selection. Explicit apps (`with`), cross-platform GUI acceptance and upstream error equivalence remain incomplete. |
-| EXT-CLIPBOARD | Clipboard text and image APIs | **Planned** | `NetWiv.Plugin.ClipboardManager` and arboard implement text, HTML, images and clearing. Actual Windows/Linux X11/Wayland/macOS clipboard roundtrips need validation. Default permissions allow no commands. |
-| EXT-NOTIFICATION | OS notifications and notification permissions | **Planned** | `NetWiv.Plugin.Notification` implements the official desktop `notify` command, two permission commands, the JS `Notification` bridge and native `notify-rust` delivery. Managed/Rust automated checks passed. Actual Windows notification-center/Linux D-Bus/macOS notification display, installed-app identity and error equivalence remain unverified. Mobile channels and scheduling are out of scope. |
+| EXT-CLIPBOARD | Clipboard text and image APIs | **Partial** | `NetWiv.Plugin.ClipboardManager` and arboard implement text, HTML, images and clearing. Managed/NativeAOT text roundtrips and clearing passed on an isolated virtual X11 display. Physical desktop clipboard behavior, Windows/macOS/Wayland paths, HTML and image roundtrips remain unverified. Default permissions allow no commands. |
+| EXT-NOTIFICATION | OS notifications and notification permissions | **Planned** | `NetWiv.Plugin.Notification` implements the desktop `notify` command, two permission commands, the JS `Notification` bridge and native `notify-rust` delivery. Windows completion now returns the OS call's success or failure asynchronously; selected managed/NativeAOT calls were accepted. This does not prove banner display. Actual Windows notification-center/Linux D-Bus/macOS notification display, installed-app identity and full error equivalence remain unverified. Mobile channels and scheduling are out of scope. |
 | EXT-GLOBAL-SHORTCUT | Global shortcuts while the app is inactive | **Planned** | `NetWiv.Plugin.GlobalShortcut` connects four official commands, native `global-hotkey` registration/removal and Channel events. C#/Rust automated checks passed. Actual inactive-app input on Windows/Linux/macOS, X11/Wayland behavior and reload races remain unverified. Default permissions allow no commands. |
 | EXT-STORE | Persistent key-value storage API | **Partial** | Guest commands, JSON persistence and shared handles are implemented. Boolean/numeric autosave debounce, explicit-save cancellation, graceful disposal flushing and failed-save recovery are implemented; see [store persistence](store.md). Custom Rust serializers are unsupported; live guest acceptance and full upstream lifecycle equivalence remain unverified. |
-| EXT-SQL | Frontend SQL database API | **Partial** | SQLite `load`, `execute`, `select` and `close` are implemented. Backend-registered forward migrations run transactionally on load/preload, validate applied history and roll back failures; see [SQLite migrations](sqlite.md). MySQL/PostgreSQL, declared-type result conversion and SQLx history import are unsupported. Live guest and clean-machine NativeAOT distribution acceptance remain separate from functional checks. |
+| EXT-SQL | Frontend SQL database API | **Partial** | SQLite `load`, `execute`, `select` and `close` are implemented. Backend-registered forward migrations run transactionally on load/preload, validate applied history and roll back failures. Competing-process migration and failed-migration retry have managed/NativeAOT regression coverage; see [SQLite migrations](sqlite.md). MySQL/PostgreSQL, declared-type result conversion and SQLx history import are unsupported. Live guest and clean-machine NativeAOT distribution acceptance remain separate from functional checks. |
 | EXT-AUTOSTART | Registration for launch at OS login | **Planned** | `NetWiv.Plugin.Autostart` implements official `enable`, `disable` and `is_enabled`, the Windows user Run registry and Linux XDG autostart `.desktop` entries. Linux temporary-directory regression checks passed. macOS registration is unsupported. Actual login launch, Windows registration and upstream AppImage comparison remain incomplete. |
 | EXT-SINGLE-INSTANCE | Single-instance enforcement and argument forwarding | **Planned** | `NetWiv.Plugin.SingleInstance` detects duplicates, forwards arguments/working directory and requests second-instance exit. Separate-process automated checks passed on Windows/Linux and Apple Silicon. Actual GUI duplicate-launch validation is pending. Linux uses .NET named pipes instead of upstream D-Bus and does not interoperate with Snap/Flatpak service declarations. |
-| EXT-DEEP-LINK | Launch and route apps through external URIs | **Planned** | `NetWiv.Plugin.DeepLink` implements four official commands, declared-scheme launch arguments/events and user protocol registration/removal. Windows/Linux registration checks passed; macOS registration is unsupported. Actual OS URI activation, installer integration and upstream error equivalence remain incomplete. |
+| EXT-DEEP-LINK | Launch and route apps through external URIs | **Partial** | `NetWiv.Plugin.DeepLink` handles declared-scheme launch arguments/events and native macOS URL batches. Windows/Linux dynamic registration checks passed; macOS uses generated bundle `CFBundleURLTypes`, while runtime registration remains unsupported. Selected physical macOS managed/NativeAOT packaged URL startup, running/resident activation and owned cleanup checks passed. File associations, installed lifecycle acceptance and upstream error equivalence remain separate checks. See [application lifetime](application-lifetime.md). |
 | EXT-CLI-PLUGIN | Application launch-argument parsing | **Planned** | `NetWiv.Plugin.Cli` implements official `cli_matches` responses and argument/subcommand/value validation. Basic flags, multiple values and subcommands passed automated checks. Advanced clap conditional constraints and help output are explicitly unsupported; upstream comparison remains incomplete. |
 | EXT-LOCALHOST | Localhost asset server | **Planned** | `NetWiv.Plugin.Localhost` serves bundled assets over HTTP on a configured port, with CSP, response headers and an `onRequest` hook. GET/HEAD/shutdown checks passed. Actual WebView origin authorization, all HTTP boundaries and upstream equivalence remain unverified. |
 | EXT-LOG | Frontend and backend logging | **Partial** | `NetWiv.Plugin.Log` implements the official log command, file/stdout/WebView outputs and file-size/archive-count limits. Long UTF-8 records and concurrent writes have regression coverage. Configured `ILoggerFactory` integration is implemented through the `NetWiv.Webview` category; the full Tauri target/filter/rotation policy remains incomplete. |
@@ -178,6 +178,13 @@ lag behind tests added to a suite.
 
 ### SDK and tooling implementation gaps
 
+- Configured `mainBinaryName` is forwarded as a global MSBuild `AssemblyName`
+  during build and AOT development. In applications with project references,
+  this can rename dependencies too and fail restore with `Ambiguous project
+  name`. Omit this option and retain the project's default binary name until
+  root-project-only naming is supported; `productName` can still set the
+  displayed application name. This is an existing CLI limitation, not a
+  completed part of the consumer-build fixes.
 - Referenced command aggregation is implemented in
   [CommandGenerator.FrontendReferences.cs](../src/NetWiv.Generators/CommandGenerator.FrontendReferences.cs),
   with [reference tests](../tests/NetWiv.Generators.Tests/ReferencedFrontendBindingsTests.cs)
@@ -193,8 +200,8 @@ lag behind tests added to a suite.
 - Plugin implementations remain a separate, coarser feature inventory above.
   Their Planned/Partial labels must not be read as an absence of code. Filesystem
   watching, Store autosave debounce and SQLite forward migrations now have
-  implementations and focused functional tests. Shell sidecars and full fs
-  metadata/options remain implementation work; dialog GUI selection and
+  implementations and focused functional tests, including scoped shell sidecars.
+  Full fs metadata/options remain implementation work; broader dialog GUI acceptance and
   installed-app restart require validation of existing paths. A method-level plugin audit is still needed
   before scheduling a plugin as a whole.
 

@@ -386,9 +386,12 @@ Schemes follow the URI scheme grammar and are normalized to lowercase. Invalid
 entries fail before bundle hooks run. If this configuration is present, a custom
 `bundle.macOS.infoPlist` cannot also set `CFBundleURLTypes`; remove one declaration
 source. A custom plist remains supported when no desktop schemes are configured.
-This declares the bundled application's URL handlers; runtime registration and
-unregistration remain unsupported on macOS. Actual launch and running-app URL
-delivery need separate platform verification.
+Each generated URL declaration includes the required `CFBundleTypeRole` as
+`Editor`. Runtime registration and unregistration remain unsupported on macOS.
+The opt-in [packaged URL lifecycle check](application-lifetime.md#validation-scope)
+validates managed and NativeAOT cold-start, running-window and resident URL
+delivery on selected physical macOS arm64. File associations and minimum-OS
+execution remain outside that validation.
 
 The shared Core path resolver uses these macOS roots:
 

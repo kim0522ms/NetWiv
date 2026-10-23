@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PublishAot>true</PublishAot>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/NetWiv.Core/NetWiv.Core.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Platform.Desktop/NetWiv.Platform.Desktop.csproj" />
+    <ProjectReference Include="../../src/NetWiv.Plugin.DeepLink/NetWiv.Plugin.DeepLink.csproj" />
+    <EmbeddedResource Include="$(NetWivConfigPath)" LogicalName="netwiv.config.json" Condition="'$(NetWivConfigPath)' != ''" />
+  </ItemGroup>
+</Project>

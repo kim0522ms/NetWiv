@@ -18,6 +18,12 @@ if (args is ["--frontend-consumer", var consumer])
     return 0;
 }
 
+if (args is ["--launchservices-smoke"])
+{
+    await MacLaunchServicesTests.Run();
+    return 0;
+}
+
 if (Environment.GetEnvironmentVariable("NETWIV_RUNNER_PROBE_OUTPUT") is { } runnerProbe)
 {
     var record = new System.Text.Json.Nodes.JsonObject { ["cwd"] = Environment.CurrentDirectory,

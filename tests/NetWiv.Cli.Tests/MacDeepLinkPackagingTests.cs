@@ -18,9 +18,10 @@ internal static class MacDeepLinkPackagingTests
             plugin["desktop"] = JsonNode.Parse("""{"schemes":["Example","app+test","a.b-c"]}""");
             var single = Types(config)!;
             Check(single.Elements("dict").Count() == 1);
-            Check(single.Descendants("string").Select(value => value.Value).SequenceEqual(new[] { "dev.netwiv.url", "example", "app+test", "a.b-c" }));
+            Check(single.Descendants("string").Select(value => value.Value).SequenceEqual(new[] { "dev.netwiv.url", "Editor", "example", "app+test", "a.b-c" }));
             plugin["desktop"] = JsonNode.Parse("""[{"schemes":["one"]},{"schemes":["two"]}]""");
             Check(Types(config)!.Elements("dict").Count() == 2);
+            Check(Types(config)!.Elements("dict").All(value => MacPropertyList.Get(value, "CFBundleTypeRole")?.Value == "Editor"));
             foreach (var malformed in new[] { "null", "false", "[null]", "{}", "{\"schemes\":null}", "{\"schemes\":[1]}", "{\"schemes\":[\"\"]}", "{\"schemes\":[\"1invalid\"]}", "{\"schemes\":[\"app://\"]}", "{\"schemes\":[\"white space\"]}" })
             {
                 plugin["desktop"] = JsonNode.Parse(malformed);

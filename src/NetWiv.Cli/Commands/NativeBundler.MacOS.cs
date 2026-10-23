@@ -178,6 +178,7 @@ internal static partial class NativeBundler
                 declared.Add(new XElement("string", name.ToLowerInvariant()));
             }
             result.Add(new XElement("dict", new XElement("key", "CFBundleURLName"), new XElement("string", config.String("identifier")),
+                new XElement("key", "CFBundleTypeRole"), new XElement("string", "Editor"),
                 new XElement("key", "CFBundleURLSchemes"), declared));
         }
         return result;

@@ -110,7 +110,31 @@ last-window shutdown and window recreation. On macOS, `--opened-smoke` sends a
 URL AppleEvent from a child process while a window exists and after it has been
 destroyed, checking typed delivery, the deep-link event and `getCurrent()`.
 Run the affected modes in managed and NativeAOT builds on each target OS.
-These checks do not establish Finder/Dock interactions, packaged startup URL/file
-activation, file association registration or installed-app acceptance.
 The `--exit-request-smoke` mode additionally exercises native async operations
 during a cooperative request, a veto, and the following approved request.
+
+The opt-in CLI LaunchServices fixture builds ad-hoc-signed managed and NativeAOT
+app bundles and opens their unique URL schemes with `/usr/bin/open`. On selected
+physical macOS arm64, it checks cold startup, an open window, and residence after
+the last window closes. Each native URL batch must match the deep-link event and
+`getCurrent()`; the resident phase also recreates a window. Completion is checked
+after runtime shutdown and app disposal, followed by owned process and handler
+cleanup.
+
+Run it from the repository root with a macOS arm64 GUI session, the .NET SDK and
+NativeAOT build tools, and freshly built native artifacts:
+
+```sh
+dotnet run --project tests/NetWiv.Cli.Tests -c Release -- --launchservices-smoke
+```
+
+An existing `~/Applications` directory with no symbolic-link ancestors is
+required. The fixture uses fresh nonce-named children there so LaunchServices
+can discover the bundles. It rejects existing paths and scheme handlers,
+registers and unregisters only its own app, and removes its output after cleanup.
+An incomplete cleanup fails the check and preserves the remaining output for
+manual removal. The explicit switch is excluded from ordinary CLI test groups.
+
+These checks do not establish Finder/Dock interactions, packaged file activation,
+file association registration, Developer ID or Gatekeeper acceptance,
+installed-app acceptance, or execution on the minimum supported macOS version.

@@ -162,6 +162,34 @@ fn late_protocol_completion_after_shutdown_does_not_reenter_callbacks() {
     assert_eq!(CALLS.load(std::sync::atomic::Ordering::Relaxed), 0);
 }
 
+#[cfg(windows)]
+#[test]
+fn late_notification_worker_completion_after_shutdown_does_not_reenter_callbacks() {
+    use std::sync::{Arc, mpsc::channel, atomic::Ordering};
+    use std::time::Duration;
+    unsafe extern "C" fn callback(_: *mut std::ffi::c_void, _: u32, _: u64,
+        _: *const u8, _: usize, _: *const u8, _: usize) -> i32 {
+        panic!("late notification callback must be discarded");
+    }
+    let shared = Arc::new(super::Shared::new(callback, std::ptr::null_mut()));
+    shared.state.store(super::STATE_RUNNING, Ordering::Release);
+    let worker_shared = shared.clone();
+    let (release, waiting) = channel();
+    let (complete, result) = channel();
+    let worker = crate::notification::spawn_notification(move || {
+        waiting.recv_timeout(Duration::from_secs(5)).unwrap();
+        Ok(serde_json::Value::Null)
+    }, move |outcome| {
+        complete.send(worker_shared.enqueue(super::UserEvent::NotificationCompletion {
+            request_id: 42, result: outcome,
+        })).unwrap();
+    });
+    shared.state.store(super::STATE_STOPPED, Ordering::Release);
+    release.send(()).unwrap();
+    assert_eq!(result.recv_timeout(Duration::from_secs(5)).unwrap().unwrap_err(), "native runtime is not running");
+    worker.join().unwrap();
+}
+
 #[cfg(target_os = "macos")]
 #[test]
 fn late_data_store_completion_after_shutdown_does_not_reenter_callbacks() {

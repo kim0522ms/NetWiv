@@ -88,6 +88,15 @@ alone is not a GUI test. See [conformance](../tests/conformance/README.md),
 [isolation](isolation.md) and [consumer verification](frontend-generator.md#verification)
 for separate validation paths.
 
+On Windows, run the managed and NativeAOT desktop smoke executables with
+`--notification-smoke` to exercise a windowless native notification request and
+await the pinned backend's `show()` result. The Windows command reports backend
+errors asynchronously without joining its worker on the UI thread. A successful
+result means the OS call was accepted; it does not establish banner visibility,
+installed app identity registration or notification-center delivery. Notifications
+already admitted to the native runtime retain their result after caller cancellation,
+like other UI mutations; document retirement suppresses stale guest replies.
+
 On Linux, select the display backend explicitly. For a logged-in Wayland
 desktop, run both the managed and published NativeAOT smoke hosts:
 

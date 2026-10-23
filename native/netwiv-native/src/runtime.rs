@@ -136,6 +136,8 @@ pub(crate) enum UserEvent {
     DialogDocumentChanged { webview_label: String, document_id: u64 },
     #[cfg(target_os = "macos")]
     DataStoreCompletion { request_id: u64, result: Result<Value, String> },
+    #[cfg(windows)]
+    NotificationCompletion { request_id: u64, result: Result<Value, String> },
     AssetResponse { id: u64, response: Response<Vec<u8>> },
     Submit {
         request_id: u64,
@@ -408,7 +410,7 @@ impl LocalRuntime {
                     .map_err(|e| format!("invalid submission: {e}"))
                     .and_then(|submission| self.invoke(target, &submission, &binary, request_id));
                 match result {
-                    #[cfg(any(target_os = "macos", target_os = "linux"))]
+                    #[cfg(any(target_os = "macos", target_os = "linux", windows))]
                     Ok(InvokeResult::Pending) => {}
                     Ok(InvokeResult::Json(value)) => {
                         self.shared.callback(
@@ -460,6 +462,15 @@ impl LocalRuntime {
             }
             #[cfg(target_os = "macos")]
             UserEvent::DataStoreCompletion { request_id, result } => {
+                let payload = match result {
+                    Ok(value) => json!({"ok":true,"value":value,"isBinary":false}),
+                    Err(error) => json!({"ok":false,"error":error}),
+                };
+                self.shared.callback(CALLBACK_COMPLETION, request_id, &payload, &[]);
+                Ok(())
+            }
+            #[cfg(windows)]
+            UserEvent::NotificationCompletion { request_id, result } => {
                 let payload = match result {
                     Ok(value) => json!({"ok":true,"value":value,"isBinary":false}),
                     Err(error) => json!({"ok":false,"error":error}),
@@ -691,7 +702,7 @@ impl LocalRuntime {
 }
 
 enum InvokeResult {
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", windows))]
     Pending,
     Json(Value),
     #[allow(dead_code)]

@@ -43,6 +43,7 @@ internal static class Program
         if (args is ["--origin-probe-smoke"]) { OriginProbe.CheckIdleConnectionAsync().GetAwaiter().GetResult(); return 0; }
         if (args is ["--no-window-smoke"]) return CheckNoWindows();
         if (args is ["--default-icon-smoke"]) return DefaultIconSmoke.Run();
+        if (args is ["--notification-smoke"]) return WindowsNotificationSmoke.Run();
         if (args is ["--webview-profile-smoke", var profileIdentifier, var profileExpected, var profileNext, var profileDirectory])
             return WindowsWebviewProfileSmoke.Run(profileIdentifier, profileExpected, profileNext, profileDirectory);
         if (args is ["--reopen-smoke"]) return MacOsReopenProbe.Run();

@@ -96,6 +96,15 @@ impl LocalRuntime {
                 .map(InvokeResult::Json);
         }
         if command == "plugin:notification|notify" {
+            #[cfg(windows)]
+            {
+                let shared = self.shared.clone();
+                crate::notification::notify(&submission.args, move |result| {
+                    let _ = shared.enqueue(UserEvent::NotificationCompletion { request_id, result });
+                })?;
+                return Ok(InvokeResult::Pending);
+            }
+            #[cfg(not(windows))]
             return crate::notification::notify(&submission.args).map(InvokeResult::Json);
         }
         if command.starts_with("plugin:global-shortcut|") {

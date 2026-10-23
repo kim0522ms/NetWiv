@@ -40,6 +40,8 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Blazor mode validates before project or runner processing", BlazorModeTests.Validation),
     ("Blazor mode experimental AOT requires explicit deployment and Hybrid selection", BlazorModeTests.ExperimentalValidation),
     ("Windows installer options validate before hooks and tools", WindowsInstallerTests.Validation),
+    ("Windows installer identity rejects missing and unsafe identifiers", WindowsInstallerIdentityTests.Validation),
+    ("Windows installer identity compiles with NSIS and WiX", WindowsInstallerIdentityTests.Compilation),
     ("Windows installer options render scope lifecycle and literal arguments", WindowsInstallerTests.Rendering),
     ("external binaries resolve target inputs and preserve payload ownership", ExternalBinaryTests.ResolutionAndStaging),
     ("external binaries reject source and destination link escapes", ExternalBinaryTests.RejectsLinks),

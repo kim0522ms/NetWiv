@@ -13,6 +13,7 @@ internal static partial class NativeBundler
     {
         var options = WindowsInstallerOptions.FromJson(config.Root);
         if (target.Platform != "windows" || formats.Count == 0) return; // Windows options may live in a shared cross-platform config.
+        _ = WindowsInstallerIdentifier(config);
         WindowsInstallerOptions.ValidateFileName(Product(config), "productName");
         if (config.String("mainBinaryName") is { } binary) WindowsInstallerOptions.ValidateFileName(binary, "mainBinaryName");
         if (formats.Contains("msi"))
@@ -33,14 +34,15 @@ internal static partial class NativeBundler
 
     internal static string RenderNsis(ConfigDocument config, string payload, string binary, string output)
     {
+        var identifier = WindowsInstallerIdentifier(config);
         var options = WindowsInstallerOptions.FromJson(config.Root);
         ValidateWorkingDirectory(payload, options.WorkingDirectory);
         var product = EscapeNsis(Product(config));
-        var defaultName = InstallerDestinationName(Product(config), config.String("identifier")! + ":" + options.RegistryHive, 200);
+        var defaultName = InstallerDestinationName(Product(config), identifier + ":" + options.RegistryHive, 200);
         var destination = EscapeNsis(defaultName);
         var name = EscapeNsis(options.ShortcutName ?? defaultName);
         var hive = options.RegistryHive;
-        var key = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\" + EscapeNsis(config.String("identifier")!);
+        var key = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\" + EscapeNsis(identifier);
         var context = options.PerMachine ? "all" : "current";
         var shortcuts = new StringBuilder();
         // CreateShortcut captures $OUTDIR as the shortcut's working directory.
@@ -202,6 +204,7 @@ SectionEnd
 
     internal static string RenderMsi(ConfigDocument config, string payload, string binary)
     {
+        _ = WindowsInstallerIdentifier(config);
         var options = WindowsInstallerOptions.FromJson(config.Root);
         ValidateWorkingDirectory(payload, options.WorkingDirectory);
         var product = Product(config);

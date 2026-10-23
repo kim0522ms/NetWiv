@@ -118,6 +118,12 @@ internal static class ManagedRuntimeProbe
             }
         }
 
+        # Exercise the real Razor/WASM solution once on SDK 10, including its HTML
+        # fingerprint/import-map pipeline, without multiplying the OS/SDK matrix.
+        if ($IsLinux -and $major -eq '10') {
+            & "$PSScriptRoot/test-blazor-package-consumer.ps1" -Cli $cli -Feed $Feed -Destination (Join-Path $workspace 'BlazorExample')
+        }
+
         # Generate package consumers, retaining the test plugin as a separate assembly.
         & "$PSScriptRoot/prepare-package-smoke.ps1" -Destination $workspace -Version $Version -TargetFramework $TargetFramework
         $smoke = Join-Path $workspace 'NetWiv.Desktop.Smoke'

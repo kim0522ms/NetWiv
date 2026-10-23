@@ -146,19 +146,23 @@ internal static class NewProjectTests
             Check(created.Code == 0, created.Error);
             var backend = Path.Combine(app, "src-netwiv/Example.csproj");
             var browserProperties = await NetWiv.Build.Execution.ProcessRunner.RunAsync(new("dotnet",
-                ["msbuild", "frontend/NetWivUi.csproj", "-nologo", "-p:PublishAot=true", "-p:PublishSingleFile=true", "-p:AssemblyName=DesktopOnly",
-                    "-getProperty:AssemblyName,PublishAot,PublishSingleFile"], app, CaptureOutput: true));
+                ["msbuild", "frontend/NetWivUi.csproj", "-nologo", "-p:PublishAot=true", "-p:PublishSingleFile=true", "-p:UseAppHost=true", "-p:AssemblyName=DesktopOnly",
+                    "-getProperty:AssemblyName,PublishAot,PublishSingleFile,UseAppHost"], app, CaptureOutput: true));
             Check(browserProperties.ExitCode == 0, browserProperties.StandardError + browserProperties.StandardOutput);
             var browserValues = JsonNode.Parse(browserProperties.StandardOutput)!["Properties"]!;
             Check(browserValues["AssemblyName"]!.GetValue<string>() == "NetWivUi" &&
-                browserValues["PublishAot"]!.GetValue<string>() == "false" && browserValues["PublishSingleFile"]!.GetValue<string>() == "false",
+                browserValues["PublishAot"]!.GetValue<string>() == "false" && browserValues["PublishSingleFile"]!.GetValue<string>() == "false" &&
+                browserValues["UseAppHost"]!.GetValue<string>() == "false",
                 "Desktop publish flags changed the browser project's restore properties.");
             var bindingDirectory = XDocument.Load(backend).Descendants("NetWivCSharpBindingsDirectory").Single().Value;
             Check(bindingDirectory == "../frontend/obj/netwiv/$(Configuration)", "Generated clients share an output across configurations.");
+            Check(File.ReadAllText(Path.Combine(app, "Example.sln")).Contains("frontend\\NetWivUi.csproj", StringComparison.Ordinal),
+                "The solution must map the Razor frontend to the selected build configuration.");
             var frontendBuild = XDocument.Load(Path.Combine(app, "Example.Frontend.esproj"));
             var publish = frontendBuild.Descendants("MSBuild").Single();
-            Check(publish.Attribute("Properties")!.Value.Contains("Configuration=$(Configuration);NoBuild=true", StringComparison.Ordinal),
-                "Frontend publish must use its configuration without starting another build.");
+            Check(publish.Attribute("Properties")!.Value.Contains("Configuration=$(Configuration);BuildProjectReferences=false", StringComparison.Ordinal) &&
+                !publish.Attribute("Properties")!.Value.Contains("NoBuild=true", StringComparison.Ordinal),
+                "Frontend publish must run the SDK build/publish pipeline without rebuilding project references.");
             Check(frontendBuild.Descendants("ProjectReference").Single().Attribute("Include")!.Value == "frontend/NetWivUi.csproj" &&
                 !frontendBuild.Descendants("Exec").Any(), "Frontend must participate in the MSBuild graph.");
             Check(File.ReadAllLines(Path.Combine(app, ".gitignore")).Contains("**/obj/"), "Generated client directory is not ignored.");
@@ -260,7 +264,7 @@ internal static class NewProjectTests
                 item!["Identity"]!.GetValue<string>().Replace('\\', '/') == "obj/netwiv/Release/NetWivCommands.g.cs"),
                 "IDE design-time compilation omitted the existing client.");
             // A solution consumer of the frontend shares its Build node with the esproj.
-            // Publish must reuse that output, without an out-of-process second build.
+            // Publish runs the SDK's incremental build in-process, with references already built.
             Directory.CreateDirectory(Path.Combine(app, "tests"));
             File.WriteAllText(Path.Combine(app, "tests/Frontend.Tests.csproj"), """
                 <Project Sdk="Microsoft.NET.Sdk">

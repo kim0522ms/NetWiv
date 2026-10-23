@@ -238,11 +238,12 @@ internal static class NewCommand
         var ui = XDocument.Load(frontendProject);
         // NuGet's restore graph does not honor ProjectReference.GlobalPropertiesToRemove.
         // Keep desktop global publish flags from changing the browser project at restore time.
-        ui.Root!.SetAttributeValue("TreatAsLocalProperty", "AssemblyName;PublishAot;PublishSingleFile");
+        ui.Root!.SetAttributeValue("TreatAsLocalProperty", "AssemblyName;PublishAot;PublishSingleFile;UseAppHost");
         ui.Root.Add(new XElement("PropertyGroup",
             new XElement("AssemblyName", "NetWivUi"),
             new XElement("PublishAot", "false"),
-            new XElement("PublishSingleFile", "false")));
+            new XElement("PublishSingleFile", "false"),
+            new XElement("UseAppHost", "false")));
         ui.Root!.Add(new XElement("Import", new XAttribute("Project", "NetWiv.targets")));
         ui.Save(frontendProject);
         var startupPath = Path.Combine(frontend, "Program.cs");
@@ -252,7 +253,7 @@ internal static class NewCommand
         File.WriteAllText(startupPath, startup.Replace(run, "builder.Services.AddScoped<NetWiv.Generated.NetWivCommands>();\n\n" + run, StringComparison.Ordinal));
 
         var solution = Directory.EnumerateFiles(project, "*.sln").Single();
-        await RunDotnet(["sln", solution, "add", Path.Combine(project, "contracts", "Contracts.csproj")], project, token);
+        await RunDotnet(["sln", solution, "add", Path.Combine(project, "contracts", "Contracts.csproj"), frontendProject], project, token);
     }
 
     private static void ClearReactFrontend(string project)
@@ -283,7 +284,7 @@ internal static class NewCommand
             document.Descendants("BuildCommand").Single().Remove();
             document.Descendants("BuildOutputFolder").Single().Value = "$(MSBuildProjectDirectory)/dist/wwwroot";
             document.Descendants("Target").Single(target => (string?)target.Attribute("Name") == "RestoreFrontendDependencies").Remove();
-            const string removeProperties = "TargetFramework;RuntimeIdentifier;RuntimeIdentifiers;SelfContained;PublishAot;PublishTrimmed;PublishSingleFile;AssemblyName;OutputPath;OutDir;PublishDir";
+            const string removeProperties = "TargetFramework;RuntimeIdentifier;RuntimeIdentifiers;SelfContained;PublishAot;PublishTrimmed;PublishSingleFile;UseAppHost;AssemblyName;OutputPath;OutDir;PublishDir";
             document.Root!.Add(new XElement("ItemGroup",
                 new XAttribute("Condition", "'$(ShouldRunBuildScript)' == 'true'"),
                 new XElement("ProjectReference", new XAttribute("Include", "frontend/NetWivUi.csproj"),
@@ -296,7 +297,7 @@ internal static class NewCommand
             buildTarget.Add(new XElement("MSBuild", new XAttribute("Projects", "frontend/NetWivUi.csproj"),
                 new XAttribute("Targets", "Publish"),
                 new XAttribute("RemoveProperties", removeProperties.Replace(";PublishDir", "", StringComparison.Ordinal)),
-                new XAttribute("Properties", "Configuration=$(Configuration);NoBuild=true;BuildProjectReferences=false;PublishDir=$(MSBuildProjectDirectory)/dist/")));
+                new XAttribute("Properties", "Configuration=$(Configuration);BuildProjectReferences=false;PublishDir=$(MSBuildProjectDirectory)/dist/")));
             document.Save(frontProject);
             var appConfigPath = Path.Combine(project, "src-netwiv", "netwiv.conf.json");
             var appConfig = JsonNode.Parse(File.ReadAllText(appConfigPath))!.AsObject();

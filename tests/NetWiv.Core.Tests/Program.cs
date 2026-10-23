@@ -22,6 +22,8 @@ GeneratedCommandRegistry.Register("generated_selected", static registry =>
 
 var tests = new List<(string Name, Func<Task> Run)>
 {
+    ("macOS reopen delivers native-only notifications and observes application lifetime", ReopenTests.DeliveryAndLifetime),
+    ("macOS reopen observes sync and async failures without blocking later handlers", ReopenTests.FailuresAndDisposal),
     ("legacy JSON metadata accepts nullable command members without relaxing value types", LegacyJsonTests.NullableMembers),
     ("runtime asset policy preserves configured CSP headers and isolation sources", AssetResponsePolicyTests.SharedPolicy),
     ("JSON text IPC preserves numeric precision through plain and isolation transport", JsonTextIpcTests.PrecisionAndIsolation),

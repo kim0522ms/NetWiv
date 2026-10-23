@@ -82,6 +82,10 @@ Callback kinds:
    grant authority: the authenticated native current URI supplies source identity.
 2. Event: `{eventName,label,payload,target?}`. For `tauri://close-requested`, the
    callback returns 1 when Core has matching listeners, preventing default close.
+   On macOS, `netwiv://reopen` carries `{hasVisibleWindows:boolean}`, a null label
+   and an `App` target. Its callback return value does not control AppKit's
+   default behavior; Tao retains ownership of that delegate decision. Core
+   invokes typed reopen handlers only for native delivery, not app/guest emits.
    With `trackWebviewParents`, `netwiv://webview-reparented` has the WebView label
    and `{windowLabel}` payload. Core consumes this adapter-only notification
    without emitting a guest or plugin event. It precedes operation completion.

@@ -285,6 +285,7 @@ jobs:
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --no-window-smoke
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --default-icon-smoke
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --effects-smoke
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --reopen-smoke
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --webview-options-smoke
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke
 

@@ -15,6 +15,11 @@ the upstream compatibility surface, not the facade's public exports. Mobile-only
 entries remain visible here as unsupported even though the facade excludes them.
 See [Linux X11/Wayland](linux.md) for runtime support and compositor limits.
 
+The managed SDK also exposes macOS Dock/Finder reopen notifications through
+`Builder`, `App` and `AppHandle.OnReopen`. This is a NetWiv lifecycle API outside
+the frontend reference counts. It does not add last-window keep-alive behavior;
+see [reopening a resident application](macos.md#reopening-a-resident-application).
+
 Implementation, declaration availability and validation are separate. Counts below
 are derived from the individual core rows, not from CI results or a completion score.
 The ten core **Not implemented** entries are mobile features excluded from NetWiv;

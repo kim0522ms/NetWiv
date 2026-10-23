@@ -21,6 +21,7 @@ public sealed class Builder
     private readonly List<Action<App>> _setup = [];
     private readonly List<Action<AppHandle, MenuEvent>> _menuEventHandlers = [];
     private readonly List<Action<AppHandle, TrayIconEvent>> _trayEventHandlers = [];
+    private readonly List<Func<AppHandle, ReopenEvent, Task>> _reopenHandlers = [];
     private Func<AssetRequest, AssetResponse?> _assetResolver = static _ => null;
     private Func<IReadOnlyList<string>> _globalScriptHashes = static () => [];
     private IReadOnlyDictionary<string, string> _responseHeaders = new Dictionary<string, string>();
@@ -103,6 +104,14 @@ public sealed class Builder
     public Builder Setup(Action<App> setup) { _setup.Add(setup); return this; }
     public Builder OnMenuEvent(Action<AppHandle, MenuEvent> handler) { ArgumentNullException.ThrowIfNull(handler); _menuEventHandlers.Add(handler); return this; }
     public Builder OnTrayIconEvent(Action<AppHandle, TrayIconEvent> handler) { ArgumentNullException.ThrowIfNull(handler); _trayEventHandlers.Add(handler); return this; }
+    /// <inheritdoc cref="AppHandle.OnReopen(Func{AppHandle, ReopenEvent, Task})"/>
+    public Builder OnReopen(Func<AppHandle, ReopenEvent, Task> handler) { ArgumentNullException.ThrowIfNull(handler); _reopenHandlers.Add(handler); return this; }
+    /// <inheritdoc cref="AppHandle.OnReopen(Func{AppHandle, ReopenEvent, Task})"/>
+    public Builder OnReopen(Action<AppHandle, ReopenEvent> handler)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        return OnReopen((app, value) => { handler(app, value); return Task.CompletedTask; });
+    }
     public Builder ResolveAssets(Func<AssetRequest, AssetResponse?> resolver) { _assetResolver = resolver; _globalScriptHashes = static () => []; return this; }
     public Builder RegisterUriSchemeProtocol(string uriScheme, Func<UriSchemeContext, AssetRequest, AssetResponse> handler)
     {
@@ -220,6 +229,7 @@ public sealed class Builder
             app.Handle.AssetResponsePolicy = responsePolicy;
             foreach (var handler in _menuEventHandlers) app.OnMenuEvent(handler);
             foreach (var handler in _trayEventHandlers) app.OnTrayIconEvent(handler);
+            foreach (var handler in _reopenHandlers) app.OnReopen(handler);
             return app;
         }
         catch (Exception buildError)

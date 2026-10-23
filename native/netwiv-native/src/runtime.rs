@@ -360,6 +360,10 @@ impl LocalRuntime {
         control_flow: &mut ControlFlow,
     ) -> Result<(), String> {
         match event {
+            Event::Reopen { has_visible_windows, .. } => {
+                self.event("netwiv://reopen", None, json!({"hasVisibleWindows":has_visible_windows}), "App");
+                Ok(())
+            }
             Event::UserEvent(event) => self.handle_user_event(event, target, control_flow),
             Event::WindowEvent {
                 window_id, event, ..

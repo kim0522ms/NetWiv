@@ -35,6 +35,7 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("generated plugin commands require capability and respect deny precedence", GeneratedPluginCommandTests.Permissions),
     ("generated plugin commands reject invalid owners selections and registrations", GeneratedPluginCommandTests.InvalidSelection),
     ("runtime identity rejects a Tauri version through guest IPC", RuntimeIdentity),
+    ("browser profile identity preserves app data roots and distinguishes reserved identifiers", BrowserProfileIdentityTests.RuntimeContext),
     ("Document-owned resource close rejects other windows and preserves backend sharing", ResourceOwnershipTests.CloseRequiresOwner),
     ("IPC boundary replacement rejects late resources and waits for async scope disposal", IpcBoundaryLifetimeTests.ReplacementWaitsForScopeAndRejectsLateResources),
     ("IPC boundary reparent preserves in-flight channels and rechecks destination ACL", IpcBoundaryLifetimeTests.ReparentPreservesInFlightDocumentAndRechecksAcl),

@@ -205,6 +205,7 @@ struct LocalRuntime {
     shared: Arc<Shared>,
     initialization_script: String,
     local_data_directory: Option<PathBuf>,
+    default_webview_data_directory: Option<PathBuf>,
     asset_protocol_enabled: bool,
     isolation_protocol: Option<String>,
     ipc_protocol_enabled: bool,
@@ -280,14 +281,13 @@ fn run_inner(shared: Arc<Shared>, config: RunConfig) -> Result<(), String> {
     if let Some((rgba, width, height)) = resources.image_data(config.default_window_icon.as_ref())? {
         crate::macos::set_application_icon(&rgba, width, height)?;
     }
-    // Tauri's explicit webview `dataDirectory` uses LocalData. The app-scoped value is
-    // carried in the run contract for Core-owned paths, but does not override Wry's
-    // default (None-keyed) browser context.
+    // Core-owned app data and the browser profile can differ for an unconfigured app.
     let _app_local_data_directory = config.app_local_data_directory;
     let mut runtime = LocalRuntime {
         shared: shared.clone(),
         initialization_script: config.initialization_script,
         local_data_directory: config.local_data_directory,
+        default_webview_data_directory: config.default_webview_data_directory,
         asset_protocol_enabled: config.asset_protocol_enabled,
         isolation_protocol: config.isolation_protocol,
         ipc_protocol_enabled: config.ipc_protocol_enabled,

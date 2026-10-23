@@ -1,0 +1,16 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Browser profile probe</title></head><body>
+<script type="module">
+import { invoke } from './core.js';
+try {
+  const { expected, next } = await invoke('profile_config');
+  const key = 'netwiv-profile-fixture';
+  const actual = localStorage.getItem(key);
+  if (actual !== (expected === 'empty' ? null : expected))
+    throw Error('Browser profile did not preserve or isolate its localStorage value');
+  localStorage.setItem(key, next);
+  await invoke('profile_result');
+} catch (error) {
+  await invoke('profile_result', { error: String(error) });
+}
+</script></body></html>

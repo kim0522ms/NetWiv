@@ -341,14 +341,36 @@ fn prevent_overflow_reduces_inner_size_by_outer_excess() {
 #[test]
 fn data_directory_matches_pinned_from_config_resolution() {
     let root = Path::new("local-data");
+    let default = Path::new("app-data");
     assert_eq!(
-        resolve_webview_data_directory(Some(root), "main", Some(&json!("profile"))).unwrap(),
+        resolve_webview_data_directory(Some(root), Some(default), "main", Some(&json!("profile"))).unwrap(),
         Some(root.join("main").join("profile"))
     );
     assert_eq!(
-        resolve_webview_data_directory(Some(root), "main", Some(&json!("../shared"))).unwrap(),
+        resolve_webview_data_directory(Some(root), Some(default), "main", Some(&json!("../shared"))).unwrap(),
         Some(PathBuf::from("../shared"))
     );
+    let absolute = std::env::temp_dir().join("netwiv-explicit-profile");
+    assert_eq!(
+        resolve_webview_data_directory(Some(root), Some(default), "main", Some(&json!(absolute))).unwrap(),
+        Some(absolute)
+    );
+    assert!(resolve_webview_data_directory(Some(root), Some(default), "main", Some(&json!(12))).is_err());
+}
+
+#[test]
+fn default_data_directory_is_windows_only_and_app_scoped() {
+    let first = Path::new("app-data/first");
+    let second = Path::new("app-data/second");
+    let expected = if cfg!(target_os = "windows") { Some(first.to_path_buf()) } else { None };
+    for value in [None, Some(json!(null))] {
+        assert_eq!(resolve_webview_data_directory(None, Some(first), "main", value.as_ref()).unwrap(), expected);
+        assert_eq!(resolve_webview_data_directory(None, Some(first), "child", value.as_ref()).unwrap(), expected);
+    }
+    let other = resolve_webview_data_directory(None, Some(second), "main", None).unwrap();
+    if cfg!(target_os = "windows") { assert_ne!(other, expected); }
+    else { assert_eq!(other, None); }
+    assert_eq!(resolve_webview_data_directory(None, None, "main", None).unwrap(), None);
 }
 
 #[test]

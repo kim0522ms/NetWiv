@@ -111,6 +111,7 @@ impl LocalRuntime {
         let shared_ipc_protocol = self.shared.clone();
         let data_directory = resolve_webview_data_directory(
             self.local_data_directory.as_deref(),
+            self.default_webview_data_directory.as_deref(),
             &config.label,
             config.extra_config.get("dataDirectory"),
         )?;

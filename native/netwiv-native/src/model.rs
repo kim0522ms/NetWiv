@@ -15,6 +15,8 @@ pub(crate) struct RunConfig {
     #[serde(default)]
     pub app_local_data_directory: Option<PathBuf>,
     #[serde(default)]
+    pub default_webview_data_directory: Option<PathBuf>,
+    #[serde(default)]
     pub asset_protocol_enabled: bool,
     #[serde(default)]
     pub isolation_protocol: Option<String>,

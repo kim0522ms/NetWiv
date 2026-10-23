@@ -19,6 +19,8 @@ public sealed record RuntimeContext(
     IReadOnlyList<string>? UriSchemeProtocols = null,
     Func<AssetRequest, ValueTask<AssetResponse?>>? ResolveUriScheme = null)
 {
+    internal bool UsesDefaultAppIdentifier { get; init; }
+
     /// <summary>Encoded PNG/ICO default icon, used when DefaultWindowIcon is unset.</summary>
     public ReadOnlyMemory<byte>? EncodedDefaultWindowIcon { get; init; }
 

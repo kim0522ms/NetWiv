@@ -227,13 +227,17 @@ pub(super) fn constrained_inner_size(
 
 pub(super) fn resolve_webview_data_directory(
     local_data_directory: Option<&Path>,
+    default_webview_data_directory: Option<&Path>,
     label: &str,
     value: Option<&Value>,
 ) -> Result<Option<PathBuf>, String> {
-    let Some(value) = value else { return Ok(None) };
-    if value.is_null() {
-        return Ok(None);
-    }
+    let Some(value) = value.filter(|value| !value.is_null()) else {
+        return Ok(if cfg!(target_os = "windows") {
+            default_webview_data_directory.map(Path::to_path_buf)
+        } else {
+            None
+        });
+    };
     let raw = PathBuf::from(
         value
             .as_str()

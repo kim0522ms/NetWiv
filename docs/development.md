@@ -88,6 +88,13 @@ alone is not a GUI test. See [conformance](../tests/conformance/README.md),
 [isolation](isolation.md) and [consumer verification](frontend-generator.md#verification)
 for separate validation paths.
 
+Run `NetWiv.Desktop.Smoke --fs-guest-smoke` from both managed and NativeAOT
+outputs to check the shipped frontend file API against the real WebView bridge.
+It covers UTF-8/UTF-16 text and lines, empty files, omitted write options,
+binary preservation, append/exclusive creation, generated command error messages
+and typed backend events with exact large-integer payloads.
+The fixture uses synthetic files and removes its owned temporary directory.
+
 On Windows, run the managed and NativeAOT desktop smoke executables with
 `--notification-smoke` to exercise a windowless native notification request and
 await the pinned backend's `show()` result. The Windows command reports backend

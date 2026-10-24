@@ -26,7 +26,9 @@ internal static class FsPluginTests
             var result = await app.Handle.InvokeResponseAsync("plugin:fs|read_file", Args("path", file));
             Check(result.IsBinary);
             Assert.Equal("AB", System.Text.Encoding.UTF8.GetString(result.Binary.Span));
-            Assert.Equal("AB", (await app.Handle.InvokeAsync("plugin:fs|read_text_file", Args("path", file))).GetString());
+            var text = await app.Handle.InvokeResponseAsync("plugin:fs|read_text_file", Args("path", file));
+            Check(text.IsBinary);
+            Assert.Equal("AB", Encoding.UTF8.GetString(text.Binary.Span));
             var utf16 = Path.Combine(folder, "utf16.txt");
             File.WriteAllText(utf16, "A\nB", Encoding.Unicode);
             var lineRid = (await app.Handle.InvokeAsync("plugin:fs|read_text_file_lines", JsonValue.Parse(
@@ -89,7 +91,7 @@ internal static class FsPluginTests
             var runtime = new FakeRuntime();
             var scope = JsonValue.From(path);
             using var app = new Builder().UseRuntime(runtime).Plugin(new FsPlugin())
-                .Capability(new("main", ["fs:allow-write-file", "fs:allow-read-file", "fs:scope"], Windows: ["main"],
+                .Capability(new("main", ["fs:allow-write-file", "fs:allow-write-text-file", "fs:allow-read-file", "fs:allow-read-text-file", "fs:scope"], Windows: ["main"],
                     PermissionScopes: [new PermissionScopeExtension("fs:scope", [scope], [])])).Build();
             app.Run();
             const string keyMarker = "headers.set('Tauri-Invoke-Key', '";
@@ -102,15 +104,35 @@ internal static class FsPluginTests
                 ["path"] = Uri.EscapeDataString(path), ["options"] = "{}"
             };
             var bytes = new byte[] { 0, 1, 127, 255 };
-            var write = await runtime.Context.InvokeProtocol!(new(new Uri("ipc://localhost/plugin%3Afs%7Cwrite_file"), "POST",
-                headers, bytes, WebviewLabel: "main", WindowLabel: "main"));
-            Assert.Equal("ok", write.Headers!["Tauri-Response"]);
-            Assert.True(File.ReadAllBytes(path).SequenceEqual(bytes), "Binary write did not preserve bytes.");
+            foreach (var command in new[] { "write_file", "write_text_file" })
+            foreach (var options in new string?[] { null, "", "undefined", "{}", "null" })
+            {
+                if (options is null) headers.Remove("options");
+                else headers["options"] = options;
+                var write = await runtime.Context.InvokeProtocol!(new(new Uri("ipc://localhost/plugin%3Afs%7C" + command), "POST",
+                    headers, bytes, WebviewLabel: "main", WindowLabel: "main"));
+                Assert.Equal("ok", write.Headers!["Tauri-Response"]);
+                Assert.True(File.ReadAllBytes(path).SequenceEqual(bytes), "Binary write did not preserve bytes.");
+            }
+            headers["options"] = "{broken";
+            var invalid = await runtime.Context.InvokeProtocol!(new(new Uri("ipc://localhost/plugin%3Afs%7Cwrite_file"), "POST",
+                headers, new byte[] { 42 }, WebviewLabel: "main", WindowLabel: "main"));
+            Assert.Equal("error", invalid.Headers!["Tauri-Response"]);
+            Assert.True(File.ReadAllBytes(path).SequenceEqual(bytes), "Malformed options changed the file.");
             headers.Remove("path"); headers.Remove("options"); headers["Content-Type"] = "application/json";
             var read = await runtime.Context.InvokeProtocol!(new(new Uri("ipc://localhost/plugin%3Afs%7Cread_file"), "POST",
                 headers, Encoding.UTF8.GetBytes(Args("path", path).GetRawText()), WebviewLabel: "main", WindowLabel: "main"));
             Assert.Equal("ok", read.Headers!["Tauri-Response"]);
             Assert.True(read.Body.Span.SequenceEqual(bytes), "Binary read did not preserve bytes.");
+            foreach (var encoding in new[] { Encoding.UTF8, Encoding.Unicode })
+            {
+                var contents = encoding.GetPreamble().Concat(encoding.GetBytes("Hello 한글 😀\0\r\n")).ToArray();
+                await File.WriteAllBytesAsync(path, contents);
+                var text = await GuestIpc.Invoke(runtime, "plugin:fs|read_text_file", Args("path", path).GetRawText());
+                Assert.Equal("ok", text.Headers!["Tauri-Response"]);
+                Assert.Equal("application/octet-stream", text.ContentType);
+                Assert.True(text.Body.Span.SequenceEqual(contents), "Text read must preserve bytes for guest decoding, including BOM.");
+            }
         }
         finally { File.Delete(path); }
     }

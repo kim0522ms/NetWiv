@@ -1,0 +1,69 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>NetWiv file API regression</title></head>
+<body><p id="status">Running file API checks…</p>
+<script type="module">
+import { invoke } from './core.js';
+import { listen } from './event.js';
+import { readFile, readTextFile, readTextFileLines, writeFile, writeTextFile } from './plugins/fs.js';
+let stage = 'configuration';
+const check = (actual, expected) => { if (actual !== expected) throw Error('Unexpected result'); };
+try {
+  const root = await invoke('fs_config');
+  for (const [file, encoding] of [['utf8.txt', 'utf-8'], ['utf16.txt', 'utf-16le']]) {
+    stage = `text ${encoding}`;
+    const text = await readTextFile(root + file, { encoding });
+    check(text, 'Hello 한글 😀\r\n\r\nlast');
+    check(text, new TextDecoder(encoding).decode(await readFile(root + file)));
+    stage = `lines ${encoding}`;
+    const lines = [];
+    for await (const line of await readTextFileLines(root + file, { encoding })) lines.push(line);
+    check(JSON.stringify(lines), JSON.stringify(['Hello 한글 😀', '', 'last']));
+  }
+  stage = 'empty file';
+  check(await readTextFile(root + 'empty.txt'), '');
+  const emptyLines = [];
+  for await (const line of await readTextFileLines(root + 'empty.txt')) emptyLines.push(line);
+  check(emptyLines.length, 0);
+  for (const explicit of [false, true]) {
+    stage = `write text ${explicit}`;
+    const path = root + 'written.txt';
+    if (explicit) await writeTextFile(path, 'Text 한글 😀\0', {});
+    else await writeTextFile(path, 'Text 한글 😀\0');
+    check(await readTextFile(path), 'Text 한글 😀\0');
+    stage = `write bytes ${explicit}`;
+    const bytes = new Uint8Array([0, 1, 127, 128, 255]);
+    if (explicit) await writeFile(path, bytes, {});
+    else await writeFile(path, bytes);
+    check(JSON.stringify(Array.from(await readFile(path))), JSON.stringify(Array.from(bytes)));
+  }
+  stage = 'append and exclusive create';
+  await writeTextFile(root + 'append.txt', 'a');
+  await writeTextFile(root + 'append.txt', 'b', { append: true });
+  check(await readTextFile(root + 'append.txt'), 'ab');
+  let rejected = false;
+  try { await writeTextFile(root + 'append.txt', 'wrong', { createNew: true }); } catch { rejected = true; }
+  check(rejected, true);
+  check(await readTextFile(root + 'append.txt'), 'ab');
+  for (const command of ['fs_ordinary_failure', 'fs_expected_failure']) {
+    stage = command;
+    let message = '';
+    try { await invoke(command); } catch (error) { message = String(error); }
+    check(message, 'A note needs some text.');
+  }
+  stage = 'typed event';
+  let complete;
+  const progress = new Promise(resolve => { complete = resolve; });
+  const unlisten = await listen('batch-progress', event => complete(event.payload));
+  try {
+    await invoke('fs_emit_progress');
+    const payload = await Promise.race([progress, new Promise((_, reject) => setTimeout(() => reject(Error('Event timeout')), 5000))]);
+    check(payload.totalBytes, '9007199254740993');
+    check(payload.status, 'Complete');
+  } finally { unlisten(); }
+  document.querySelector('#status').textContent = 'Passed';
+  await invoke('fs_result', { passed: true, stage });
+} catch {
+  document.querySelector('#status').textContent = `Failed: ${stage}`;
+  await invoke('fs_result', { passed: false, stage });
+}
+</script></body></html>

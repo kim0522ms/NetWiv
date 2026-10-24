@@ -1,6 +1,11 @@
 using NetWiv;
 using System.Text.Json.Serialization;
 
+[assembly: EventPayload("batch-progress", typeof(EventProgress))]
+
+public sealed record EventProgress(int Completed,
+    [property: JsonNumberHandling(JsonNumberHandling.WriteAsString)] long TotalBytes);
+
 [JsonConverter(typeof(JsonStringEnumConverter<WireStatus>))]
 public enum WireStatus { Ready, [JsonStringEnumMemberName("in-progress")] Running }
 

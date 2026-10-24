@@ -95,6 +95,33 @@ internal sealed class FrontendBindingEmitter
             }
             // Validate even an empty local contract's serializer context.
             emitters.Add(ContextIdentity(context), new FrontendBindingEmitter(context));
+            var eventEmitter = emitters[ContextIdentity(context)];
+            var events = new SortedDictionary<string, ITypeSymbol>(StringComparer.Ordinal);
+            foreach (var attribute in application.GetAttributes().Where(static attribute =>
+                         attribute.AttributeClass?.ToDisplayString() == "NetWiv.EventPayloadAttribute"))
+            {
+                var name = attribute.ConstructorArguments.ElementAtOrDefault(0).Value as string;
+                var payload = attribute.ConstructorArguments.ElementAtOrDefault(1).Value as ITypeSymbol;
+                try
+                {
+                    if (name is null || payload is null) throw new NotSupportedException("EventPayload requires an event name and payload type");
+                    if (events.ContainsKey(name)) throw new NotSupportedException("duplicate event payload registration");
+                    if (context is null || !context.GetAttributes().Any(item =>
+                            item.AttributeClass?.ToDisplayString() == "System.Text.Json.Serialization.JsonSerializableAttribute" &&
+                            SymbolEqualityComparer.Default.Equals(item.ConstructorArguments.FirstOrDefault().Value as ITypeSymbol, payload)))
+                        throw new NotSupportedException("register the event payload with JsonSerializable in the assembly's CommandJsonContext");
+                    payload = payload.WithNullableAnnotation(NullableAnnotation.NotAnnotated);
+                    // Events use ordinary System.Text.Json, not the command-level byte[] codec.
+                    eventEmitter.Type(payload, false);
+                    events.Add(name, payload);
+                }
+                catch (NotSupportedException exception)
+                {
+                    output.ReportDiagnostic(Diagnostic.Create(Unsupported, attribute.ApplicationSyntaxReference?.GetSyntax().GetLocation(),
+                        name ?? "event", exception.Message));
+                    return;
+                }
+            }
             // Discover the complete wire graph before naming it. A later command must not
             // rename an earlier DTO according to traversal order, including recursive DTOs.
             foreach (var command in ordered)
@@ -140,6 +167,13 @@ internal sealed class FrontendBindingEmitter
             }
             js.AppendLine("});");
             types.AppendLine("};");
+            if (events.Count > 0)
+            {
+                types.AppendLine().AppendLine("export interface EventPayloads {");
+                foreach (var item in events)
+                    types.Append("  ").Append(Quote(item.Key)).Append(": ").Append(eventEmitter.Type(item.Value, false)).AppendLine(";");
+                types.AppendLine("}");
+            }
             foreach (var declaration in emitters.Values.SelectMany(emitter => emitter._declarations)
                          .OrderBy(pair => pair.Key, StringComparer.Ordinal)) types.AppendLine().AppendLine(declaration.Value);
             output.AddSource("NetWiv.FrontendBindings.g.cs", SourceText.From(

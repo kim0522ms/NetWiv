@@ -223,6 +223,7 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("channel messages retain order and terminate", ChannelIsOrdered),
     ("event targets preserve window and webview kinds", EventTargetKindsAreDistinct),
     ("upstream manager::emit", ManagerEventTests.Emit),
+    ("manager typed event payload uses source-generated JSON and preserves targets", ManagerEventTests.TypedPayload),
     ("upstream manager::emit_to", ManagerEventTests.EmitTo),
     ("manager once-any and unlisten preserve target and reentrant cleanup", ManagerEventTests.OnceAndUnlisten),
     ("native close events distinguish broadcast and preventing listeners", NativeCloseEventTargets),

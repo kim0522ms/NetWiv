@@ -99,10 +99,19 @@ do not edit them manually. When adding a JSON DTO, add `JsonSerializable` to the
 C# `AppJsonContext`. Unsupported custom serialization produces a build error
 rather than a guessed type.
 
-TypeScript names such as `GreetingOutput` derive from C# type names. See the
+TypeScript names use a wire-direction suffix: C# `Greeting` becomes
+`GreetingOutput` for results, while input DTOs use `Input`. Import
+`GreetingOutput`, not `Greeting`, from `./generated/commands.js`. See the
 [generator reference](frontend-generator.md) for serialization support and
 [DTO naming](frontend-generator.md#readable-dto-names). Permissions, command
 cancellation and resource ownership are described in the [C# SDK](csharp-api.md).
+
+Frontend event subscriptions need explicit `core:event:allow-listen` and
+`core:event:allow-unlisten` grants even when application commands work without
+an application manifest. Await registration and handle errors before triggering
+backend work. See [event delivery](csharp-api.md#event-delivery) for the builder
+and frontend examples, and [command errors](csharp-api.md#command-errors) for safe
+user-facing validation messages and string rejection handling.
 
 ## Solutions and IDEs
 

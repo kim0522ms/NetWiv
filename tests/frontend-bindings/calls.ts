@@ -1,4 +1,16 @@
 import { commands } from './src/generated/commands.js';
+import { listen } from '@netwiv/api/event';
+import type { EventPayloads } from './src/generated/commands.js';
+const stopProgress = await listen<EventPayloads['batch-progress']>('batch-progress', event => {
+  const completed: number = event.payload.completed;
+  const totalBytes: string = event.payload.totalBytes;
+  // @ts-expect-error WriteAsString preserves the exact large integer as a string.
+  const roundedBytes: number = event.payload.totalBytes;
+  void [completed, totalBytes, roundedBytes];
+});
+stopProgress();
+// @ts-expect-error Undeclared event names have no registered payload type.
+type UnknownEvent = EventPayloads['missing'];
 import type { GreetingOutput, WireContractInput, WireContractOutput } from './src/generated/commands.js';
 const result: GreetingOutput = await commands.greet({ name: 'NetWiv' });
 const message: string = result.message;

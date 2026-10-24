@@ -70,6 +70,61 @@ the old frontend dependencies and runtime-detection guards as described in
 [the migration guide](frontend-api.md#installation-and-migration). Command names,
 permissions and backend registration remain unchanged.
 
+### Event payload types
+
+Register event-only DTOs explicitly; no dummy command is required:
+
+```csharp
+using NetWiv;
+using System.Text.Json.Serialization;
+
+[assembly: GenerateFrontendBindings]
+[assembly: CommandJsonContext(typeof(AppJsonContext))]
+[assembly: EventPayload("batch-progress", typeof(BatchProgress))]
+
+public sealed record BatchProgress(int Completed, int Total);
+
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(BatchProgress))]
+internal partial class AppJsonContext : JsonSerializerContext;
+```
+
+Emit using the same source-generated metadata, including under NativeAOT:
+
+```csharp
+app.Emit("batch-progress", new BatchProgress(3, 10), AppJsonContext.Default.BatchProgress);
+// EmitTo("main", "batch-progress", payload, typeInfo) targets one label.
+```
+
+`commands.d.ts` contains the event name-to-payload map and the DTO's output shape:
+
+```ts
+import { listen } from '@netwiv/api/event';
+import type { EventPayloads } from './generated/commands.js';
+
+const unlisten = await listen<EventPayloads['batch-progress']>('batch-progress', event => {
+  console.log(event.payload.completed, event.payload.total);
+});
+// Call unlisten() when the owning UI is disposed.
+```
+
+Registrations are local to the application assembly, require both assembly
+attributes above and `[JsonSerializable]` for each registered payload, and work
+without any commands. Duplicate event names or unsupported serializer mappings
+fail generation with `DTOXGEN009`. Naming policies, ignored properties and number
+handling follow the selected JSON context. Event `byte[]` payloads use ordinary
+JSON Base64 strings, including at the root; the command-specific byte-array
+codec does not apply. Preserve large integers with `WriteAsString` when JavaScript
+must retain their exact value.
+
+This is a compile-time payload map, not runtime event-name/type enforcement or
+a listener generator. Emit with the declared type and context; using different
+metadata can produce a different wire contract. Names still undergo the normal
+runtime event-name validation. C#-client-only builds do not emit this map.
+Generation does not grant permissions: frontend registration needs
+`core:event:allow-listen` and cleanup needs `core:event:allow-unlisten`.
+See [event delivery](csharp-api.md#event-delivery) for capability setup and lifetime.
+
 ### Typed C# client for .NET frontends
 
 A .NET frontend such as Blazor WebAssembly can call the same commands through

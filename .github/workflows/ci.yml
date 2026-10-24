@@ -212,6 +212,7 @@ jobs:
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe --lifetime-smoke default
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe --lifetime-smoke resident
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe --exit-request-smoke
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe --fs-guest-smoke
 
       - name: Windows managed lifetime and persistent WebView profiles
         if: runner.os == 'Windows'
@@ -222,6 +223,7 @@ jobs:
           ./artifacts/ci/desktop-managed/NetWiv.Desktop.Smoke.exe --lifetime-smoke default
           ./artifacts/ci/desktop-managed/NetWiv.Desktop.Smoke.exe --lifetime-smoke resident
           ./artifacts/ci/desktop-managed/NetWiv.Desktop.Smoke.exe --exit-request-smoke
+          ./artifacts/ci/desktop-managed/NetWiv.Desktop.Smoke.exe --fs-guest-smoke
           pwsh -NoProfile -File scripts/test-windows-webview-profile.ps1 -ManagedDirectory artifacts/ci/desktop-managed -AotDirectory artifacts/ci/desktop-aot
 
       - name: Managed Blazor Hybrid native WebView
@@ -270,6 +272,8 @@ jobs:
           done
           xvfb-run -a -s '-screen 0 1280x800x24' \
             bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke)" x11 --exit-request-smoke
+          xvfb-run -a -s '-screen 0 1280x800x24' \
+            bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke)" x11 --fs-guest-smoke
 
       - name: Build Linux managed dialog regression host
         if: runner.os == 'Linux'
@@ -313,6 +317,7 @@ jobs:
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --lifetime-smoke default
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --lifetime-smoke resident
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --exit-request-smoke
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --fs-guest-smoke
 
       - name: Publish macOS isolation smoke with NativeAOT
         if: runner.os == 'macOS'

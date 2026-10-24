@@ -75,7 +75,8 @@ public sealed partial class CommandGenerator : IIncrementalGenerator
         if (candidates.IsDefaultOrEmpty && !exportFrontend) return;
 
         INamedTypeSymbol? jsonContext = null;
-        if (!candidates.IsDefaultOrEmpty)
+        if (!candidates.IsDefaultOrEmpty || exportFrontend && compilation.Assembly.GetAttributes().Any(static attribute =>
+            attribute.AttributeClass?.ToDisplayString() == "NetWiv.EventPayloadAttribute"))
         {
             jsonContext = FindJsonContext(compilation, context, out var contextIsInvalid);
             if (contextIsInvalid) return;

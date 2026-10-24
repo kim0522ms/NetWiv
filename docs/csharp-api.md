@@ -54,6 +54,29 @@ Use `IDisposable` for deterministic cleanup; garbage collection is not a Rust
 
 ## Invocation and restart lifetime
 
+### Command errors
+
+Use `throw new InvokeException("A note needs some text.")` for an intentional,
+user-facing command rejection. `InvokeException(JsonElement)` can return a
+structured error payload instead. Catch the rejected frontend promise; a string
+rejection is not a JavaScript `Error`, so reading only `error.message` can hide it:
+
+```ts
+try {
+  await commands.save_note({ text });
+} catch (error) {
+  const message = typeof error === 'string' ? error
+    : error instanceof Error ? error.message : 'The operation failed.';
+  showError(message);
+}
+```
+
+Ordinary command exceptions currently also expose their `Message` as a string
+through both IPC transports; they are not automatically redacted. Do not put
+secrets or personal paths in messages that can reach the frontend. For expected
+validation errors, use an explicit safe `InvokeException` message. Exception
+objects and stack traces are not serialized as the rejection payload.
+
 Guest `core:resources:close` calls must match the owning WebView and document
 generation of managed resources registered through `InvokeContext.AddResource`.
 The ownership check and removal are atomic. Trusted backend calls retain access,
@@ -119,6 +142,42 @@ manager's target; `ListenAny`/`OnceAny` receive every target for the named event
 a `RuntimeEventTarget` or a label, which matches that label across target kinds.
 These synchronous backend operations share the same event bus as guest delivery.
 Existing `EmitAsync` methods on window/WebView wrappers remain available.
+
+All five managers also accept typed payloads with source-generated metadata:
+`Emit<T>(eventName, payload, JsonTypeInfo<T>)` and
+`EmitTo<T>(targetOrLabel, eventName, payload, JsonTypeInfo<T>)`. These overloads
+serialize with the supplied metadata and preserve the existing target rules;
+they do not require reflection-based serialization. To export an event-only DTO
+to TypeScript, use `[assembly: EventPayload("batch-progress", typeof(BatchProgress))]`
+with the assembly's JSON context and frontend-binding opt-in. See
+[event payload types](frontend-generator.md#event-payload-types) for the complete
+C# and TypeScript setup, including NativeAOT and numeric precision.
+
+Frontend `listen` and `once` require `core:event:allow-listen`; cleanup requires
+`core:event:allow-unlisten`. Add only those grants to the intended window:
+
+```csharp
+.Capability(new("main", ["core:event:allow-listen", "core:event:allow-unlisten"],
+    Windows: ["main"]))
+```
+
+```ts
+import { listen } from '@netwiv/api/event';
+import type { EventPayloads } from './generated/commands.js';
+
+// Await registration before starting backend work that emits the event.
+const unlisten = await listen<EventPayloads['batch-progress']>('batch-progress', event => {
+  updateProgress(event.payload);
+});
+// Call unlisten() when the owning UI is disposed.
+```
+
+Handle registration rejection in the surrounding async operation; ignoring the
+promise can look like an event that never arrives. With no application command
+manifest, registered application commands can be called by bundled local pages,
+but core/plugin commands still need their capability grants. Once an application
+manifest exists, application commands need permissions too. Backend `Emit` does
+not grant frontend listening access.
 
 Dispose the returned listener subscription to unsubscribe, or pass `AppEvent.Id`
 to any manager's `Unlisten`. IDs identify backend listeners across all managers;

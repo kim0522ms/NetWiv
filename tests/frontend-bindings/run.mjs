@@ -90,7 +90,7 @@ try {
   assert.ok((await readFile(programPath, 'utf8')).includes('#if !DEBUG'), 'Template processing removed the C# development guard');
   await writeFile(programPath, (await readFile(programPath, 'utf8'))
     .replace('builder.InvokeHandler("smoke_done")', 'builder.InvokeHandler("smoke_done").InvokeHandler("wire_profile").InvokeHandler("constructor_profile").InvokeHandler("number_profile").InvokeHandler("extension_profile").Capability(new("frontend-desktop-read", ["core:window:allow-inner-size", "core:webview:allow-webview-size"], Windows: ["main"]))')
-    .replace('[JsonSerializable(typeof(Greeting))]', '[JsonSerializable(typeof(Greeting))]\n[JsonSerializable(typeof(WireContract))]\n[JsonSerializable(typeof(ConstructorWire))]\n[JsonSerializable(typeof(NumberWire))]\n[JsonSerializable(typeof(ExtensibleWire))]'));
+    .replace('[JsonSerializable(typeof(Greeting))]', '[JsonSerializable(typeof(Greeting))]\n[JsonSerializable(typeof(WireContract))]\n[JsonSerializable(typeof(ConstructorWire))]\n[JsonSerializable(typeof(NumberWire))]\n[JsonSerializable(typeof(ExtensibleWire))]\n[JsonSerializable(typeof(EventProgress))]'));
   const reactPath = path.join(consumer, 'src/App.tsx');
   // The injected checks are untyped JavaScript, as they were in the former App.jsx.
   await writeFile(reactPath, `// @ts-nocheck

@@ -2,11 +2,49 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 // Ports manager::test::{emit, emit_to} from the pinned Tauri source.
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using NetWiv;
 using NetWiv.Runtime;
 
 internal static class ManagerEventTests
 {
+    internal static Task TypedPayload()
+    {
+        using var app = Create();
+        var window = app.GetWindow("main-window")!;
+        var webview = app.GetWebview("main-webview")!;
+        var combined = app.GetWebviewWindow("main-webview-window")!;
+        var received = new List<string>();
+        Action<AppEvent> Listener(string name) => value =>
+        {
+            Assert.Equal("9007199254740993", value.Payload.GetProperty("totalBytes").GetString());
+            Assert.Equal("AAH/", value.Payload.GetProperty("data").GetString());
+            received.Add(name);
+        };
+        using var appListener = app.Listen("typed", Listener("app"));
+        using var windowListener = window.Listen("typed", Listener("window"));
+        using var webviewListener = webview.Listen("typed", Listener("webview"));
+        using var combinedListener = combined.Listen("typed", Listener("combined"));
+        var payload = new TypedEventPayload(9007199254740993, [0, 1, 255]);
+        var info = TypedEventJson.Default.TypedEventPayload;
+        Action<string, TypedEventPayload, JsonTypeInfo<TypedEventPayload>>[] emitters =
+            [app.Emit, app.Handle.Emit, window.Emit, webview.Emit, combined.Emit];
+        Action<string, string, TypedEventPayload, JsonTypeInfo<TypedEventPayload>>[] labels =
+            [app.EmitTo, app.Handle.EmitTo, window.EmitTo, webview.EmitTo, combined.EmitTo];
+        Action<RuntimeEventTarget, string, TypedEventPayload, JsonTypeInfo<TypedEventPayload>>[] targets =
+            [app.EmitTo, app.Handle.EmitTo, window.EmitTo, webview.EmitTo, combined.EmitTo];
+        for (var i = 0; i < emitters.Length; i++)
+        {
+            emitters[i]("typed", payload, info); Check(received, "app", "window", "webview", "combined");
+            labels[i](webview.Label, "typed", payload, info); Check(received, "webview");
+            targets[i](RuntimeEventTarget.App, "typed", payload, info); Check(received, "app");
+        }
+        using var bytes = app.Listen("bytes", value => Assert.Equal("AAH/", value.Payload.GetString()));
+        app.Emit("bytes", payload.Data, TypedEventJson.Default.ByteArray);
+        return Task.CompletedTask;
+    }
+
     internal static Task Emit()
     {
         using var app = Create();
@@ -102,3 +140,11 @@ internal static class ManagerEventTests
         received.Clear();
     }
 }
+
+internal sealed record TypedEventPayload(
+    [property: JsonNumberHandling(JsonNumberHandling.WriteAsString)] long TotalBytes, byte[] Data);
+
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(TypedEventPayload))]
+[JsonSerializable(typeof(byte[]))]
+internal partial class TypedEventJson : JsonSerializerContext;

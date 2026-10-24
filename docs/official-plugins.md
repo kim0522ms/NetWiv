@@ -182,6 +182,14 @@ if (typeof selected === 'string') {
 
 Frontend calls require capability permissions. To read and write a selected file, add `dialog:default`, `fs:allow-read-text-file`, and `fs:allow-write-text-file` to the app's capability. Paths selected by `open()` or `save()` are added to the filesystem and asset scopes for the app session. Allow other paths separately through `fs:scope` rules. Both file access and command permissions are required, and deny rules take precedence over allow rules.
 
+`readTextFile` returns decoded text; its IPC response contains the original file
+bytes so the frontend `TextDecoder` handles the requested encoding and BOM.
+Backend callers of the wire command should use `InvokeResponseAsync` and read
+the binary response. `writeTextFile(path, text)` and `writeFile(path, bytes)` do
+not require an options argument; `{}` is equivalent to omitting it. Malformed
+options still reject the write. `readTextFileLines` supports UTF-8 and UTF-16LE,
+including empty lines and end-of-file cleanup.
+
 Linux open/save and message dialogs use GTK response callbacks on the desktop
 event thread, leaving UI dispatch and IPC available while a dialog is open.
 Closing its parent window or source WebView, navigating its source document,

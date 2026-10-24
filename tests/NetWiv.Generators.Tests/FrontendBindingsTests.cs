@@ -67,6 +67,50 @@ public sealed class FrontendBindingsTests
         Assert.Equal(2, result.Errors.Count(diagnostic => diagnostic.Id == "DTOXGEN003"));
     }
 
+    [Fact]
+    public void EventOnlyPayloadsUseSerializerOptionsAndOrdinaryByteArrayWireFormat()
+    {
+        var source = Preamble.Replace("[JsonSourceGenerationOptions", "[JsonSerializable(typeof(Progress))]\n[JsonSerializable(typeof(byte[]))]\n[JsonSourceGenerationOptions")
+            .Replace("[assembly: GenerateFrontendBindings]", "[assembly: GenerateFrontendBindings]\n[assembly: EventPayload(\"batch-progress\", typeof(Progress))]\n[assembly: EventPayload(\"bytes\", typeof(byte[]))]");
+        var result = Generate(source + "public sealed record Progress(int CompletedCount, [property: JsonNumberHandling(JsonNumberHandling.WriteAsString)] long TotalBytes);");
+        Assert.Empty(result.Errors);
+        var bindings = Read(result.Compilation);
+        Assert.Contains("export interface EventPayloads", bindings.TypeScript);
+        Assert.Contains("\"batch-progress\": ProgressOutput;", bindings.TypeScript);
+        Assert.Contains("\"bytes\": string;", bindings.TypeScript);
+        Assert.Contains("\"completedCount\": number", bindings.TypeScript);
+        Assert.Contains("\"totalBytes\": string", bindings.TypeScript);
+        Assert.DoesNotContain("ProgressInput", bindings.TypeScript);
+        Assert.DoesNotContain("batch-progress", bindings.JavaScript);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    public void EventPayloadsRejectMissingSerializerRegistrationAndDuplicateNames(bool registered, bool duplicate)
+    {
+        var attributes = "[assembly: EventPayload(\"progress\", typeof(int))]";
+        if (duplicate) attributes += attributes;
+        var source = Preamble.Replace("[assembly: GenerateFrontendBindings]", "[assembly: GenerateFrontendBindings]" + attributes);
+        if (registered) source = source.Replace("[JsonSourceGenerationOptions", "[JsonSerializable(typeof(int))]\n[JsonSourceGenerationOptions");
+        var result = Generate(source);
+        Assert.Contains(result.Errors, diagnostic => diagnostic.Id == "DTOXGEN009");
+    }
+
+    [Fact]
+    public void EventsAndCommandsShareDtoNamesAndRejectUnsupportedConverters()
+    {
+        var source = Preamble.Replace("[assembly: GenerateFrontendBindings]", "[assembly: GenerateFrontendBindings]\n[assembly: EventPayload(\"progress\", typeof(Item))]")
+            .Replace("[JsonSourceGenerationOptions", "[JsonSerializable(typeof(Item))]\n[JsonSourceGenerationOptions");
+        var result = Generate(source + "public sealed record Item(int Count); public static class Commands { [Command] public static Item Get() => throw null!; }");
+        Assert.Empty(result.Errors);
+        var types = Read(result.Compilation).TypeScript;
+        Assert.Contains("\"progress\": ItemOutput;", types);
+        Assert.Equal(1, types.Split("export interface ItemOutput").Length - 1);
+        var invalid = Generate(source + "[JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))] public sealed record Item(int Count);");
+        Assert.Contains(invalid.Errors, diagnostic => diagnostic.Id == "DTOXGEN009");
+    }
+
     private const string Preamble = """
         using System;
         using System.Text.Json.Serialization;

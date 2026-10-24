@@ -76,6 +76,30 @@ generation. When you add a return type, add `[JsonSerializable(typeof(MyDto))]` 
 `AppJsonContext`. Do not edit the generated files. The starter screen and its
 styles are in `src/App.tsx` and `src/style.css`; replace them with your own.
 
+DTO imports use their wire direction: C# `Greeting` produces `GreetingOutput`,
+and an input DTO uses an `Input` suffix. For example:
+`import type { GreetingOutput } from './generated/commands.js'`.
+
+Application commands are callable from the bundled page without an application
+command manifest. Core/plugin APIs still require permissions. Before subscribing
+with `listen` from `@netwiv/api/event`, add this to the C# builder:
+
+```csharp
+.Capability(new("main", ["core:event:allow-listen", "core:event:allow-unlisten"],
+    Windows: ["main"]))
+```
+
+Await `listen(...)` and handle its rejection before starting backend work; call
+the returned unlisten function when the UI is disposed. An explicit application
+manifest also requires grants for application commands. Use `InvokeException`
+with a safe message for user-facing validation errors and catch frontend promise
+rejections; string rejections do not have an `error.message` property.
+
+For typed backend events, register event-only DTOs with `EventPayload` and use
+`Emit`/`EmitTo` with source-generated `JsonTypeInfo<T>`. Generated `EventPayloads`
+provides the payload type for `listen<EventPayloads['event-name']>(...)`. See
+[the event binding guide](https://github.com/kim0522ms/NetWiv/blob/main/docs/frontend-generator.md#event-payload-types).
+
 ## Publish
 
 ```powershell

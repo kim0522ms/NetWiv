@@ -68,15 +68,11 @@ public sealed partial class FsPlugin : IPlugin
                     return Json(JsonValue.From(File.Exists(path) || Directory.Exists(path)));
                 }
                 case "read_file":
-                {
-                    var path = await Resolve(context, args, "path", Options(args), token);
-                    return RuntimeInvokeResponse.FromBinary(await File.ReadAllBytesAsync(path, token));
-                }
                 case "read_text_file":
                 {
-                    var options = Options(args);
-                    var path = await Resolve(context, args, "path", options, token);
-                    return Json(JsonValue.From(await File.ReadAllTextAsync(path, EncodingFor(options), token)));
+                    var path = await Resolve(context, args, "path", Options(args), token);
+                    // The guest decodes text using TextDecoder and its requested encoding.
+                    return RuntimeInvokeResponse.FromBinary(await File.ReadAllBytesAsync(path, token));
                 }
                 case "write_file":
                 case "write_text_file":
@@ -84,7 +80,9 @@ public sealed partial class FsPlugin : IPlugin
                     if (!context.Request.Body().IsBinary) throw new InvokeException("File write requires a binary request body.");
                     var headers = context.Request.Headers();
                     if (!headers.TryGetValue("path", out var encodedPath)) throw new InvokeException("File write path header is missing.");
-                    var options = headers.TryGetValue("options", out var optionsJson) ? JsonValue.Parse(optionsJson) : default;
+                    var options = headers.TryGetValue("options", out var optionsJson) &&
+                        !string.IsNullOrWhiteSpace(optionsJson) && optionsJson != "undefined"
+                        ? JsonValue.Parse(optionsJson) : default;
                     var path = await Resolve(context, Uri.UnescapeDataString(encodedPath), options, token);
                     var mode = Flag(options, "append") ? FileMode.Append : Flag(options, "createNew") ? FileMode.CreateNew : FileMode.Create;
                     await using var file = new FileStream(path, mode, FileAccess.Write, FileShare.Read, 81920, true);

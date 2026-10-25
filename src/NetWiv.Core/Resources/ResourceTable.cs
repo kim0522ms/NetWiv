@@ -4,7 +4,7 @@ public sealed class ResourceTable : IDisposable
 {
     private readonly object _gate = new();
     private readonly Dictionary<uint, object> _resources = [];
-    private readonly Dictionary<uint, (string Webview, ulong Document)> _owners = [];
+    private readonly Dictionary<uint, (object Owner, ulong Document)> _owners = [];
     private uint _nextId = int.MaxValue;
     private bool _disposed;
 
@@ -29,12 +29,12 @@ public sealed class ResourceTable : IDisposable
                 : throw new KeyNotFoundException($"The resource id {id} is invalid.");
     }
 
-    internal uint AddOwned<T>(T resource, string webview, ulong document) where T : notnull
+    internal uint AddOwned<T>(T resource, object owner, ulong document) where T : notnull
     {
         lock (_gate)
         {
             var id = Add(resource);
-            _owners.Add(id, (webview, document));
+            _owners.Add(id, (owner, document));
             return id;
         }
     }
@@ -44,7 +44,7 @@ public sealed class ResourceTable : IDisposable
         object[] stale;
         lock (_gate)
         {
-            var ids = _owners.Where(entry => entry.Value.Webview == change.WebviewLabel &&
+            var ids = _owners.Where(entry => Equals(entry.Value.Owner, change.WebviewLabel) &&
                 (change.Closed || entry.Value.Document != change.DocumentId)).Select(entry => entry.Key).ToArray();
             stale = ids.Select(id => _resources[id]).Distinct(ReferenceEqualityComparer.Instance).ToArray();
             foreach (var id in ids) { _owners.Remove(id); _resources.Remove(id); }
@@ -63,14 +63,14 @@ public sealed class ResourceTable : IDisposable
 
     public bool Close(uint id) => Close(id, null, 0);
 
-    internal bool Close(uint id, string? webviewLabel, ulong documentId)
+    internal bool Close(uint id, object? owner, ulong documentId)
     {
         object resource;
         lock (_gate)
         {
-            if (webviewLabel is not null && _owners.TryGetValue(id, out var owner) &&
-                (owner.Webview != webviewLabel || owner.Document != documentId))
-                throw new InvokeException("Resource belongs to another document.");
+            if (owner is not null && _owners.TryGetValue(id, out var expected) &&
+                (!Equals(expected.Owner, owner) || expected.Document != documentId))
+                throw new InvokeException(owner is string ? "Resource belongs to another document." : "Resource belongs to another invocation owner.");
             if (!_resources.Remove(id, out resource!)) return false;
             _owners.Remove(id);
         }

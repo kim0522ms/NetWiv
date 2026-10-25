@@ -3,25 +3,265 @@ import { readFile } from 'node:fs/promises';
 import { webcrypto } from 'node:crypto';
 import vm from 'node:vm';
 import test from 'node:test';
-import { invokeJson } from '../../packages/api/lib/core.js';
+import { getFilePath, invokeJson } from '../../packages/api/lib/core.js';
 
 const read = file => readFile(new URL(file, import.meta.url), 'utf8');
 const initialization = await read('../../src/NetWiv.Core/Ipc/InitializationScript.cs');
 const transport = await read('../../src/NetWiv.Core/Security/Isolation/transport.js');
 const secure = await read('../../src/NetWiv.Core/Security/Isolation/secure.js');
 const processMessage = await read('../../src/NetWiv.Core/Security/Isolation/process-ipc-message.js');
+const filePathSmoke = await read('../NetWiv.Desktop.Smoke/wwwroot/file-path.html');
 const numbers = '{"long":9223372036854775807,"decimal":0.1234567890123456789012345678,"nested":[9007199254740993,null,"escaped \\" string"]}';
 
 // Execute the shipped scripts, with just the browser/native boundary supplied by the test.
+async function nativeDropComparison() {
+  const events = {};
+  const clicks = {};
+  const timers = [];
+  const reports = [];
+  const button = { disabled: true, addEventListener: (name, handler) => { clicks[name] = handler; } };
+  const window = {};
+  const document = {
+    querySelector: selector => selector === '#finish-native' ? button : {},
+    addEventListener: (name, handler) => { events[name] = handler; }
+  };
+  const source = filePathSmoke.split('<script type="module">')[1].split('</script>')[0]
+    .replace("import { getFilePath, invoke } from './core.js';", '');
+  await vm.runInNewContext(`(async () => { ${source} })()`, {
+    window, document, File: class {},
+    getFilePath: async () => { throw new Error('not allowed'); },
+    invoke: async (command, args) => {
+      if (command === 'file_path_config') return { window: 'native', windows: true, fileName: 'sample.txt' };
+      reports.push(args);
+    },
+    setTimeout: callback => timers.push(callback)
+  });
+  assert.equal(reports.some(value => value.kind === 'failure'), false);
+  return { window, button, events, clicks, timers, reports };
+}
+
+test('native drop comparison waits for settling and an explicit finish before reporting absence', async () => {
+  const runtime = await nativeDropComparison();
+  const counts = () => runtime.reports.filter(value => value.kind === 'native-html-drop-count');
+  runtime.window.__netwivCheckNativeDomDrop();
+  assert.equal(counts().length, 0);
+  assert.equal(runtime.button.disabled, true);
+  runtime.window.__netwivCheckNativeDomDrop();
+  runtime.timers.shift()();
+  assert.equal(runtime.button.disabled, true, 'A prior drop cannot enable completion for a newer drop');
+  runtime.timers.shift()();
+  assert.equal(runtime.button.disabled, false);
+  assert.equal(counts().length, 0);
+  runtime.clicks.click();
+  assert.equal(runtime.button.disabled, true);
+  assert.equal(counts().at(-1).count, 0);
+  // A DOM event delivered after the zero report must still notify the host of failure.
+  runtime.events.drop();
+  assert.equal(counts().at(-1).count, 1);
+});
+
+test('DOM co-delivery blocks native comparison completion and reports the positive count', async () => {
+  const runtime = await nativeDropComparison();
+  runtime.window.__netwivCheckNativeDomDrop();
+  runtime.events.drop();
+  runtime.timers.shift()();
+  assert.equal(runtime.button.disabled, true);
+  assert.equal(runtime.reports.at(-1).kind, 'native-html-drop-count');
+  assert.equal(runtime.reports.at(-1).count, 1);
+});
+
 function script(isolated) {
   const result = initialization.split('=> $$"""')[1].split('""";')[0]
     .replaceAll('{{invokeKey}}', 'test-key')
+    .replace('{{(isolationScheme is null ? "false" : "true")}}', isolated ? 'true' : 'false')
     .replace(/\{\{\(freezePrototype[^\n]+/, '')
     .replace(/\{\{\(isolationScheme[^\n]+/g, match => match.includes('TransportScript')
       ? (isolated ? transport.replace('__NETWIV_ISOLATION_SCHEME__', '"isolation"') : '') : '');
   assert.ok(!result.includes('{{'));
   return result;
 }
+
+function filePathRuntime({ os = 'windows', isolated = false, topFrame = true, fileTransport = true, protocolIpc = false, ids } = {}) {
+  const events = {};
+  const messages = [];
+  const transfers = [];
+  class File { constructor(name) { this.name = name; } }
+  const bridge = {
+    os, protocolIpc,
+    postMessage: text => messages.push(JSON.parse(text))
+  };
+  if (fileTransport) bridge.postFileMessage = (text, file) => transfers.push({ message: JSON.parse(text), file });
+  const window = {
+    addEventListener: (name, handler) => { events[name] = handler; },
+    location: { origin: 'https://app.test' },
+    __NETWIV_IPC__: bridge
+  };
+  window.top = topFrame ? window : { location: { origin: 'https://app.test' } };
+  const crypto = ids ? { getRandomValues: value => {
+    if (value instanceof Uint32Array) value[0] = ids.shift();
+    else value.fill(3);
+    return value;
+  } } : webcrypto;
+  vm.runInNewContext(script(isolated), { window, crypto, ArrayBuffer, Uint8Array, Uint32Array, File });
+  return { api: window.__TAURI_INTERNALS__, bridge, events, messages, transfers, File };
+}
+
+test('core.getFilePath delegates the File to the installed NetWiv runtime', async () => {
+  const file = {};
+  globalThis.window = { __TAURI_INTERNALS__: { getFilePath: async value => {
+    assert.equal(value, file);
+    return 'C:\\picked\\file.txt';
+  } } };
+  try {
+    assert.equal(await getFilePath(file), 'C:\\picked\\file.txt');
+  } finally { delete globalThis.window; }
+  globalThis.window = { __TAURI_INTERNALS__: {} };
+  try { await assert.rejects(getFilePath(file), { message: 'FilePathNotSupported' }); }
+  finally { delete globalThis.window; }
+});
+
+test('getFilePath preauthorizes, transfers the original File and settles through document-bound callbacks', async () => {
+  const runtime = filePathRuntime();
+  const file = new runtime.File('dropped.txt');
+  const pending = runtime.api.getFilePath(file);
+  assert.equal(runtime.messages.length, 1);
+  const authorization = runtime.messages[0];
+  assert.equal(authorization.cmd, 'plugin:webview|get_file_path');
+  assert.equal(authorization.payload.generation, 0);
+  assert.equal(typeof authorization.payload.nonce, 'string');
+  assert.equal(runtime.transfers.length, 0);
+  runtime.api.runCallback(authorization.callback, 'one-use-ticket');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(runtime.transfers.length, 1);
+  const transfer = runtime.transfers[0];
+  assert.equal(transfer.file, file);
+  assert.equal(transfer.message.ticket, 'one-use-ticket');
+  assert.equal(transfer.message.nonce, authorization.payload.nonce);
+  assert.equal(transfer.message.generation, 0);
+  assert.equal(runtime.api.runFileCallback('wrong-nonce', transfer.message.generation,
+    transfer.message.callback, 'stale path'), false);
+  assert.equal(runtime.api.runFileCallback(transfer.message.nonce, transfer.message.generation,
+    transfer.message.callback, 'C:\\picked\\dropped.txt'), true);
+  assert.equal(await pending, 'C:\\picked\\dropped.txt');
+  assert.equal(runtime.api.callbacks.size, 0);
+  assert.equal(runtime.api.runFileCallback(transfer.message.nonce, transfer.message.generation,
+    transfer.message.error, 'FilePathUnavailable'), false);
+});
+
+test('getFilePath ticket authorization keeps full-source message transport when protocol IPC is enabled', async () => {
+  const runtime = filePathRuntime({ protocolIpc: true });
+  runtime.bridge.fetchIpc = () => { throw new Error('ticket authorization used protocol IPC'); };
+  const pending = runtime.api.getFilePath(new runtime.File('dropped.txt'));
+  assert.equal(runtime.messages.length, 1);
+  assert.equal(runtime.messages[0].cmd, 'plugin:webview|get_file_path');
+  runtime.api.runCallback(runtime.messages[0].callback, 'one-use-ticket');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(runtime.transfers.length, 1);
+  const transfer = runtime.transfers[0].message;
+  runtime.api.runFileCallback(transfer.nonce, transfer.generation, transfer.callback, 'C:\\picked\\dropped.txt');
+  assert.equal(await pending, 'C:\\picked\\dropped.txt');
+});
+
+test('getFilePath rejects unsupported contexts and non-File inputs before dispatch', async () => {
+  const file = new (filePathRuntime().File)('real.txt');
+  for (const options of [
+    { os: 'macos' }, { isolated: true }, { topFrame: false }, { fileTransport: false }
+  ]) {
+    const runtime = filePathRuntime(options);
+    await assert.rejects(runtime.api.getFilePath(new runtime.File('real.txt')), { message: 'FilePathNotSupported' });
+    assert.equal(runtime.messages.length, 0);
+    assert.equal(runtime.transfers.length, 0);
+  }
+  const runtime = filePathRuntime();
+  await assert.rejects(runtime.api.getFilePath(file), { message: 'FilePathUnavailable' });
+  assert.equal(runtime.messages.length, 0);
+});
+
+test('getFilePath ACL rejection prevents transfer and retires the authorization callbacks', async () => {
+  const runtime = filePathRuntime();
+  const pending = runtime.api.getFilePath(new runtime.File('dropped.txt'));
+  const authorization = runtime.messages[0];
+  runtime.api.runCallback(authorization.error, 'permission denied');
+  await assert.rejects(pending, error => error === 'permission denied');
+  assert.equal(runtime.transfers.length, 0);
+  assert.equal(runtime.api.callbacks.size, 0);
+});
+
+test('getFilePath native failure rejects and retires its transfer callbacks', async () => {
+  const runtime = filePathRuntime();
+  const pending = runtime.api.getFilePath(new runtime.File('synthetic.txt'));
+  const authorization = runtime.messages[0];
+  runtime.api.runCallback(authorization.callback, 'one-use-ticket');
+  await new Promise(resolve => setImmediate(resolve));
+  const transfer = runtime.transfers[0].message;
+  assert.equal(runtime.api.runFileCallback(transfer.nonce, transfer.generation, transfer.error, 'FilePathUnavailable'), true);
+  await assert.rejects(pending, error => error === 'FilePathUnavailable');
+  assert.equal(runtime.api.callbacks.size, 0);
+});
+
+test('getFilePath transport exceptions normalize unexpected errors and preserve unsupported errors', async () => {
+  for (const [thrown, expected] of [
+    [new TypeError('File cannot be transferred'), 'FilePathUnavailable'],
+    [new Error('FilePathNotSupported'), 'FilePathNotSupported']
+  ]) {
+    const runtime = filePathRuntime();
+    runtime.bridge.postFileMessage = () => { throw thrown; };
+    const pending = runtime.api.getFilePath(new runtime.File('dropped.txt'));
+    runtime.api.runCallback(runtime.messages[0].callback, 'one-use-ticket');
+    await assert.rejects(pending, { message: expected });
+    assert.equal(runtime.api.callbacks.size, 0);
+  }
+});
+
+test('getFilePath pagehide before ticket response rejects and prevents a later transfer', async () => {
+  const runtime = filePathRuntime();
+  const pending = runtime.api.getFilePath(new runtime.File('dropped.txt'));
+  const authorization = runtime.messages[0];
+  runtime.events.pagehide({ persisted: true });
+  await assert.rejects(pending, error => error.name === 'AbortError');
+  runtime.api.runCallback(authorization.callback, 'late-ticket');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(runtime.transfers.length, 0);
+  assert.equal(runtime.api.callbacks.size, 0);
+});
+
+test('getFilePath pagehide during transfer rejects and ignores its late result', async () => {
+  const runtime = filePathRuntime();
+  const pending = runtime.api.getFilePath(new runtime.File('dropped.txt'));
+  const authorization = runtime.messages[0];
+  runtime.api.runCallback(authorization.callback, 'one-use-ticket');
+  await new Promise(resolve => setImmediate(resolve));
+  const transfer = runtime.transfers[0].message;
+  runtime.events.pagehide({ persisted: true });
+  await assert.rejects(pending, error => error.name === 'AbortError');
+  assert.equal(runtime.api.runFileCallback(transfer.nonce, transfer.generation, transfer.callback, 'late path'), false);
+  assert.equal(runtime.api.callbacks.size, 0);
+});
+
+test('getFilePath rejects stale BFCache callbacks even when callback IDs are reused', async () => {
+  const runtime = filePathRuntime({ ids: [1, 2, 1, 2, 1, 2, 1, 2] });
+  const first = runtime.api.getFilePath(new runtime.File('first.txt'));
+  const firstAuthorization = runtime.messages[0];
+  runtime.api.runCallback(firstAuthorization.callback, 'first-ticket');
+  await new Promise(resolve => setImmediate(resolve));
+  const firstTransfer = runtime.transfers[0].message;
+  runtime.events.pagehide({ persisted: true });
+  await assert.rejects(first, error => error.name === 'AbortError');
+  runtime.events.pageshow({ persisted: true });
+  let secondSettled = false;
+  const second = runtime.api.getFilePath(new runtime.File('second.txt')).finally(() => { secondSettled = true; });
+  const secondAuthorization = runtime.messages[1];
+  runtime.api.runCallback(secondAuthorization.callback, 'second-ticket');
+  await new Promise(resolve => setImmediate(resolve));
+  const secondTransfer = runtime.transfers[1].message;
+  assert.equal(firstTransfer.callback, secondTransfer.callback);
+  assert.equal(runtime.api.runFileCallback(firstTransfer.nonce, firstTransfer.generation,
+    firstTransfer.callback, 'stale path'), false);
+  assert.equal(secondSettled, false);
+  runtime.api.runFileCallback(secondTransfer.nonce, secondTransfer.generation,
+    secondTransfer.callback, 'C:\\picked\\second.txt');
+  assert.equal(await second, 'C:\\picked\\second.txt');
+});
 
 for (const protocolIpc of [false, true]) {
   for (const isolated of [false, true]) {

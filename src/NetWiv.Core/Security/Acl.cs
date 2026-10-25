@@ -23,7 +23,11 @@ public sealed record Capability(
     IReadOnlyList<string>? Webviews = null,
     bool Local = true,
     IReadOnlyList<string>? RemoteUrls = null,
-    IReadOnlyList<PermissionScopeExtension>? PermissionScopes = null);
+    IReadOnlyList<PermissionScopeExtension>? PermissionScopes = null)
+{
+    /// <summary>Allows this capability to be selected for non-WebView managed command invocation.</summary>
+    public bool Backend { get; init; }
+}
 
 public sealed record PermissionScopeExtension(
     string Identifier,
@@ -69,6 +73,8 @@ internal sealed partial class AclAuthorizer
             .Distinct(StringComparer.Ordinal).ToDictionary(pattern => pattern, pattern => new RemoteUrlPattern(pattern), StringComparer.Ordinal);
         foreach (var capability in capabilities)
         {
+            if (capability.Backend && (capability.Windows is { Count: > 0 } || capability.Webviews is { Count: > 0 } || capability.RemoteUrls is { Count: > 0 }))
+                throw new InvalidOperationException($"Backend capability '{capability.Identifier}' cannot target windows, webviews or remote URLs.");
             foreach (var permission in capability.Permissions)
             {
                 _ = PermissionIdentifier.Parse(permission);
@@ -96,6 +102,7 @@ internal sealed partial class AclAuthorizer
         var scopeDeny = new List<JsonElement>();
         foreach (var capability in _capabilities)
         {
+            if (capability.Backend) continue;
             if (!capability.Local && capability.RemoteUrls is not { Count: > 0 }) continue;
             foreach (var permissionName in capability.Permissions)
             {
@@ -106,6 +113,7 @@ internal sealed partial class AclAuthorizer
 
         foreach (var capability in _capabilities)
         {
+            if (capability.Backend) continue;
             if (!MatchesTarget(capability, request.WindowLabel, request.WebviewLabel) ||
                 !MatchesOrigin(capability, request.Source, isLocal))
             {

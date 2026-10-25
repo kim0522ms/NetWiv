@@ -9,7 +9,7 @@ using NetWiv.Runtime;
 namespace NetWiv.Platform.Desktop;
 
 /// <summary>NativeAOT desktop runtime backed by the pinned wry, tao, muda and tray-icon libraries.</summary>
-public sealed class DesktopRuntime : IDesktopRuntime
+public sealed partial class DesktopRuntime : IDesktopRuntime
 {
     private readonly object _gate = new();
     private readonly ConcurrentDictionary<ulong, TaskCompletionSource<RuntimeInvokeResponse>> _requests = new();
@@ -154,20 +154,20 @@ public sealed class DesktopRuntime : IDesktopRuntime
             catch { _requests.TryRemove(id, out _); throw; }
             response = completion.Task;
         }
-        // Only native dialogs support cancelling an admitted request. Other UI mutations
+        // Native dialogs and script results support cancelling an admitted request. Other UI mutations
         // retain their result even after cancellation, including created resource handles.
-        return cancellationToken.CanBeCanceled && (command is "plugin:dialog|open" or "plugin:dialog|save" or "plugin:dialog|message")
-            ? AwaitDialogResponseAsync(id, response, cancellationToken) : response;
+        return cancellationToken.CanBeCanceled && (command is "plugin:dialog|open" or "plugin:dialog|save" or "plugin:dialog|message" or "netwiv:evaluate_script")
+            ? AwaitCancellableResponseAsync(id, response, cancellationToken) : response;
     }
 
-    private async Task<RuntimeInvokeResponse> AwaitDialogResponseAsync(ulong id, Task<RuntimeInvokeResponse> response, CancellationToken cancellationToken)
+    private async Task<RuntimeInvokeResponse> AwaitCancellableResponseAsync(ulong id, Task<RuntimeInvokeResponse> response, CancellationToken cancellationToken)
     {
         // Register and dispose outside _gate: disposal can wait for a cancellation
         // callback that needs that lock to enqueue the native cancellation request.
         using var registration = cancellationToken.UnsafeRegister(static state =>
         {
             var (runtime, requestId) = ((DesktopRuntime, ulong))state!;
-            runtime.CancelDialogRequest(requestId);
+            runtime.CancelRequest(requestId);
         }, (this, id));
         try { return await response.ConfigureAwait(false); }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -176,12 +176,12 @@ public sealed class DesktopRuntime : IDesktopRuntime
         }
     }
 
-    private void CancelDialogRequest(ulong id)
+    private void CancelRequest(ulong id)
     {
         lock (_gate)
         {
             if (_native == 0 || !_requests.ContainsKey(id)) return;
-            try { Check(NativeMethods.Cancel(_native, id), "cancel native dialog"); }
+            try { Check(NativeMethods.Cancel(_native, id), "cancel native request"); }
             catch (Exception error)
             {
                 // CancellationToken callbacks must not throw on the cancelling thread.

@@ -219,9 +219,12 @@ public sealed partial class AppHandle : IDisposable
     public Task<string> ResolveDirectoryAsync(int directory, string? path = null, CancellationToken cancellationToken = default) =>
         _runtime.ResolveDirectoryAsync(directory, path, Metadata.Identifier, cancellationToken);
 
-    internal async ValueTask<RuntimeInvokeResponse> InvokePlatformAsync(string command, JsonElement args, InvokeContext context, CancellationToken cancellationToken) =>
-        await _runtime.InvokeResponseAsync(command, args, new RuntimeCommandContext(context.WebviewLabel, context.Source,
+    internal async ValueTask<RuntimeInvokeResponse> InvokePlatformAsync(string command, JsonElement args, InvokeContext context, CancellationToken cancellationToken)
+    {
+        RequireGuestOrTrustedBackend(context);
+        return await _runtime.InvokeResponseAsync(command, args, new RuntimeCommandContext(context.WebviewLabel, context.Source,
             true, context.WindowLabel, context.Scope, context.DocumentId, context.IsTrusted), cancellationToken);
+    }
 
     public void Emit(string eventName, JsonElement payload, string? label = null)
         => Emit(eventName, payload, label is null ? RuntimeEventTarget.Any : new("AnyLabel", label));
@@ -275,6 +278,17 @@ public sealed partial class AppHandle : IDisposable
                 "tauri://focus" or "tauri://blur" or "tauri://scale-change" or "tauri://theme-changed")
                 EmitMatching(runtimeEvent.EventName, runtimeEvent.Payload, target, listener => listener.Kind == "Any" ||
                     listener.Kind is "Window" or "WebviewWindow" && listener.Label == target.Label);
+            else if (target.Kind == "Webview" && runtimeEvent.EventName is
+                "tauri://drag-enter" or "tauri://drag-over" or "tauri://drag-drop" or "tauri://drag-leave")
+            {
+                string? parentWindow;
+                lock (_registryGate)
+                    parentWindow = target.Label is not null && _webviews.TryGetValue(target.Label, out var view)
+                        ? view.ParentWindowLabel : null;
+                EmitMatching(runtimeEvent.EventName, runtimeEvent.Payload, target, listener =>
+                    RuntimeEventTarget.Matches(listener, target) || parentWindow is not null &&
+                    listener.Kind is "Window" or "WebviewWindow" && listener.Label == parentWindow);
+            }
             else Emit(runtimeEvent.EventName, runtimeEvent.Payload, target);
         },
         _assetResolver,
@@ -382,9 +396,12 @@ public sealed partial class AppHandle : IDisposable
         string command,
         JsonElement args,
         InvokeContext context,
-        CancellationToken cancellationToken) =>
-        _runtime.InvokeAsync(command, args,
+        CancellationToken cancellationToken)
+    {
+        RequireGuestOrTrustedBackend(context);
+        return _runtime.InvokeAsync(command, args,
             new RuntimeCommandContext(context.WebviewLabel, context.Source, true, context.WindowLabel, context.Scope, context.DocumentId, context.IsTrusted), cancellationToken);
+    }
 
     private async void OnRuntimeMessage(RuntimeMessage message)
     {
@@ -539,6 +556,7 @@ public sealed partial class AppHandle : IDisposable
             pending = _invocations.Keys.ToArray();
         }
         foreach (var lifetime in pending) _ = CancelInvocation(lifetime);
+        CancelScriptEvaluations(closeAdmission: true);
         Isolation?.Dispose();
         _jsEventListeners.Clear();
         Events.Dispose();

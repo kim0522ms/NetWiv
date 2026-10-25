@@ -42,6 +42,10 @@ impl LocalRuntime {
             }
         }
         let command = submission.command.as_str();
+        if command == "netwiv:evaluate_script" {
+            self.begin_script_evaluation(submission, request_id)?;
+            return Ok(InvokeResult::Pending);
+        }
         if matches!(command, "plugin:app|app_show" | "plugin:app|app_hide" | "plugin:app|set_dock_visibility") {
             #[cfg(target_os = "macos")]
             {

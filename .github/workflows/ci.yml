@@ -213,6 +213,9 @@ jobs:
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe --lifetime-smoke resident
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe --exit-request-smoke
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe --fs-guest-smoke
+          for mode in --backend-invocation-smoke --script-evaluation-smoke --file-path-smoke --file-path-timeout-smoke; do
+            ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke.exe "$mode"
+          done
 
       - name: Windows managed lifetime and persistent WebView profiles
         if: runner.os == 'Windows'
@@ -224,6 +227,9 @@ jobs:
           ./artifacts/ci/desktop-managed/NetWiv.Desktop.Smoke.exe --lifetime-smoke resident
           ./artifacts/ci/desktop-managed/NetWiv.Desktop.Smoke.exe --exit-request-smoke
           ./artifacts/ci/desktop-managed/NetWiv.Desktop.Smoke.exe --fs-guest-smoke
+          for mode in --backend-invocation-smoke --script-evaluation-smoke --file-path-smoke --file-path-timeout-smoke; do
+            ./artifacts/ci/desktop-managed/NetWiv.Desktop.Smoke.exe "$mode"
+          done
           pwsh -NoProfile -File scripts/test-windows-webview-profile.ps1 -ManagedDirectory artifacts/ci/desktop-managed -AotDirectory artifacts/ci/desktop-aot
 
       - name: Managed Blazor Hybrid native WebView
@@ -274,6 +280,10 @@ jobs:
             bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke)" x11 --exit-request-smoke
           xvfb-run -a -s '-screen 0 1280x800x24' \
             bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke)" x11 --fs-guest-smoke
+          for mode in --backend-invocation-smoke --script-evaluation-smoke; do
+            xvfb-run -a -s '-screen 0 1280x800x24' \
+              bash scripts/run-linux-smoke-desktop.sh "$(realpath artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke)" x11 "$mode"
+          done
 
       - name: Build Linux managed dialog regression host
         if: runner.os == 'Linux'
@@ -318,6 +328,8 @@ jobs:
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --lifetime-smoke resident
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --exit-request-smoke
           ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --fs-guest-smoke
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --backend-invocation-smoke
+          ./artifacts/ci/desktop-aot/NetWiv.Desktop.Smoke --script-evaluation-smoke
 
       - name: Publish macOS isolation smoke with NativeAOT
         if: runner.os == 'macOS'
@@ -430,6 +442,7 @@ jobs:
             tests/NetWiv.Isolation.Smoke/*.test.mjs \
             compatibility/scripts/upstream-test-inventory.test.mjs \
             native/netwiv-native/src/runtime/ipc.test.mjs \
+            native/netwiv-native/src/runtime/script_evaluation.test.mjs \
             native/license-provenance.test.mjs
       - name: Windows owned-host cleanup tests
         if: runner.os == 'Windows' && matrix.group == 'contracts'

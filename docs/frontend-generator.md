@@ -39,14 +39,15 @@ the CLI. The exporter reads PE metadata, not a loaded assembly; module
 initializers, static constructors and app setup do not execute. It needs the
 managed DLL before NativeAOT compilation, not the final native executable.
 
-The output is `commands.js` plus `commands.d.ts`:
+The output is `commands.js` and `commands.d.ts`, plus the runtime-import-free
+`commands.factory.js` and its adjacent `commands.factory.d.ts` declaration:
 
 ```ts
 import { commands } from './generated/commands.js';
 const greeting = await commands.greet({ name: 'World' });
 ```
 
-Wrappers call `@netwiv/api/core` invoke and pass InvokeOptions through. The
+The default `commands` entry calls `@netwiv/api/core` invoke and passes InvokeOptions through. The
 desktop facade privately bundles the pinned Tauri implementation;
 see [the frontend SDK](frontend-api.md) for package setup and excluded APIs.
 Command names and argument keys are preserved exactly. No-argument
@@ -60,6 +61,47 @@ non-virtual, non-overridden constant expression-bodied getter so export can
 determine the wire name without executing code (`DTOXGEN011` otherwise).
 Runtime plugin registration has no such constant-name requirement.
 See [plugin commands](plugin-commands.md) for explicit runtime registration.
+
+### Tests and web previews
+
+The existing `commands.js` entry imports NetWiv's `invoke` and creates the same
+frozen command object through the factory. Tests and component previews can
+instead import the factory and supply an application-owned function:
+
+```ts
+import { createCommands } from './generated/commands.factory.js';
+import type { CommandInvoke } from './generated/commands.factory.js';
+
+const invoke: CommandInvoke = async <T,>(cmd: string) => {
+  if (cmd === 'greet') return { message: 'Hello, preview', count: 1 } as T;
+  throw new Error(`Unexpected command: ${cmd}`);
+};
+const commands = createCommands(invoke);
+const greeting = await commands.greet({ name: 'World' });
+```
+
+The factory module has no imports and does not load the NetWiv runtime. Its
+declarations use type-only imports; `ReturnType<typeof createCommands>` is
+`typeof commands` from the existing entry, including DTO results, no-argument
+commands, plugin routes and `InvokeOptions`. The supplied function receives the
+exact command name, argument object and options and owns its results and errors.
+This generic callback is a transport boundary: a mock must provide values matching
+the generated contract; the factory does not validate mock data at runtime.
+
+An injected function receives no NetWiv authorization. Capability checks and
+document-lifetime checks apply when calls reach NetWiv's real `invoke`. There is
+no runtime detection or automatic mock selection. For desktop use, continue
+importing `commands.js`, or explicitly pass `invoke` from `@netwiv/api/core` to
+`createCommands`.
+
+Both MSBuild and `netwiv bindings` export all four files without an additional
+property. Upgrade `NetWiv.Generators`, `NetWiv.Build` and the CLI together; older
+exporters do not extract factory metadata. Keep the factory beside `commands.js`
+when copying or bundling generated modules. Exporting an older assembly still
+produces its original two files and removes stale NetWiv-generated factory files.
+The exporter checks all generated destinations before changing any file and
+refuses to overwrite handwritten outputs. Handwritten factory files remain in
+place when exporting an older assembly that does not produce a factory.
 
 When upgrading an existing project, install the matching `@netwiv/api` package
 before regenerating bindings. The first facade is supplied as a portable local
@@ -159,9 +201,9 @@ plugin assemblies. A command whose parameters and result are only `byte[]` or
 `JsonElement` (or none) needs no shared context.
 
 When `NetWivCSharpBindingsDirectory` is set and `NetWivFrontendBindingsDirectory`
-is not, the app emits only the C# client: `commands.js` and `commands.d.ts` are
-not generated, so wire types that the TypeScript mapping rejects (for example a
-custom `[JsonConverter]`) do not fail the app build. `netwiv bindings` reports
+is not, the app emits only the C# client: the command JavaScript modules and
+declarations are not generated, so wire types that the TypeScript mapping rejects
+(for example a custom `[JsonConverter]`) do not fail the app build. `netwiv bindings` reports
 that such an app has no JavaScript bindings.
 
 Method names are the C# method name plus `Async`; two methods with the same name

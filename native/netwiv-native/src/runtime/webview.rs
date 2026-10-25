@@ -1,5 +1,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+#[cfg(target_os = "windows")]
+use std::time::Instant;
 use serde_json::{Value, json};
 use tao::dpi::{LogicalPosition, LogicalSize};
 use wry::{DragDropEvent, PageLoadEvent, Rect, WebContext, WebViewBuilder};
@@ -15,6 +17,8 @@ use super::{
     CALLBACK_DOCUMENT,
 };
 use super::protocol::{bridge_script, webview_origin};
+#[cfg(target_os = "windows")]
+use super::file_path::{FilePathError, FilePathRequest};
 use super::options::{
     parse_child_webview_options,
     invalid_argument,
@@ -94,6 +98,7 @@ impl LocalRuntime {
             &config.label,
             use_https_scheme,
             builtin_ipc,
+            cfg!(target_os = "windows") && self.isolation_protocol.is_none(),
         );
         let shared_ipc = self.shared.clone();
         let ipc_label = config.label.clone();
@@ -103,6 +108,8 @@ impl LocalRuntime {
         let shared_page = self.shared.clone();
         let page_label = config.label.clone();
         let page_doc = doc.clone();
+        #[cfg(target_os = "windows")]
+        let page_file_path_tickets = self.file_path_tickets.clone();
         #[cfg(target_os = "linux")]
         let page_ipc = ipc.clone();
         let shared_tauri_asset = self.shared.clone();
@@ -155,7 +162,12 @@ impl LocalRuntime {
             // must prove the native-issued capability before source attribution.
             .with_initialization_script_for_main_only(bridge, !cfg!(target_os = "windows"))
             .with_initialization_script_for_main_only(self.initialization_script.clone(), !cfg!(target_os = "windows"))
+            .with_initialization_script_for_main_only(super::script_evaluation::BOOTSTRAP, true)
             .with_ipc_handler(move |request| {
+                #[cfg(target_os = "windows")]
+                if super::file_path::is_file_path_wrapper(request.body()) {
+                    return;
+                }
                 #[cfg(not(target_os = "linux"))]
                 let source = request.uri().to_string();
                 #[cfg(not(target_os = "linux"))]
@@ -177,6 +189,10 @@ impl LocalRuntime {
             .with_on_page_load_handler(move |event, _url| {
                 if matches!(event, PageLoadEvent::Started) {
                     let id = shared_page.next_document_id(); page_doc.store(id, Ordering::Release);
+                    #[cfg(target_os = "windows")]
+                    if let Ok(mut tickets) = page_file_path_tickets.lock() {
+                        tickets.clear_webview(&page_label);
+                    }
                     #[cfg(target_os = "linux")]
                     {
                         let result = page_ipc.lock().map_err(|_| "document IPC lock is poisoned".to_string())
@@ -248,23 +264,34 @@ impl LocalRuntime {
         if let Some(proxy) = parse_proxy_url(config.extra_config.get("proxyUrl"))? {
             builder = builder.with_proxy_config(proxy);
         }
+        let drag_position = std::rc::Rc::new(std::cell::RefCell::new(super::drag_drop::DragPosition::default()));
         if drag_drop_enabled {
             let shared_drag = self.shared.clone();
             let drag_label = config.label.clone();
+            let drag_position = drag_position.clone();
             builder = builder.with_drag_drop_handler(move |event| {
+                let position = match &event {
+                    DragDropEvent::Enter { position, .. }
+                    | DragDropEvent::Over { position }
+                    | DragDropEvent::Drop { position, .. } => {
+                        let Some(position) = drag_position.borrow().physical(*position) else { return true; };
+                        position
+                    }
+                    _ => (0, 0),
+                };
                 let (event_name, payload) = match event {
-                    DragDropEvent::Enter { paths, position } => (
+                    DragDropEvent::Enter { paths, .. } => (
                         "tauri://drag-enter",
                         json!({
                             "paths":paths.iter().map(|path| path.to_string_lossy()).collect::<Vec<_>>(),
                             "position":{"x":position.0,"y":position.1}
                         }),
                     ),
-                    DragDropEvent::Over { position } => (
+                    DragDropEvent::Over { .. } => (
                         "tauri://drag-over",
                         json!({"position":{"x":position.0,"y":position.1}}),
                     ),
-                    DragDropEvent::Drop { paths, position } => (
+                    DragDropEvent::Drop { paths, .. } => (
                         "tauri://drag-drop",
                         json!({
                             "paths":paths.iter().map(|path| path.to_string_lossy()).collect::<Vec<_>>(),
@@ -422,6 +449,20 @@ impl LocalRuntime {
             self.web_contexts.remove(&context_key);
         }
         let native = native?;
+        drag_position.borrow_mut().attach(&native);
+        #[cfg(target_os = "windows")]
+        let file_path_hook = if self.isolation_protocol.is_none() {
+            super::file_path::WebMessageHook::install(
+                &native,
+                config.label.clone(),
+                doc.clone(),
+                self.file_path_tickets.clone(),
+                self.shared.clone(),
+            )
+            .ok()
+        } else {
+            None
+        };
         #[cfg(target_os = "linux")]
         {
             use wry::WebViewExtUnix;
@@ -471,6 +512,8 @@ impl LocalRuntime {
         self.webviews.insert(
             config.label.clone(),
             WebviewState {
+                #[cfg(target_os = "windows")]
+                file_path_hook,
                 native,
                 window_label: window.label.clone(),
                 document_id: doc,
@@ -514,6 +557,44 @@ impl LocalRuntime {
     }
 
     pub(super) fn invoke_webview(&mut self, command: &str, submission: &Submission) -> Result<Value, String> {
+        if command == "plugin:webview|get_file_path" {
+            #[cfg(not(target_os = "windows"))]
+            return Err("FilePathNotSupported".to_owned());
+
+            #[cfg(target_os = "windows")]
+            {
+                if self.isolation_protocol.is_some() {
+                    return Err(FilePathError::NotSupported.code().to_owned());
+                }
+                let view = self
+                    .webviews
+                    .get(&submission.webview_label)
+                    .ok_or_else(|| FilePathError::Unavailable.code().to_owned())?;
+                if view.file_path_hook.is_none() {
+                    return Err(FilePathError::NotSupported.code().to_owned());
+                }
+                let document_id = view.document_id.load(Ordering::Acquire);
+                if submission.document_id == 0 || submission.document_id != document_id {
+                    return Err(FilePathError::Unavailable.code().to_owned());
+                }
+                let request: FilePathRequest = serde_json::from_value(submission.args.clone())
+                    .map_err(|_| FilePathError::Unavailable.code().to_owned())?;
+                let ticket = self
+                    .file_path_tickets
+                    .lock()
+                    .map_err(|_| FilePathError::Unavailable.code().to_owned())?
+                    .issue(
+                        &submission.webview_label,
+                        &submission.source,
+                        document_id,
+                        &request.nonce,
+                        request.generation,
+                        Instant::now(),
+                    )
+                    .map_err(|error| error.code().to_owned())?;
+                return Ok(json!(ticket));
+            }
+        }
         let label = submission
             .args
             .get("label")
@@ -779,6 +860,10 @@ impl LocalRuntime {
             .webviews
             .push(label.to_owned());
         self.shared.reparent_document(label, destination)?;
+        #[cfg(target_os = "windows")]
+        if let Ok(mut tickets) = self.file_path_tickets.lock() {
+            tickets.clear_webview(label);
+        }
         if self.track_webview_parents {
             self.shared.callback(CALLBACK_EVENT, 0, &json!({"eventName":"netwiv://webview-reparented","label":label,"payload":{"windowLabel":destination}}), &[]);
         }

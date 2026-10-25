@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Drag coordinate fixture</title>
+<style>
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; font: 15px sans-serif; }
+body { background: #f4f5f7; }
+#instructions { margin: 12px; font-size: 13px; }
+#zone { position: absolute; left: 35%; top: 45%; width: 30%; height: 25%; background: #cce4ff; border: 2px solid #165eaa; box-sizing: border-box; }
+#source { display: inline-block; padding: 6px; background: #ddd; }
+#status { margin: 12px; font-size: 12px; }
+</style></head><body>
+<div id="instructions">Starting…</div><div id="source" draggable="true">HTML source</div>
+<div id="zone" data-drop-zone>Drop in this blue zone</div><div id="status"></div>
+<script type="module">
+import { invoke } from './core.js';
+import { getCurrentWebview } from './webview.js';
+const webview = getCurrentWebview();
+const zone = document.querySelector('#zone');
+const status = document.querySelector('#status');
+let config, nativeCount = 0, entered = false, htmlDrop = false, completed = false;
+const fail = stage => invoke('drag_result', { passed: false, stage });
+const pass = async stage => {
+  if (completed) return;
+  completed = true;
+  zone.style.background = '#bce8c7';
+  status.textContent = 'Passed';
+  await invoke('drag_result', { passed: true, stage });
+};
+try {
+  config = await invoke('drag_config');
+  await webview.setZoom(config.zoom);
+  // Standard page zoom can affect devicePixelRatio differently by engine.
+  // Derive the physical/CSS ratio from the actual WebView and layout viewport.
+  const unlisten = await webview.onDragDropEvent(async ({ payload }) => {
+    nativeCount++;
+    if (config.html) { await fail('native event with native drop disabled'); return; }
+    if (payload.type === 'enter') {
+      entered = true;
+      status.textContent = `Native enter #${nativeCount}: ${payload.position.x},${payload.position.y}`;
+      return;
+    }
+    if (payload.type === 'over') {
+      status.textContent = `Native over #${nativeCount}: ${payload.position.x},${payload.position.y}`;
+      return;
+    }
+    if (payload.type === 'leave') { status.textContent = `Native leave #${nativeCount}`; return; }
+    if (payload.type !== 'drop') return;
+    try {
+      if (!entered) { await fail('native drop missing enter'); return; }
+      if (!payload.paths.some(path => /(?:^|[/\\])netwiv-drag-fixture\.txt$/.test(path))) {
+        await fail('native drop missing expected fixture filename'); return;
+      }
+      const size = await webview.size();
+      const x = payload.position.x * innerWidth / size.width;
+      const y = payload.position.y * innerHeight / size.height;
+      const hit = document.elementFromPoint(x, y)?.closest('[data-drop-zone]');
+      if (hit !== zone) {
+        await fail(`native coordinate outside zone: physical ${payload.position.x},${payload.position.y}; CSS ${x.toFixed(1)},${y.toFixed(1)}; size ${size.width},${size.height}; viewport ${innerWidth},${innerHeight}`);
+        return;
+      }
+      status.textContent = `physical ${payload.position.x},${payload.position.y}; CSS ${x.toFixed(1)},${y.toFixed(1)}; DPR ${devicePixelRatio}`;
+      // Allow any incorrectly forwarded HTML drop to run before asserting.
+      await new Promise(resolve => setTimeout(resolve, 200));
+      if (htmlDrop) { await fail('native file drop also delivered HTML drop'); return; }
+      await pass('native enter/drop, file payload and CSS hit');
+    } catch { await fail('native drop size query or handler error'); }
+  });
+  addEventListener('pagehide', unlisten, { once: true });
+  document.querySelector('#source').addEventListener('dragstart', event => {
+    event.dataTransfer.setData('text/plain', 'netwiv-html-fixture');
+    status.textContent = `HTML drag started; native events ${nativeCount}`;
+  });
+  zone.addEventListener('dragover', event => { event.preventDefault(); status.textContent = `HTML drag over target; native events ${nativeCount}`; });
+  zone.addEventListener('drop', async event => {
+    event.preventDefault(); htmlDrop = true;
+    status.textContent = `HTML drop received; native events ${nativeCount}`;
+    if (config.html && event.isTrusted && event.dataTransfer.getData('text/plain') === 'netwiv-html-fixture') {
+      await new Promise(resolve => setTimeout(resolve, 200));
+      if (nativeCount) await fail('native event during HTML drag');
+      else await pass('trusted HTML drag/drop with native handler disabled');
+    }
+  });
+  document.querySelector('#instructions').textContent = config.html
+    ? 'Drag HTML source into blue zone in each window.'
+    : 'Drop the synthetic netwiv-drag-fixture.txt from the OS file manager into blue zone in each window.';
+  status.textContent = `Ready: ${webview.label}, zoom ${config.zoom}, DPR ${devicePixelRatio}`;
+} catch { await fail('fixture startup'); }
+</script></body></html>

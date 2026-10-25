@@ -29,5 +29,11 @@ public interface IDesktopRuntime
         RuntimeInvokeResponse.FromJson(await InvokeAsync(command, args, context, cancellationToken));
     void EvaluateScript(string webviewLabel, string script);
     void EvaluateScript(string webviewLabel, string script, ulong documentId) => EvaluateScript(webviewLabel, script);
+    Task<JsonElement> EvaluateScriptAsync(
+        string webviewLabel,
+        string script,
+        ulong documentId,
+        CancellationToken cancellationToken = default) =>
+        Task.FromException<JsonElement>(new NotSupportedException("This desktop runtime does not support asynchronous script evaluation."));
     void Exit(int exitCode = 0);
 }

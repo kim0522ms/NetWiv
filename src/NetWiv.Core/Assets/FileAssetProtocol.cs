@@ -88,13 +88,19 @@ internal sealed class FileAssetProtocol(FileScope scope)
                 return new(200, contentType, body.ToArray(), headers);
             }
 
+            if (request.Method == "HEAD")
+            {
+                headers["Content-Length"] = length.ToString(CultureInfo.InvariantCulture);
+                return new(200, contentType, default, headers);
+            }
+            // The response contract requires one contiguous managed byte array.
+            // Reject an unrepresentable body before attempting a large allocation.
+            if (length > (ulong)Array.MaxLength)
+                return new(413, "text/plain", "Asset file is too large for a buffered response. Request byte ranges instead."u8.ToArray(), headers);
+            var content = length < 8192 ? prefix : ReadFullBody(file, checked((int)length));
+            if ((ulong)content.Length != length) throw new EndOfStreamException("Asset file was truncated while reading.");
             headers["Content-Length"] = length.ToString(CultureInfo.InvariantCulture);
-            if (request.Method == "HEAD") return new(200, contentType, default, headers);
-            if (length < 8192) return new(200, contentType, prefix, headers);
-            file.Position = 0;
-            using var content = new MemoryStream();
-            file.CopyTo(content);
-            return new(200, contentType, content.ToArray(), headers);
+            return new(200, contentType, content, headers);
         }
         catch (FileNotFoundException) { return new(404, "", default, headers); }
         catch (DirectoryNotFoundException) { return new(404, "", default, headers); }
@@ -103,6 +109,16 @@ internal sealed class FileAssetProtocol(FileScope scope)
         {
             return new(500, "text/plain", Encoding.UTF8.GetBytes(error.Message), headers);
         }
+    }
+
+    internal static byte[] ReadFullBody(FileStream file, int length)
+    {
+        // Read the captured entity length once. Appended bytes belong to the next
+        // request; truncation fails rather than returning an incorrect length.
+        file.Position = 0;
+        var bytes = new byte[length];
+        file.ReadExactly(bytes);
+        return bytes;
     }
 
     private static byte[] Read(FileStream file, ulong start, ulong count)

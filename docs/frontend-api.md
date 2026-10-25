@@ -66,6 +66,10 @@ are not exported. Consumers deliberately installing upstream code are outside th
 supported contract; the export map is not a security sandbox. Backend authorization
 remains authoritative. Internal wire names are implementation details.
 
+For native file-drop payloads, WebView-local physical coordinates, zoom-aware
+DOM hit testing, and the Windows HTML drag-and-drop trade-off, see
+[desktop drag and drop](drag-and-drop.md).
+
 ## Desktop boundary
 
 Mobile targets and the updater runtime are excluded, not deferred. Core exports

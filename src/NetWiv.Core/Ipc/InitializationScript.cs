@@ -18,6 +18,9 @@ internal static class InitializationScript
           const callbacks = new Map();
           const eventCallbacks = new Map();
           const pendingInvocations = new Map();
+          const documentNonce = Array.from(crypto.getRandomValues(new Uint8Array(16)),
+            value => value.toString(16).padStart(2, '0')).join('');
+          const isolatedDocument = {{(isolationScheme is null ? "false" : "true")}};
           let documentActive = true;
           let clientGeneration = 0;
           const documentHiddenError = () => {
@@ -109,7 +112,7 @@ internal static class InitializationScript
           };
           let sendIpc = sendToNative;
           {{(isolationScheme is null ? string.Empty : IsolationPattern.TransportScript(isolationScheme))}}
-          const invoke = (cmd, args = {}, options, json = false) => new Promise((resolve, reject) => {
+          const invokeWithCallbacks = send => new Promise((resolve, reject) => {
             if (!documentActive) { reject(documentHiddenError()); return; }
             let callback;
             let error;
@@ -117,11 +120,41 @@ internal static class InitializationScript
             error = transformCallback(value => { callbacks.delete(callback); pendingInvocations.delete(error); reject(value); }, true);
             pendingInvocations.set(error, reject);
             try {
-              sendIpc({ cmd, callback, error, payload: args, options, __NETWIV_JSON__: json, __NETWIV_CLIENT_GENERATION__: clientGeneration });
+              send(callback, error);
             } catch (exception) {
               callbacks.delete(callback); callbacks.delete(error); pendingInvocations.delete(error); reject(exception);
             }
           });
+          const invoke = (cmd, args = {}, options, json = false) => invokeWithCallbacks((callback, error) =>
+            sendIpc({ cmd, callback, error, payload: args, options, __NETWIV_JSON__: json, __NETWIV_CLIENT_GENERATION__: clientGeneration }));
+          const getFilePath = async file => {
+            if (bridge.os !== 'windows' || typeof bridge.postFileMessage !== 'function' || isolatedDocument || window.top !== window)
+              throw new Error('FilePathNotSupported');
+            if (!documentActive) throw documentHiddenError();
+            if (typeof File === 'undefined' || !(file instanceof File)) throw new Error('FilePathUnavailable');
+            const generation = clientGeneration;
+            // Keep authorization on the WebView message channel so native sees
+            // the same full document source as the AdditionalObjects message.
+            const ticket = await invokeWithCallbacks((callback, error) => bridge.postMessage(JSON.stringify({
+              cmd: 'plugin:webview|get_file_path', callback, error, payload: { nonce: documentNonce, generation },
+              __NETWIV_BODY_TYPE__: 'application/json', __NETWIV_INVOKE_KEY__: '{{invokeKey}}',
+              __NETWIV_CLIENT_GENERATION__: generation
+            })));
+            if (!documentActive || generation !== clientGeneration) throw documentHiddenError();
+            return invokeWithCallbacks((callback, error) => {
+              try {
+                bridge.postFileMessage(JSON.stringify({ ticket, nonce: documentNonce, generation, callback, error }), file);
+              } catch (exception) {
+                if (exception?.message === 'FilePathNotSupported') throw exception;
+                throw new Error('FilePathUnavailable');
+              }
+            });
+          };
+          const runFileCallback = (nonce, generation, id, data) => {
+            if (!documentActive || nonce !== documentNonce || generation !== clientGeneration || !callbacks.has(id)) return false;
+            runCallback(id, data);
+            return true;
+          };
           const internals = window.__TAURI_INTERNALS__ || {};
           const isWindows = bridge.os === 'windows';
           Object.assign(internals, {
@@ -133,7 +166,9 @@ internal static class InitializationScript
             transformCallback,
             unregisterCallback: id => callbacks.delete(id),
             runCallback,
+            runFileCallback,
             invoke,
+            getFilePath,
             invokeJson: (cmd, args = '{}', options) => {
               if (typeof args !== 'string') return Promise.reject(new TypeError('invokeJson requires JSON text'));
               return invoke(cmd, args, options, true);

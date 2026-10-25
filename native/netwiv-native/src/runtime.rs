@@ -1,10 +1,14 @@
 mod window;
 mod webview;
+mod drag_drop;
 mod commands;
 mod menus;
 mod protocol;
 mod options;
 mod platform;
+mod script_evaluation;
+#[cfg(any(target_os = "windows", test))]
+mod file_path;
 #[cfg(target_os = "linux")]
 mod ipc;
 #[cfg(target_os = "linux")]
@@ -123,6 +127,7 @@ impl Shared {
 }
 
 pub(crate) enum UserEvent {
+    ScriptEvaluationResult { request_id: u64, result: String },
     #[cfg(target_os = "linux")]
     ActivateIpc { label: String, document_id: u64 },
     #[cfg(target_os = "linux")]
@@ -186,6 +191,8 @@ impl WindowState {
 }
 
 struct WebviewState {
+    #[cfg(target_os = "windows")]
+    file_path_hook: Option<file_path::WebMessageHook>,
     native: WebView,
     window_label: String,
     document_id: Arc<AtomicU64>,
@@ -204,6 +211,7 @@ struct WebContextState {
 }
 
 struct LocalRuntime {
+    pending_evaluations: HashMap<u64, script_evaluation::PendingEvaluation>,
     shared: Arc<Shared>,
     initialization_script: String,
     local_data_directory: Option<PathBuf>,
@@ -227,6 +235,8 @@ struct LocalRuntime {
     clipboard: Option<arboard::Clipboard>,
     global_shortcuts: crate::global_shortcut::GlobalShortcuts,
     strongholds: crate::stronghold::Strongholds,
+    #[cfg(target_os = "windows")]
+    file_path_tickets: Arc<Mutex<file_path::FilePathTickets>>,
     #[cfg(target_os = "linux")]
     pending_dialogs: HashMap<u64, dialogs::PendingNativeDialog>,
     exit_code: i32,
@@ -287,6 +297,7 @@ fn run_inner(shared: Arc<Shared>, config: RunConfig) -> Result<(), String> {
     // Core-owned app data and the browser profile can differ for an unconfigured app.
     let _app_local_data_directory = config.app_local_data_directory;
     let mut runtime = LocalRuntime {
+        pending_evaluations: HashMap::new(),
         shared: shared.clone(),
         initialization_script: config.initialization_script,
         local_data_directory: config.local_data_directory,
@@ -310,6 +321,8 @@ fn run_inner(shared: Arc<Shared>, config: RunConfig) -> Result<(), String> {
         clipboard: None,
         global_shortcuts: crate::global_shortcut::GlobalShortcuts::new(),
         strongholds: crate::stronghold::Strongholds::new(),
+        #[cfg(target_os = "windows")]
+        file_path_tickets: Arc::new(Mutex::new(file_path::FilePathTickets::default())),
         #[cfg(target_os = "linux")]
         pending_dialogs: HashMap::new(),
         exit_code: 0,
@@ -344,6 +357,7 @@ fn run_inner(shared: Arc<Shared>, config: RunConfig) -> Result<(), String> {
     });
     #[cfg(target_os = "linux")]
     runtime.cancel_all_dialogs("native runtime stopped before dialog completed");
+    runtime.cancel_all_script_evaluations();
     runtime.close_all_documents();
     runtime.webviews.clear();
     runtime.web_contexts.clear();
@@ -377,6 +391,7 @@ impl LocalRuntime {
                 window_id, event, ..
             } => self.handle_window_event(window_id, event, control_flow),
             Event::MainEventsCleared => {
+                self.poll_script_evaluations();
                 // GTK can report resize before its maximized state has settled.
                 // Snapshot normal bounds after the native event batch instead.
                 for state in self.windows.values_mut() { state.capture_normal_bounds(); }
@@ -394,6 +409,10 @@ impl LocalRuntime {
         control_flow: &mut ControlFlow,
     ) -> Result<(), String> {
         match event {
+            UserEvent::ScriptEvaluationResult { request_id, result } => {
+                self.receive_script_evaluation(request_id, &result);
+                Ok(())
+            }
             #[cfg(target_os = "linux")]
             UserEvent::ActivateIpc { label, document_id } => self.query_ipc_nonce(&label, document_id, None),
             #[cfg(target_os = "linux")]
@@ -443,6 +462,7 @@ impl LocalRuntime {
                 Ok(())
             }
             UserEvent::CancelRequest { request_id } => {
+                self.cancel_script_evaluation(request_id);
                 #[cfg(target_os = "linux")]
                 self.cancel_dialog_request(request_id);
                 // Other platforms retain their synchronous rfd behavior.
@@ -580,6 +600,10 @@ impl LocalRuntime {
     fn remove_webview(&mut self, label: &str) -> Result<(), String> {
         #[cfg(target_os = "linux")]
         self.cancel_dialogs_for_webview(label);
+        #[cfg(target_os = "windows")]
+        if let Ok(mut tickets) = self.file_path_tickets.lock() {
+            tickets.clear_webview(label);
+        }
         if let Some(view) = self.webviews.remove(label) {
             let id = view.document_id.load(Ordering::Acquire);
             let window_label = view.window_label.clone();
@@ -634,6 +658,7 @@ impl LocalRuntime {
     }
 
     fn shutdown(&mut self, control_flow: &mut ControlFlow) {
+        self.cancel_all_script_evaluations();
         #[cfg(target_os = "linux")]
         self.cancel_all_dialogs("native runtime stopped before dialog completed");
         let labels: Vec<_> = self.windows.keys().cloned().collect();

@@ -47,6 +47,7 @@ public sealed partial class AppHandle
             pending = _invocations.Keys.ToArray();
         }
         foreach (var lifetime in pending) _ = CancelInvocation(lifetime);
+        CancelScriptEvaluations(closeAdmission: closeAdmission);
     }
 
     /// <summary>
@@ -82,6 +83,7 @@ public sealed partial class AppHandle
                 (change.Closed || entry.Value.Document != change.DocumentId)).Select(entry => entry.Key).ToArray();
         }
         foreach (var lifetime in stale) _ = CancelInvocation(lifetime);
+        CancelScriptEvaluations(change.WebviewLabel, change.Closed ? 0 : change.DocumentId);
         Resources.CloseDocument(change);
     }
 
@@ -96,12 +98,14 @@ public sealed partial class AppHandle
     {
         lock (_invocationGate)
         {
-            if (_disposed || !context.IsTrusted && !IsCurrentDocument(context.WebviewLabel, context.DocumentId))
+            if (_disposed || context.InvocationCompleted || !context.IsBackend && !IsCurrentDocument(context.WebviewLabel, context.DocumentId))
             {
                 if (resource is IDisposable disposable) disposable.Dispose();
                 throw new InvokeException("The originating document has been replaced or the application stopped.");
             }
-            return context.IsTrusted ? Resources.Add(resource) : Resources.AddOwned(resource, context.WebviewLabel, context.DocumentId);
+            var id = context.IsTrusted ? Resources.Add(resource) : Resources.AddOwned(resource, context.ResourceOwner, context.DocumentId);
+            context.InvocationResources?.Add(id);
+            return id;
         }
     }
 }

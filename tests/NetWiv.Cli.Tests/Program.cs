@@ -158,6 +158,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("effective config expands capabilities", EffectiveConfig),
     ("upstream acl::capability::capability_file_de", CapabilityFileDe),
     ("effective capabilities reject malformed inactive entries before platform filtering", CapabilityInputBoundaries),
+    ("backend capability configuration survives JSON and TOML effective configuration", BackendCapabilityConfiguration),
     ("effective ACL discovers recursive TOML and JSON permissions", EffectivePermissionDiscovery),
     ("empty permission inputs do not create an app manifest", EmptyEffectivePermissions),
     ("effective ACL preserves default permissions and sets", EffectivePermissionSets),
@@ -542,6 +543,10 @@ static Task CapabilityInputBoundaries() => Temp(root =>
         """{"identifier":"test","platforms":["linux"],"permissions":["plugin:bad_name"]}""",
         """{"identifier":"test","permissions":[{"identifier":"core:default","allow":{}}]}""",
         """{"identifier":"test","permissions":[],"local":null}""",
+        """{"identifier":"test","permissions":[],"backend":"true"}""",
+        """{"identifier":"test","permissions":[],"backend":true,"windows":["main"]}""",
+        """{"identifier":"test","permissions":[],"backend":true,"webviews":["main"]}""",
+        """{"identifier":"test","permissions":[],"backend":true,"remote":{"urls":["https://example.invalid"]}}""",
         """{"identifier":"test","permissions":[],"windows":[1]}""",
         """{"identifier":"test","permissions":[],"remote":{}}""",
         """{"identifier":"test"}""", """{"capabilities":null}""", "[null]" })
@@ -549,6 +554,27 @@ static Task CapabilityInputBoundaries() => Temp(root =>
         File.WriteAllText(Path.Combine(dir, "capabilities", "test.json"), input);
         var config = ConfigLoader.Load(root, "windows");
         Throws<NetWivConfigException>(() => CommandConfig.WriteEffectiveConfig(config, BuildTarget.Resolve("win-x64"), false));
+    }
+    return Task.CompletedTask;
+});
+
+static Task BackendCapabilityConfiguration() => Temp(root =>
+{
+    var dir = Path.Combine(root, "src-netwiv"); Directory.CreateDirectory(Path.Combine(dir, "capabilities"));
+    File.WriteAllText(Path.Combine(dir, "netwiv.conf.json"), """{"identifier":"com.test.app","app":{"security":{"capabilities":["backend"]}}}""");
+    foreach (var format in new[] { "json", "toml" })
+    {
+        var capabilityPath = Path.Combine(dir, "capabilities", "backend." + format);
+        File.WriteAllText(capabilityPath, format == "json"
+            ? """{"identifier":"backend","backend":true,"permissions":["core:resources:default"]}"""
+            : "identifier = \"backend\"\nbackend = true\npermissions = [\"core:resources:default\"]\n");
+        var config = ConfigLoader.Load(root, "windows");
+        var path = CommandConfig.WriteEffectiveConfig(config, BuildTarget.Resolve("win-x64"), false);
+        var capability = ConfigLoader.ParseFile(path)["app"]!["security"]!["capabilities"]![0]!;
+        Equal(true, capability["backend"]!.GetValue<bool>());
+        Equal("backend", capability["identifier"]!.GetValue<string>());
+        True(capability["windows"] is null);
+        File.Delete(capabilityPath);
     }
     return Task.CompletedTask;
 });

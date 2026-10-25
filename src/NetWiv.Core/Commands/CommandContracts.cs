@@ -47,6 +47,12 @@ public sealed class InvokeContext
     public string WebviewLabel { get; }
     public Uri Source { get; }
     public bool IsTrusted { get; }
+    /// <summary>True for managed callers without an originating guest document.</summary>
+    public bool IsBackend => IsTrusted || Authorization is not null;
+    internal InvokeAuthorization? Authorization { get; init; }
+    internal List<uint>? InvocationResources { get; init; }
+    internal bool InvocationCompleted { get; set; }
+    internal object ResourceOwner => (object?)Authorization ?? WebviewLabel;
     public Runtime.RuntimeCommandScope Scope { get; }
     public ulong DocumentId { get; }
     public Request Request { get; }
@@ -56,7 +62,7 @@ public sealed class InvokeContext
     /// </summary>
     public IServiceProvider Services { get; }
     public State<T> State<T>() where T : notnull => App.State<T>();
-    /// <summary>Registers a resource owned by the invoking document, or by the app for trusted backend calls.</summary>
+    /// <summary>Registers a resource owned by the document, scoped authorization, or app for trusted backend calls.</summary>
     public uint AddResource<T>(T resource) where T : notnull => App.AddInvocationResource(this, resource);
     /// <summary>Runs a platform operation after the plugin command passed the ACL check.</summary>
     public ValueTask<Runtime.RuntimeInvokeResponse> InvokePlatformAsync(string command, JsonElement args, CancellationToken cancellationToken = default) =>

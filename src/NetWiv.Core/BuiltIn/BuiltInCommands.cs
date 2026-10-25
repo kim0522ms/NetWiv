@@ -19,7 +19,7 @@ internal static class BuiltInCommands
         registry.Register("plugin:resources|close", async (context, args, cancellationToken) =>
         {
             var rid = args.GetProperty("rid").GetUInt32();
-            if (app.Resources.Close(rid, context.IsTrusted ? null : context.WebviewLabel, context.DocumentId)) return JsonValue.Null;
+            if (app.Resources.Close(rid, context.IsTrusted ? null : context.ResourceOwner, context.DocumentId)) return JsonValue.Null;
             if (rid >= 0x80000000) throw new InvokeException($"The resource id {rid} is invalid.");
             return await app.InvokeRuntimeDirectAsync("plugin:resources|close", args, context, cancellationToken);
         });
@@ -349,6 +349,11 @@ internal static class BuiltInCommands
                 permissions.Add(new($"core:{plugin}:deny-{command}", [], [wireCommand]));
             }
         }
+
+        // NetWiv extension: local file paths require an explicit grant and are
+        // deliberately excluded from both webview and core default permissions.
+        permissions.Add(new("core:webview:allow-get-file-path", ["plugin:webview|get_file_path"], []));
+        permissions.Add(new("core:webview:deny-get-file-path", [], ["plugin:webview|get_file_path"]));
 
         var defaults = new[]
         {

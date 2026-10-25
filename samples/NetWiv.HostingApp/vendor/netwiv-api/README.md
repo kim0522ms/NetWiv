@@ -10,6 +10,14 @@ must encode an object; the result is JSON text. Binary responses are unsupported
 This requires a matching NetWiv runtime. Ordinary `invoke` and `JSON.parse`
 retain JavaScript's numeric precision limits.
 
+On Windows, `core.getFilePath(file)` resolves a local file supplied by an HTML5
+drop or file input. It requires the explicit `core:webview:allow-get-file-path`
+capability; core default permissions do not include it. Set `dragDropEnabled`
+to `false` to keep HTML5 drag-and-drop enabled on Windows. Constructed files
+without a local backing file reject with `FilePathUnavailable`. Other platforms,
+child frames, isolation and runtimes without the required WebView2 feature reject
+with `FilePathNotSupported`. Obtaining a path does not grant filesystem access.
+
 ```ts
 import { invoke } from '@netwiv/api/core';
 import { getCurrentWindow } from '@netwiv/api/window';

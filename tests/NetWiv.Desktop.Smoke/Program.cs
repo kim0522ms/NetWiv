@@ -39,12 +39,16 @@ internal static class Program
         if (args is ["--webview-options-smoke"]) return MacOsWebviewOptionsProbe.Run();
         if (args is ["--webview-options-input-smoke"]) return MacOsWebviewOptionsProbe.Run(input: true);
         if (args is ["--window-state-smoke", var stateRoot, var phase]) return WindowStateSmoke.Run(stateRoot, phase == "restore");
+        if (args is ["--backend-invocation-smoke"]) return BackendInvocationSmoke.Run();
         if (args is ["--expect-startup-error", var expected]) return CheckStartupError(expected);
         if (args is ["--origin-probe-smoke"]) { OriginProbe.CheckIdleConnectionAsync().GetAwaiter().GetResult(); return 0; }
         if (args is ["--no-window-smoke"]) return CheckNoWindows();
         if (args is ["--default-icon-smoke"]) return DefaultIconSmoke.Run();
         if (args is ["--notification-smoke"]) return WindowsNotificationSmoke.Run();
         if (args is ["--fs-guest-smoke"]) return FsGuestSmoke.Run();
+        if (args is ["--file-path-smoke"]) return FilePathSmoke.Run(interactive: false);
+        if (args is ["--file-path-timeout-smoke"]) return FilePathSmoke.Run(interactive: false, timeoutSmoke: true);
+        if (args is ["--file-path-interactive"]) return FilePathSmoke.Run(interactive: true);
         if (args is ["--webview-profile-smoke", var profileIdentifier, var profileExpected, var profileNext, var profileDirectory])
             return WindowsWebviewProfileSmoke.Run(profileIdentifier, profileExpected, profileNext, profileDirectory);
         if (args is ["--reopen-smoke"]) return MacOsReopenProbe.Run();
@@ -52,6 +56,7 @@ internal static class Program
         if (args is ["--exit-request-smoke"]) return ExitRequestSmoke.Run();
         if (args is ["--lifetime-smoke", "default"]) return ApplicationLifetimeSmoke.Run(resident: false);
         if (args is ["--opened-smoke"]) return MacOsOpenedProbe.Run();
+        if (args is ["--script-evaluation-smoke"]) return ScriptEvaluationSmoke.Run();
         if (args is ["--send-opened-event", var openedProcessId]) return MacOsReopenProbe.SendOpened(int.Parse(openedProcessId, System.Globalization.CultureInfo.InvariantCulture));
         if (args is ["--send-reopen-event", var processId]) return MacOsReopenProbe.SendReopen(int.Parse(processId, System.Globalization.CultureInfo.InvariantCulture));
         if (args.Length != 0) throw new ArgumentException("Unknown smoke-test arguments.");

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { copyFile, cp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { addReferencedPolymorphism, polymorphismGuestChecks, referencedPolymorphismCalls } from './polymorphism.mjs';
@@ -92,15 +93,66 @@ try {
 </script></body></html>`);
   await run(dotnet, ['build', 'src-netwiv', '-p:NetWivBindingsOnly=true', '--disable-build-servers'], initialized);
   const declarationFile = path.join(initialized, 'src/generated/commands.d.ts');
+  const factoryFile = path.join(initialized, 'src/generated/commands.factory.js');
+  const factoryDtsFile = path.join(initialized, 'src/generated/commands.factory.d.ts');
   const declarations = await readFile(declarationFile, 'utf8');
   assert.ok(declarations.includes('"plugin:library-check|profile"') && declarations.includes('"package_echo"'));
   assert.ok(declarations.includes('"count": number | string;') && declarations.includes('"count": string;'));
+  const factoryDts = await readFile(factoryDtsFile, 'utf8');
+  assert.ok(factoryDts.includes("import type { InvokeOptions } from '@netwiv/api/core';"));
+  assert.ok(factoryDts.includes("import type { commands } from './commands.js';"));
+  assert.ok(factoryDts.includes('export type CommandInvoke = <T>(cmd: string, args: Record<string, unknown>, options?: InvokeOptions) => Promise<T>;'));
+  assert.ok(factoryDts.includes('export declare function createCommands(invoke: CommandInvoke): typeof commands;'));
+  const managedProject = await readFile(projectFile, 'utf8');
+  const targetFramework = /<TargetFramework>([^<]+)<\/TargetFramework>/.exec(managedProject)?.[1];
+  assert.ok(targetFramework, 'Initialized app must declare a single managed target framework.');
+  const managedAssembly = path.join(initialized, 'src-netwiv', 'bin', 'Debug', targetFramework, 'NetWiv.App.dll');
+  const cliBindings = path.join(initialized, 'cli-bindings');
+  await run(dotnet, ['tool', 'run', 'netwiv', '--', 'bindings', managedAssembly, cliBindings], initialized);
+  for (const file of ['commands.js', 'commands.d.ts', 'commands.factory.js', 'commands.factory.d.ts'])
+    assert.deepEqual(await readFile(path.join(cliBindings, file)), await readFile(path.join(initialized, 'src/generated', file)),
+      `CLI extraction differs from MSBuild output: ${file}`);
+  const temporaryRoot = path.resolve(await realpath(os.tmpdir()));
+  const isolatedPrefix = 'netwiv-factory-';
+  const isolated = await mkdtemp(path.join(temporaryRoot, isolatedPrefix));
+  try {
+    await copyFile(factoryFile, path.join(isolated, 'commands.factory.js'));
+    await copyFile(new URL('./factory-runtime.mjs', import.meta.url), path.join(isolated, 'factory-runtime.mjs'));
+    await writeFile(path.join(isolated, 'package.json'), '{"type":"module"}\n');
+    await run(process.execPath, ['factory-runtime.mjs'], isolated);
+  } finally {
+    const actual = path.resolve(await realpath(isolated));
+    const relative = path.relative(temporaryRoot, actual);
+    assert.ok(relative && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative),
+      'Factory test cleanup target must remain inside the system temporary directory.');
+    assert.ok(path.basename(actual).startsWith(isolatedPrefix) && path.basename(actual).length > isolatedPrefix.length,
+      'Factory test cleanup target must have its expected randomized prefix.');
+    await rm(actual, { recursive: true, force: true });
+  }
   const calls = path.join(initialized, 'referenced-calls.ts');
   await writeFile(calls, `import { commands } from './src/generated/commands.js';
+import { createCommands, type CommandInvoke } from './src/generated/commands.factory.js';
+import { invoke as realInvoke } from '@netwiv/api/core';
+import type { InvokeOptions } from '@netwiv/api/core';
 const result = await commands['plugin:library-check|profile']({ value: { display_name: 'package', count: '7', input_only: 'received' } });
 const count: string = result.count;
 const output: string = result.output_only;
 await commands.package_echo({ value: { display_name: 'package', count: 7 } });
+const invoke: CommandInvoke = async <T>(command: string, args: Record<string, unknown>, options?: InvokeOptions): Promise<T> => undefined as T;
+const factoryCommands = createCommands(invoke);
+const realFactoryCommands = createCommands(realInvoke);
+const generatedCommandsShape: typeof commands = factoryCommands;
+const factoryCommandsShape: ReturnType<typeof createCommands> = commands;
+const factoryEcho = await factoryCommands.package_echo({ value: { display_name: 'typed', count: 7 } });
+const factoryCount: string = factoryEcho.count;
+const pluginPing: Promise<unknown> = factoryCommands['plugin:library-check|ping']();
+void [factoryCount, pluginPing, realFactoryCommands, generatedCommandsShape, factoryCommandsShape];
+// @ts-expect-error Factory wrappers preserve required generated argument shapes.
+factoryCommands.package_echo();
+// @ts-expect-error Factory wrappers reject invalid generated argument types.
+factoryCommands.package_echo({ value: { display_name: 42, count: 7 } });
+// @ts-expect-error No-argument plugin commands do not accept command arguments.
+factoryCommands['plugin:library-check|ping']({ value: 'unexpected' });
 // @ts-expect-error Producer uses snake case even though the consumer context uses camel case.
 commands.package_echo({ value: { displayName: 'package', count: 7 } });
 // @ts-expect-error Producer WhenReading/computed getter excludes this input.
@@ -115,6 +167,7 @@ ${referencedPolymorphismCalls}
   await run(process.execPath, [fileURLToPath(new URL('./node_modules/typescript/bin/tsc', import.meta.url)),
     '--ignoreConfig', '--strict', '--noEmit', '--module', 'ESNext', '--target', 'ES2022', '--moduleResolution', 'Bundler', calls], initialized);
   await copyFile(path.join(initialized, 'src/generated/commands.js'), path.join(dist, 'commands.js'));
+  await copyFile(factoryFile, path.join(dist, 'commands.factory.js'));
   await run(dotnet, ['tool', 'run', 'netwiv', '--', 'build', '--no-bundle', '--', '-p:TreatWarningsAsErrors=true'], initialized);
   const target = rid === 'win-x64' ? 'x86_64-pc-windows-msvc' : 'x86_64-unknown-linux-gnu';
   const executable = path.join(initialized, 'target', target, 'release', 'NetWiv.App' + (rid === 'win-x64' ? '.exe' : ''));
@@ -138,6 +191,7 @@ ${referencedPolymorphismCalls}
     .replace(/  const packageInput = [\s\S]*?(?=  if \(await \(await fetch)/, ''));
   await run(dotnet, ['build', 'src-netwiv', '-p:NetWivBindingsOnly=true', '--disable-build-servers'], initialized);
   await copyFile(path.join(initialized, 'src/generated/commands.js'), path.join(dist, 'commands.js'));
+  await copyFile(factoryFile, path.join(dist, 'commands.factory.js'));
   await run(dotnet, ['tool', 'run', 'netwiv', '--', 'build', '--no-bundle', '--', '-p:TreatWarningsAsErrors=true'], initialized);
   assert.ok(!(await readFile(declarationFile, 'utf8')).includes('"plugin:library-check|profile"'));
   assert.ok(!(await readFile(declarationFile, 'utf8')).includes('"package_echo"'));

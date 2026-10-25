@@ -53,7 +53,7 @@ internal static class FrontendDevTests
             pids.Add(await WaitForProbe("after"));
             if (pids[0] == pids[1]) throw new Exception("C# changed without restarting the native app.");
             await WaitStopped(pids[0]);
-            foreach (var file in new[] { "commands.js", "commands.d.ts" })
+            foreach (var file in new[] { "commands.d.ts", "commands.factory.js" })
             {
                 var bindings = await File.ReadAllTextAsync(Path.Combine(consumer, "src", "generated", file));
                 if (!bindings.Contains("dev_version_v2", StringComparison.Ordinal) || bindings.Contains("\"dev_version\"", StringComparison.Ordinal))

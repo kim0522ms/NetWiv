@@ -71,8 +71,10 @@ try {
   await npm(['test']);
   await npm(['run', 'build']);
   const bindings = await readFile(path.join(consumer, 'frontend/generated/commands.js'), 'utf8');
+  const factory = await readFile(path.join(consumer, 'frontend/generated/commands.factory.js'), 'utf8');
+  assert.ok(bindings.includes('./commands.factory.js') && bindings.includes('createCommands(invoke)'));
   for (const command of ['greet', 'plugin:equipment|get_status', 'plugin:equipment|reset', 'plugin:equipment|unselected'])
-    assert.ok(bindings.includes(`invoke("${command}"`), `Missing generated wrapper: ${command}`);
+    assert.ok(factory.includes(`invoke("${command}"`), `Missing generated wrapper: ${command}`);
   for (const deployment of ['managed', 'aot']) {
     const publish = path.join(runRoot, deployment);
     const output = await run(dotnet, ['publish', 'src-netwiv', '-c', 'Release', '-r', rid, '--self-contained', 'true',

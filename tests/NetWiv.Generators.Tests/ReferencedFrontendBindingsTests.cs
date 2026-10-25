@@ -45,7 +45,7 @@ public sealed class ReferencedFrontendBindingsTests
         var consumer = Generate("Consumer", "using NetWiv; [assembly: GenerateFrontendBindings]", producer);
         Assert.Empty(consumer.Errors);
         var bindings = Read(consumer.Compilation);
-        Assert.Contains("invoke(\"plugin:catalog|item.fetch\", args, options)", bindings.JavaScript);
+        Assert.Contains("invoke(\"plugin:catalog|item.fetch\", args, options)", bindings.FactoryJavaScript!);
         Assert.Contains("\"app.external\"", bindings.TypeScript);
         Assert.Contains("\"display_name\": string;", bindings.TypeScript);
         Assert.DoesNotContain("\"display_name\": string | null;", bindings.TypeScript);
@@ -111,7 +111,7 @@ public sealed class ReferencedFrontendBindingsTests
             """));
         var result = Generate("Consumer", "using NetWiv; [assembly: GenerateFrontendBindings]", producer);
         Assert.Empty(result.Errors);
-        Assert.Contains("invoke(\"exact.name\\u000asecond-line\", args, options)", Read(result.Compilation).JavaScript);
+        Assert.Contains("invoke(\"exact.name\\u000asecond-line\", args, options)", Read(result.Compilation).FactoryJavaScript!);
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public sealed class ReferencedFrontendBindingsTests
             """));
         var consumer = Generate("Consumer", "using NetWiv; [assembly: GenerateFrontendBindings]", producer);
         Assert.Empty(consumer.Errors);
-        var js = Read(consumer.Compilation).JavaScript;
+        var js = Read(consumer.Compilation).FactoryJavaScript!;
         Assert.Contains("\"public\"", js);
         Assert.Contains("\"nested_public\"", js);
         Assert.DoesNotContain("\"internal\"", js);
@@ -144,7 +144,7 @@ public sealed class ReferencedFrontendBindingsTests
         var runtimeOnly = Reference("RuntimeOnly", Generate("RuntimeOnly", "using NetWiv; public static class Commands { [Command] public static void RuntimeOnly() { } }"));
         var consumer = Generate("Consumer", "using NetWiv; [assembly: GenerateFrontendBindings]", middle, runtimeOnly);
         Assert.Empty(consumer.Errors);
-        var js = Read(consumer.Compilation).JavaScript;
+        var js = Read(consumer.Compilation).FactoryJavaScript!;
         Assert.Contains("\"middle\"", js);
         Assert.DoesNotContain("\"leaf\"", js);
         Assert.DoesNotContain("\"runtime_only\"", js);
@@ -235,6 +235,8 @@ public sealed class ReferencedFrontendBindingsTests
         Assert.Equal(4, original.TypeScript.Split('\n').Where(line => line.StartsWith("export interface ")).Distinct().Count());
         Assert.Equal(original.TypeScript, upgraded.TypeScript);
         Assert.Equal(original.JavaScript, upgraded.JavaScript);
+        Assert.Equal(original.FactoryJavaScript, upgraded.FactoryJavaScript);
+        Assert.Equal(original.FactoryTypeScript, upgraded.FactoryTypeScript);
     }
 
     [Theory]

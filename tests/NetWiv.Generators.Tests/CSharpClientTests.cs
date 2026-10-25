@@ -186,11 +186,24 @@ public sealed class CSharpClientTests
 
         var bindings = Bindings(ConverterApp, csharpOnly: true);
         Assert.False(bindings.HasScript);
+        Assert.Null(bindings.FactoryJavaScript);
+        Assert.Null(bindings.FactoryTypeScript);
         Assert.Contains("RenewAsync(global::Token token, ", bindings.CSharp, StringComparison.Ordinal);
         Compile(bindings.CSharp!);
         var directory = Directory.CreateTempSubdirectory("netwiv-csharp-only-").FullName;
         try { Assert.Throws<InvalidOperationException>(() => bindings.WriteTo(directory)); }
         finally { Directory.Delete(directory, true); }
+    }
+
+    [Fact]
+    public void CommandFactoryEmissionDoesNotChangeTheTypedCSharpClient()
+    {
+        const string app = """
+            using NetWiv;
+            [assembly: GenerateFrontendBindings]
+            public static class Commands { [Command] public static byte[] Echo(byte[] value) => value; }
+            """;
+        Assert.Equal(Client(app, csharpOnly: true), Client(app));
     }
 
     [Fact]

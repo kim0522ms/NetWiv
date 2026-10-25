@@ -9,6 +9,38 @@ namespace NetWiv.Generators.Tests;
 public sealed class FrontendBindingsTests
 {
     [Fact]
+    public void CommandFactoryHasNoRuntimeImportsAndSharesTheExistingCommandType()
+    {
+        var result = Generate(Preamble + "public static class Commands { [Command] public static string Echo(string value) => value; }");
+        Assert.Empty(result.Errors);
+        var bindings = Read(result.Compilation);
+        Assert.Contains("import { createCommands } from './commands.factory.js';", bindings.JavaScript);
+        Assert.Contains("export const commands = createCommands(invoke);", bindings.JavaScript);
+        Assert.DoesNotContain("import", bindings.FactoryJavaScript!);
+        Assert.DoesNotContain("@netwiv/api", bindings.FactoryJavaScript!);
+        Assert.Contains("export function createCommands(invoke)", bindings.FactoryJavaScript!);
+        Assert.Contains("import type { commands } from './commands.js';", bindings.FactoryTypeScript!);
+        Assert.Contains("import type { InvokeOptions } from '@netwiv/api/core';", bindings.FactoryTypeScript!);
+        Assert.Contains("createCommands(invoke: CommandInvoke): typeof commands;", bindings.FactoryTypeScript!);
+        Assert.Contains("Promise<string>", bindings.TypeScript);
+    }
+
+    [Fact]
+    public void FactoryNamesDoNotCollideWithDtoNames()
+    {
+        var result = Generate(Preamble + """
+            public sealed record CommandInvoke(string Value);
+            public sealed record Commands(CommandInvoke Value);
+            public static class Handlers { [Command] public static Commands Echo(Commands value) => value; }
+            """);
+        Assert.Empty(result.Errors);
+        var bindings = Read(result.Compilation);
+        Assert.Contains("export interface CommandInvokeInput", bindings.TypeScript);
+        Assert.Contains("export interface CommandsOutput", bindings.TypeScript);
+        Assert.DoesNotContain("export type CommandInvoke", bindings.TypeScript);
+    }
+
+    [Fact]
     public void PluginBindingsUseQualifiedNamesWithoutCollidingWithAppCommands()
     {
         var result = Generate(Preamble + """
@@ -28,7 +60,7 @@ public sealed class FrontendBindingsTests
         var bindings = Read(result.Compilation);
         foreach (var name in new[] { "plugin:first|get_status", "plugin:second|get_status", "get_status" })
         {
-            Assert.Contains($"invoke(\"{name}\", args, options)", bindings.JavaScript);
+            Assert.Contains($"invoke(\"{name}\", args, options)", bindings.FactoryJavaScript!);
             Assert.Contains($"\"{name}\": (args?: Record<string, never>", bindings.TypeScript);
         }
     }
@@ -81,7 +113,8 @@ public sealed class FrontendBindingsTests
         Assert.Contains("\"completedCount\": number", bindings.TypeScript);
         Assert.Contains("\"totalBytes\": string", bindings.TypeScript);
         Assert.DoesNotContain("ProgressInput", bindings.TypeScript);
-        Assert.DoesNotContain("batch-progress", bindings.JavaScript);
+        Assert.DoesNotContain("batch-progress", bindings.FactoryJavaScript!);
+        Assert.Contains("Object.freeze({\n  });", bindings.FactoryJavaScript!);
     }
 
     [Theory]
@@ -145,7 +178,7 @@ public sealed class FrontendBindingsTests
         var bindings = Read(result.Compilation);
         Assert.Contains("import { invoke } from '@netwiv/api/core';", bindings.JavaScript);
         Assert.Contains("import type { Channel, InvokeOptions } from '@netwiv/api/core';", bindings.TypeScript);
-        Assert.Contains("[\"account.fetch\"]: (args, options) => invoke(\"account.fetch\", args, options)", bindings.JavaScript);
+        Assert.Contains("[\"account.fetch\"]: (args, options) => invoke(\"account.fetch\", args, options)", bindings.FactoryJavaScript!);
         Assert.DoesNotContain("counter", bindings.TypeScript);
         Assert.DoesNotContain("Secret", bindings.TypeScript);
         Assert.DoesNotContain("\"displayName\"?: string", bindings.TypeScript);
@@ -274,8 +307,8 @@ public sealed class FrontendBindingsTests
             """);
         Assert.Empty(result.Errors);
         var bindings = Read(result.Compilation);
-        Assert.Contains("[\"__proto__\"]", bindings.JavaScript);
-        Assert.Contains("quote\\\"\\\\\\u000a\\u0007", bindings.JavaScript);
+        Assert.Contains("[\"__proto__\"]", bindings.FactoryJavaScript!);
+        Assert.Contains("quote\\\"\\\\\\u000a\\u0007", bindings.FactoryJavaScript!);
         Assert.Contains("\"default\": string", bindings.TypeScript);
     }
 
@@ -615,8 +648,8 @@ public sealed class FrontendBindingsTests
             """);
         Assert.Empty(result.Errors);
         var bindings = Read(result.Compilation);
-        Assert.Contains("invoke(\"hello\", args, options)", bindings.JavaScript);
-        Assert.DoesNotContain("InvokeHandler", bindings.JavaScript);
+        Assert.Contains("invoke(\"hello\", args, options)", bindings.FactoryJavaScript!);
+        Assert.DoesNotContain("InvokeHandler", bindings.FactoryJavaScript!);
         var without = Generate(Preamble.Replace("[assembly: GenerateFrontendBindings]", "") +
             "public static class Commands { [Command] public static void Ping() {} }");
         Assert.Throws<InvalidOperationException>(() => Read(without.Compilation));
@@ -628,15 +661,26 @@ public sealed class FrontendBindingsTests
         var directory = Path.Combine(Path.GetTempPath(), "netwiv-bindings-" + Guid.NewGuid().ToString("N"));
         try
         {
-            var bindings = new FrontendBindings("// Generated by NetWiv. Do not edit.\n// 한글\n", "// Generated by NetWiv. Do not edit.\nexport {};\n");
+            const string generated = "// Generated by NetWiv. Do not edit.\n";
+            var bindings = new FrontendBindings(generated + "// 한글\n", generated + "export {};\n")
+            {
+                FactoryJavaScript = generated + "export function createCommands(invoke) {}\n",
+                FactoryTypeScript = generated + "export {};\n"
+            };
             bindings.WriteTo(directory);
-            var js = Path.Combine(directory, "commands.js");
-            File.SetLastWriteTimeUtc(js, new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc));
-            var timestamp = File.GetLastWriteTimeUtc(js);
+            var files = new[] { "commands.js", "commands.d.ts", "commands.factory.js", "commands.factory.d.ts" };
+            var timestamp = new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            foreach (var file in files) File.SetLastWriteTimeUtc(Path.Combine(directory, file), timestamp);
             bindings.WriteTo(directory);
-            Assert.Equal(timestamp, File.GetLastWriteTimeUtc(js));
-            Assert.Equal(bindings.JavaScript, File.ReadAllText(js));
-            Assert.False(File.ReadAllBytes(js).AsSpan().StartsWith(new byte[] { 0xef, 0xbb, 0xbf }));
+            foreach (var file in files)
+            {
+                var path = Path.Combine(directory, file);
+                Assert.Equal(timestamp, File.GetLastWriteTimeUtc(path));
+                Assert.False(File.ReadAllBytes(path).AsSpan().StartsWith(new byte[] { 0xef, 0xbb, 0xbf }));
+            }
+            Assert.Equal(bindings.JavaScript, File.ReadAllText(Path.Combine(directory, "commands.js")));
+            Assert.Equal(bindings.FactoryJavaScript, File.ReadAllText(Path.Combine(directory, "commands.factory.js")));
+            Assert.Equal(bindings.FactoryTypeScript, File.ReadAllText(Path.Combine(directory, "commands.factory.d.ts")));
         }
         finally { Directory.Delete(directory, true); }
     }
@@ -647,7 +691,7 @@ public sealed class FrontendBindingsTests
         var result = Generate("using NetWiv; [assembly: GenerateFrontendBindings] public class Empty { }");
         Assert.Empty(result.Errors);
         var bindings = Read(result.Compilation);
-        Assert.Contains("Object.freeze({\n});", bindings.JavaScript);
+        Assert.Contains("Object.freeze({\n  });", bindings.FactoryJavaScript!);
         Assert.DoesNotContain("Promise<", bindings.TypeScript);
     }
 
@@ -667,6 +711,125 @@ public sealed class FrontendBindingsTests
             Assert.Equal("// user-authored declarations", File.ReadAllText(dts));
         }
         finally { Directory.Delete(directory, true); }
+    }
+
+    [Theory]
+    [InlineData("commands.js")]
+    [InlineData("commands.d.ts")]
+    [InlineData("commands.factory.js")]
+    [InlineData("commands.factory.d.ts")]
+    public void ExportValidatesAllDestinationsBeforeWritingOrDeleting(string handwritten)
+    {
+        var directory = Directory.CreateTempSubdirectory("netwiv-factory-").FullName;
+        var files = new[] { "commands.js", "commands.d.ts", "commands.factory.js", "commands.factory.d.ts" };
+        const string generated = "// Generated by NetWiv. Do not edit.\n";
+        try
+        {
+            foreach (var file in files) File.WriteAllText(Path.Combine(directory, file), file == handwritten ? "handwritten" : generated + "previous");
+            var bindings = new FrontendBindings(generated + "new", generated + "new")
+            {
+                FactoryJavaScript = generated + "new",
+                FactoryTypeScript = generated + "new"
+            };
+            Assert.Throws<InvalidOperationException>(() => bindings.WriteTo(directory));
+            foreach (var file in files) Assert.Equal(file == handwritten ? "handwritten" : generated + "previous", File.ReadAllText(Path.Combine(directory, file)));
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    [Theory]
+    [InlineData("commands.factory.js")]
+    [InlineData("commands.factory.d.ts")]
+    public void FactoryDirectoryCollisionDoesNotPartiallyOverwriteExistingBindings(string collision)
+    {
+        var directory = Directory.CreateTempSubdirectory("netwiv-factory-").FullName;
+        const string generated = "// Generated by NetWiv. Do not edit.\n";
+        try
+        {
+            var js = Path.Combine(directory, "commands.js");
+            var types = Path.Combine(directory, "commands.d.ts");
+            File.WriteAllText(js, generated + "previous JS");
+            File.WriteAllText(types, generated + "previous types");
+            Directory.CreateDirectory(Path.Combine(directory, collision));
+            var bindings = new FrontendBindings(generated + "new", generated + "new")
+            {
+                FactoryJavaScript = generated + "new",
+                FactoryTypeScript = generated + "new"
+            };
+            Assert.Throws<InvalidOperationException>(() => bindings.WriteTo(directory));
+            Assert.Equal(generated + "previous JS", File.ReadAllText(js));
+            Assert.Equal(generated + "previous types", File.ReadAllText(types));
+            Assert.True(Directory.Exists(Path.Combine(directory, collision)));
+            // Legacy output does not own or remove a directory at an optional factory path.
+            new FrontendBindings(generated + "legacy", generated + "legacy").WriteTo(directory);
+            Assert.Equal(generated + "legacy", File.ReadAllText(js));
+            Assert.Equal(generated + "legacy", File.ReadAllText(types));
+            Assert.True(Directory.Exists(Path.Combine(directory, collision)));
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    [Theory]
+    [InlineData("commands.factory.js")]
+    [InlineData("commands.factory.d.ts")]
+    public void LegacyAssemblyExtractionRemovesOnlyStaleGeneratedFactoryFiles(string handwritten)
+    {
+        var legacy = Generate("""
+            [assembly: System.Reflection.AssemblyMetadata("NetWiv.Frontend.JavaScript.v1", "// Generated by NetWiv. Do not edit.\n// legacy JS")]
+            [assembly: System.Reflection.AssemblyMetadata("NetWiv.Frontend.TypeScript.v1", "// Generated by NetWiv. Do not edit.\n// legacy types")]
+            """);
+        Assert.Empty(legacy.Errors);
+        var bindings = Read(legacy.Compilation);
+        Assert.Null(bindings.FactoryJavaScript);
+        Assert.Null(bindings.FactoryTypeScript);
+        var directory = Directory.CreateTempSubdirectory("netwiv-legacy-bindings-").FullName;
+        try
+        {
+            var current = Read(Generate(Preamble + "public static class Commands { [Command] public static void Ping() {} }").Compilation);
+            current.WriteTo(directory);
+            Assert.True(File.Exists(Path.Combine(directory, "commands.factory.js")));
+            bindings.WriteTo(directory);
+            Assert.Equal(bindings.JavaScript, File.ReadAllText(Path.Combine(directory, "commands.js")));
+            Assert.Equal(bindings.TypeScript, File.ReadAllText(Path.Combine(directory, "commands.d.ts")));
+            Assert.False(File.Exists(Path.Combine(directory, "commands.factory.js")));
+            Assert.False(File.Exists(Path.Combine(directory, "commands.factory.d.ts")));
+            current.WriteTo(directory);
+            File.WriteAllText(Path.Combine(directory, handwritten), "handwritten");
+            bindings.WriteTo(directory);
+            Assert.Equal(bindings.JavaScript, File.ReadAllText(Path.Combine(directory, "commands.js")));
+            Assert.Equal(bindings.TypeScript, File.ReadAllText(Path.Combine(directory, "commands.d.ts")));
+            Assert.Equal("handwritten", File.ReadAllText(Path.Combine(directory, handwritten)));
+            Assert.False(File.Exists(Path.Combine(directory, handwritten == "commands.factory.js" ? "commands.factory.d.ts" : "commands.factory.js")));
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    [Theory]
+    [InlineData("FactoryJavaScript")]
+    [InlineData("FactoryTypeScript")]
+    public void ExportRejectsIncompleteFactoryMetadata(string kind)
+    {
+        var result = Generate("""
+            [assembly: System.Reflection.AssemblyMetadata("NetWiv.Frontend.JavaScript.v1", "JS")]
+            [assembly: System.Reflection.AssemblyMetadata("NetWiv.Frontend.TypeScript.v1", "types")]
+            """ + $"[assembly: System.Reflection.AssemblyMetadata(\"NetWiv.Frontend.{kind}.v1\", \"factory\")]");
+        Assert.Empty(result.Errors);
+        Assert.Throws<InvalidOperationException>(() => Read(result.Compilation));
+    }
+
+    [Theory]
+    [InlineData("[assembly: System.Reflection.AssemblyMetadata(\"NetWiv.Frontend.FactoryJavaScript.v1\", null)]")]
+    [InlineData("[assembly: System.Reflection.AssemblyMetadata(\"NetWiv.Frontend.FactoryJavaScript.v1\", \"duplicate\")]")]
+    [InlineData("")]
+    public void ExportRejectsInvalidFactoryMetadata(string extra)
+    {
+        // A complete pair without the script entry is invalid too.
+        var result = Generate("""
+            [assembly: System.Reflection.AssemblyMetadata("NetWiv.Frontend.FactoryJavaScript.v1", "JS")]
+            [assembly: System.Reflection.AssemblyMetadata("NetWiv.Frontend.FactoryTypeScript.v1", "types")]
+            """ + extra);
+        Assert.Empty(result.Errors);
+        Assert.Throws<InvalidOperationException>(() => Read(result.Compilation));
     }
 
     [Fact]

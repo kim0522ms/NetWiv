@@ -14,8 +14,11 @@ internal static class BindingsCommand
         if (args.Length != 2) throw new ArgumentException("Usage: netwiv bindings <managed-assembly.dll> <output-directory>");
         var source = Path.GetFullPath(args[0], workingDirectory);
         var destination = Path.GetFullPath(args[1], workingDirectory);
-        FrontendBindings.Read(source).WriteTo(destination);
-        await output.WriteLineAsync($"Generated commands.js and commands.d.ts in {destination}");
+        var bindings = FrontendBindings.Read(source);
+        bindings.WriteTo(destination);
+        await output.WriteLineAsync(bindings.FactoryJavaScript is null
+            ? $"Generated commands.js and commands.d.ts in {destination}"
+            : $"Generated commands.js, commands.d.ts, commands.factory.js and commands.factory.d.ts in {destination}");
         return 0;
     }
 }

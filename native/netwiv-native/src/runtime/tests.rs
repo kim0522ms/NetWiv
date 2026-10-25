@@ -318,9 +318,17 @@ fn initial_webview_origin_matches_pinned_tauri_rules() {
         }
     );
     assert!(
-        super::protocol::bridge_script("main", "secondary", true, true)
+        super::protocol::bridge_script("main", "secondary", true, true, false)
             .contains("protocolScheme:\"https\"")
     );
+    assert!(!super::protocol::bridge_script("main", "secondary", false, true, false)
+        .contains("postFileMessage"));
+    if cfg!(target_os = "windows") {
+        let script = super::protocol::bridge_script("main", "secondary", false, true, true);
+        assert!(script.contains("postMessageWithAdditionalObjects"));
+        assert!(script.contains("JSON.stringify({__NETWIV_FILE_PATH__:serialized})"));
+        assert!(script.contains("FilePathNotSupported"));
+    }
     assert_eq!(webview_origin("data:text/html,hello", false), "null");
     assert_eq!(
         webview_origin("https://example.test:8443/page", false),

@@ -226,6 +226,7 @@ pub(super) fn bridge_script(
     webview: &str,
     use_https_scheme: bool,
     protocol_ipc: bool,
+    file_path_ipc: bool,
 ) -> String {
     let os = if cfg!(target_os = "windows") {
         "windows"
@@ -239,8 +240,13 @@ pub(super) fn bridge_script(
     } else {
         "postMessage(message){window.ipc.postMessage(typeof message==='string'?message:JSON.stringify(message));}"
     };
+    let file_path_transport = if file_path_ipc {
+        ",postFileMessage(message,file){const post=window.chrome?.webview?.postMessageWithAdditionalObjects;if(typeof post!=='function')throw new Error('FilePathNotSupported');const serialized=typeof message==='string'?message:JSON.stringify(message);post.call(window.chrome.webview,JSON.stringify({__NETWIV_FILE_PATH__:serialized}),[file]);}"
+    } else {
+        ""
+    };
     let bridge = format!(
-        "(()=>{{const bridge=Object.freeze({{os:{},windowLabel:{},webviewLabel:{},protocolScheme:{},protocolIpc:{protocol_ipc},{transport}}});Object.defineProperty(globalThis,'__NETWIV_IPC__',{{value:bridge,configurable:false,writable:false}});}})();",
+        "(()=>{{const bridge=Object.freeze({{os:{},windowLabel:{},webviewLabel:{},protocolScheme:{},protocolIpc:{protocol_ipc},{transport}{file_path_transport}}});Object.defineProperty(globalThis,'__NETWIV_IPC__',{{value:bridge,configurable:false,writable:false}});}})();",
         serde_json::to_string(os).unwrap(),
         serde_json::to_string(window).unwrap(),
         serde_json::to_string(webview).unwrap(),

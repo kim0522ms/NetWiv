@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NetWiv file path smoke</title>
+  <style>
+    body { font: 16px system-ui, sans-serif; margin: 24px; color: #18212f; }
+    main { max-width: 650px; margin: auto; }
+    .target { min-height: 90px; border: 2px dashed #62748b; border-radius: 10px; padding: 16px; margin: 14px 0; }
+    button { padding: 8px 12px; margin: 4px; }
+    li { padding: 8px; cursor: grab; }
+    #status { min-height: 24px; font-weight: 600; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>File path smoke</h1>
+    <p id="status">Starting checks…</p>
+    <section id="interactive" hidden>
+      <p>Use the generated <code>sample.txt</code> for each file check. The path stays in the host assertion and is never shown here.</p>
+      <button id="open-fixture">Show sample in Explorer</button>
+      <div id="main-drop" class="target">Drop the generated sample file here.</div>
+      <label>Select the generated sample: <input id="picker" type="file"></label>
+      <p>Cancel the file chooser once, then select the sample on a second opening.</p>
+      <h2>HTML5 reorder</h2>
+      <p>Drag “First” below “Second”. This is an in-page HTML5 drag check.</p>
+      <ol id="items"><li draggable="true" data-id="first">First</li><li draggable="true" data-id="second">Second</li></ol>
+      <p id="native-instructions" hidden>For the comparison, drag the same file onto the separate native-drop window.</p>
+    </section>
+    <section id="native" hidden>
+      <div class="target">Drop the generated sample file anywhere in this window.</div>
+      <p>Native drop events should be received by the host; browser drop events should remain absent.</p>
+    </section>
+  </main>
+  <script type="module">
+    import { getFilePath, invoke } from './core.js';
+
+    const status = document.querySelector('#status');
+    let stage = 'configuration';
+    let failureKind = 'other';
+    let config;
+    try {
+      config = await invoke('file_path_config');
+      const report = (kind, values = {}) => invoke('file_path_report', { kind, ...values });
+      window.__netwivVerifyPicker = async () => {
+        const file = document.querySelector('#picker').files?.[0];
+        if (!file) { window.__netwivPickerFailure = 'no-file'; return false; }
+        try {
+          stage = 'forged stage-two ticket';
+          await expectForgedTicketRejected(file);
+          stage = 'browser file';
+          const path = await getFilePath(file);
+          window.__netwivPickerFailure = 'host-assertion';
+          await report('browser-file', { path });
+          const deletedPath = await getFilePath(file);
+          await report('browser-file-deleted', { path: deletedPath });
+          return true;
+        } catch (error) {
+          const message = [String(error), error?.name, error?.message].filter(value => typeof value === 'string').join(' ');
+          window.__netwivPickerFailure = message.includes('FilePathUnavailable') ? 'unavailable' :
+            message.includes('FilePathNotSupported') ? 'unsupported' :
+            error instanceof TypeError ? 'type-error' : 'other';
+          return false;
+        }
+      };
+      const expectRejected = async (name, action, expected) => {
+        let rejected = false;
+        try { await action(); }
+        catch (error) {
+          const message = [String(error), error?.name, error?.message, error?.code]
+            .filter(value => typeof value === 'string').join(' ');
+          rejected = message.includes(expected);
+          if (!rejected) {
+            failureKind = message.includes('not allowed') || message.includes('permission') ? 'permission-denied' :
+              message.includes('FilePathNotSupported') ? 'unsupported' :
+              message.includes('FilePathUnavailable') ? 'unavailable' : 'other';
+            throw new Error(name);
+          }
+        }
+        if (!rejected) { failureKind = 'resolved'; throw new Error(name); }
+      };
+      const expectForgedTicketRejected = async file => {
+        const webview = window.chrome?.webview;
+        const original = webview?.postMessageWithAdditionalObjects;
+        if (typeof original !== 'function') throw new Error('file path transport');
+        const descriptor = Object.getOwnPropertyDescriptor(webview, 'postMessageWithAdditionalObjects');
+        Object.defineProperty(webview, 'postMessageWithAdditionalObjects', {
+          configurable: true,
+          writable: true,
+          value(message, objects) {
+            const serializedEnvelope = typeof message === 'string' ? JSON.parse(message) : message;
+            const request = JSON.parse(serializedEnvelope.__NETWIV_FILE_PATH__);
+            request.ticket = 'invalid-ticket';
+            const envelope = { __NETWIV_FILE_PATH__: JSON.stringify(request) };
+            return original.call(webview, typeof message === 'string' ? JSON.stringify(envelope) : envelope, objects);
+          }
+        });
+        try {
+          await expectRejected('forged stage-two ticket', () => getFilePath(file), 'FilePathUnavailable');
+        } finally {
+          if (descriptor) Object.defineProperty(webview, 'postMessageWithAdditionalObjects', descriptor);
+          else delete webview.postMessageWithAdditionalObjects;
+        }
+      };
+
+      if (config.window === 'native') {
+        stage = 'window permission';
+        await expectRejected('native window permission', () => getFilePath(new File(['synthetic'], config.fileName)),
+          config.windows ? 'not allowed' : 'FilePathNotSupported');
+        await report('window-denied', { passed: true });
+        document.querySelector('#native').hidden = false;
+        document.addEventListener('drop', () => { window.__netwivNativeHtmlDropCount++; });
+        window.__netwivNativeHtmlDropCount = 0;
+        window.__netwivCheckNativeDomDrop = () => report('native-html-drop-count', { count: window.__netwivNativeHtmlDropCount });
+        status.textContent = 'Native drop comparison ready.';
+      } else {
+        const unavailable = config.windows ? 'FilePathUnavailable' : 'FilePathNotSupported';
+        stage = 'synthetic File';
+        await expectRejected('synthetic File', () => getFilePath(new File(['synthetic'], config.fileName)), unavailable);
+        stage = 'plain object';
+        await expectRejected('plain object', () => getFilePath({ name: config.fileName }), unavailable);
+        stage = 'missing File';
+        await expectRejected('missing File', () => getFilePath(undefined), unavailable);
+        let rawRejected = false;
+        stage = 'guessed ticket request';
+        try { await invoke('plugin:webview|get_file_path', { nonce: 'invalid', generation: -1 }); }
+        catch { rawRejected = true; }
+        if (!rawRejected) throw new Error('raw ticket request');
+        stage = 'file path API';
+        await report('automatic', { passed: true });
+        status.textContent = 'Automatic checks passed.';
+
+        if (config.interactive) {
+          document.querySelector('#interactive').hidden = false;
+          document.querySelector('#native-instructions').hidden = false;
+          document.querySelector('#open-fixture').addEventListener('click', () => invoke('file_path_open_fixture'));
+          const mainDrop = document.querySelector('#main-drop');
+          mainDrop.addEventListener('dragover', event => event.preventDefault());
+          mainDrop.addEventListener('drop', async event => {
+            event.preventDefault();
+            const file = event.dataTransfer?.files?.[0];
+            if (!file) return;
+            try { await report('main-drop', { path: await getFilePath(file) }); status.textContent = 'OS file drop path verified.'; }
+            catch { status.textContent = 'OS file drop check failed.'; }
+          });
+          const picker = document.querySelector('#picker');
+          picker.addEventListener('change', async () => {
+            const file = picker.files?.[0];
+            if (!file) return;
+            try { await report('picker-selection', { path: await getFilePath(file) }); status.textContent = 'Picker path verified.'; }
+            catch { status.textContent = 'Picker check failed.'; }
+          });
+          picker.addEventListener('cancel', async () => {
+            await report('picker-cancelled');
+            status.textContent = 'Chooser cancellation verified.';
+          });
+          let dragged;
+          const items = document.querySelector('#items');
+          items.addEventListener('dragstart', event => {
+            dragged = event.target.closest('[data-id]');
+            event.dataTransfer.setData('text/plain', dragged?.dataset.id ?? '');
+          });
+          items.addEventListener('dragover', event => event.preventDefault());
+          items.addEventListener('drop', async event => {
+            event.preventDefault();
+            const target = event.target.closest('[data-id]');
+            if (!dragged || !target || dragged === target) return;
+            target.after(dragged);
+            const order = Array.from(items.children, item => item.dataset.id).join(',');
+            await report('html-reordered', { order });
+            status.textContent = 'HTML5 reorder verified.';
+          });
+          status.textContent = 'Ready for the OS drop, picker, cancellation, and HTML5 reorder checks.';
+        }
+      }
+    } catch {
+      status.textContent = 'File path smoke failed.';
+      try { await invoke('file_path_report', { kind: 'failure', stage, failureKind }); } catch { }
+    }
+  </script>
+</body>
+</html>

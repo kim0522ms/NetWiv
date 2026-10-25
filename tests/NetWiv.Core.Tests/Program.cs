@@ -31,6 +31,8 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("backend invocation snapshots mutable ACL inputs and isolates handler scope changes", BackendAuthorizationTests.AuthorizationTokensSnapshotMutableAclInputs),
     ("backend invocation cleans failed resources and preserves binary response ownership", BackendAuthorizationTests.ScopedCleanupErrorsAndBinaryResponses),
     ("backend invocation scoped cancellation and shutdown close admission", BackendAuthorizationTests.ScopedInvocationCancellationAndShutdown),
+    ("file path tickets require an explicit capability excluded from core defaults", FilePathPermissionTests.RequiresExplicitGrant),
+    ("file path tickets enforce target origin and deny permission boundaries", FilePathPermissionTests.TargetOriginAndDenyBoundaries),
     ("macOS reopen delivers native-only notifications and observes application lifetime", ReopenTests.DeliveryAndLifetime),
     ("native opened delivers URL batches and observes resident application lifetime", OpenedTests.DeliveryAndLifetime),
     ("cooperative exit requests await handlers and preserve veto ordering", ExitRequestTests.ApprovalVetoAndOrdering),

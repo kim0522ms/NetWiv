@@ -44,6 +44,7 @@ wry = { version = "=0.55.1", default-features = false, features = ["protocol", "
 muda = { version = "=0.20.0", default-features = false, features = ["common-controls-v6"] }
 rfd = { version = "=0.16.0", default-features = false, features = ["common-controls-v6"] }
 tray-icon = { version = "=0.25.1", default-features = false, features = ["muda-common-controls-v6"] }
+webview2-com = "=0.38.2"
 windows = { version = "=0.61.3", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
 window-vibrancy = "=0.6.0"
 

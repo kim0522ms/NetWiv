@@ -9,3 +9,11 @@ import type { InvokeOptions } from './upstream/core.js';
  * Parsing the returned text with JSON.parse restores JavaScript's number limits.
  */
 export declare function invokeJson(cmd: string, args?: string, options?: InvokeOptions): Promise<string>;
+/**
+ * Resolve a real file's native path from a top-level Windows WebView2 page.
+ * The `core:webview:allow-get-file-path` capability is required and is excluded from defaults.
+ * Rejects with `FilePathUnavailable` when the file has no local backing file, or
+ * `FilePathNotSupported` on unsupported hosts, frames or runtimes. A path does not
+ * grant filesystem access.
+ */
+export declare function getFilePath(file: File): Promise<string>;

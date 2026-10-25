@@ -6,6 +6,8 @@ mod protocol;
 mod options;
 mod platform;
 mod script_evaluation;
+#[cfg(any(target_os = "windows", test))]
+mod file_path;
 #[cfg(target_os = "linux")]
 mod ipc;
 #[cfg(target_os = "linux")]
@@ -188,6 +190,8 @@ impl WindowState {
 }
 
 struct WebviewState {
+    #[cfg(target_os = "windows")]
+    file_path_hook: Option<file_path::WebMessageHook>,
     native: WebView,
     window_label: String,
     document_id: Arc<AtomicU64>,
@@ -230,6 +234,8 @@ struct LocalRuntime {
     clipboard: Option<arboard::Clipboard>,
     global_shortcuts: crate::global_shortcut::GlobalShortcuts,
     strongholds: crate::stronghold::Strongholds,
+    #[cfg(target_os = "windows")]
+    file_path_tickets: Arc<Mutex<file_path::FilePathTickets>>,
     #[cfg(target_os = "linux")]
     pending_dialogs: HashMap<u64, dialogs::PendingNativeDialog>,
     exit_code: i32,
@@ -314,6 +320,8 @@ fn run_inner(shared: Arc<Shared>, config: RunConfig) -> Result<(), String> {
         clipboard: None,
         global_shortcuts: crate::global_shortcut::GlobalShortcuts::new(),
         strongholds: crate::stronghold::Strongholds::new(),
+        #[cfg(target_os = "windows")]
+        file_path_tickets: Arc::new(Mutex::new(file_path::FilePathTickets::default())),
         #[cfg(target_os = "linux")]
         pending_dialogs: HashMap::new(),
         exit_code: 0,
@@ -591,6 +599,10 @@ impl LocalRuntime {
     fn remove_webview(&mut self, label: &str) -> Result<(), String> {
         #[cfg(target_os = "linux")]
         self.cancel_dialogs_for_webview(label);
+        #[cfg(target_os = "windows")]
+        if let Ok(mut tickets) = self.file_path_tickets.lock() {
+            tickets.clear_webview(label);
+        }
         if let Some(view) = self.webviews.remove(label) {
             let id = view.document_id.load(Ordering::Acquire);
             let window_label = view.window_label.clone();

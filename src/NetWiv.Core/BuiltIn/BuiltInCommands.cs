@@ -350,6 +350,11 @@ internal static class BuiltInCommands
             }
         }
 
+        // NetWiv extension: local file paths require an explicit grant and are
+        // deliberately excluded from both webview and core default permissions.
+        permissions.Add(new("core:webview:allow-get-file-path", ["plugin:webview|get_file_path"], []));
+        permissions.Add(new("core:webview:deny-get-file-path", [], ["plugin:webview|get_file_path"]));
+
         var defaults = new[]
         {
             new PermissionDefinition("core:app:default", Commands("app", "version", "name", "tauri_version", "identifier", "bundle_type", "register_listener", "remove_listener", "supports_multiple_windows"), []),

@@ -95,6 +95,16 @@ binary preservation, append/exclusive creation, generated command error messages
 and typed backend events with exact large-integer payloads.
 The fixture uses synthetic files and removes its owned temporary directory.
 
+On Windows, `NetWiv.Desktop.Smoke --file-path-smoke` checks `core.getFilePath`
+through the shipped frontend and WebView2 AdditionalObjects bridge in managed
+and NativeAOT outputs. Its hidden WebView uses an isolated temporary profile and
+loopback DevTools connection to supply an owned synthetic file to a file input.
+The host compares the returned path in memory. This checks browser-backed File
+resolution and rejection/permission boundaries; it does not verify OS drag or
+file-chooser interactions. Use `--file-path-interactive` for those interactions,
+HTML5 reordering and the native-drop comparison. Complete its displayed steps
+in a Windows desktop session; do not count generated DOM events as OS drops.
+
 On Windows, run the managed and NativeAOT desktop smoke executables with
 `--notification-smoke` to exercise a windowless native notification request and
 await the pinned backend's `show()` result. The Windows command reports backend

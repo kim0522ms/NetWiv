@@ -15,6 +15,8 @@ const result: Promise<string> = core.invoke<string>('greet', { name: 'fixture' }
 const options: core.InvokeOptions = { headers: { 'x-fixture': 'value' } };
 const jsonResult: Promise<string> = core.invokeJson('echo', '{"value":9007199254740993}', options);
 void jsonResult;
+const filePath: Promise<string> = core.getFilePath(new File([], 'fixture.txt'));
+void filePath;
 const channel = new core.Channel<string>();
 channel.onmessage = value => { const message: string = value; void message; };
 const permission: core.PermissionState = 'prompt';

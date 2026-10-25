@@ -7,7 +7,7 @@ Verbatim license and NOTICE candidates are stored by SHA-256 under
 `native/third-party-licenses/texts`; `manifest.json` maps each package and original filename
 to those bytes and explicitly marks packages for which no candidate was found.
 
-Cargo.lock SHA-256: `423291bed42be8f0eb4485940d04d813e6a4ea99622c3e6b116f46932cab1f2d`
+Cargo.lock SHA-256: `f84ef68aa6c544b011eb81335279fa7497cfb049cd7e06abc6467952e0e85fbe`
 
 Regenerate this file with `node native/generate-third-party-notices.mjs` after changing
 the native dependency graph.

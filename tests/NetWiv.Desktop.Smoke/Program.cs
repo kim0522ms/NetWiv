@@ -53,6 +53,7 @@ internal static class Program
         if (args is ["--exit-request-smoke"]) return ExitRequestSmoke.Run();
         if (args is ["--lifetime-smoke", "default"]) return ApplicationLifetimeSmoke.Run(resident: false);
         if (args is ["--opened-smoke"]) return MacOsOpenedProbe.Run();
+        if (args is ["--script-evaluation-smoke"]) return ScriptEvaluationSmoke.Run();
         if (args is ["--send-opened-event", var openedProcessId]) return MacOsReopenProbe.SendOpened(int.Parse(openedProcessId, System.Globalization.CultureInfo.InvariantCulture));
         if (args is ["--send-reopen-event", var processId]) return MacOsReopenProbe.SendReopen(int.Parse(processId, System.Globalization.CultureInfo.InvariantCulture));
         if (args.Length != 0) throw new ArgumentException("Unknown smoke-test arguments.");

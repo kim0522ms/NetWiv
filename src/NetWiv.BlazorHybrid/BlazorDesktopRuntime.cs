@@ -340,6 +340,8 @@ public sealed class BlazorDesktopRuntime : IDesktopRuntime
         _runtime.InvokeResponseAsync(command, args, context, cancellationToken);
     public void EvaluateScript(string webviewLabel, string script) => _runtime.EvaluateScript(webviewLabel, script);
     public void EvaluateScript(string webviewLabel, string script, ulong documentId) => _runtime.EvaluateScript(webviewLabel, script, documentId);
+    public Task<JsonElement> EvaluateScriptAsync(string webviewLabel, string script, ulong documentId, CancellationToken cancellationToken = default) =>
+        _runtime.EvaluateScriptAsync(webviewLabel, script, documentId, cancellationToken);
     public void Exit(int exitCode = 0)
     {
         RetireCurrent();

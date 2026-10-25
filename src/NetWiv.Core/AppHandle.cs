@@ -545,6 +545,7 @@ public sealed partial class AppHandle : IDisposable
             pending = _invocations.Keys.ToArray();
         }
         foreach (var lifetime in pending) _ = CancelInvocation(lifetime);
+        CancelScriptEvaluations(closeAdmission: true);
         Isolation?.Dispose();
         _jsEventListeners.Clear();
         Events.Dispose();

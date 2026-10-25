@@ -47,6 +47,7 @@ public sealed partial class AppHandle
             pending = _invocations.Keys.ToArray();
         }
         foreach (var lifetime in pending) _ = CancelInvocation(lifetime);
+        CancelScriptEvaluations(closeAdmission: closeAdmission);
     }
 
     /// <summary>
@@ -82,6 +83,7 @@ public sealed partial class AppHandle
                 (change.Closed || entry.Value.Document != change.DocumentId)).Select(entry => entry.Key).ToArray();
         }
         foreach (var lifetime in stale) _ = CancelInvocation(lifetime);
+        CancelScriptEvaluations(change.WebviewLabel, change.Closed ? 0 : change.DocumentId);
         Resources.CloseDocument(change);
     }
 

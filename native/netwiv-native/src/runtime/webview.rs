@@ -155,6 +155,7 @@ impl LocalRuntime {
             // must prove the native-issued capability before source attribution.
             .with_initialization_script_for_main_only(bridge, !cfg!(target_os = "windows"))
             .with_initialization_script_for_main_only(self.initialization_script.clone(), !cfg!(target_os = "windows"))
+            .with_initialization_script_for_main_only(super::script_evaluation::BOOTSTRAP, true)
             .with_ipc_handler(move |request| {
                 #[cfg(not(target_os = "linux"))]
                 let source = request.uri().to_string();

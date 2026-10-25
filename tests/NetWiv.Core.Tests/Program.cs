@@ -81,6 +81,7 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("P1 SQL select permission cannot mutate or attach databases", PluginSecurityTests.SqlReadOnly),
     ("P1 SQL cancellation interrupts an executing query and preserves connection", PluginSecurityTests.SqlCancellation),
     ("P1 guest invocations cancel on document replacement and app disposal", InvocationLifetimeTests.CancelOnReloadAndDispose),
+    ("async script evaluation captures document results and cancels with document lifetime", ScriptEvaluationTests.Run),
     ("P1 HTTP resources close on document replacement", InvocationLifetimeTests.HttpResourcesOnReload),
     ("P1 document close cancels streaming HTTP and releases both handles", InvocationLifetimeTests.HttpStreamingOnClose),
     ("P1 restart waits for cleanup and releases single-instance ownership", RestartLifecycleTests.RestartAfterCleanup),

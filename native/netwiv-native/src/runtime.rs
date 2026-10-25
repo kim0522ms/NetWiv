@@ -5,6 +5,7 @@ mod menus;
 mod protocol;
 mod options;
 mod platform;
+mod script_evaluation;
 #[cfg(target_os = "linux")]
 mod ipc;
 #[cfg(target_os = "linux")]
@@ -123,6 +124,7 @@ impl Shared {
 }
 
 pub(crate) enum UserEvent {
+    ScriptEvaluationResult { request_id: u64, result: String },
     #[cfg(target_os = "linux")]
     ActivateIpc { label: String, document_id: u64 },
     #[cfg(target_os = "linux")]
@@ -204,6 +206,7 @@ struct WebContextState {
 }
 
 struct LocalRuntime {
+    pending_evaluations: HashMap<u64, script_evaluation::PendingEvaluation>,
     shared: Arc<Shared>,
     initialization_script: String,
     local_data_directory: Option<PathBuf>,
@@ -287,6 +290,7 @@ fn run_inner(shared: Arc<Shared>, config: RunConfig) -> Result<(), String> {
     // Core-owned app data and the browser profile can differ for an unconfigured app.
     let _app_local_data_directory = config.app_local_data_directory;
     let mut runtime = LocalRuntime {
+        pending_evaluations: HashMap::new(),
         shared: shared.clone(),
         initialization_script: config.initialization_script,
         local_data_directory: config.local_data_directory,
@@ -344,6 +348,7 @@ fn run_inner(shared: Arc<Shared>, config: RunConfig) -> Result<(), String> {
     });
     #[cfg(target_os = "linux")]
     runtime.cancel_all_dialogs("native runtime stopped before dialog completed");
+    runtime.cancel_all_script_evaluations();
     runtime.close_all_documents();
     runtime.webviews.clear();
     runtime.web_contexts.clear();
@@ -377,6 +382,7 @@ impl LocalRuntime {
                 window_id, event, ..
             } => self.handle_window_event(window_id, event, control_flow),
             Event::MainEventsCleared => {
+                self.poll_script_evaluations();
                 // GTK can report resize before its maximized state has settled.
                 // Snapshot normal bounds after the native event batch instead.
                 for state in self.windows.values_mut() { state.capture_normal_bounds(); }
@@ -394,6 +400,10 @@ impl LocalRuntime {
         control_flow: &mut ControlFlow,
     ) -> Result<(), String> {
         match event {
+            UserEvent::ScriptEvaluationResult { request_id, result } => {
+                self.receive_script_evaluation(request_id, &result);
+                Ok(())
+            }
             #[cfg(target_os = "linux")]
             UserEvent::ActivateIpc { label, document_id } => self.query_ipc_nonce(&label, document_id, None),
             #[cfg(target_os = "linux")]
@@ -443,6 +453,7 @@ impl LocalRuntime {
                 Ok(())
             }
             UserEvent::CancelRequest { request_id } => {
+                self.cancel_script_evaluation(request_id);
                 #[cfg(target_os = "linux")]
                 self.cancel_dialog_request(request_id);
                 // Other platforms retain their synchronous rfd behavior.
@@ -634,6 +645,7 @@ impl LocalRuntime {
     }
 
     fn shutdown(&mut self, control_flow: &mut ControlFlow) {
+        self.cancel_all_script_evaluations();
         #[cfg(target_os = "linux")]
         self.cancel_all_dialogs("native runtime stopped before dialog completed");
         let labels: Vec<_> = self.windows.keys().cloned().collect();

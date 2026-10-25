@@ -104,6 +104,34 @@ Cancellation is cooperative: application code must pass the token to asynchronou
 work or observe it explicitly. Already accepted native UI mutations retain their
 existing completion contract.
 
+`AppHandle.EvaluateScriptAsync(webviewLabel, script, cancellationToken)` evaluates
+a JavaScript expression in the WebView's current document and returns a
+`JsonElement`. Use an immediately invoked function expression to run multiple
+statements and return a value, for example `(() => { const n = 40; return n + 2; })()`;
+use an async IIFE when those statements need `await`. The runtime awaits a
+returned JavaScript promise. Native injection avoids `eval` and `new Function`,
+so the API does not require `'unsafe-eval'` in the document's CSP.
+Results follow `JSON.stringify`; `undefined` is
+represented as JSON `null`, while cyclic values and `BigInt` fail serialization.
+
+An exception thrown or promise rejection from a valid expression is reported as
+`JavaScriptException`, preserving its JavaScript `Name`, `Message` and optional
+`JavaScriptStackTrace`. Malformed syntax or a WebView engine failure before an
+error can be returned uses the fallback name `JavaScriptEvaluationError`, a
+generic message and no JavaScript stack trace; the native engine does not provide
+enough information to classify these as a specific JavaScript error. The call
+requires a current, open document; before the first document exists, after it
+closes, or for an unknown label, it throws `InvalidOperationException`. The
+native `DesktopRuntime` supports this API on Windows, Linux and macOS; other
+runtime implementations may throw `NotSupportedException`. The existing
+synchronous `EvaluateScript` operation continues to accept general JavaScript
+statements and is unchanged.
+
+The evaluation token combines caller cancellation with application shutdown and
+the captured document's lifetime. Replacing or closing the document cancels the
+.NET operation, and a late runtime result is discarded. Cancellation cannot
+undo JavaScript side effects that already started running in the WebView.
+
 Use `InvokeContext.AddResource(value)` for resources created on behalf of a guest.
 The handle is closed when its document is replaced or closed; a late registration
 from an obsolete document is rejected and disposes an `IDisposable` value. Trusted

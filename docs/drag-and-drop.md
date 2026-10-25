@@ -141,7 +141,7 @@ layout viewport rounding also limit precision at target boundaries.
 | --- | --- | --- |
 | Windows | Native file events provide paths. Wry replaces WebView2's drop target and disables external browser drop. HTML `dragenter`/`dragover`/`drop` delivery cannot be relied on, including in-page non-file drags. | No NetWiv native file events. WebView2 handles HTML drag and drop; OS files arrive as browser `File` objects. |
 | Linux | Native file events are handled through GTK signals. Coexistence and ordering with HTML drag events remain unverified; do not rely on either suppression or simultaneous delivery. | No NetWiv native file events. Browser HTML drag behavior remains subject to WebKitGTK; actual file-manager and in-page scenarios require target validation. |
-| macOS | NetWiv accepts Wry's native drag callback, which suppresses the default WKWebView file-drop operation. In-page HTML drag coexistence remains unverified. | No NetWiv native file events. WKWebView handles HTML drag behavior; actual file-manager and in-page scenarios require target validation. |
+| macOS | NetWiv accepts Wry's native drag callback, which suppresses the default WKWebView file-drop operation. In-page HTML drag coexistence remains unverified. | No NetWiv native file events. Selected root/child in-page HTML drags passed on WKWebView; external browser file drops still require target validation. |
 
 Native handling is not a way to populate `<input type="file">`: the accepted
 native file drop may suppress that browser default, and JavaScript cannot set
@@ -194,6 +194,15 @@ See [frontend SDK](frontend-api.md) for the supported package entry point;
 this extension is NetWiv behavior, not an upstream compatibility pass.
 
 ## Verification
+
+Selected physical Windows and macOS checks passed in managed and NativeAOT
+execution: actual file-manager drops into root and child WebViews at page zoom
+1 and 1.5, CSS hit testing, parent-window delivery, and trusted in-page HTML
+dragging with native handling disabled. Windows also passed actual browser
+file-drop path lookup, picker selection/cancellation, HTML reordering and
+native-versus-HTML file-drop separation. These checks do not establish Linux
+interactive acceptance, every desktop scale, minimum-OS support or full
+upstream equivalence. The platform-specific limits above still apply.
 
 Native unit regressions cover scaling, negative positions, macOS child-origin
 inversion, flipped backing coordinates, and Windows identity. The C# API tests

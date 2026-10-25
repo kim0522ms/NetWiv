@@ -264,23 +264,34 @@ impl LocalRuntime {
         if let Some(proxy) = parse_proxy_url(config.extra_config.get("proxyUrl"))? {
             builder = builder.with_proxy_config(proxy);
         }
+        let drag_position = std::rc::Rc::new(std::cell::RefCell::new(super::drag_drop::DragPosition::default()));
         if drag_drop_enabled {
             let shared_drag = self.shared.clone();
             let drag_label = config.label.clone();
+            let drag_position = drag_position.clone();
             builder = builder.with_drag_drop_handler(move |event| {
+                let position = match &event {
+                    DragDropEvent::Enter { position, .. }
+                    | DragDropEvent::Over { position }
+                    | DragDropEvent::Drop { position, .. } => {
+                        let Some(position) = drag_position.borrow().physical(*position) else { return true; };
+                        position
+                    }
+                    _ => (0, 0),
+                };
                 let (event_name, payload) = match event {
-                    DragDropEvent::Enter { paths, position } => (
+                    DragDropEvent::Enter { paths, .. } => (
                         "tauri://drag-enter",
                         json!({
                             "paths":paths.iter().map(|path| path.to_string_lossy()).collect::<Vec<_>>(),
                             "position":{"x":position.0,"y":position.1}
                         }),
                     ),
-                    DragDropEvent::Over { position } => (
+                    DragDropEvent::Over { .. } => (
                         "tauri://drag-over",
                         json!({"position":{"x":position.0,"y":position.1}}),
                     ),
-                    DragDropEvent::Drop { paths, position } => (
+                    DragDropEvent::Drop { paths, .. } => (
                         "tauri://drag-drop",
                         json!({
                             "paths":paths.iter().map(|path| path.to_string_lossy()).collect::<Vec<_>>(),
@@ -438,6 +449,7 @@ impl LocalRuntime {
             self.web_contexts.remove(&context_key);
         }
         let native = native?;
+        drag_position.borrow_mut().attach(&native);
         #[cfg(target_os = "windows")]
         let file_path_hook = if self.isolation_protocol.is_none() {
             super::file_path::WebMessageHook::install(

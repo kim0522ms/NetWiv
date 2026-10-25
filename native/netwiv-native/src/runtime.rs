@@ -1,5 +1,6 @@
 mod window;
 mod webview;
+mod drag_drop;
 mod commands;
 mod menus;
 mod protocol;

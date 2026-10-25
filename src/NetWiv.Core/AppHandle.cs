@@ -278,6 +278,17 @@ public sealed partial class AppHandle : IDisposable
                 "tauri://focus" or "tauri://blur" or "tauri://scale-change" or "tauri://theme-changed")
                 EmitMatching(runtimeEvent.EventName, runtimeEvent.Payload, target, listener => listener.Kind == "Any" ||
                     listener.Kind is "Window" or "WebviewWindow" && listener.Label == target.Label);
+            else if (target.Kind == "Webview" && runtimeEvent.EventName is
+                "tauri://drag-enter" or "tauri://drag-over" or "tauri://drag-drop" or "tauri://drag-leave")
+            {
+                string? parentWindow;
+                lock (_registryGate)
+                    parentWindow = target.Label is not null && _webviews.TryGetValue(target.Label, out var view)
+                        ? view.ParentWindowLabel : null;
+                EmitMatching(runtimeEvent.EventName, runtimeEvent.Payload, target, listener =>
+                    RuntimeEventTarget.Matches(listener, target) || parentWindow is not null &&
+                    listener.Kind is "Window" or "WebviewWindow" && listener.Label == parentWindow);
+            }
             else Emit(runtimeEvent.EventName, runtimeEvent.Payload, target);
         },
         _assetResolver,

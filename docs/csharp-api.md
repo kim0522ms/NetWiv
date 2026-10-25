@@ -367,6 +367,23 @@ allows files below the application's image directory while giving deny patterns
 precedence. The unchanged guest `convertFileSrc(path)` produces the corresponding
 asset URL. A configured CSP must separately permit that URL for its intended use.
 
+Without a `Range` header, the file asset protocol buffers the file in one managed
+body array, plus a MIME-sniffing prefix of at most 8 KiB. The native bridge and
+WebView also buffer the response; this is not a total-process memory bound.
+Bodies larger than .NET's `Array.MaxLength` cannot be represented by that array
+and return HTTP 413 with guidance to request byte ranges, rather than attempting
+an impossible allocation. This is a representation limit, not a guarantee that
+every smaller file fits available memory. Range-less HEAD still returns HTTP 200
+with the full file length and no body, including above this limit. Single ranges
+remain capped at 1,024,000 bytes; multipart behavior is unchanged. For large
+content, request ranges or use an application-owned streaming HTTP server.
+
+Full responses read only the length captured from the opened file. Appended bytes
+are left for the next request; an early end of file produces HTTP 500 without a
+success `Content-Length`. Concurrent writers remain allowed, so same-length edits
+are not an immutable content snapshot. Keep served files stable when consistency
+across requests matters.
+
 File scope matching uses literal path separators, canonical filesystem paths,
 and the pinned platform default for leading dots (Unix requires a literal dot;
 Windows does not). These filesystem scopes are separate from command capabilities.

@@ -25,6 +25,20 @@ without calling a destroyed native responder. Handler exceptions produce HTTP 50
 Synchronous work runs on the callback thread; use asynchronous I/O or explicitly
 offload CPU work for a long operation.
 
+Response bodies are fully buffered. `AssetResponse.Body` is a `ReadOnlyMemory<byte>`;
+the native ABI copies it into an owned byte buffer, and the pinned Wry responder
+accepts a complete byte body. An asynchronous handler changes when the response
+completes; it does not stream the response or bound its memory use. Native and
+WebView buffers can coexist with the managed body. Handlers serving large content
+should honor byte `Range` requests or use an application-owned loopback HTTP server
+with an appropriate streaming implementation and access policy.
+
+Incremental protocol bodies cannot be implemented by adding a `Stream` to the
+managed response alone. They require a native responder contract with backpressure,
+source ownership and cancellation on document replacement, WebView close and
+runtime shutdown, plus stream delivery for WebView2, WebKitGTK and WKWebView.
+The current protocol API does not provide that facility.
+
 Use `convertFileSrc('path', 'example')` from `@netwiv/api/core` to
 construct frontend URLs. Windows uses `http://example.localhost/path` by default
 (or HTTPS when configured); Linux/macOS use `example://localhost/path`. Cross-origin

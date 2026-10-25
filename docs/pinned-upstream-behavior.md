@@ -107,6 +107,19 @@ Its 416 response omits CORS headers. Multipart ranges return status 200, append 
 second Content-Type header, and repeat a part separator as the final boundary
 without the closing `--`. The Core regression preserves those wire behaviors.
 
+For Range-less bodies, NetWiv reads directly into one managed array instead of
+growing a `MemoryStream` and copying its buffer. Unlike pinned Tauri 2.11.5's
+`read_to_end` path, NetWiv explicitly rejects a body larger than .NET's
+`Array.MaxLength` with HTTP 413. That deliberate difference follows the buffered
+managed response representation; it does not impose an arbitrary application
+quota. Range-less HEAD and bounded ranges still work above this size. A truncated
+full-body read fails with HTTP 500 instead of returning a body shorter than its
+advertised length; appends do not extend the captured response. Applications
+fetching large files should request byte ranges or use a streaming HTTP server.
+These safety differences are not upstream compatibility passes. See
+[file asset response limits](csharp-api.md#deployment-boundary) and
+[custom protocol buffering](uri-scheme-protocols.md).
+
 Browser access is a separate boundary: WebView2 rejects suffix and multipart
 Range fetches at CORS preflight, while WebKitGTK permits them for the custom
 scheme. The frontend fixture first requires successful GET, HEAD and single

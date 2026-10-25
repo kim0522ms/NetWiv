@@ -1,5 +1,7 @@
 using System.Text;
 using System.Text.Json;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 using NetWiv;
 using NetWiv.Runtime;
 
@@ -84,9 +86,76 @@ internal static class FileAssetProtocolTests
             File.WriteAllBytes(path, new byte[1_100_000]);
             var capped = Get(range: "bytes=0-");
             if (capped.Body.Length != 1_024_000 || capped.Headers!["Content-Range"] != "bytes 0-1023999/1100000") throw new Exception("Range cap mismatch.");
+            foreach (var size in new[] { 0, 8191, 8192, 8193 })
+            {
+                var expected = Enumerable.Range(0, size).Select(static index => (byte)(index % 251)).ToArray();
+                File.WriteAllBytes(path, expected);
+                var response = Get();
+                if (response.StatusCode != 200 || !response.Body.Span.SequenceEqual(expected) ||
+                    response.Headers!["Content-Length"] != size.ToString(System.Globalization.CultureInfo.InvariantCulture))
+                    throw new Exception("Full response differs at the MIME prefix boundary.");
+            }
+            const int allocationSize = 16 * 1024 * 1024;
+            using (var writer = File.OpenWrite(path)) writer.SetLength(allocationSize);
+            _ = Get(); // Warm up parsing and file I/O before measuring the synchronous resolver.
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            var large = Get();
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            if (large.StatusCode != 200 || large.Body.Length != allocationSize || allocated > allocationSize + 128 * 1024)
+                throw new Exception("Full response allocated more than one body plus fixed request overhead.");
+            using (var reader = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            using (var writer = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete))
+            {
+                writer.SetLength(8192);
+                writer.Position = 8192;
+                writer.WriteByte(42);
+                writer.Flush();
+                var captured = FileAssetProtocol.ReadFullBody(reader, 8192);
+                if (captured.Length != 8192) throw new Exception("An append expanded the captured entity body.");
+                writer.SetLength(8191);
+                try { FileAssetProtocol.ReadFullBody(reader, 8192); throw new Exception("Truncation returned a partial success body."); }
+                catch (EndOfStreamException) { }
+            }
+            using (var writer = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete))
+            {
+                // NTFS needs an explicit sparse flag; Unix creates holes on extension.
+                if (OperatingSystem.IsWindows() && !DeviceIoControl(writer.SafeFileHandle, 0x900c4, IntPtr.Zero, 0, IntPtr.Zero, 0, out _, IntPtr.Zero))
+                    throw new System.ComponentModel.Win32Exception(Marshal.GetLastPInvokeError(), "Cannot create the sparse asset fixture.");
+                foreach (long size in new[] { (long)Array.MaxLength + 1, (long)int.MaxValue + 1, 5L * 1024 * 1024 * 1024 })
+                {
+                    writer.SetLength(size);
+                    writer.Position = size - 1;
+                    writer.WriteByte(42);
+                    writer.Flush();
+                    before = GC.GetAllocatedBytesForCurrentThread();
+                    var rejected = Get();
+                    allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+                    Check(rejected, 413, "Asset file is too large for a buffered response. Request byte ranges instead.");
+                    if (allocated > 128 * 1024 || rejected.Headers!.ContainsKey("Content-Length") ||
+                        rejected.Headers["Access-Control-Allow-Origin"] != "https://initial.example")
+                        throw new Exception("Oversized response allocated a body or lost error/origin metadata.");
+                    var hugeHead = Get(method: "HEAD");
+                    if (hugeHead.StatusCode != 200 || !hugeHead.Body.IsEmpty ||
+                        hugeHead.Headers!["Content-Length"] != size.ToString(System.Globalization.CultureInfo.InvariantCulture))
+                        throw new Exception("Oversized HEAD lost entity metadata.");
+                    var tail = Get(range: "bytes=" + (size - 1).ToString(System.Globalization.CultureInfo.InvariantCulture) + "-");
+                    if (tail.StatusCode != 206 || !tail.Body.Span.SequenceEqual(new byte[] { 42 }) ||
+                        tail.Headers!["Content-Range"] != FormattableString.Invariant($"bytes {size - 1}-{size - 1}/{size}"))
+                        throw new Exception("Oversized source tail range was not served.");
+                    var hugeMultipart = Get(range: FormattableString.Invariant($"bytes=0-0,{size - 1}-{size - 1}"));
+                    if (hugeMultipart.StatusCode != 200 || hugeMultipart.Body.Length > 1024 ||
+                        !hugeMultipart.Headers!["Content-Type"].StartsWith("multipart/byteranges;", StringComparison.Ordinal))
+                        throw new Exception("Oversized source multipart response was not bounded.");
+                }
+            }
             if (FileAssetProtocol.Create(default, "test") is not null) throw new Exception("Asset scheme enabled by default.");
             return Task.CompletedTask;
         }
         finally { Directory.Delete(root, recursive: true); }
     }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeviceIoControl(SafeFileHandle file, uint controlCode, IntPtr input, uint inputSize,
+        IntPtr output, uint outputSize, out uint returned, IntPtr overlapped);
 }

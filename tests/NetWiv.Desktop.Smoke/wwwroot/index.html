@@ -40,7 +40,7 @@ try {
  const file = await invoke('asset_path');
  await advance('scoped asset');
  const response = await fetch(convertFileSrc(file));
- if (response.status !== 200 || await response.text() !== 'NetWiv asset') throw Error('Scoped asset response/origin mismatch');
+ if (response.status !== 200 || await response.text() !== 'NetWiv asset' + 'x'.repeat(64 * 1024)) throw Error('Scoped asset response/origin mismatch');
  await advance('JSON IPC');
  const value = await invoke('echo', {input: [label, 42, true]});
  if (JSON.stringify(value) !== JSON.stringify([label, 42, true])) throw Error('JSON IPC mismatch');

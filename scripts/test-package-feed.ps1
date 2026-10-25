@@ -33,6 +33,18 @@ try {
     Write-Output "Validating SDK $sdk with only runtime major $major"
     $workspace = Join-Path ([IO.Path]::GetTempPath()) ('netwiv-package-check-' + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $workspace | Out-Null
+    if ($IsMacOS) {
+        # macOS temp paths can use /var while native process working directories
+        # use /private/var. Keep repeated MSBuild project paths identical so its
+        # incremental clean does not delete outputs through the other alias.
+        Push-Location $workspace
+        try {
+            $physicalWorkspace = & /bin/pwd -P
+            if ($LASTEXITCODE -ne 0 -or !$physicalWorkspace) { throw 'Could not resolve the package workspace.' }
+            $workspace = $physicalWorkspace
+        }
+        finally { Pop-Location }
+    }
     # A fresh consumer outside the checkout cannot inherit source project targets or cached NetWiv packages.
     $env:NUGET_PACKAGES = Join-Path $workspace 'cache'
     Copy-Item -LiteralPath (Join-Path $repository 'global.json') -Destination $workspace

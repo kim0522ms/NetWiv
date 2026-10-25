@@ -329,7 +329,10 @@ Validate package-only consumers against the exact packages intended for release,
 including NativeAOT execution, frontend IPC and installer lifecycle on each
 supported platform. The Windows package-consumer check runs each managed
 deployment from a separate copy, keeping WebView2 profile locks out of the
-build output that the next deployment mode cleans. State the checks performed,
+build output that the next deployment mode cleans. On macOS, it resolves the
+temporary workspace to its physical path before building so successive consumers
+use the same MSBuild paths for shared Razor library outputs.
+State the checks performed,
 results, skips and missing dependencies in the PR; do not add evidence collection
 or report storage to code or CI/CD.
 See [support and validation](implementation-status.md) for outstanding coverage.

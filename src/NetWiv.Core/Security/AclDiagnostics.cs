@@ -37,7 +37,7 @@ internal sealed partial class AclAuthorizer
 
     private IEnumerable<DiagnosticEntry> Entries(string command, bool deny)
     {
-        foreach (var capability in _capabilities.OrderBy(capability => capability.Identifier, StringComparer.Ordinal))
+        foreach (var capability in _capabilities.Where(capability => !capability.Backend).OrderBy(capability => capability.Identifier, StringComparer.Ordinal))
             foreach (var permissionName in capability.Permissions)
                 foreach (var permission in _resolved[permissionName])
                 {

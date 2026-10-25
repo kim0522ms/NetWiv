@@ -23,6 +23,14 @@ GeneratedCommandRegistry.Register("generated_selected", static registry =>
 
 var tests = new List<(string Name, Func<Task> Run)>
 {
+    ("backend invocation selects immutable capabilities and preserves application denies", BackendAuthorizationTests.SelectedCapabilitiesAndApplicationDenies),
+    ("backend invocation scoped context rejects guest channels and native forwarding", BackendAuthorizationTests.BackendContextAndNativeForwardingGuard),
+    ("backend invocation merges permission and capability scopes", BackendAuthorizationTests.PermissionAndCapabilityScopesCombine),
+    ("backend invocation retains unselected backend scope denies without adding allows", BackendAuthorizationTests.UnselectedBackendScopesContributeOnlyDenies),
+    ("backend invocation scopes resources to tokens and cleans failed calls", BackendAuthorizationTests.ScopedResourcesRespectTokenAndFailureLifetime),
+    ("backend invocation snapshots mutable ACL inputs and isolates handler scope changes", BackendAuthorizationTests.AuthorizationTokensSnapshotMutableAclInputs),
+    ("backend invocation cleans failed resources and preserves binary response ownership", BackendAuthorizationTests.ScopedCleanupErrorsAndBinaryResponses),
+    ("backend invocation scoped cancellation and shutdown close admission", BackendAuthorizationTests.ScopedInvocationCancellationAndShutdown),
     ("macOS reopen delivers native-only notifications and observes application lifetime", ReopenTests.DeliveryAndLifetime),
     ("native opened delivers URL batches and observes resident application lifetime", OpenedTests.DeliveryAndLifetime),
     ("cooperative exit requests await handlers and preserve veto ordering", ExitRequestTests.ApprovalVetoAndOrdering),
@@ -82,6 +90,12 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("instance commands plugin scope and permissions", NetWiv.Tests.InstanceCommandScenarios.PluginInstanceCommandsKeepTheirScopeAndPermissions),
     ("instance commands native callback context", NetWiv.Tests.InstanceCommandScenarios.NativeCallbackDoesNotCaptureCallerContext),
     ("instance commands Lifetimes", NetWiv.Tests.InstanceCommandScenarios.Lifetimes),
+    ("trusted backend invocation bypasses guest ACL and exposes generated native context", BackendInvocationTests.TrustedContextAndGeneratedInjection),
+    ("backend invocation generated channels callback against the native label", BackendInvocationTests.GeneratedChannelUsesNativeCallbackTarget),
+    ("backend invocation links caller and shutdown cancellation without document ownership", BackendInvocationTests.CancellationAndDocumentLifetime),
+    ("backend invocation resources belong to the application", BackendInvocationTests.BackendResourcesBelongToTheApplication),
+    ("backend invocation preserves exception identity and structured payloads", BackendInvocationTests.ExceptionIdentityAndPayloadArePreserved),
+    ("trusted backend invocation starts synchronous handlers on the caller thread", BackendInvocationTests.SynchronousHandlerStartsOnCallerThread),
     ("instance commands ConstructorAndParameterShareScope", NetWiv.Tests.InstanceCommandScenarios.ConstructorAndParameterShareScope),
     ("instance commands ConcurrentAwaitAndDisposal", NetWiv.Tests.InstanceCommandScenarios.ConcurrentAwaitAndDisposal),
     ("instance commands FailureAndCancellation", NetWiv.Tests.InstanceCommandScenarios.FailureAndCancellation),

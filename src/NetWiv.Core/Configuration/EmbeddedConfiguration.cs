@@ -139,7 +139,7 @@ internal sealed record EmbeddedConfiguration(
         if (value.TryGetProperty("remote", out var remote) && remote.ValueKind == JsonValueKind.Object &&
             remote.TryGetProperty("urls", out var urls)) remoteUrls = ReadStrings(urls);
         return new(identifier, permissions, ReadOptionalStrings(value, "windows"), ReadOptionalStrings(value, "webviews"),
-            Boolean(value, "local") ?? true, remoteUrls, permissionScopes);
+            Boolean(value, "local") ?? true, remoteUrls, permissionScopes) { Backend = Boolean(value, "backend") ?? false };
     }
 
     internal static bool AppliesToCurrentPlatform(JsonElement value)

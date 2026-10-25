@@ -219,9 +219,12 @@ public sealed partial class AppHandle : IDisposable
     public Task<string> ResolveDirectoryAsync(int directory, string? path = null, CancellationToken cancellationToken = default) =>
         _runtime.ResolveDirectoryAsync(directory, path, Metadata.Identifier, cancellationToken);
 
-    internal async ValueTask<RuntimeInvokeResponse> InvokePlatformAsync(string command, JsonElement args, InvokeContext context, CancellationToken cancellationToken) =>
-        await _runtime.InvokeResponseAsync(command, args, new RuntimeCommandContext(context.WebviewLabel, context.Source,
+    internal async ValueTask<RuntimeInvokeResponse> InvokePlatformAsync(string command, JsonElement args, InvokeContext context, CancellationToken cancellationToken)
+    {
+        RequireGuestOrTrustedBackend(context);
+        return await _runtime.InvokeResponseAsync(command, args, new RuntimeCommandContext(context.WebviewLabel, context.Source,
             true, context.WindowLabel, context.Scope, context.DocumentId, context.IsTrusted), cancellationToken);
+    }
 
     public void Emit(string eventName, JsonElement payload, string? label = null)
         => Emit(eventName, payload, label is null ? RuntimeEventTarget.Any : new("AnyLabel", label));
@@ -382,9 +385,12 @@ public sealed partial class AppHandle : IDisposable
         string command,
         JsonElement args,
         InvokeContext context,
-        CancellationToken cancellationToken) =>
-        _runtime.InvokeAsync(command, args,
+        CancellationToken cancellationToken)
+    {
+        RequireGuestOrTrustedBackend(context);
+        return _runtime.InvokeAsync(command, args,
             new RuntimeCommandContext(context.WebviewLabel, context.Source, true, context.WindowLabel, context.Scope, context.DocumentId, context.IsTrusted), cancellationToken);
+    }
 
     private async void OnRuntimeMessage(RuntimeMessage message)
     {

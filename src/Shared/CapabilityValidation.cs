@@ -11,6 +11,8 @@ internal static class CapabilityValidation
         if (capability.TryGetProperty("description", out _)) RequireString(capability, "description");
         if (capability.TryGetProperty("local", out var local) && local.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
             throw new FormatException("Capability local must be a boolean.");
+        if (capability.TryGetProperty("backend", out var backend) && backend.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+            throw new FormatException("Capability backend must be a boolean.");
         foreach (var name in new[] { "windows", "webviews" })
             if (capability.TryGetProperty(name, out var labels)) Strings(labels, name);
         if (capability.TryGetProperty("remote", out var remote) && remote.ValueKind != JsonValueKind.Null)
@@ -18,6 +20,10 @@ internal static class CapabilityValidation
             if (remote.ValueKind != JsonValueKind.Object || !remote.TryGetProperty("urls", out var urls)) throw new FormatException("Capability remote requires a urls array.");
             Strings(urls, "remote.urls");
         }
+        if (backend.ValueKind == JsonValueKind.True &&
+            (HasTargets(capability, "windows") || HasTargets(capability, "webviews") ||
+             remote.ValueKind == JsonValueKind.Object && HasTargets(remote, "urls")))
+            throw new FormatException("Backend capabilities cannot target windows, webviews or remote URLs.");
         if (capability.TryGetProperty("platforms", out var platforms) && platforms.ValueKind != JsonValueKind.Null)
         {
             Strings(platforms, "platforms");
@@ -35,6 +41,9 @@ internal static class CapabilityValidation
                     throw new FormatException($"Permission {name} scope must be an array or null.");
         }
     }
+
+    private static bool HasTargets(JsonElement owner, string name) =>
+        owner.TryGetProperty(name, out var targets) && targets.ValueKind == JsonValueKind.Array && targets.GetArrayLength() > 0;
 
     private static string RequireString(JsonElement owner, string name) =>
         owner.ValueKind == JsonValueKind.Object && owner.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String

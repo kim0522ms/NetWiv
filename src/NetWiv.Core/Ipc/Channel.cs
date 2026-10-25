@@ -24,6 +24,7 @@ public sealed class Channel : IDisposable
 
     public static Channel FromJson(InvokeContext context, JsonElement value)
     {
+        if (context.Authorization is not null) throw new InvokeException("Scoped backend invocations do not have guest channels.");
         var text = value.GetString();
         const string prefix = "__CHANNEL__:";
         if (text is null || !text.StartsWith(prefix, StringComparison.Ordinal) ||

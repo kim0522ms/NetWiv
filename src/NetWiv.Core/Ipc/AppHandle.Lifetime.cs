@@ -96,12 +96,14 @@ public sealed partial class AppHandle
     {
         lock (_invocationGate)
         {
-            if (_disposed || !context.IsTrusted && !IsCurrentDocument(context.WebviewLabel, context.DocumentId))
+            if (_disposed || context.InvocationCompleted || !context.IsBackend && !IsCurrentDocument(context.WebviewLabel, context.DocumentId))
             {
                 if (resource is IDisposable disposable) disposable.Dispose();
                 throw new InvokeException("The originating document has been replaced or the application stopped.");
             }
-            return context.IsTrusted ? Resources.Add(resource) : Resources.AddOwned(resource, context.WebviewLabel, context.DocumentId);
+            var id = context.IsTrusted ? Resources.Add(resource) : Resources.AddOwned(resource, context.ResourceOwner, context.DocumentId);
+            context.InvocationResources?.Add(id);
+            return id;
         }
     }
 }

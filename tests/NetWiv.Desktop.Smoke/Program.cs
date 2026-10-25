@@ -39,6 +39,7 @@ internal static class Program
         if (args is ["--webview-options-smoke"]) return MacOsWebviewOptionsProbe.Run();
         if (args is ["--webview-options-input-smoke"]) return MacOsWebviewOptionsProbe.Run(input: true);
         if (args is ["--window-state-smoke", var stateRoot, var phase]) return WindowStateSmoke.Run(stateRoot, phase == "restore");
+        if (args is ["--backend-invocation-smoke"]) return BackendInvocationSmoke.Run();
         if (args is ["--expect-startup-error", var expected]) return CheckStartupError(expected);
         if (args is ["--origin-probe-smoke"]) { OriginProbe.CheckIdleConnectionAsync().GetAwaiter().GetResult(); return 0; }
         if (args is ["--no-window-smoke"]) return CheckNoWindows();

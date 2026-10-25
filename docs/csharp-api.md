@@ -116,6 +116,112 @@ with its arguments and working directory. Repeated pending requests coalesce;
 cleanup failure prevents relaunch. Custom runtime hosts that do not use `App.Run`
 must not treat `Restart` as an immediate process launch.
 
+## Backend invocation
+
+`AppHandle.InvokeAsync(command, args, cancellationToken)` invokes a registered
+command from trusted application code. It starts the handler on the caller's
+thread and awaits it directly; schedule CPU work explicitly when calling from
+the UI thread. It uses `WindowLabel = "native"`, `WebviewLabel = "native"`,
+`Source = new Uri("netwiv://native")`, `DocumentId = 0` and `IsTrusted = true`.
+These are dispatch labels, not a guarantee that a native window or WebView exists.
+
+The trusted overload bypasses capability selection, origin/target matching,
+command allow/deny permissions and ACL scope collection, including explicit
+denies. `InvokeContext.Scope` is an empty `RuntimeCommandScope`. This does not
+bypass a command's argument validation, plugin-specific policy, filesystem
+validation or other checks implemented by its handler.
+
+Generated commands inject `AppHandle`, `InvokeContext`, `Request`, `State<T>`
+and `CancellationToken` (and explicitly requested DI services). `Window`,
+`Webview` and `WebviewWindow` are **not** injected parameter types. Use
+`InvokeContext.App.GetWindow(label)` or the corresponding WebView lookup with an
+application-selected label and check its nullable result. Do not use the
+synthetic `native` label as the identity of a real view.
+
+Generated `Channel` and `Channel<T>` parameters are regular JSON arguments:
+pass, for example, `{"updates":"__CHANNEL__:47"}`. Missing or malformed channel
+arguments fail binding. A trusted backend call binds the channel to callback 47
+in the `native` WebView label, with document generation zero. NetWiv does not
+create a JavaScript callback or a managed message receiver for that call. A
+normal app has no such view or callback, so this is not a backend streaming API;
+use an application-owned .NET progress/message abstraction when no guest exists.
+
+The command token observes the supplied caller token and application shutdown.
+There is no guest document lifetime; reloading or closing a view does not cancel
+the backend call. Cancellation is cooperative. `InvokeContext.AddResource`
+creates an application-owned resource on the trusted path; it survives document
+changes and command completion, including failure, until explicitly closed or
+the app is disposed. Trusted resource close can also close guest-owned resources.
+
+Backend callers observe the original exception from the handler, including an
+`InvokeException` instance and its `ErrorPayload`, or an
+`OperationCanceledException` for cooperative cancellation. Exceptions are not
+converted to frontend rejection strings. ACL and missing-command failures use
+`InvokeException`; argument conversion errors can also expose their original
+JSON/conversion exception types. Invocation after disposal uses
+`ObjectDisposedException`. A binary response requires `InvokeResponseAsync`;
+the JSON-only overload rejects it with `InvokeException`.
+
+### Scoped calls from a managed relay
+
+A relay for a less-trusted source can issue a reusable authorization handle
+once, then pass it when dispatching. This additive NetWiv C# API has no Tauri
+frontend counterpart. The existing trusted overload keeps its behavior.
+
+```csharp
+var builder = new Builder()
+    .Permission(new PermissionDefinition("allow-cleanup", "cleanup_cache"))
+    .Capability(new Capability("automation", ["allow-cleanup"]) { Backend = true });
+// Register the command and configure/build the app as usual.
+var authorization = app.Handle.CreateInvokeAuthorization("automation");
+await app.Handle.InvokeAsync(authorization, "cleanup_cache", args, stoppingToken);
+```
+
+`Backend = true` (or `"backend": true` in a capability JSON object) explicitly
+enables a dedicated backend capability. It cannot contain window, WebView or
+remote URL targets; `Local` has no meaning for this non-WebView policy. Backend
+capabilities do not grant or deny frontend calls. Ordinary frontend capabilities
+cannot be selected by the factory. Empty selection grants nothing, including
+custom commands in apps without an app command manifest.
+
+The app-issued handle snapshots selected capability identifiers, resolved
+permissions, scopes and **all backend capabilities' command and scope denies**, including
+denies outside the selected subset. A caller cannot omit a deny by selecting
+fewer capabilities. Later mutation of configuration collections cannot change
+an issued handle. Handles cannot be used with another app. Treat handle creation
+and selecting its capabilities as trusted relay configuration; do not select
+capabilities from an unauthenticated request. Possession of `AppHandle` still
+permits trusted invocation. This routing policy does not sandbox registered C#
+handlers, which execute with the host process's privileges.
+
+Allowed calls receive the selected permission and capability scope extensions
+in `InvokeContext.Scope`, including scope denies. Handlers remain responsible
+for enforcing the meaning of those scopes; a command allow is not a validation
+of its arguments. This is the sense in which backend authorization remains
+authoritative. Scoped calls have `IsTrusted = false`, `IsBackend = true`, empty
+window/WebView labels, source `netwiv://backend` and document generation zero.
+They retain caller-thread execution, caller/app cancellation and ordinary
+exception propagation. They do not impersonate a frontend origin or window.
+
+Only registered managed commands are dispatched. Native command fallback and
+`InvokeContext.InvokePlatformAsync` are rejected; these require the existing
+trusted or real guest path. Generated channel arguments are rejected during
+binding, before the command method runs; `Channel.FromJson` also rejects a scoped
+backend context when called directly by a registered handler.
+Use the injected context and application-selected SDK handles when a command
+intentionally operates on a window; there is no automatic window injection.
+
+Resources registered through scoped `InvokeContext.AddResource` belong to that
+authorization handle, survive successful calls and are released at app disposal.
+With the resource-close permission, the same handle can close its resources and
+explicitly shared app resources, but cannot close another handle's or a guest's
+resources. Guest callers cannot close scoped resources either. A failed scoped
+command closes resources it registered; registration after its invocation has
+completed is rejected and disposes the supplied `IDisposable` value. Cleanup
+attempts every resource; if cleanup itself fails, an `AggregateException` contains
+the original command failure and cleanup errors. Creating a second handle with
+the same capability names creates a different resource owner.
+
 ## Backend events
 
 ### Initial window configuration

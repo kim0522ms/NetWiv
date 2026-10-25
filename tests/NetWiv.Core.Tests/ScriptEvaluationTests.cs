@@ -8,7 +8,13 @@ internal static class ScriptEvaluationTests
     {
         var runtime = new EvaluationRuntime
         {
-            Evaluate = (_, script, documentId, _) => Task.FromResult(JsonSerializer.SerializeToElement(new { script, documentId }))
+            Evaluate = (_, script, documentId, _) => Task.FromResult(JsonValue.Write(writer =>
+            {
+                writer.WriteStartObject();
+                writer.WriteString("script", script);
+                writer.WriteNumber("documentId", documentId);
+                writer.WriteEndObject();
+            }))
         };
         using var app = new Builder().UseRuntime(runtime).Window("main", "Main", "index.html").Build();
         app.Run();

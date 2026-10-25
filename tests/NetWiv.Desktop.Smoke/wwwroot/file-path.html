@@ -32,6 +32,7 @@
     <section id="native" hidden>
       <div class="target">Drop the generated sample file anywhere in this window.</div>
       <p>Native drop events should be received by the host; browser drop events should remain absent.</p>
+      <button id="finish-native" disabled>Finish native comparison</button>
     </section>
   </main>
   <script type="module">
@@ -111,9 +112,26 @@
           config.windows ? 'not allowed' : 'FilePathNotSupported');
         await report('window-denied', { passed: true });
         document.querySelector('#native').hidden = false;
-        document.addEventListener('drop', () => { window.__netwivNativeHtmlDropCount++; });
         window.__netwivNativeHtmlDropCount = 0;
-        window.__netwivCheckNativeDomDrop = () => report('native-html-drop-count', { count: window.__netwivNativeHtmlDropCount });
+        const finishNative = document.querySelector('#finish-native');
+        let nativeCheck = 0;
+        const reportNativeCount = () => report('native-html-drop-count', { count: window.__netwivNativeHtmlDropCount });
+        document.addEventListener('drop', () => {
+          window.__netwivNativeHtmlDropCount++;
+          finishNative.disabled = true;
+          void reportNativeCount();
+        });
+        window.__netwivCheckNativeDomDrop = () => {
+          const check = ++nativeCheck;
+          finishNative.disabled = true;
+          setTimeout(() => {
+            if (check === nativeCheck && window.__netwivNativeHtmlDropCount === 0) finishNative.disabled = false;
+          }, 250);
+        };
+        finishNative.addEventListener('click', () => {
+          finishNative.disabled = true;
+          void reportNativeCount();
+        });
         status.textContent = 'Native drop comparison ready.';
       } else {
         const unavailable = config.windows ? 'FilePathUnavailable' : 'FilePathNotSupported';

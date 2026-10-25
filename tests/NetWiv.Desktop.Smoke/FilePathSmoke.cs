@@ -24,10 +24,16 @@ internal static class FilePathSmoke
     private static volatile bool _browserVerified;
     private static int _result = 1;
     private static int _debugPort;
+    private static bool _timeoutSmoke;
+    private static volatile bool _timedOut;
+    private static CancellationTokenSource? _browserCancellation;
+    private static readonly object BrowserAppGate = new();
+    private static Task? _browserTask;
+    private static Timer? _watchdog;
     private static IDisposable? _nativeDropEvents;
     private static Webview? _nativeWebview;
 
-    internal static int Run(bool interactive)
+    internal static int Run(bool interactive, bool timeoutSmoke = false)
     {
         if (interactive && !OperatingSystem.IsWindows())
         {
@@ -41,6 +47,11 @@ internal static class FilePathSmoke
         _automaticPassed = _windowDenied = false;
         _browserFile = _browserFileDeleted = _browserVerified = false;
         _result = 1;
+        _timeoutSmoke = timeoutSmoke;
+        _timedOut = false;
+        _browserTask = null;
+        using var browserCancellation = new CancellationTokenSource();
+        _browserCancellation = browserCancellation;
         var fixture = Directory.CreateTempSubdirectory("netwiv-file-path-");
         _expectedPath = Path.Combine(fixture.FullName, "sample.txt");
         var debugPort = 0;
@@ -80,10 +91,12 @@ internal static class FilePathSmoke
                 .Setup(context =>
                 {
                     Program.VerifyBackend(runtime);
+                    if (_timedOut) { context.Handle.Exit(124); return; }
                     _nativeWebview = context.Handle.GetWebview("native");
                     _nativeDropEvents = context.Handle.GetWindow("native")!.OnDragDropEvent(value =>
                     {
                         if (value.Payload is not DragDroppedEvent drop) return;
+                        _nativeHtmlDropAbsent = false;
                         if (drop.Paths.Any(path => SamePath(path, _expectedPath))) _nativeDrop = true;
                         if (_interactive) _nativeWebview!.EvaluateScript("window.__netwivCheckNativeDomDrop?.()");
                         TryComplete(context.Handle);
@@ -92,11 +105,36 @@ internal static class FilePathSmoke
             using var app = builder.Build();
             using var watchdog = new Timer(_ =>
             {
-                Console.Error.WriteLine("FAIL file path smoke timed out.");
-                Environment.Exit(124);
+                lock (BrowserAppGate)
+                {
+                    if (browserCancellation.IsCancellationRequested) return;
+                    _timedOut = true;
+                    browserCancellation.Cancel();
+                    _result = 124;
+                    if (!_timeoutSmoke) Console.Error.WriteLine("FAIL file path smoke timed out.");
+                    try { app.Handle.Exit(124); }
+                    catch (InvalidOperationException) { /* Setup observes timeouts that precede runtime startup. */ }
+                }
             }, null, TimeSpan.FromMinutes(interactive ? 10 : 2), Timeout.InfiniteTimeSpan);
+            _watchdog = watchdog;
             try { app.Run(); }
-            finally { _nativeDropEvents?.Dispose(); _nativeDropEvents = null; }
+            finally
+            {
+                watchdog.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+                lock (BrowserAppGate) browserCancellation.Cancel();
+                if (!watchdog.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(5)))
+                {
+                    Console.Error.WriteLine("FAIL watchdog shutdown.");
+                    _result = 1;
+                }
+                if (_browserTask is { } browserTask && !browserTask.Wait(TimeSpan.FromSeconds(5)))
+                {
+                    Console.Error.WriteLine("FAIL browser task shutdown.");
+                    _result = 1;
+                }
+                _nativeDropEvents?.Dispose();
+                _nativeDropEvents = null;
+            }
         }
         catch
         {
@@ -105,6 +143,8 @@ internal static class FilePathSmoke
         }
         finally
         {
+            browserCancellation.Cancel();
+            _watchdog = null;
             _nativeDropEvents?.Dispose();
             _nativeDropEvents = null;
             for (var attempt = 0; ; attempt++)
@@ -113,6 +153,16 @@ internal static class FilePathSmoke
                 catch (IOException) when (attempt < 100) { Thread.Sleep(100); }
                 catch { Console.Error.WriteLine("FAIL synthetic file cleanup."); _result = 1; break; }
             }
+        }
+        if (_timeoutSmoke)
+        {
+            if (_timedOut && _result == 124 && _browserTask?.IsCompleted == true && !Directory.Exists(fixture.FullName))
+            {
+                Console.WriteLine("PASS file path watchdog cancels browser work and removes its fixture");
+                return 0;
+            }
+            Console.Error.WriteLine("FAIL file path watchdog cleanup.");
+            return 1;
         }
         return _result;
     }
@@ -144,21 +194,36 @@ internal static class FilePathSmoke
                 }
                 _automaticPassed = true;
                 if (OperatingSystem.IsWindows() && !_interactive)
-                    _ = Task.Run(async () =>
+                {
+                    var cancellationToken = _browserCancellation!.Token;
+                    _browserTask = Task.Run(async () =>
                     {
                         var browserStage = "browser debugger target";
                         try
                         {
-                            await VerifyBrowserFileAsync(_debugPort, value => browserStage = value);
-                            _browserVerified = true;
-                            context.App.Dispatch(() => TryComplete(context.App));
+                            await VerifyBrowserFileAsync(_debugPort, value => browserStage = value, cancellationToken);
+                            lock (BrowserAppGate)
+                            {
+                                if (cancellationToken.IsCancellationRequested) return;
+                                _browserVerified = true;
+                                context.App.Dispatch(() =>
+                                {
+                                    if (!cancellationToken.IsCancellationRequested) TryComplete(context.App);
+                                });
+                            }
                         }
                         catch
                         {
-                            Console.Error.WriteLine($"FAIL browser file path smoke during {browserStage}.");
-                            context.App.Exit(1);
+                            lock (BrowserAppGate)
+                            {
+                                if (cancellationToken.IsCancellationRequested) return;
+                                Console.Error.WriteLine($"FAIL browser file path smoke during {browserStage}.");
+                                _result = 1;
+                                context.App.Exit(1);
+                            }
                         }
                     });
+                }
                 TryComplete(context.App);
                 break;
             case "browser-file":
@@ -201,8 +266,16 @@ internal static class FilePathSmoke
                 TryComplete(context.App);
                 break;
             case "native-html-drop-count":
-                Require(_interactive && context.WebviewLabel == "native"
-                    && args.GetProperty("count").GetInt32() == 0, "native drop reached HTML");
+                Require(_interactive && context.WebviewLabel == "native", "native comparison source");
+                if (args.GetProperty("count").GetInt32() != 0)
+                {
+                    _nativeHtmlDropAbsent = false;
+                    _result = 1;
+                    Console.Error.WriteLine("FAIL native drop also reached HTML.");
+                    context.App.Exit(1);
+                    break;
+                }
+                Require(_nativeDrop, "native comparison requires a native file drop");
                 _nativeHtmlDropAbsent = true;
                 TryComplete(context.App);
                 break;
@@ -214,7 +287,7 @@ internal static class FilePathSmoke
 
     private static void TryComplete(AppHandle app)
     {
-        if (_result == 0) return;
+        if (_result == 0 || _timedOut) return;
         if (!_interactive && _automaticPassed && _windowDenied
             && (!OperatingSystem.IsWindows() || _browserFile && _browserFileDeleted && _browserVerified))
         {
@@ -269,9 +342,10 @@ internal static class FilePathSmoke
         return JsonValue.Parse(Encoding.UTF8.GetString(buffer.ToArray()));
     }
 
-    private static async Task VerifyBrowserFileAsync(int port, Action<string> setStage)
+    private static async Task VerifyBrowserFileAsync(int port, Action<string> setStage, CancellationToken cancellationToken)
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(45));
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
         JsonElement target = default;
         while (!timeout.IsCancellationRequested)
@@ -298,8 +372,14 @@ internal static class FilePathSmoke
         setStage("browser debugger WebSocket");
         using var socket = new ClientWebSocket();
         var socketUrl = new Uri(target.GetProperty("webSocketDebuggerUrl").GetString()!);
-        if (socketUrl.Scheme != "ws" || socketUrl.Host != IPAddress.Loopback.ToString()) throw new InvalidOperationException();
+        if (socketUrl.Scheme != "ws" || socketUrl.Host != IPAddress.Loopback.ToString() || socketUrl.Port != port)
+            throw new InvalidOperationException();
         await socket.ConnectAsync(socketUrl, timeout.Token);
+        if (_timeoutSmoke)
+        {
+            _watchdog!.Change(TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+            await Task.Delay(Timeout.Infinite, timeout.Token);
+        }
         var cdp = new CdpClient(socket, timeout.Token);
         setStage("browser document query");
         var document = await cdp.CallAsync("DOM.getDocument", "{}");

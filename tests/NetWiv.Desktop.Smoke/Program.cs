@@ -47,6 +47,7 @@ internal static class Program
         if (args is ["--notification-smoke"]) return WindowsNotificationSmoke.Run();
         if (args is ["--fs-guest-smoke"]) return FsGuestSmoke.Run();
         if (args is ["--file-path-smoke"]) return FilePathSmoke.Run(interactive: false);
+        if (args is ["--file-path-timeout-smoke"]) return FilePathSmoke.Run(interactive: false, timeoutSmoke: true);
         if (args is ["--file-path-interactive"]) return FilePathSmoke.Run(interactive: true);
         if (args is ["--webview-profile-smoke", var profileIdentifier, var profileExpected, var profileNext, var profileDirectory])
             return WindowsWebviewProfileSmoke.Run(profileIdentifier, profileExpected, profileNext, profileDirectory);

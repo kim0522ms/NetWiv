@@ -10,9 +10,66 @@ const initialization = await read('../../src/NetWiv.Core/Ipc/InitializationScrip
 const transport = await read('../../src/NetWiv.Core/Security/Isolation/transport.js');
 const secure = await read('../../src/NetWiv.Core/Security/Isolation/secure.js');
 const processMessage = await read('../../src/NetWiv.Core/Security/Isolation/process-ipc-message.js');
+const filePathSmoke = await read('../NetWiv.Desktop.Smoke/wwwroot/file-path.html');
 const numbers = '{"long":9223372036854775807,"decimal":0.1234567890123456789012345678,"nested":[9007199254740993,null,"escaped \\" string"]}';
 
 // Execute the shipped scripts, with just the browser/native boundary supplied by the test.
+async function nativeDropComparison() {
+  const events = {};
+  const clicks = {};
+  const timers = [];
+  const reports = [];
+  const button = { disabled: true, addEventListener: (name, handler) => { clicks[name] = handler; } };
+  const window = {};
+  const document = {
+    querySelector: selector => selector === '#finish-native' ? button : {},
+    addEventListener: (name, handler) => { events[name] = handler; }
+  };
+  const source = filePathSmoke.split('<script type="module">')[1].split('</script>')[0]
+    .replace("import { getFilePath, invoke } from './core.js';", '');
+  await vm.runInNewContext(`(async () => { ${source} })()`, {
+    window, document, File: class {},
+    getFilePath: async () => { throw new Error('not allowed'); },
+    invoke: async (command, args) => {
+      if (command === 'file_path_config') return { window: 'native', windows: true, fileName: 'sample.txt' };
+      reports.push(args);
+    },
+    setTimeout: callback => timers.push(callback)
+  });
+  assert.equal(reports.some(value => value.kind === 'failure'), false);
+  return { window, button, events, clicks, timers, reports };
+}
+
+test('native drop comparison waits for settling and an explicit finish before reporting absence', async () => {
+  const runtime = await nativeDropComparison();
+  const counts = () => runtime.reports.filter(value => value.kind === 'native-html-drop-count');
+  runtime.window.__netwivCheckNativeDomDrop();
+  assert.equal(counts().length, 0);
+  assert.equal(runtime.button.disabled, true);
+  runtime.window.__netwivCheckNativeDomDrop();
+  runtime.timers.shift()();
+  assert.equal(runtime.button.disabled, true, 'A prior drop cannot enable completion for a newer drop');
+  runtime.timers.shift()();
+  assert.equal(runtime.button.disabled, false);
+  assert.equal(counts().length, 0);
+  runtime.clicks.click();
+  assert.equal(runtime.button.disabled, true);
+  assert.equal(counts().at(-1).count, 0);
+  // A DOM event delivered after the zero report must still notify the host of failure.
+  runtime.events.drop();
+  assert.equal(counts().at(-1).count, 1);
+});
+
+test('DOM co-delivery blocks native comparison completion and reports the positive count', async () => {
+  const runtime = await nativeDropComparison();
+  runtime.window.__netwivCheckNativeDomDrop();
+  runtime.events.drop();
+  runtime.timers.shift()();
+  assert.equal(runtime.button.disabled, true);
+  assert.equal(runtime.reports.at(-1).kind, 'native-html-drop-count');
+  assert.equal(runtime.reports.at(-1).count, 1);
+});
+
 function script(isolated) {
   const result = initialization.split('=> $$"""')[1].split('""";')[0]
     .replaceAll('{{invokeKey}}', 'test-key')

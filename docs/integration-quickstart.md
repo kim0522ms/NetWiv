@@ -7,6 +7,8 @@ built from source. Release availability depends on maintainer publication;
 cloning the repository does not provide a prebuilt package feed.
 To create packages yourself, see [framework development](development.md#create-a-local-package-feed).
 Full TAURI® compatibility and release validation remain incomplete.
+New projects default to React 18 and .NET 10. Agents confirm these version
+choices before creating files; see [bootstrap version choices](coding-agents.md#bootstrap-version-choices).
 For a shared Razor UI with managed desktop development and deployment,
 optional experimental NativeAOT Hybrid or WebAssembly execution, see the optional
 [NetWiv.BlazorHybrid guide](blazor-hybrid.md).
@@ -15,24 +17,27 @@ With the package feed below, select that layout using
 `dotnet run --project src-netwiv` from the new directory. Its Debug mode uses
 managed Hybrid on the supported desktop platforms in both Debug and Release.
 Set `NetWivBlazorTargetFramework` in the generated `Directory.Build.props` to
-`net9.0` or `net10.0` to change the default .NET 8 target and matching component
+`net8.0` or `net9.0` to change the default .NET 10 target and matching component
 packages together. Choose WebAssembly with
 `--blazor-mode WebAssembly`. Experimental NativeAOT Hybrid requires
 `netwiv build --no-bundle --aot --blazor-mode Hybrid --experimental-blazor-aot`.
 
 ## Prerequisites
 
-- Windows: .NET 8 or later SDK, WebView2 Runtime and a Node.js version supported by the
+- Windows: .NET 10 or later SDK for the default starter, WebView2 Runtime and a Node.js version supported by the
   template. The React template declares Node.js `^20.19.0 || >=22.12.0`.
 - Windows NativeAOT builds: Visual Studio C++ Build Tools and Windows SDK.
-- Linux: .NET 8 or later SDK, GTK3, WebKitGTK 4.1 and Node.js; NativeAOT additionally needs its native build dependencies.
+- Linux: .NET 10 or later SDK for the default starter, GTK3, WebKitGTK 4.1 and Node.js; NativeAOT additionally needs its native build dependencies.
   Build Linux distributions on a Linux host. See [Linux X11 and Wayland](linux.md)
   for desktop-session requirements and platform limits.
-- macOS 12+: .NET 8 or later SDK and the template's Node.js version. NativeAOT
+- macOS 12+: .NET 10 or later SDK for the default starter and the template's Node.js version. NativeAOT
   additionally needs Xcode Command Line Tools. WKWebView/AppKit are supplied by macOS. Use SDK and native package
   assets for the Mac's architecture; see the [macOS guide](macos.md).
 - A feed containing matching versions of `NetWiv.Cli`, the SDK and native runtime
   packages. Ordinary React app development does not require Cargo.
+
+For an explicitly selected .NET 8 or 9 app, pass `--framework net8.0` or
+`--framework net9.0` to `netwiv new` and use a supporting SDK.
 
 ## Create the project
 

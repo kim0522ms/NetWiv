@@ -8,7 +8,10 @@ public static class CliApp
         .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(typeof(CliApp).Assembly)!
         .InformationalVersion.Split('+')[0];
 
-    public static async Task<int> RunAsync(string[] args, TextWriter output, TextWriter error, string workingDirectory, CancellationToken cancellationToken = default)
+    public static Task<int> RunAsync(string[] args, TextWriter output, TextWriter error, string workingDirectory, CancellationToken cancellationToken = default)
+        => RunAsync(args, output, error, workingDirectory, null, cancellationToken);
+
+    internal static async Task<int> RunAsync(string[] args, TextWriter output, TextWriter error, string workingDirectory, TextReader? input, CancellationToken cancellationToken)
     {
         try
         {
@@ -26,7 +29,7 @@ public static class CliApp
             var tail = args[1..];
             return args[0] switch
             {
-                "new" => await NewCommand.RunAsync(tail, output, workingDirectory, cancellationToken),
+                "new" => await NewCommand.RunAsync(tail, output, workingDirectory, cancellationToken, input),
                 "init" => await InitCommand.RunAsync(tail, output, workingDirectory, cancellationToken),
                 "dev" => await DevCommand.RunAsync(tail, output, workingDirectory, cancellationToken),
                 "build" => await BuildCommand.RunAsync(tail, output, workingDirectory, cancellationToken),

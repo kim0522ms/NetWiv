@@ -49,6 +49,10 @@ internal static class McpCommand
         ServerInfo = new Implementation { Name = "netwiv", Version = CliApp.Version },
         ServerInstructions =
             $"NetWiv {CliApp.Version}: a .NET desktop framework with C# commands and a web frontend on the OS WebView. " +
+            "Before bootstrapping a new project, ask the user to choose the frontend and .NET target versions; " +
+            "offer React 18 and .NET 10 as the defaults and wait for their answer before creating files. " +
+            "Keep versions the user has already selected and preserve existing projects' versions. " +
+            "Read the coding-agents guide's Bootstrap version choices section for applying their selection. " +
             "Search the bundled guides (netwiv_docs_search, then netwiv_docs_read) before answering NetWiv API, configuration " +
             "or permission questions; they match this CLI version. Use netwiv_project_info first in a project to see its " +
             "configuration and NetWiv version. These tools only read; build, run and edit with the netwiv CLI and the files themselves.",

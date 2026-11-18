@@ -5,6 +5,124 @@ using NetWiv.Cli;
 
 internal static class NewProjectTests
 {
+    internal static async Task InteractiveVersions()
+    {
+        var root = Directory.CreateTempSubdirectory("netwiv-new-interactive-").FullName;
+        try
+        {
+            async Task<(int Code, string Output)> Create(string name, string answers, params string[] options)
+            {
+                using var input = new StringReader(answers);
+                using var output = new StringWriter();
+                using var error = new StringWriter();
+                var code = await CliApp.RunAsync(["new", name, .. options], output, error, root, input, CancellationToken.None);
+                return (code, output.ToString() + error);
+            }
+            var defaults = await Create("Defaults", "\n\n");
+            Check(defaults.Code == 0 && defaults.Output.Contains("React version", StringComparison.Ordinal) &&
+                defaults.Output.Contains(".NET version", StringComparison.Ordinal), defaults.Output);
+            Check(XDocument.Load(Path.Combine(root, "Defaults/src-netwiv/Defaults.csproj"))
+                .Descendants("TargetFramework").Single().Value == "net10.0", "Enter did not select .NET 10");
+            Check(JsonNode.Parse(File.ReadAllText(Path.Combine(root, "Defaults/package.json")))!["dependencies"]!["react"]!
+                .GetValue<string>() == "18.3.1", "Enter did not select React 18");
+            var selected = await Create("Selected", "17\n19\n7\n9\n", "--manager", "pnpm");
+            Check(selected.Code == 0 && selected.Output.Contains("Choose one of", StringComparison.Ordinal), selected.Output);
+            var manifest = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "Selected/package.json")))!;
+            Check(manifest["dependencies"]!["react"]!.GetValue<string>() == "19.2.8" &&
+                manifest["dependencies"]!["react-dom"]!.GetValue<string>() == "19.2.8" &&
+                manifest["devDependencies"]!["@types/react"]!.GetValue<string>() == "19.2.7",
+                "Selected React version and types were not applied");
+            Check(!File.Exists(Path.Combine(root, "Selected/package-lock.json")), "Non-npm selection retained an npm lockfile");
+            Check(XDocument.Load(Path.Combine(root, "Selected/src-netwiv/Selected.csproj"))
+                .Descendants("TargetFramework").Single().Value == "net9.0", "Selected .NET version was ignored");
+            var index = 0;
+            foreach (var options in new[]
+            {
+                new[] { "--yes" },
+                new[] { "--react-version", "18", "--framework", "net8.0" },
+                new[] { "--template", "vue", "--framework", "net8.0" },
+            })
+            {
+                var name = "Explicit" + index++;
+                var explicitSelection = await Create(name, "", options);
+                Check(explicitSelection.Code == 0 && !explicitSelection.Output.Contains(" version (", StringComparison.Ordinal), explicitSelection.Output);
+            }
+            foreach (var answers in new[] { "", "18\n", "17\n" })
+            {
+                var ended = await Create("Ended", answers);
+                Check(ended.Code == 1 && !Directory.Exists(Path.Combine(root, "Ended")), "Input EOF created a project");
+                Check(!Directory.EnumerateDirectories(root, ".netwiv-new-*").Any(), "Input EOF left a staging directory");
+            }
+            var partial = await Create("Partial", "19\n", "--framework", "net8.0", "--manager", "pnpm");
+            Check(partial.Code == 0 && !partial.Output.Contains(".NET version", StringComparison.Ordinal), partial.Output);
+            var pipe = new System.IO.Pipelines.Pipe();
+            using var pendingInput = new StreamReader(pipe.Reader.AsStream());
+            using var pendingOutput = new StringWriter();
+            using var pendingError = new StringWriter();
+            using var cancel = new CancellationTokenSource();
+            var pending = CliApp.RunAsync(["new", "Cancelled"], pendingOutput, pendingError, root, pendingInput, cancel.Token);
+            Check(!pending.IsCompleted && pendingOutput.ToString().Contains("React version", StringComparison.Ordinal) &&
+                !Directory.Exists(Path.Combine(root, "Cancelled")), "Version prompt did not wait before creating files");
+            cancel.Cancel();
+            Check(await pending.WaitAsync(TimeSpan.FromSeconds(5)) == 130 && !Directory.Exists(Path.Combine(root, "Cancelled")),
+                "Cancellation while choosing versions created a project");
+            await pipe.Writer.CompleteAsync();
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    internal static async Task React19Lockfile()
+    {
+        var root = Directory.CreateTempSubdirectory("netwiv-react19-").FullName;
+        var cache = Environment.GetEnvironmentVariable("npm_config_cache");
+        var offline = Environment.GetEnvironmentVariable("npm_config_offline");
+        var registry = Environment.GetEnvironmentVariable("npm_config_registry");
+        try
+        {
+            var created = await Run(["new", "React19", "--react-version", "19", "--yes"], root);
+            Check(created.Code == 0, created.Output + created.Error);
+            var locked = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "React19/package-lock.json")))!["packages"]!;
+            foreach (var dependency in new[] { "react", "react-dom" })
+                Check(locked["node_modules/" + dependency]!["version"]!.GetValue<string>() == "19.2.8", "React 19 lockfile uses another runtime version");
+            Check(locked["node_modules/@types/react"]!["version"]!.GetValue<string>() == "19.2.7" &&
+                locked["node_modules/@types/react-dom"]!["version"]!.GetValue<string>() == "19.2.3", "React 19 types are mismatched");
+            var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+            listener.Start();
+            try
+            {
+                Environment.SetEnvironmentVariable("npm_config_cache", Path.Combine(root, "pending-cache"));
+                Environment.SetEnvironmentVariable("npm_config_registry", "http://127.0.0.1:" + ((System.Net.IPEndPoint)listener.LocalEndpoint).Port);
+                using var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                var pending = Run(["new", "Cancelled", "--react-version", "19", "--yes"], root, cancel.Token);
+                // Hold the real npm registry request open, then cancel while resolution is pending.
+                using var connection = await listener.AcceptTcpClientAsync(cancel.Token);
+                Check(!pending.IsCompleted, "Registry resolution completed before receiving a response");
+                cancel.Cancel();
+                var stopped = await pending.WaitAsync(TimeSpan.FromSeconds(5));
+                Check(stopped.Code == 130 && !Directory.Exists(Path.Combine(root, "Cancelled")) &&
+                    !Directory.EnumerateDirectories(root, ".netwiv-new-*").Any(), "Cancelled dependency resolution left a partial project");
+            }
+            finally
+            {
+                listener.Stop();
+                Environment.SetEnvironmentVariable("npm_config_registry", registry);
+            }
+            Environment.SetEnvironmentVariable("npm_config_cache", Path.Combine(root, "empty-cache"));
+            Environment.SetEnvironmentVariable("npm_config_offline", "true");
+            var failed = await Run(["new", "Unavailable", "--react-version", "19", "--yes"], root);
+            Check(failed.Code == 1 && failed.Error.Contains("lockfile resolution failed", StringComparison.Ordinal), failed.Output + failed.Error);
+            Check(!Directory.Exists(Path.Combine(root, "Unavailable")) && !Directory.EnumerateDirectories(root, ".netwiv-new-*").Any(),
+                "Failed dependency resolution left a partial project");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("npm_config_cache", cache);
+            Environment.SetEnvironmentVariable("npm_config_offline", offline);
+            Environment.SetEnvironmentVariable("npm_config_registry", registry);
+            Directory.Delete(root, true);
+        }
+    }
+
     internal static async Task BlazorHybrid()
     {
         var root = Directory.CreateTempSubdirectory("netwiv-hybrid-template-").FullName;
@@ -31,6 +149,7 @@ internal static class NewProjectTests
                 await watcher.WaitAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
             }
             var backend = XDocument.Load(Path.Combine(destination, "src-netwiv/Example.csproj"));
+            Check(backend.Descendants("OutputType").Single().Value == "WinExe", "Hybrid desktop must default to a Windows GUI executable");
             Check((string?)backend.Root!.Attribute("Sdk") == "Microsoft.NET.Sdk.Razor" &&
                 backend.Descendants("EnableDefaultContentItems").Single().Value == "false",
                 "Hybrid desktop must resolve Razor library assets while preserving its explicit mode-specific content.");
@@ -58,6 +177,8 @@ internal static class NewProjectTests
             Check(File.ReadAllText(Path.Combine(destination, "README.md")).Contains("--experimental-blazor-aot", StringComparison.Ordinal),
                 "Experimental Hybrid NativeAOT publishing guidance is missing.");
             var props = XDocument.Load(Path.Combine(destination, "Directory.Build.props"));
+            Check(props.Descendants("NetWivBlazorTargetFramework").Single().Value == "net10.0",
+                "Hybrid starter must default to .NET 10.");
             Check(!props.Descendants("Import").Any() && props.Descendants("NetWivBlazorMode").Single().Value == "Hybrid",
                 "Generated mode configuration is not standalone or does not default to Hybrid.");
             var shared = XDocument.Load(Path.Combine(destination, "Shared/Shared.csproj"));
@@ -170,7 +291,7 @@ internal static class NewProjectTests
         try
         {
             var app = Path.Combine(root, "app");
-            var created = await Run(["new", "Example", "-t", "blazor", "-o", app], root);
+            var created = await Run(["new", "Example", "-t", "blazor", "-o", app, "--framework", "net8.0"], root);
             Check(created.Code == 0, created.Error);
             var backend = Path.Combine(app, "src-netwiv/Example.csproj");
             var browserProperties = await NetWiv.Build.Execution.ProcessRunner.RunAsync(new("dotnet",
@@ -327,6 +448,7 @@ internal static class NewProjectTests
             Check(config["productName"]!.GetValue<string>() == "My.App" && config["identifier"]!.GetValue<string>() == "com.example.custom", "Application metadata was not personalized");
             Check(config["build"]!["dotnetProject"]!.GetValue<string>() == "My.App.csproj", "Project config retained the template name");
             var project = XDocument.Load(Path.Combine(destination, "src-netwiv/My.App.csproj"));
+            Check(project.Descendants("OutputType").Single().Value == "WinExe", "Desktop starter must default to a Windows GUI executable");
             Check(project.Descendants("NetWivVersion").Single().Value == CliApp.Version, "SDK version differs from CLI");
             var frontend = project.Descendants("ProjectReference").Single();
             Check(frontend.Attribute("Include")!.Value == "../My.App.Frontend.esproj" &&
@@ -336,8 +458,8 @@ internal static class NewProjectTests
                 solution.Contains("My.App.Frontend.esproj", StringComparison.Ordinal) &&
                 !solution.Contains("ReactExample", StringComparison.Ordinal), "Solution paths were not personalized");
             Check(!project.Descendants("PublishAot").Any() && !project.Descendants("IsAotCompatible").Any(), "Consumer template must not opt into AOT");
-            Check(project.Descendants("TargetFramework").Single().Value == "net8.0", "Backend must support .NET 8");
-            Check(project.Descendants("RollForward").Single().Value == "Major", "Managed app must start when only .NET 9/10 is installed");
+            Check(project.Descendants("TargetFramework").Single().Value == "net10.0", "Backend must default to .NET 10");
+            Check(project.Descendants("RollForward").Single().Value == "Major", "Managed app must retain major runtime roll-forward");
             Check(File.Exists(Path.Combine(destination, "My.App.Frontend.esproj")), "Frontend project is missing");
             var program = File.ReadAllText(Path.Combine(destination, "src-netwiv/Program.cs"));
             Check(program.Contains("\"com.example.custom\"", StringComparison.Ordinal) && program.Contains("#if !DEBUG", StringComparison.Ordinal), "Template engine lost metadata or the development guard");
@@ -370,6 +492,26 @@ internal static class NewProjectTests
             Check(config["identifier"]!.GetValue<string>() == "dev.netwiv.helloworld", "Incorrect default identifier");
             Check(!File.Exists(Path.Combine(root, "HelloWorld/NuGet.Config")), "Unrequested package sources were installed");
             Check(output.Contains("NuGet.Config", StringComparison.Ordinal), "Private feed setup was not explained");
+            var package = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "HelloWorld/package.json")))!;
+            var locked = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "HelloWorld/package-lock.json")))!["packages"]!;
+            foreach (var dependency in new[] { "react", "react-dom" })
+            {
+                Check(package["dependencies"]![dependency]!.GetValue<string>() == "18.3.1", "React starter must default to React 18");
+                Check(locked["node_modules/" + dependency]!["version"]!.GetValue<string>() == "18.3.1", "React lockfile differs from the selected default");
+            }
+            foreach (var framework in new[] { "net8.0", "net9.0", "net10.0" })
+            {
+                var selected = await Run(["new", "Selected", "--framework", framework, "-o", framework], root);
+                Check(selected.Code == 0, selected.Output + selected.Error);
+                var backend = XDocument.Load(Path.Combine(root, framework, "src-netwiv/Selected.csproj"));
+                Check(backend.Descendants("TargetFramework").Single().Value == framework, "Explicit backend target was ignored");
+                var frontend = XDocument.Load(Path.Combine(root, framework, "Selected.Frontend.esproj"));
+                Check(frontend.Descendants("TargetFramework").Single().Value == framework, "Explicit frontend build target was ignored");
+            }
+            var hybrid = await Run(["new", "Selected", "-t", "blazor-hybrid", "--framework", "net8.0"], root);
+            Check(hybrid.Code == 0, hybrid.Output + hybrid.Error);
+            var hybridProps = XDocument.Load(Path.Combine(root, "Selected/Directory.Build.props"));
+            Check(hybridProps.Descendants("NetWivBlazorTargetFramework").Single().Value == "net8.0", "Explicit Hybrid target was ignored");
         }
         finally { Directory.Delete(root, true); }
     }
@@ -399,7 +541,8 @@ internal static class NewProjectTests
             foreach (var (template, evidence) in selected)
             {
                 var destination = Path.Combine(root, template);
-                var result = await Run(["new", "Example", "--template", template, "--output", destination], root);
+                var result = await Run(["new", "Example", "--template", template, "--output", destination,
+                    "--framework", "net8.0"], root);
                 Check(result.Code == 0, result.Error);
                 Check(File.Exists(Path.Combine(destination, evidence)), "Missing frontend for " + template);
                 var screen = File.ReadAllText(Path.Combine(destination, evidence));
@@ -409,6 +552,8 @@ internal static class NewProjectTests
                 Check(config["build"]!["dotnetProject"]!.GetValue<string>() == "Example.csproj", "Backend project mismatch: " + template);
                 Check(File.Exists(Path.Combine(destination, "Example.sln")), "Solution missing: " + template);
                 var backend = XDocument.Load(Path.Combine(destination, "src-netwiv/Example.csproj"));
+                Check(backend.Descendants("OutputType").Single().Value == "WinExe", "Desktop output must avoid a Windows console: " + template);
+                Check(backend.Descendants("TargetFramework").Single().Value == "net8.0", "Selected desktop target was ignored: " + template);
                 Check(!backend.Descendants("PublishAot").Any() && !backend.Descendants("IsAotCompatible").Any(), "Template forces AOT: " + template);
                 Check(backend.Descendants("PackageReference").Any(item => item.Attribute("Include")?.Value == "NetWiv.Platform.Desktop"), "Desktop package missing: " + template);
                 Check(!backend.ToString().Contains("NetWiv.Platform.Wry", StringComparison.Ordinal), "Former package name leaked into " + template);
@@ -418,6 +563,9 @@ internal static class NewProjectTests
                 CheckAgentConfig(destination, result.Output, template);
                 if (template == "blazor")
                 {
+                    foreach (var file in new[] { "frontend/NetWivUi.csproj", "contracts/Contracts.csproj" })
+                        Check(XDocument.Load(Path.Combine(destination, file)).Descendants("TargetFramework").Single().Value == "net8.0",
+                            "Blazor projects must use the selected framework: " + file);
                     Check(config["build"]!["frontendDist"]!.GetValue<string>() == "../dist/wwwroot", "Blazor asset root mismatch");
                     Check(File.Exists(Path.Combine(destination, "frontend/wwwroot/vendor/@netwiv/api/upstream/core.js")), "Blazor JS API module missing");
                     Check(File.Exists(Path.Combine(destination, "frontend/wwwroot/vendor/@netwiv/api/core.js")), "Blazor NetWiv API module missing");
@@ -480,6 +628,10 @@ internal static class NewProjectTests
                 new[] { "new", "App", "--template", "blazor", "--manager", "npm" },
                 new[] { "new", "App", "--template", "blazor-hybrid", "--manager", "npm" },
                 new[] { "new", "App", "--template", "react", "--manager", "cargo" },
+                new[] { "new", "App", "--framework", "net7.0" }, new[] { "new", "App", "--framework", "net11.0" },
+                new[] { "new", "App", "--framework" },
+                new[] { "new", "App", "--react-version", "17" }, new[] { "new", "App", "--react-version" },
+                new[] { "new", "App", "--template", "vue", "--react-version", "18" },
                 new[] { "new", "App", "--template", "yew" }, new[] { "new", "App", "--template", "react-ts" } })
             {
                 var (code, _, error) = await Run(args, root);

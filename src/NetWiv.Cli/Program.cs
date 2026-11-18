@@ -9,7 +9,8 @@ public static class Program
         Console.CancelKeyPress += cancel;
         try
         {
-            return await CliApp.RunAsync(args, Console.Out, Console.Error, Directory.GetCurrentDirectory(), stop.Token);
+            return await CliApp.RunAsync(args, Console.Out, Console.Error, Directory.GetCurrentDirectory(),
+                Console.IsInputRedirected || Console.IsOutputRedirected ? null : Console.In, stop.Token);
         }
         finally { Console.CancelKeyPress -= cancel; }
     }

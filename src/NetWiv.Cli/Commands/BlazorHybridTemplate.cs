@@ -6,7 +6,7 @@ namespace NetWiv.Cli;
 
 internal static class BlazorHybridTemplate
 {
-    internal static async Task CreateAsync(string project, string name, string version, CancellationToken token)
+    internal static async Task CreateAsync(string project, string name, string version, string framework, CancellationToken token)
     {
         var source = Path.Combine(AppContext.BaseDirectory, "templates", "blazor-hybrid");
         if (!File.Exists(Path.Combine(source, "Desktop", "Desktop.csproj")))
@@ -19,6 +19,7 @@ internal static class BlazorHybridTemplate
         var propsPath = Path.Combine(project, "Directory.Build.props");
         var props = XDocument.Load(propsPath);
         props.Root!.Elements("Import").Remove();
+        props.Descendants("NetWivBlazorTargetFramework").Single().Value = framework;
         props.Root.AddFirst(new XElement("PropertyGroup",
             new XElement("LangVersion", "12.0"),
             new XElement("Nullable", "enable"),
@@ -49,6 +50,7 @@ internal static class BlazorHybridTemplate
             }
             if (path == desktopProject)
             {
+                document.Descendants("OutputType").Single().Value = "WinExe";
                 document.Descendants("AssemblyName").Single().Value = name;
                 document.Root!.Elements("PropertyGroup").First().Add(new XElement("NetWivConfigPath", "$(MSBuildProjectDirectory)/netwiv.conf.json"));
             }
@@ -135,6 +137,9 @@ internal static class BlazorHybridTemplate
         shared reference factory. No static component or callback registry is
         needed for this default path.
 
+        The desktop project defaults to `OutputType=WinExe` so Windows does not
+        open a separate console window. Use `Exe` when a console is required.
+
         Keep the desktop project's Razor SDK: it supplies referenced Razor
         library static assets through the managed development manifest and
         stages them under `wwwroot/_content` when publishing.
@@ -143,8 +148,9 @@ internal static class BlazorHybridTemplate
         Replace these files with your application's icons. `bundle.icon` selects
         them for runtime window/Dock icons, Windows executables and macOS bundles.
 
-        The starter defaults to .NET 8. Set `NetWivBlazorTargetFramework` in
-        `Directory.Build.props` to `net9.0` or `net10.0` to select that target
+        New starters default to .NET 10. This project's selected target is in
+        `Directory.Build.props`. Set `NetWivBlazorTargetFramework` to
+        `net8.0`, `net9.0` or `net10.0` to select that target
         and matching Microsoft packages across the desktop, shared UI and
         WebAssembly projects. Install a matching or newer SDK.
         The IDE must also support that SDK. If an installed newer SDK prevents

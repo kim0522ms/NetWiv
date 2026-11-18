@@ -7,11 +7,11 @@ namespace NetWiv.Cli;
 internal static class NewCommand
 {
     private const string TemplateNotice = "\n---\n\nTAURI® is a trademark of The Tauri Programme within the Commons Conservancy.\n\nNetWiv is an independent project. Its framework, plugins and templates are not affiliated with, endorsed by, or officially approved by The Tauri Programme within the Commons Conservancy.\n";
-    private const string Usage = "Usage: netwiv new NAME [-t|--template TEMPLATE] [-m|--manager MANAGER] [-o|--output DIRECTORY] [--identifier ID] [--source NUGET_SOURCE]\n       netwiv new --list\nDefault template: react. Run `netwiv new --list` for all choices.";
+    private const string Usage = "Usage: netwiv new NAME [-t|--template TEMPLATE] [-m|--manager MANAGER] [-o|--output DIRECTORY] [--identifier ID] [--source NUGET_SOURCE] [--framework net8.0|net9.0|net10.0] [--react-version 18|19] [-y|--yes]\n       netwiv new --list\nDefaults: react (React 18), .NET 10. A terminal prompts for unspecified versions; --yes accepts defaults. Run `netwiv new --list` for all templates.";
     // TypeScript starters. React is the base template; the others replace its frontend.
     private static readonly string[] JavaScriptTemplates = ["react", "vue", "svelte", "angular"];
 
-    public static async Task<int> RunAsync(string[] args, TextWriter output, string workingDirectory, CancellationToken token)
+    public static async Task<int> RunAsync(string[] args, TextWriter output, string workingDirectory, CancellationToken token, TextReader? input = null)
     {
         var arguments = new CommandArguments(args);
         if (arguments.TakeFlag("--help", "-h")) { await output.WriteLineAsync(Usage); return 0; }
@@ -29,8 +29,17 @@ internal static class NewCommand
         var outputOption = arguments.TakeOption("--output", "-o");
         var identifierOption = arguments.TakeOption("--identifier");
         var sourceOption = arguments.TakeOption("--source");
+        var frameworkOption = arguments.TakeOption("--framework");
+        var framework = frameworkOption ?? "net10.0";
+        var reactOption = arguments.TakeOption("--react-version");
+        var react = reactOption ?? "18";
+        var yes = arguments.TakeFlag("--yes", "-y");
         var name = arguments.TakePositional() ?? throw new ArgumentException("A project name is required. " + Usage);
         arguments.EnsureEmpty();
+        if (framework is not ("net8.0" or "net9.0" or "net10.0"))
+            throw new ArgumentException($"Unsupported framework '{framework}'. Choose net8.0, net9.0 or net10.0.");
+        if (react is not ("18" or "19") || (reactOption is not null && template != "react"))
+            throw new ArgumentException("--react-version accepts 18 or 19 and requires the react template.");
         if (!JavaScriptTemplates.Contains(template, StringComparer.Ordinal) && !dotnetFrontend)
             throw new ArgumentException($"Unknown template '{template}'. Run `netwiv new --list`.");
         if (dotnetFrontend ? manager != "dotnet" : manager is not ("npm" or "pnpm" or "yarn" or "bun" or "deno"))
@@ -49,6 +58,13 @@ internal static class NewCommand
         if (!File.Exists(Path.Combine(templatePath, ".template.config", "template.json")))
             throw new DirectoryNotFoundException("The React template is missing from this NetWiv CLI installation.");
         token.ThrowIfCancellationRequested();
+        if (input is not null && !yes)
+        {
+            if (template == "react" && reactOption is null)
+                react = await AskVersionAsync(input, output, "React", ["18", "19"], "18", token);
+            if (frameworkOption is null)
+                framework = "net" + await AskVersionAsync(input, output, ".NET", ["8", "9", "10"], "10", token) + ".0";
+        }
         var parent = Path.GetDirectoryName(destination) ?? throw new ArgumentException("Cannot create a project at a filesystem root.");
         Directory.CreateDirectory(parent);
         // A sibling staging directory keeps the final move on the destination volume.
@@ -59,14 +75,15 @@ internal static class NewCommand
             var hive = Path.Combine(staging, "hive");
             var project = Path.Combine(staging, "app");
             if (template == "blazor-hybrid")
-                await BlazorHybridTemplate.CreateAsync(project, name, CliApp.Version, token);
+                await BlazorHybridTemplate.CreateAsync(project, name, CliApp.Version, framework, token);
             else
             {
                 await RunDotnet(["new", "install", templatePath, "--debug:custom-hive", hive], workingDirectory, token);
                 await RunDotnet(["new", "netwiv-react", "--debug:custom-hive", hive, "--name", name, "--output", project,
-                    "--NetWivVersion", CliApp.Version], workingDirectory, token);
-                if (template == "blazor") await ApplyBlazorFrontendAsync(project, token);
+                    "--NetWivVersion", CliApp.Version, "--Framework", framework], workingDirectory, token);
+                if (template == "blazor") await ApplyBlazorFrontendAsync(project, framework, token);
                 else if (template != "react") ApplyFrontend(project, template);
+                else if (react == "19") await ConfigureReact19Async(project, manager, token);
                 ConfigureFrontend(project, template, manager);
             }
             var configPath = Path.Combine(project, "src-netwiv", "netwiv.conf.json");
@@ -114,7 +131,7 @@ internal static class NewCommand
             catch (Exception error) when (error is IOException or UnauthorizedAccessException)
             { await output.WriteLineAsync($"Temporary template cache could not be removed: {staging}"); }
         }
-        await output.WriteLineAsync($"Created {name} in {destination} ({template}, NetWiv {CliApp.Version}).");
+        await output.WriteLineAsync($"Created {name} in {destination} ({template}, {framework}, NetWiv {CliApp.Version}).");
         await output.WriteLineAsync("Next steps:");
         await output.WriteLineAsync($"  cd \"{destination}\"");
         if (source is null) await output.WriteLineAsync("  Add your NetWiv NuGet feed to NuGet.Config if these packages are not on NuGet.org.");
@@ -129,6 +146,52 @@ internal static class NewCommand
         await output.WriteLineAsync("Build: dotnet tool restore && dotnet tool run netwiv -- build --no-bundle (add --aot for NativeAOT)");
         await output.WriteLineAsync("Coding agents: .mcp.json registers `netwiv mcp`; run dotnet tool restore once before the agent starts it.");
         return 0;
+    }
+
+    private static async Task<string> AskVersionAsync(TextReader input, TextWriter output, string name, string[] choices, string fallback, CancellationToken token)
+    {
+        while (true)
+        {
+            await output.WriteAsync($"{name} version ({string.Join('/', choices)}) [{fallback}]: ");
+            await output.FlushAsync(token);
+            // Console.In can read synchronously even through ReadLineAsync.
+            // Keep Ctrl+C responsive while the terminal is waiting for a line.
+            var answer = (await Task.Run(async () => await input.ReadLineAsync(token), token).WaitAsync(token))?.Trim()
+                ?? throw new InvalidOperationException("Input ended before version selection completed; no project was created.");
+            token.ThrowIfCancellationRequested();
+            if (answer.Length == 0) return fallback;
+            if (choices.Contains(answer, StringComparer.Ordinal)) return answer;
+            await output.WriteLineAsync("Choose one of: " + string.Join(", ", choices));
+        }
+    }
+
+    private static async Task ConfigureReact19Async(string project, string manager, CancellationToken token)
+    {
+        var path = Path.Combine(project, "package.json");
+        var package = JsonNode.Parse(await File.ReadAllTextAsync(path, token))!;
+        package["dependencies"]!["react"] = "19.2.8";
+        package["dependencies"]!["react-dom"] = "19.2.8";
+        package["devDependencies"]!["@types/react"] = "19.2.7";
+        package["devDependencies"]!["@types/react-dom"] = "19.2.3";
+        await File.WriteAllTextAsync(path, package.ToJsonString(), token);
+        var readme = Path.Combine(project, "README.md");
+        await File.WriteAllTextAsync(readme, (await File.ReadAllTextAsync(readme, token))
+            .Replace("React 18 +", "React 19 +", StringComparison.Ordinal), token);
+        if (manager != "npm") return;
+        var process = ProcessRunner.StartShell("npm install --package-lock-only --ignore-scripts --no-audit --no-fund", project,
+            new Dictionary<string, string?>(), captureOutput: true);
+        var stdout = process.StandardOutput.ReadToEndAsync(token);
+        var stderr = process.StandardError.ReadToEndAsync(token);
+        try { await Task.WhenAll(stdout, stderr); }
+        catch
+        {
+            await ProcessRunner.StopAsync(process);
+            process.Dispose();
+            throw;
+        }
+        var exitCode = await ProcessRunner.WaitOwnedAsync(process, token);
+        if (exitCode != 0)
+            throw new InvalidOperationException($"React 19 lockfile resolution failed (exit {exitCode}): {await stdout} {await stderr}");
     }
 
     // Registers the project's own CLI as a read-only MCP server for coding agents, so the
@@ -177,11 +240,11 @@ internal static class NewCommand
         File.WriteAllText(Path.Combine(project, "README.md"), $"# NetWiv + {template}\n\nRun `npm ci` and `npm run desktop:dev`. Edit `src-netwiv/Program.cs` for C# commands and `src` for the frontend.\n" + TemplateNotice);
     }
 
-    private static async Task ApplyBlazorFrontendAsync(string project, CancellationToken token)
+    private static async Task ApplyBlazorFrontendAsync(string project, string framework, CancellationToken token)
     {
         ClearReactFrontend(project);
         var frontend = Path.Combine(project, "frontend");
-        await RunDotnet(["new", "blazorwasm", "--no-restore", "--name", "NetWivUi", "--output", frontend], project, token);
+        await RunDotnet(["new", "blazorwasm", "--no-restore", "--name", "NetWivUi", "--output", frontend, "--framework", framework], project, token);
         // Keep only the starter screen: drop the Blazor template's sample pages, navigation and Bootstrap.
         foreach (var sample in new[] { "Pages/Counter.razor", "Pages/Weather.razor", "Layout/NavMenu.razor", "Layout/NavMenu.razor.css", "Layout/MainLayout.razor.css" })
             File.Delete(Path.Combine(frontend, sample));
@@ -196,6 +259,10 @@ internal static class NewCommand
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
             File.Copy(source, destination, overwrite: true);
         }
+        var contractsPath = Path.Combine(project, "contracts", "Contracts.csproj");
+        var contracts = XDocument.Load(contractsPath);
+        contracts.Descendants("TargetFramework").Single().Value = framework;
+        contracts.Save(contractsPath);
         await UseTypedBlazorClientAsync(project, frontend, token);
         CopyDirectory(Path.Combine(AppContext.BaseDirectory, "templates", "frontends", "shared", "vendor"), Path.Combine(frontend, "wwwroot", "vendor"));
         var indexPath = Path.Combine(frontend, "wwwroot", "index.html");

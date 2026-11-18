@@ -8,14 +8,14 @@
     "version": "1.0.22",
     "source": "https://github.com/jedisct1/libsodium/releases/tag/1.0.22-RELEASE",
     "sourceContainer": {
-      "url": "https://static.crates.io/crates/libsodium-sys-stable/libsodium-sys-stable-1.24.0.crate",
-      "sha256": "72b04bf6da2c98b727af37ab62cb505f4d751b975b034a9b9ad491d333b0564e",
-      "prefix": "libsodium-sys-stable-1.24.0"
+      "url": "https://static.crates.io/crates/libsodium-sys-stable/libsodium-sys-stable-1.24.4.crate",
+      "sha256": "c1629ebb2a3debca7ec393e17089df091ebba110e33b6c708cec72034d7a755e",
+      "prefix": "libsodium-sys-stable-1.24.4"
     },
     "windowsArchiveUrl": "https://github.com/jedisct1/libsodium/releases/download/1.0.22-RELEASE/libsodium-1.0.22-msvc.zip",
-    "signatureVerification": "libsodium-sys-stable 1.24.0 minisign public key",
-    "linuxArchiveSha256": "b20a92e7ec25b285eafa349d721a5bb27e3a8ba94c0816630a127883f1d1b3ab",
-    "linuxSignatureSha256": "2162883303fb903068519916871476b192d5cf31d5e412378db8ae05a0c05895",
+    "signatureVerification": "libsodium-sys-stable 1.24.4 minisign public key",
+    "linuxArchiveSha256": "6df69cd35b5f18d8a6f267f3d2510e7b0bf2488e71dea3de4ddf6a1402247a13",
+    "linuxSignatureSha256": "fb91a9bff15515948be6ec8730ec8741aa357eb1a73ee0777e3cd0bd4447a3c3",
     "windowsArchiveSha256": "3e03a726fac4bc09cb61d8f29d658ef7a5eca0811de59082130414f7ca2e4279",
     "windowsSignatureSha256": "3210cf4d985f7b192bb8d5eb2ec7f481e0f47420f144cf1069921f714bfad1d1",
     "licenseSha256": "508a76d186356c0dd807a670ef510964f8724557024796a2c426c6c0e19ab683"

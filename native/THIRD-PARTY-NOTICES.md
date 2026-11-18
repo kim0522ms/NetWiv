@@ -7,7 +7,7 @@ Verbatim license and NOTICE candidates are stored by SHA-256 under
 `native/third-party-licenses/texts`; `manifest.json` maps each package and original filename
 to those bytes and explicitly marks packages for which no candidate was found.
 
-Cargo.lock SHA-256: `f84ef68aa6c544b011eb81335279fa7497cfb049cd7e06abc6467952e0e85fbe`
+Cargo.lock SHA-256: `afd650e8be369c703933009d1155749ce2d3a0454eab4e154b914566ae18040c`
 
 Regenerate this file with `node native/generate-third-party-notices.mjs` after changing
 the native dependency graph.
@@ -65,7 +65,7 @@ the native dependency graph.
 | bytes | 1.12.1 | MIT | https://github.com/tokio-rs/bytes | 1 |
 | cairo-rs | 0.18.5 | MIT | https://github.com/gtk-rs/gtk-rs-core | 2 |
 | cairo-sys-rs | 0.18.2 | MIT | https://github.com/gtk-rs/gtk-rs-core | 1 |
-| cc | 1.4.5 | MIT OR Apache-2.0 | https://github.com/rust-lang/cc-rs | 2 |
+| cc | 1.11.2 | MIT OR Apache-2.0 | https://github.com/rust-lang/cc-rs | 2 |
 | cesu8 | 1.1.0 | Apache-2.0/MIT | https://github.com/emk/cesu8-rs | 1 |
 | cfb | 0.7.3 | MIT | https://github.com/mdsteele/rust-cfb | 1 |
 | cfg_aliases | 0.2.2 | MIT | https://github.com/katharostech/cfg_aliases | 1 |
@@ -155,7 +155,7 @@ the native dependency graph.
 | fiat-crypto | 0.2.9 | MIT OR Apache-2.0 OR BSD-1-Clause | https://github.com/mit-plv/fiat-crypto | 4 |
 | field-offset | 0.3.6 | MIT OR Apache-2.0 | https://github.com/Diggsey/rust-field-offset | 2 |
 | filetime | 0.2.29 | MIT/Apache-2.0 | https://github.com/alexcrichton/filetime | 2 |
-| find-msvc-tools | 0.1.12 | MIT OR Apache-2.0 | https://github.com/rust-lang/cc-rs | 2 |
+| find-msvc-tools | 0.1.15 | MIT OR Apache-2.0 | https://github.com/rust-lang/cc-rs | 2 |
 | fixedbitset | 0.5.7 | MIT OR Apache-2.0 | https://github.com/petgraph/fixedbitset | 2 |
 | flate2 | 1.1.10 | MIT OR Apache-2.0 | https://github.com/rust-lang/flate2-rs | 2 |
 | fnv | 1.0.7 | Apache-2.0 / MIT | https://github.com/servo/rust-fnv | 2 |
@@ -260,7 +260,7 @@ the native dependency graph.
 | libflate_lz77 | 2.3.0 | MIT | https://github.com/sile/libflate | 1 |
 | libloading | 0.7.4 | ISC | https://github.com/nagisa/rust_libloading/ | 1 |
 | libredox | 0.1.23 | MIT | https://gitlab.redox-os.org/redox-os/libredox.git | 1 |
-| libsodium-sys-stable | 1.24.0 | MIT OR Apache-2.0 | https://github.com/jedisct1/libsodium-sys-stable | 3 |
+| libsodium-sys-stable | 1.24.4 | MIT OR Apache-2.0 | https://github.com/jedisct1/libsodium-sys-stable | 3 |
 | linux-raw-sys | 0.12.1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/sunfishcode/linux-raw-sys | 4 |
 | litemap | 0.8.3 | Unicode-3.0 | https://github.com/unicode-org/icu4x | 1 |
 | lock_api | 0.4.14 | MIT OR Apache-2.0 | https://github.com/Amanieu/parking_lot | 2 |
@@ -270,7 +270,7 @@ the native dependency graph.
 | memchr | 2.8.3 | Unlicense OR MIT | https://github.com/BurntSushi/memchr | 3 |
 | memoffset | 0.6.5 | MIT | https://github.com/Gilnaa/memoffset | 1 |
 | memoffset | 0.9.1 | MIT | https://github.com/Gilnaa/memoffset | 1 |
-| minisign-verify | 0.2.5 | MIT | https://github.com/jedisct1/rust-minisign-verify | 1 |
+| minisign-verify | 0.3.0 | MIT | https://github.com/jedisct1/rust-minisign-verify | 1 |
 | miniz_oxide | 0.8.9 | MIT OR Zlib OR Apache-2.0 | https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide | 4 |
 | miniz_oxide | 0.9.1 | MIT OR Zlib OR Apache-2.0 | https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide | 4 |
 | moxcms | 0.8.1 | BSD-3-Clause OR Apache-2.0 | https://github.com/awxkee/moxcms.git | 2 |
@@ -281,6 +281,7 @@ the native dependency graph.
 | new_debug_unreachable | 1.0.6 | MIT | https://github.com/mbrubeck/rust-debug-unreachable | 1 |
 | nix | 0.24.3 | MIT | https://github.com/nix-rust/nix | 1 |
 | nix | 0.29.0 | MIT | https://github.com/nix-rust/nix | 1 |
+| nix | 0.31.4 | MIT | https://github.com/nix-rust/nix | 1 |
 | no_std_io2 | 0.9.4 | Apache-2.0 OR MIT | https://github.com/wcampbell0x2a/no-std-io2 | 2 |
 | nom | 8.0.0 | MIT | https://github.com/rust-bakery/nom | 1 |
 | notify-rust | 4.11.0 | MIT/Apache-2.0 | https://github.com/hoodie/notify-rust | 2 |
@@ -460,7 +461,7 @@ the native dependency graph.
 | tracing-core | 0.1.36 | MIT | https://github.com/tokio-rs/tracing | 1 |
 | tray-icon | 0.25.1 | MIT OR Apache-2.0 | https://github.com/tauri-apps/tray-icon | 3 |
 | tree_magic_mini | 3.2.2 | MIT | https://github.com/mbrubeck/tree_magic/ | 1 |
-| typed-path | 0.12.3 | MIT OR Apache-2.0 | https://github.com/chipsenkbeil/typed-path | 2 |
+| typed-path | 0.13.0 | MIT OR Apache-2.0 | https://github.com/chipsenkbeil/typed-path | 2 |
 | typeid | 1.0.3 | MIT OR Apache-2.0 | https://github.com/dtolnay/typeid | 2 |
 | typenum | 1.20.1 | MIT OR Apache-2.0 | https://github.com/paholg/typenum | 3 |
 | uds_windows | 1.2.1 | MIT | https://github.com/haraldh/rust_uds_windows | 1 |
@@ -473,8 +474,8 @@ the native dependency graph.
 | unicode-normalization | 0.1.25 | MIT OR Apache-2.0 | https://github.com/unicode-rs/unicode-normalization | 3 |
 | unicode-segmentation | 1.13.3 | MIT OR Apache-2.0 | https://github.com/unicode-rs/unicode-segmentation | 3 |
 | universal-hash | 0.5.1 | MIT OR Apache-2.0 | https://github.com/RustCrypto/traits | 2 |
-| ureq | 3.4.2 | MIT OR Apache-2.0 | https://github.com/algesten/ureq | 2 |
-| ureq-proto | 0.6.4 | MIT OR Apache-2.0 | https://github.com/algesten/ureq-proto | 2 |
+| ureq | 3.5.2 | MIT OR Apache-2.0 | https://github.com/algesten/ureq | 2 |
+| ureq-proto | 0.7.1 | MIT OR Apache-2.0 | https://github.com/algesten/ureq-proto | 2 |
 | url | 2.5.8 | MIT OR Apache-2.0 | https://github.com/servo/rust-url | 2 |
 | urlpattern | 0.3.0 | MIT | https://github.com/denoland/rust-urlpattern | 1 |
 | utf8_iter | 1.0.4 | Apache-2.0 OR MIT | https://github.com/hsivonen/utf8_iter | 3 |
@@ -596,7 +597,7 @@ the native dependency graph.
 | zerotrie | 0.2.5 | Unicode-3.0 | https://github.com/unicode-org/icu4x | 1 |
 | zerovec | 0.11.8 | Unicode-3.0 | https://github.com/unicode-org/icu4x | 1 |
 | zerovec-derive | 0.11.6 | Unicode-3.0 | https://github.com/unicode-org/icu4x | 1 |
-| zip | 8.6.0 | MIT | https://github.com/zip-rs/zip2 | 1 |
+| zip | 9.4.1 | MIT | https://github.com/zip-rs/zip2 | 1 |
 | zlib-rs | 0.6.7 | Zlib | https://github.com/trifectatechfoundation/zlib-rs | 1 |
 | zmij | 1.0.23 | MIT | https://github.com/dtolnay/zmij | 1 |
 | zopfli | 0.8.3 | Apache-2.0 | https://github.com/zopfli-rs/zopfli | 1 |

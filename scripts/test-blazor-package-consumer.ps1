@@ -6,7 +6,9 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $repository = Split-Path $PSScriptRoot -Parent
-& $Cli new BlazorExample --template blazor --source $Feed --output $Destination
+$sdkMajor = (& dotnet --version).Split('.')[0]
+if ($LASTEXITCODE -ne 0) { throw 'Could not resolve the test SDK.' }
+& $Cli new BlazorExample --template blazor --source $Feed --output $Destination --framework "net$sdkMajor.0" --yes
 if ($LASTEXITCODE -ne 0) { throw 'Packaged Blazor starter generation failed.' }
 Push-Location $Destination
 try {

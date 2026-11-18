@@ -51,7 +51,8 @@ The CLI's JS/TS starters carry a portable `vendor/netwiv-api` package. Running
 locally, including its private core/plugin implementations. No separate upstream
 frontend dependency or public `@netwiv/api` registry release is required. See [frontend SDK distribution](frontend-api.md#installation-and-migration).
 Use `dotnet tool update` if the CLI is already installed. You still need the
-.NET 8 or later SDK, your frontend toolchain and platform WebView/NativeAOT prerequisites.
+.NET 10 or later SDK for default new projects (or a supporting SDK for an explicit
+`--framework` choice), your frontend toolchain and platform WebView/NativeAOT prerequisites.
 Continue with the repository's
 [package quickstart](https://github.com/kim0522ms/NetWiv/blob/main/docs/integration-quickstart.md).
 

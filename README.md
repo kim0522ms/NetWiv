@@ -135,11 +135,16 @@ and `net10.0` assets with pinned Microsoft component packages for each target.
 See [SDK compatibility](docs/dotnet-compatibility.md)
 for SDK selection, runtime behavior and validation limits.
 
-**Windows prerequisites:** .NET 8 or later SDK, Node.js and WebView2 Runtime.
+New starters default to React 18 and .NET 10. Agents confirm the versions before
+creation; `netwiv new --framework net8.0|net9.0|net10.0` selects the .NET target.
+In a terminal, the CLI asks for unspecified versions; use `--react-version 18|19`
+and `--framework` to specify them, or `--yes` to accept defaults without prompts.
+
+**Windows prerequisites:** .NET 10 or later SDK for the default starter, Node.js and WebView2 Runtime.
 NativeAOT release builds also need Visual Studio C++ Build Tools and Windows SDK.
 On Linux, use GTK3 and WebKitGTK 4.1 in an X11 or Wayland session; see
 the [Linux guide](docs/linux.md) for prerequisites and compositor limits.
-On macOS 12+, use .NET 8 or later and Node.js; WKWebView is provided by the OS.
+On macOS 12+, use .NET 10 or later for the default starter and Node.js; WKWebView is provided by the OS.
 NativeAOT builds additionally require Xcode Command Line Tools. Follow the [macOS guide](docs/macos.md) and the
 [zsh quickstart](docs/integration-quickstart.md#create-the-project).
 

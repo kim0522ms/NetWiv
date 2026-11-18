@@ -7,7 +7,7 @@ optional experimental NativeAOT Hybrid and WebAssembly deployment.
 
 | Frontend | `--template` | Tooling | Screen source |
 | --- | --- | --- | --- |
-| React + TypeScript | `react` (default) | Vite, npm | `src/App.tsx` |
+| React 18 + TypeScript | `react` (default) | Vite, npm | `src/App.tsx` |
 | Vue + TypeScript | `vue` | Vite, npm | `src/App.vue` |
 | Svelte + TypeScript | `svelte` | Vite, npm | `src/App.svelte` |
 | Angular | `angular` | Angular CLI, npm | `src/app.ts` |
@@ -18,6 +18,10 @@ The TypeScript starters accept `--manager npm|pnpm|yarn|bun|deno`; Blazor accept
 only `dotnet`. Default npm projects include lockfiles; other package managers
 create their own lockfiles on first installation. No starter requires Rust or
 Cargo.
+
+All starters default to `net10.0`; select `net8.0`, `net9.0` or `net10.0` with
+`--framework`. Coding agents confirm the frontend and .NET versions before
+creation; see [bootstrap version choices](coding-agents.md#bootstrap-version-choices).
 
 All starters include NetWiv artwork in `src-netwiv/icons`: PNG for runtime and
 Linux icons, ICO for the Windows executable, and ICNS for the macOS app bundle.

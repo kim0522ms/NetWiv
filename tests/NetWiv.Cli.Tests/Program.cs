@@ -80,6 +80,8 @@ var tests = new (string Name, Func<Task> Run)[]
     ("new project creates a personalized package-only React application", NewProjectTests.CreateReact),
     ("application icons embed configured bytes and respect overlays and overrides", ApplicationIconTests.BuildSelection),
     ("new project defaults keep matching SDK and CLI versions", NewProjectTests.Defaults),
+    ("new project interactive versions honor choices defaults explicit options and EOF", NewProjectTests.InteractiveVersions),
+    ("new project React 19 resolves matching lockfiles and preserves destinations on failure", NewProjectTests.React19Lockfile),
     ("new project covers every starter template and manager choice", NewProjectTests.TemplateMatrix),
     ("new Blazor Hybrid project defaults to managed hosting and gates experimental AOT", NewProjectTests.BlazorHybrid),
     ("new project rejects invalid arguments before writing files", NewProjectTests.InvalidInput),
@@ -450,6 +452,7 @@ static Task InitPackages() => Temp(async root =>
     Equal(0, await CliApp.RunAsync(["init", "--ci", "--directory", root, "--window-title", title], output, error, Directory.GetCurrentDirectory()), error.ToString());
     var dir = Path.Combine(root, "src-netwiv");
     var project = File.ReadAllText(Path.Combine(dir, "NetWiv.App.csproj"));
+    Equal("WinExe", System.Xml.Linq.XDocument.Parse(project).Descendants("OutputType").Single().Value);
     True(project.Contains($"<NetWivVersion>{CliApp.Version}</NetWivVersion>", StringComparison.Ordinal));
     True(project.Contains("NetWiv.Platform.Desktop", StringComparison.Ordinal) && project.Contains("NetWiv.Generators", StringComparison.Ordinal));
     True(!project.Contains("ProjectReference", StringComparison.Ordinal) && !project.Contains("__", StringComparison.Ordinal));

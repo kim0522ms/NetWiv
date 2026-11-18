@@ -91,6 +91,9 @@ internal static class McpTests
             }
             var initialized = await Request("initialize", new { protocolVersion = "2025-06-18", capabilities = new { }, clientInfo = new { name = "netwiv-test", version = "1" } });
             Check(initialized.GetProperty("serverInfo").GetProperty("name").GetString() == "netwiv", "stdio handshake identifies the server");
+            var instructions = initialized.GetProperty("instructions").GetString()!;
+            Check(instructions.Contains("React 18", StringComparison.Ordinal) && instructions.Contains(".NET 10", StringComparison.Ordinal) &&
+                instructions.Contains("ask the user", StringComparison.Ordinal), "bootstrap version choices must reach the MCP client");
             await process.StandardInput.WriteLineAsync("{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}");
             var tools = await Request("tools/list", new { });
             Check(tools.GetProperty("tools").GetArrayLength() == 5, "stdio lists all tools");

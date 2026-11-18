@@ -71,9 +71,10 @@ The target framework selects the adapter; runtime roll-forward alone does not
 upgrade its Blazor implementation. Use a matching or newer SDK to build an app.
 Packing NetWiv itself requires SDK 10 or later to include all three assets.
 
-The sample and generated `blazor-hybrid` starter default to `net8.0`. Set
-`NetWivBlazorTargetFramework` in their `Directory.Build.props` to `net9.0` or
-`net10.0`, or pass `-p:NetWivBlazorTargetFramework=net10.0` to `dotnet`.
+The repository sample defaults to `net8.0`; new `blazor-hybrid` projects default
+to `net10.0`. Select another starter target with `netwiv new --framework`.
+Set `NetWivBlazorTargetFramework` in `Directory.Build.props` to `net8.0`,
+`net9.0` or `net10.0`, or pass that property to `dotnet`.
 This keeps the desktop, shared Razor UI, binding-generation build and
 WebAssembly project on the same framework and Microsoft package versions.
 

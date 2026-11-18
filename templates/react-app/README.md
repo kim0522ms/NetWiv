@@ -1,9 +1,13 @@
 # NetWiv + React
 
-A NetWiv desktop app with a React 19 + TypeScript + Vite 8 frontend and a C#
-backend. It needs the .NET 8 SDK or later and Node.js 20.19+ or 22.12+. Windows
+A NetWiv desktop app with a React 18 + TypeScript + Vite 8 frontend and a C#
+backend. New projects default to .NET 10; use an SDK that supports the target in
+`src-netwiv/ReactExample.csproj`, and Node.js 20.19+ or 22.12+. Windows
 uses the WebView2 Runtime, Linux uses GTK3 and WebKitGTK 4.1, and macOS 12 or
 later uses the system WKWebView and AppKit. Rust is not required.
+
+The desktop project uses `OutputType=WinExe` to avoid a separate Windows console
+window. Change it to `Exe` only when the application needs a console.
 
 `@netwiv/api` installs from the bundled `vendor/netwiv-api` folder, so no npm
 registry release is needed. Core modules are `@netwiv/api/*` and plugin modules
@@ -22,6 +26,13 @@ can also create this project from the template package:
 dotnet new install /path/to/NetWiv.Templates.nupkg
 dotnet new netwiv-react -n MyApp --NetWivVersion 0.1.0-dev
 ```
+
+Pass `--Framework net8.0` or `--Framework net9.0` to select an earlier backend
+target. With `netwiv new`, use lowercase `--framework`.
+Coding agents ask for the frontend and .NET version choices before creating a
+project, offering React 18 and .NET 10 as defaults.
+`netwiv new` also asks in a terminal. Use `--react-version 18|19` and
+`--framework` to specify versions, or `--yes` to accept defaults without prompts.
 
 ## Run it
 

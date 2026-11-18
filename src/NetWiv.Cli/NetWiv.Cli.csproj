@@ -6,6 +6,8 @@
     <RootNamespace>NetWiv.Cli</RootNamespace>
     <IsAotCompatible>true</IsAotCompatible>
     <PublishAot Condition="'$(RuntimeIdentifier)' != ''">true</PublishAot>
+    <!-- Keep the AOT compiler and linked runtime on the same patched servicing release. -->
+    <RuntimeFrameworkVersion Condition="'$(PublishAot)' == 'true' and '$(RuntimeFrameworkVersion)' == ''">8.0.34</RuntimeFrameworkVersion>
     <StripSymbols>true</StripSymbols>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>netwiv</ToolCommandName>

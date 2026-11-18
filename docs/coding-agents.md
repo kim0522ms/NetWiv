@@ -13,6 +13,46 @@ file and terminal tools and the `netwiv` CLI.
 
 ## New projects
 
+### Bootstrap version choices
+
+Before creating a project, ask the user which frontend and .NET versions to
+use. Offer React 18 and .NET 10 as the defaults, and wait for the answer before
+creating files. Reuse an explicit choice already given in the conversation;
+do not ask again. Preserve the versions of an existing project unless the user
+requests a migration. Ask about React only when the chosen frontend is React.
+
+In a terminal, `netwiv new` asks for unspecified React and .NET versions.
+Enter selects React 18.3.1 and `net10.0`. Explicit version options skip their
+questions; `--yes` skips all questions. Redirected stdin or stdout also skips
+questions and uses explicit options or defaults, so scripts never wait for input.
+EOF or Ctrl+C during version selection stops creation before writing files.
+The agent asks the user before invoking the CLI and passes the selected versions:
+`--react-version 18|19` for React and
+`--framework net8.0|net9.0|net10.0` to apply the selected .NET target across
+the starter's projects; use an SDK that supports that target. Framework
+packages retain their .NET 8 compatibility baseline. .NET 10 is the default
+for new applications, including those opting into NativeAOT; this does not
+guarantee AOT compatibility for every application dependency.
+
+For example, after the user selects React 18 and .NET 10:
+
+```sh
+netwiv new MyApp --template react --react-version 18 --framework net10.0 --source /path/to/packages
+```
+
+For React 19, pass `--react-version 19`. The CLI selects matching runtime and
+type packages. For npm, resolving the updated lockfile requires npm and access
+to its registry or an existing cache; package lifecycle scripts are disabled:
+
+```sh
+netwiv new MyApp --template react --react-version 19 --framework net10.0 --source /path/to/packages
+```
+
+Keep `react` and `react-dom` on matching versions and update the lockfile using
+the selected package manager. Run the generated frontend build after a version
+change. Other React versions require their own dependency and application checks;
+the default starter's validation does not establish their compatibility.
+
 `netwiv new` writes `.mcp.json` at the project root:
 
 ```json

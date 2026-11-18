@@ -1,6 +1,6 @@
 # .NET SDK and runtime compatibility
 
-Core managed packages and default desktop applications target `net8.0`.
+Core managed packages target `net8.0`; new desktop applications default to `net10.0`.
 The optional `NetWiv.BlazorHybrid` package instead includes `net8.0`, `net9.0`
 and `net10.0` assets paired with matching Microsoft component package majors.
 The same packages can be referenced by `net8.0`, `net9.0` and `net10.0`
@@ -13,19 +13,28 @@ package set for .NET 8/9 applications.
 - Install .NET SDK 8.0.406 or later, including SDK 9 or 10. `global.json` selects
   the newest installed compatible stable SDK. CI pins each SDK in a separate
   installation so child CLI processes cannot accidentally use a newer SDK.
+  New default starters require SDK 10 or later. With SDK 8 or 9, explicitly
+  select a supported application target with `netwiv new --framework`.
 - Open/build `NetWiv.sln`. Generated applications also use `.sln`; SDK 8 cannot
   read `.slnx` files. C# 12 is the source-language baseline.
 - Core libraries and the CLI target `net8.0`; the source generator remains
   `netstandard2.0`. No separate package set is needed for each .NET version.
+  CLI NativeAOT publishing selects runtime/compiler patch `8.0.34` by default
+  through `RuntimeFrameworkVersion`. This keeps older SDKs from selecting
+  vulnerable compiler/runtime packs; NuGet auditing and warnings-as-errors remain
+  enabled. See [the .NET security advisory](https://github.com/advisories/GHSA-p3jp-9v83-76w9).
 - The CLI and generated managed desktop apps use `RollForward=Major`. They use
-  .NET 8 when installed and can run on .NET 9/10 when .NET 8 is absent. Existing
+  their target runtime when installed and can run on newer major runtimes when
+  that runtime is absent. The CLI targets .NET 8; default new apps target .NET 10. Existing
   custom apps control their own target and runtime roll-forward policy.
-- A generated desktop backend defaults to .NET 8. To publish with the .NET 9 or
-  10 NativeAOT compiler, change its `TargetFramework` to `net9.0` or `net10.0`.
-  The `blazor` WebAssembly starter uses the selected SDK's template target.
-  The separate `blazor-hybrid` starter defaults to .NET 8. Set
-  `NetWivBlazorTargetFramework` in its `Directory.Build.props` to `net9.0` or
-  `net10.0` to select matching packages across its shared UI and hosts.
+- A generated desktop backend defaults to .NET 10, including NativeAOT publishing.
+  Use `netwiv new --framework net8.0|net9.0|net10.0` to select another target.
+  Blazor WebAssembly and Hybrid starters use that target across their projects.
+  NetWiv bundles the standalone Blazor WebAssembly starter. A newer SDK can
+  generate an older target even if it does not install that target's Microsoft
+  project template.
+  In an existing Hybrid project, set `NetWivBlazorTargetFramework` in its
+  `Directory.Build.props` to select matching packages across its shared UI and hosts.
   Managed and experimental AOT Hybrid have selected physical Windows and macOS
   native checks on all three targets and Linux WSLg X11/Wayland checks on .NET 9/10. See
   [Hybrid dependency and validation limits](blazor-hybrid.md).
@@ -61,8 +70,8 @@ runtime major is visible. A mixed installation or an ambient runtime-policy
 override fails the check.
 
 Each job installs and runs the packaged CLI, publishes the generated React
-solution via `netwiv build --framework-dependent`, and executes its `net8.0`
-apphost through the WebView/IPC smoke flow.
+solution via `netwiv build --framework-dependent`, and executes the apphost for
+its explicitly selected framework through the WebView/IPC smoke flow.
 The .NET 8 baseline jobs then publish and execute the default self-contained
 managed output. Its runtime configuration must include the bundled framework;
 framework-dependent output must request an installed framework. Both modes

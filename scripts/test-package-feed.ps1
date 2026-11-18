@@ -58,7 +58,7 @@ try {
         $cli = Join-Path $workspace ('tools/netwiv' + $(if ($IsWindows) { '.exe' } else { '' }))
         $reportedVersion = & $cli --version
         if ($LASTEXITCODE -ne 0 -or $reportedVersion -ne "netwiv-cli $Version") { throw "Incorrect CLI version: $reportedVersion" }
-        & $cli new PackageExample --template react --source $Feed
+        & $cli new PackageExample --template react --source $Feed --framework $TargetFramework --yes
         if ($LASTEXITCODE -ne 0) { throw 'CLI template creation from the installed package failed.' }
         @'
 internal static class ManagedRuntimeProbe
@@ -169,7 +169,7 @@ internal sealed class PackageOptions { public string Value { get; set; } = ""; }
         else { & $executable --no-window-smoke }
         if ($LASTEXITCODE -ne 0) { throw 'Package-only native startup failed.' }
 
-        & $cli new HybridExample --template blazor-hybrid --source $Feed
+        & $cli new HybridExample --template blazor-hybrid --source $Feed --framework $TargetFramework --yes
         if ($LASTEXITCODE -ne 0) { throw 'Packaged Hybrid starter generation failed.' }
         $sharedPath = Join-Path $workspace 'HybridExample/Shared/Shared.csproj'
         $shared = [xml](Get-Content $sharedPath -Raw)

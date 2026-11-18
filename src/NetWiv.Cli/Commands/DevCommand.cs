@@ -10,12 +10,15 @@ internal static class DevCommand
 {
     public static async Task<int> RunAsync(string[] args, TextWriter output, string workingDirectory, CancellationToken cancellationToken)
     {
-        if (args.Contains("--help")) { await output.WriteLineAsync("Usage: netwiv dev [--release] [--no-watch] [--aot] [--blazor-mode Hybrid|WebAssembly] [--experimental-blazor-aot] [--no-dev-server] [--port PORT] [-t TARGET] [-c CONFIG] [-f FEATURES] [-- APP_ARGS]"); return 0; }
+        if (args.Contains("--help")) { await output.WriteLineAsync("Usage: netwiv dev [--release] [--no-watch] [--hot-reload] [--aot] [--blazor-mode Hybrid|WebAssembly] [--experimental-blazor-aot] [--no-dev-server] [--port PORT] [-t TARGET] [-c CONFIG] [-f FEATURES] [-- APP_ARGS]"); return 0; }
         var arguments = new CommandArguments(args);
         var appArguments = arguments.TakeAfterSeparator();
         var release = arguments.TakeFlag("--release");
         var noWatch = arguments.TakeFlag("--no-watch");
+        var hotReload = arguments.TakeFlag("--hot-reload");
         var aot = arguments.TakeFlag("--aot");
+        if (hotReload && (release || noWatch || aot))
+            throw new ArgumentException("--hot-reload requires watched managed Debug development and cannot be used with --release, --no-watch, or --aot.");
         var blazorMode = CommandConfig.BlazorMode(arguments.TakeOption("--blazor-mode"));
         var experimentalBlazorAot = arguments.TakeFlag("--experimental-blazor-aot");
         CommandConfig.ValidateBlazorAot(aot, blazorMode, experimentalBlazorAot);
@@ -98,8 +101,9 @@ internal static class DevCommand
                 var processArgs = new List<string>();
                 if (!noWatch)
                 {
-                    processArgs.AddRange(["watch", "--no-hot-reload", "--project", project, "run"]);
+                    processArgs.AddRange(["watch", hotReload ? "--non-interactive" : "--no-hot-reload", "--project", project, "run"]);
                     environment = With(environment, "DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER", "1");
+                    if (hotReload) environment = With(environment, "DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH", "1");
                 }
                 else processArgs.AddRange(["run", "--project", project]);
                 processArgs.AddRange(["-c", release ? "Release" : "Debug", "--property:NetWivFeatures=\"" + string.Join("%3B", features) + "\""]);

@@ -4,6 +4,17 @@ using NetWiv.Cli;
 
 internal static class DevReloadTests
 {
+    internal static async Task HotReloadValidation()
+    {
+        foreach (var incompatible in new[] { "--release", "--no-watch", "--aot" })
+        {
+            using var error = new StringWriter();
+            var exit = await CliApp.RunAsync(["dev", "--hot-reload", incompatible], TextWriter.Null, error, Path.GetTempPath());
+            if (exit != 1 || !error.ToString().Contains("requires watched managed Debug development", StringComparison.Ordinal))
+                throw new Exception($"Expected --hot-reload with {incompatible} to fail before loading the project: {error}");
+        }
+    }
+
     private sealed record ChildRun(int Pid, long StartTimeTicks)
     {
         public static ChildRun Parse(string line)

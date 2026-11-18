@@ -14,7 +14,7 @@ internal static class FrontendDevTests
         var reactFile = Path.Combine(consumer, "src", "App.tsx");
         var source = await File.ReadAllTextAsync(sourceFile);
         var react = await File.ReadAllTextAsync(reactFile);
-        var record = Path.Combine(consumer, "dev-restart-" + Guid.NewGuid().ToString("N") + ".log");
+        var record = Path.Combine(consumer, "dev-probe-" + Guid.NewGuid().ToString("N") + ".log");
         var previous = Environment.GetEnvironmentVariable("NETWIV_DEV_PROBE_FILE");
         Environment.SetEnvironmentVariable("NETWIV_DEV_PROBE_FILE", record);
         var modified = source.Replace(".InvokeHandler(\"greet\")", ".InvokeHandler(\"greet\").InvokeHandler(\"dev_version\").InvokeHandler(\"dev_probe\")", StringComparison.Ordinal) + """
@@ -30,14 +30,20 @@ internal static class FrontendDevTests
             """;
         var probe = """
 
-            let lastDevProbe;
-            const devProbeTimer = setInterval(async () => {
-              try {
-                const value = await (commands.dev_version_v2 ?? commands.dev_version)();
-                if (value !== lastDevProbe) { await commands.dev_probe({ value }); lastDevProbe = value; }
-              } catch { /* A document or command can disappear during the restart under test. */ }
-            }, 250);
-            if (import.meta.hot) import.meta.hot.dispose(() => clearInterval(devProbeTimer));
+              const [devState] = useState(() => crypto.randomUUID());
+              useEffect(() => {
+                let lastDevProbe;
+                const timer = setInterval(async () => {
+                  try {
+                    const value = await (commands.dev_version_v2 ?? commands.dev_version)();
+                    if (value === lastDevProbe) return;
+                    await commands.dev_probe({ value: [value, performance.timeOrigin, devState].join('|') });
+                    lastDevProbe = value;
+                  } catch { /* A document or command can disappear during the restart under test. */ }
+                }, 250);
+                return () => clearInterval(timer);
+              }, [devState]);
+
             """;
         using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(150));
         Task<int>? session = null;
@@ -45,12 +51,23 @@ internal static class FrontendDevTests
         try
         {
             await File.WriteAllTextAsync(sourceFile, modified);
-            await File.WriteAllTextAsync(reactFile, react + probe);
-            session = CliApp.RunAsync(["dev", "--", "--dev"], Console.Out, Console.Error, consumer, stop.Token);
-            pids.Add(await WaitForProbe("before"));
-            await File.WriteAllTextAsync(sourceFile, modified.Replace("\"dev_version\"", "\"dev_version_v2\"", StringComparison.Ordinal)
-                .Replace("\"before|\"", "\"after|\"", StringComparison.Ordinal));
-            pids.Add(await WaitForProbe("after"));
+            const string formHandler = "  async function greet(event: FormEvent) {";
+            await File.WriteAllTextAsync(reactFile, react.Replace(formHandler, probe + "\n" + formHandler, StringComparison.Ordinal));
+            session = CliApp.RunAsync(["dev", "--hot-reload", "--", "--dev"], Console.Out, Console.Error, consumer, stop.Token);
+            var before = await WaitForProbe("before");
+            pids.Add(before.Pid);
+
+            var bodyEdit = modified.Replace("\"before|\"", "\"hot|\"", StringComparison.Ordinal);
+            await File.WriteAllTextAsync(sourceFile, bodyEdit);
+            var hot = await WaitForProbe("hot");
+            if (before != hot)
+                throw new Exception($"A command body edit replaced the app process, WebView document or React state: {before} → {hot}.");
+            Console.WriteLine("PASS React dev: C# command returned the edited result with the same PID, WebView document and React state");
+
+            await File.WriteAllTextAsync(sourceFile, bodyEdit.Replace("\"dev_version\"", "\"dev_version_v2\"", StringComparison.Ordinal)
+                .Replace("string Version()", "string VersionV2()", StringComparison.Ordinal)
+                .Replace("\"hot|\"", "\"after|\"", StringComparison.Ordinal));
+            pids.Add((await WaitForProbe("after")).Pid);
             if (pids[0] == pids[1]) throw new Exception("C# changed without restarting the native app.");
             await WaitStopped(pids[0]);
             foreach (var file in new[] { "commands.d.ts", "commands.factory.js" })
@@ -76,13 +93,17 @@ internal static class FrontendDevTests
             File.Delete(record);
         }
 
-        async Task<int> WaitForProbe(string phase)
+        async Task<(int Pid, string Document, string ReactState)> WaitForProbe(string phase)
         {
             while (!stop.IsCancellationRequested)
             {
                 // The app process appends probe results while this loop reads them.
                 var line = ConcurrentFile.ReadCompleteLines(record).FirstOrDefault(line => line.StartsWith(phase + "|", StringComparison.Ordinal));
-                if (line is not null) return int.Parse(line.Split('|')[1]);
+                if (line is not null)
+                {
+                    var parts = line.Split('|');
+                    return (int.Parse(parts[1]), parts[2], parts[3]);
+                }
                 if (session!.IsCompleted) throw new Exception("CLI ended before the " + phase + " IPC result: " + await session);
                 await Task.Delay(100, stop.Token);
             }

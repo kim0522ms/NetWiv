@@ -303,8 +303,8 @@ const html = (title, entry) => `<!doctype html>
 
 const reactPackage = JSON.parse(await readFile(path.join(reactApp, 'package.json'), 'utf8'));
 reactPackage.scripts.build = 'npm run bindings && tsc --noEmit && vite build';
-reactPackage.dependencies = { ...api, react: '19.2.8', 'react-dom': '19.2.8' };
-reactPackage.devDependencies = { '@types/react': '19.2.7', '@types/react-dom': '19.2.3', '@vitejs/plugin-react': '6.1.1', ...typescript, ...vite };
+reactPackage.dependencies = { ...api, react: '18.3.1', 'react-dom': '18.3.1' };
+reactPackage.devDependencies = { '@types/react': '18.3.31', '@types/react-dom': '18.3.7', '@vitejs/plugin-react': '6.1.1', ...typescript, ...vite };
 await rm(path.join(reactApp, 'src/App.jsx'), { force: true });
 await rm(path.join(reactApp, 'src/main.jsx'), { force: true });
 await save(reactApp, {
@@ -630,7 +630,9 @@ await save(path.join(root, 'angular'), {
       'desktop:build': 'dotnet tool restore && dotnet tool run netwiv -- build --no-bundle',
     },
     dependencies: { ...api, '@angular/common': '21.2.25', '@angular/compiler': '21.2.25', '@angular/core': '21.2.25', '@angular/forms': '21.2.25', '@angular/platform-browser': '21.2.25', rxjs: '7.8.2', tslib: '2.8.1' },
-    devDependencies: { '@angular/build': '21.2.28', '@angular/cli': '21.2.28', '@angular/compiler-cli': '21.2.25', typescript: '5.9.3' },
+    devDependencies: { '@angular/build': '21.2.29', '@angular/cli': '21.2.29', '@angular/compiler-cli': '21.2.25', typescript: '5.9.3' },
+    // The Angular tooling still resolves minimatch 10 through transitive dependencies.
+    overrides: { minimatch: '11.0.1' },
   }, null, 2),
   'angular.json': JSON.stringify({
     $schema: './node_modules/@angular/cli/lib/config/schema.json', version: 1,
@@ -763,14 +765,12 @@ export class App implements AfterViewInit {
 });
 
 // ---------------------------------------------------------------------------
-// Blazor: `netwiv new --template blazor` runs `dotnet new blazorwasm`, removes its sample
-// pages and copies this overlay over the project root (see NewCommand.cs). The screen calls
-// C# through NetWivCommands, a typed client the app build generates from its [Command]
-// methods into frontend/Generated; the types both sides share live in contracts/.
+// Blazor: `netwiv new --template blazor` copies this starter to the project root.
+// Leave its hand-maintained WebAssembly project and boot files in place. The screen
+// uses NetWivCommands generated from the backend [Command] methods and the shared contracts.
 // The window opens index.html, so Home answers that route as well as "/".
 
 const blazorRoute = 'NetWivCommands.GreetAsync → Commands.Greet';
-await rm(path.join(root, 'blazor'), { recursive: true, force: true });
 await save(path.join(root, 'blazor'), {
   'contracts/Contracts.csproj': `<Project Sdk="Microsoft.NET.Sdk" TreatAsLocalProperty="AssemblyName">
   <!-- Types the desktop app and the Blazor frontend share. Both reference this project. -->

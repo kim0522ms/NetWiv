@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "cargoLockSha256": "f84ef68aa6c544b011eb81335279fa7497cfb049cd7e06abc6467952e0e85fbe",
-  "packageCount": 591,
+  "cargoLockSha256": "afd650e8be369c703933009d1155749ce2d3a0454eab4e154b914566ae18040c",
+  "packageCount": 592,
   "uniqueTextCount": 320,
   "packages": [
     {
@@ -1171,7 +1171,7 @@
     },
     {
       "name": "cc",
-      "version": "1.4.5",
+      "version": "1.11.2",
       "license": "MIT OR Apache-2.0",
       "licenseFile": null,
       "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -3133,7 +3133,7 @@
     },
     {
       "name": "find-msvc-tools",
-      "version": "0.1.12",
+      "version": "0.1.15",
       "license": "MIT OR Apache-2.0",
       "licenseFile": null,
       "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -5429,7 +5429,7 @@
     },
     {
       "name": "libsodium-sys-stable",
-      "version": "1.24.0",
+      "version": "1.24.4",
       "license": "MIT OR Apache-2.0",
       "licenseFile": null,
       "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -5662,7 +5662,7 @@
     },
     {
       "name": "minisign-verify",
-      "version": "0.2.5",
+      "version": "0.3.0",
       "license": "MIT",
       "licenseFile": null,
       "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -5919,6 +5919,23 @@
     {
       "name": "nix",
       "version": "0.29.0",
+      "license": "MIT",
+      "licenseFile": null,
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "repository": "https://github.com/nix-rust/nix",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "66e3ee1fa7f909ad3c612d556f2a0cdabcd809ad6e66f3b0605015ac64841b70",
+          "bytes": 1097,
+          "origin": "crate-package"
+        }
+      ],
+      "status": "collected-from-crate-package"
+    },
+    {
+      "name": "nix",
+      "version": "0.31.4",
       "license": "MIT",
       "licenseFile": null,
       "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -9801,7 +9818,7 @@
     },
     {
       "name": "typed-path",
-      "version": "0.12.3",
+      "version": "0.13.0",
       "license": "MIT OR Apache-2.0",
       "licenseFile": null,
       "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -10178,7 +10195,7 @@
     },
     {
       "name": "ureq",
-      "version": "3.4.2",
+      "version": "3.5.2",
       "license": "MIT OR Apache-2.0",
       "licenseFile": null,
       "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -10201,7 +10218,7 @@
     },
     {
       "name": "ureq-proto",
-      "version": "0.6.4",
+      "version": "0.7.1",
       "license": "MIT OR Apache-2.0",
       "licenseFile": null,
       "source": "registry+https://github.com/rust-lang/crates.io-index",
@@ -12925,7 +12942,7 @@
     },
     {
       "name": "zip",
-      "version": "8.6.0",
+      "version": "9.4.1",
       "license": "MIT",
       "licenseFile": null,
       "source": "registry+https://github.com/rust-lang/crates.io-index",

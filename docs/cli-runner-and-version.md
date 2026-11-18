@@ -23,8 +23,12 @@ permissive RunnerConfig parser; malformed known fields fail configuration.
 
 Runner arguments follow the command verb and precede generated arguments.
 `build` and AOT dev use `publish`; managed dev uses `run`. Watched managed dev
-uses `watch --no-hot-reload --project <project> run`, followed by runner arguments. Strings with
-spaces remain single arguments. Configuration reload re-resolves the runner,
+uses `watch --no-hot-reload --project <project> run` by default. In watched
+managed Debug development, `netwiv dev --hot-reload` uses
+`watch --non-interactive --project <project> run` so unsupported edits can
+restart the app without prompting. NetWiv suppresses the .NET watch browser
+refresh for Hot Reload sessions. Both forms are followed by runner arguments.
+Strings with spaces remain single arguments. Configuration reload re-resolves the runner,
 and CLI overrides retain precedence. The managed/AOT development child and
 build runner exit codes are propagated. Argument/cwd tests launch a real child
 through all three CLI paths, including the NativeAOT CLI on Windows/Linux. The macOS CLI suite also exercises

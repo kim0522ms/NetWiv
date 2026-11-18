@@ -100,6 +100,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("development child exit checks tolerate exit during process inspection", DevReloadTests.ProcessExitRace),
     ("development watcher discards transient build files but preserves source changes", DevReloadTests.TransientFiles),
     ("development reload retries configuration files that are still being saved", DevReloadTests.SavingRetry),
+    ("development Hot Reload rejects Release, no-watch and NativeAOT modes", DevReloadTests.HotReloadValidation),
     ("direct-root config keeps project root", DirectRoot),
     ("nested new config is discovered", NestedConfig),
     ("new and legacy bases are ambiguous", AmbiguousConfig),

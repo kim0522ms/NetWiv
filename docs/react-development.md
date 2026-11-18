@@ -25,6 +25,17 @@ builds regenerate `src/generated/commands.js` and `commands.d.ts`; Vite observes
 these changes. Backend changes restart the application and its managed state.
 Use Ctrl+C in the starting terminal to stop the development session.
 
+To enable managed Debug Hot Reload after restoring the local CLI, run:
+
+```sh
+dotnet tool run netwiv -- dev --hot-reload -- --dev
+```
+
+Supported C# edits, such as a command method body change, take effect on the
+next call without restarting the app or reloading its WebView. Edits that
+`dotnet watch` cannot apply in place trigger a rebuild and restart. Changes to
+NetWiv configuration or permissions also restart the app.
+
 For separate terminals, run `npm run dev` and `npm run desktop:dev:backend`.
 Those processes are then owned by their respective terminals.
 
@@ -46,8 +57,10 @@ dotnet run --project tests/NetWiv.Cli.Tests -c Release --disable-build-servers -
 ```
 
 This test temporarily adds C#/React probes, starts the CLI development path,
-checks a native WebView response, renames the C# command, checks regenerated
-JS/TS and a response from a new application PID, then cancels the session. It
+checks a native WebView response, edits the C# command body, and verifies the
+new response with the same application PID, WebView document and React state.
+It then renames the C# method and command, checks regenerated JS/TS and a
+response from a new application PID, and cancels the session. It
 requires both application PIDs to stop and Vite's port to become available.
 The original source files are restored and temporary IPC probe results are deleted.
 Generated files are refreshed by the next normal build. The cancellation token
@@ -58,9 +71,12 @@ through `scripts/run-linux-smoke-desktop.sh` with `x11` or `wayland`; the native
 app inherits that display. Do not run two nested desktop wrappers concurrently.
 
 On macOS, run in a logged-in desktop session with the matching `osx-arm64`
-Wry assets. Keep the generated synchronous C# entry point on the process
-main thread. The frontend-binding harness above currently hardcodes Windows/Linux
-RIDs, so its development restart scenario does not establish macOS acceptance.
+Wry assets. Pass the consumer's physical path (use `pwd -P` from its root),
+since the .NET watcher can miss managed edits through symlinked paths. Keep
+the generated synchronous C# entry point on the process main thread. The
+frontend-binding harness above currently hardcodes Windows/Linux RIDs; for
+the development test on macOS, use a React starter from a matching local
+package feed and run `npm ci` in the generated project first.
 The separate release package-consumer harness checks managed React execution
 and windowless NativeAOT consumers on macOS arm64. Source-linked
 WKWebView smoke is another separate integration check; see

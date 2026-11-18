@@ -244,35 +244,20 @@ internal static class NewCommand
     {
         ClearReactFrontend(project);
         var frontend = Path.Combine(project, "frontend");
-        await RunDotnet(["new", "blazorwasm", "--no-restore", "--name", "NetWivUi", "--output", frontend, "--framework", framework], project, token);
-        // Keep only the starter screen: drop the Blazor template's sample pages, navigation and Bootstrap.
-        foreach (var sample in new[] { "Pages/Counter.razor", "Pages/Weather.razor", "Layout/NavMenu.razor", "Layout/NavMenu.razor.css", "Layout/MainLayout.razor.css" })
-            File.Delete(Path.Combine(frontend, sample));
-        // .NET 8 keeps Bootstrap in wwwroot/css/bootstrap; .NET 9 and later in wwwroot/lib.
-        foreach (var sample in new[] { "wwwroot/sample-data", "wwwroot/lib", "wwwroot/css/bootstrap" })
-            if (Directory.Exists(Path.Combine(frontend, sample))) Directory.Delete(Path.Combine(frontend, sample), recursive: true);
-        // The overlay holds frontend/, contracts/ and src-netwiv/ files relative to the project root.
-        var overlay = Path.Combine(AppContext.BaseDirectory, "templates", "frontends", "blazor");
-        foreach (var source in Directory.EnumerateFiles(overlay, "*", SearchOption.AllDirectories))
+        // A single installed SDK does not necessarily ship templates for older targets.
+        CopyDirectory(Path.Combine(AppContext.BaseDirectory, "templates", "frontends", "blazor"), project);
+        foreach (var file in new[] { "contracts/Contracts.csproj", "frontend/NetWivUi.csproj" })
         {
-            var destination = Path.Combine(project, Path.GetRelativePath(overlay, source));
-            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            File.Copy(source, destination, overwrite: true);
+            var path = Path.Combine(project, file);
+            var document = XDocument.Load(path);
+            document.Descendants("TargetFramework").Single().Value = framework;
+            document.Save(path);
         }
-        var contractsPath = Path.Combine(project, "contracts", "Contracts.csproj");
-        var contracts = XDocument.Load(contractsPath);
-        contracts.Descendants("TargetFramework").Single().Value = framework;
-        contracts.Save(contractsPath);
         await UseTypedBlazorClientAsync(project, frontend, token);
         CopyDirectory(Path.Combine(AppContext.BaseDirectory, "templates", "frontends", "shared", "vendor"), Path.Combine(frontend, "wwwroot", "vendor"));
-        var indexPath = Path.Combine(frontend, "wwwroot", "index.html");
-        // Bootstrap is gone, and with no scoped .razor.css files left there is no NetWivUi.styles.css bundle.
-        var index = File.ReadAllText(indexPath).Replace("<base href=\"/\" />", "<base href=\"./\" />", StringComparison.Ordinal);
-        index = string.Join('\n', index.Split('\n').Where(line => !line.Contains("bootstrap", StringComparison.OrdinalIgnoreCase) && !line.Contains("NetWivUi.styles.css", StringComparison.Ordinal)));
-        File.WriteAllText(indexPath, index);
         Directory.Delete(Path.Combine(project, "scripts"), recursive: true);
         Directory.Delete(Path.Combine(project, "vendor"), recursive: true);
-        File.WriteAllText(Path.Combine(project, "README.md"), "# NetWiv + Blazor\n\nThe frontend is a Blazor WebAssembly project targeting the selected .NET SDK in `frontend/`. Run `dotnet tool restore` then `dotnet tool run netwiv -- dev -- --dev`. The desktop backend is in `src-netwiv/`.\n\n" +
+        File.WriteAllText(Path.Combine(project, "README.md"), "# NetWiv + Blazor\n\nThe frontend is a Blazor WebAssembly project in `frontend/`. It uses the same .NET target as the desktop backend in `src-netwiv/`. Run `dotnet tool restore` then `dotnet tool run netwiv -- dev -- --dev`.\n\n" +
             "Types the app and the frontend share live in `contracts/`. Each app build generates `frontend/obj/netwiv/<Configuration>/NetWivCommands.g.cs`, a typed C# client for the `[Command]` methods whose parameters and results use those shared types; inject `NetWivCommands` and call, for example, `GreetAsync(name)`.\n" + TemplateNotice);
     }
 
@@ -302,23 +287,6 @@ internal static class NewCommand
         backend.Save(backendPath);
 
         var frontendProject = Path.Combine(frontend, "NetWivUi.csproj");
-        var ui = XDocument.Load(frontendProject);
-        // NuGet's restore graph does not honor ProjectReference.GlobalPropertiesToRemove.
-        // Keep desktop global publish flags from changing the browser project at restore time.
-        ui.Root!.SetAttributeValue("TreatAsLocalProperty", "AssemblyName;PublishAot;PublishSingleFile;UseAppHost");
-        ui.Root.Add(new XElement("PropertyGroup",
-            new XElement("AssemblyName", "NetWivUi"),
-            new XElement("PublishAot", "false"),
-            new XElement("PublishSingleFile", "false"),
-            new XElement("UseAppHost", "false")));
-        ui.Root!.Add(new XElement("Import", new XAttribute("Project", "NetWiv.targets")));
-        ui.Save(frontendProject);
-        var startupPath = Path.Combine(frontend, "Program.cs");
-        var startup = File.ReadAllText(startupPath);
-        const string run = "await builder.Build().RunAsync();";
-        if (!startup.Contains(run, StringComparison.Ordinal)) throw new InvalidOperationException("The Blazor template's Program.cs has an unexpected shape.");
-        File.WriteAllText(startupPath, startup.Replace(run, "builder.Services.AddScoped<NetWiv.Generated.NetWivCommands>();\n\n" + run, StringComparison.Ordinal));
-
         var solution = Directory.EnumerateFiles(project, "*.sln").Single();
         await RunDotnet(["sln", solution, "add", Path.Combine(project, "contracts", "Contracts.csproj"), frontendProject], project, token);
     }

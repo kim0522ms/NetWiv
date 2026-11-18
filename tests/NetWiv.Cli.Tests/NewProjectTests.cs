@@ -296,9 +296,11 @@ internal static class NewProjectTests
             var backend = Path.Combine(app, "src-netwiv/Example.csproj");
             var browserProperties = await NetWiv.Build.Execution.ProcessRunner.RunAsync(new("dotnet",
                 ["msbuild", "frontend/NetWivUi.csproj", "-nologo", "-p:PublishAot=true", "-p:PublishSingleFile=true", "-p:UseAppHost=true", "-p:AssemblyName=DesktopOnly",
-                    "-getProperty:AssemblyName,PublishAot,PublishSingleFile,UseAppHost"], app, CaptureOutput: true));
+                    "-getProperty:AssemblyName,PublishAot,PublishSingleFile,UseAppHost,BlazorFrameworkVersion"], app, CaptureOutput: true));
             Check(browserProperties.ExitCode == 0, browserProperties.StandardError + browserProperties.StandardOutput);
             var browserValues = JsonNode.Parse(browserProperties.StandardOutput)!["Properties"]!;
+            Check(browserValues["BlazorFrameworkVersion"]!.GetValue<string>().StartsWith("8.0.", StringComparison.Ordinal),
+                "The selected .NET 8 browser target must use .NET 8 Blazor packages regardless of the installed SDK");
             Check(browserValues["AssemblyName"]!.GetValue<string>() == "NetWivUi" &&
                 browserValues["PublishAot"]!.GetValue<string>() == "false" && browserValues["PublishSingleFile"]!.GetValue<string>() == "false" &&
                 browserValues["UseAppHost"]!.GetValue<string>() == "false",
@@ -583,7 +585,7 @@ internal static class NewProjectTests
                         !backendProject.Contains("NetWivFrontendBindingsDirectory", StringComparison.Ordinal) && backendProject.Contains("../contracts/Contracts.csproj", StringComparison.Ordinal), "Blazor app does not export the C# client");
                     Check(File.Exists(Path.Combine(destination, "Directory.Build.props")) && !File.Exists(Path.Combine(destination, "src-netwiv/Directory.Build.props")), "Bindings-only build isolation missing");
                     Check(File.ReadAllText(Path.Combine(destination, "frontend/NetWivUi.csproj")).Contains("NetWiv.targets", StringComparison.Ordinal), "Frontend does not import NetWiv.targets");
-                    Check(File.ReadAllText(Path.Combine(destination, "frontend/Program.cs")).Contains("AddScoped<NetWiv.Generated.NetWivCommands>()", StringComparison.Ordinal), "Typed client is not registered");
+                    Check(File.ReadAllText(Path.Combine(destination, "frontend/Program.cs")).Contains("AddScoped<NetWivCommands>()", StringComparison.Ordinal), "Typed client is not registered");
                     Check(File.ReadAllText(Path.Combine(destination, "frontend/Pages/Home.razor")).Contains("Commands.GreetAsync(Name)", StringComparison.Ordinal), "Blazor screen does not use the typed client");
                 }
                 else

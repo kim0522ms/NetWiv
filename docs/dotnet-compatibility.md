@@ -30,6 +30,9 @@ package set for .NET 8/9 applications.
 - A generated desktop backend defaults to .NET 10, including NativeAOT publishing.
   Use `netwiv new --framework net8.0|net9.0|net10.0` to select another target.
   Blazor WebAssembly and Hybrid starters use that target across their projects.
+  NetWiv bundles the standalone Blazor WebAssembly starter. A newer SDK can
+  generate an older target even if it does not install that target's Microsoft
+  project template.
   In an existing Hybrid project, set `NetWivBlazorTargetFramework` in its
   `Directory.Build.props` to select matching packages across its shared UI and hosts.
   Managed and experimental AOT Hybrid have selected physical Windows and macOS

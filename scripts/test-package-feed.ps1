@@ -8,6 +8,33 @@ $ErrorActionPreference = 'Stop'
 $repository = Split-Path $PSScriptRoot -Parent
 $workspace = $null
 $previousPackages = $env:NUGET_PACKAGES
+$validationFailed = $false
+
+function Invoke-WindowsManagedSmoke([string]$Executable) {
+    # WinExe apphosts can return control to PowerShell before the app exits.
+    $start = [System.Diagnostics.ProcessStartInfo]::new($Executable)
+    $start.ArgumentList.Add('--smoke-test')
+    $start.UseShellExecute = $false
+    $start.RedirectStandardOutput = $true
+    $start.RedirectStandardError = $true
+    $process = [System.Diagnostics.Process]::Start($start)
+    try {
+        $stdout = $process.StandardOutput.ReadToEndAsync()
+        $stderr = $process.StandardError.ReadToEndAsync()
+        if (!$process.WaitForExit(120000)) {
+            $process.Kill($true)
+            if (!$process.WaitForExit(10000)) { throw 'Generated Windows smoke app did not stop after termination.' }
+            throw 'Generated Windows smoke app timed out.'
+        }
+        if (![System.Threading.Tasks.Task]::WaitAll(@($stdout, $stderr), 10000)) {
+            throw 'Generated Windows smoke app did not close its output streams.'
+        }
+        if ($stderr.Result) { Write-Host $stderr.Result }
+        return @{ ExitCode = $process.ExitCode; Output = ($stdout.Result -split '\r?\n') }
+    }
+    finally { $process.Dispose() }
+}
+
 try {
     $Feed = [IO.Path]::GetFullPath($Feed)
     # SDK selection alone does not isolate the runtimes used by net8.0 apphosts.
@@ -100,14 +127,26 @@ internal static class ManagedRuntimeProbe
                 Copy-Item -LiteralPath (Split-Path $managed) -Destination $executionDirectory -Recurse
                 $managed = Join-Path $executionDirectory (Split-Path $managed -Leaf)
             }
-            if ($IsLinux) {
-                $managedOutput = @(& xvfb-run -a bash (Join-Path $repository 'scripts/run-linux-smoke-desktop.sh') $managed x11 --smoke-test)
+            if ($IsWindows) {
+                $result = Invoke-WindowsManagedSmoke $managed
+                $managedOutput = $result.Output
+                $managedExit = $result.ExitCode
             }
-            else { $managedOutput = @(& $managed --smoke-test) }
-            $managedExit = $LASTEXITCODE
+            else {
+                if ($IsLinux) {
+                    $managedOutput = @(& xvfb-run -a bash (Join-Path $repository 'scripts/run-linux-smoke-desktop.sh') $managed x11 --smoke-test)
+                }
+                else { $managedOutput = @(& $managed --smoke-test) }
+                $managedExit = $LASTEXITCODE
+            }
             $managedOutput | Write-Output
+            $passedReactSmoke = if ($IsWindows) {
+                # Windows apphosts can encode the arrow separators with the active console code page.
+                $managedOutput -cmatch '^PASS: React form \S+ generated C# \S+ JSON$'
+            }
+            else { $managedOutput -contains 'PASS: React form → generated C# → JSON' }
             if ($managedExit -ne 0 -or !($managedOutput -contains "PASS managed runtime $major") -or
-                !($managedOutput -contains 'PASS: React form → generated C# → JSON')) {
+                !$passedReactSmoke) {
                 throw "Generated $mode managed application smoke failed."
             }
             Write-Output "PASS managed ${mode}: GUI/IPC"
@@ -237,7 +276,17 @@ internal sealed class PackageOptions { public string Value { get; set; } = ""; }
     finally { Pop-Location }
     Write-Output "PASS ${TargetFramework}: packaged CLI, generated managed GUI/IPC, configuration binding and package-only NativeAOT startup"
 }
+catch {
+    $validationFailed = $true
+    throw
+}
 finally {
     $env:NUGET_PACKAGES = $previousPackages
-    if ($workspace) { Remove-Item -LiteralPath $workspace -Recurse -Force }
+    if ($workspace) {
+        try { Remove-Item -LiteralPath $workspace -Recurse -Force }
+        catch {
+            if (!$validationFailed) { throw }
+            Write-Warning "Could not clean up the temporary package workspace: $($_.Exception.Message)"
+        }
+    }
 }

@@ -107,7 +107,7 @@ internal static class MacOsTests
             await Run("/usr/bin/codesign", ["--verify", "--strict", Path.Combine(app, "Contents/MacOS/helper")], root);
             await NativeBundler.BundleAsync(config, BuildTarget.Resolve(null), publish, "dmg", true, TextWriter.Null, CancellationToken.None);
             var dmg = Directory.GetFiles(Path.Combine(publish, "bundle/dmg"), "*.dmg").Single();
-            await Run("/usr/bin/hdiutil", ["verify", dmg], root);
+            await VerifyDmgAsync(dmg, root);
             File.WriteAllText(Path.Combine(root, "entitlements.plist"), """<?xml version="1.0"?><plist version="1.0"><dict/></plist>""");
             config.Root["bundle"]!["macOS"] = new JsonObject { ["entitlements"] = "entitlements.plist" };
             config.Root["bundle"]!["icon"] = new JsonArray();
@@ -122,6 +122,25 @@ internal static class MacOsTests
             await ThrowsAsync<InvalidOperationException>(() => NativeBundler.BuildMacAppAsync(config, publish, binary, true, CancellationToken.None));
         }
         finally { Directory.Delete(root, true); }
+    }
+
+    private static async Task VerifyDmgAsync(string dmg, string workingDirectory)
+    {
+        const int maxAttempts = 4;
+        for (var attempt = 1; ; attempt++)
+        {
+            var result = await ProcessRunner.RunAsync(new ProcessSpec(
+                "/usr/bin/hdiutil", ["verify", dmg], workingDirectory, CaptureOutput: true));
+            if (result.ExitCode == 0) return;
+
+            // DiskImages can briefly refuse the image immediately after create returns.
+            if (attempt == maxAttempts || !result.StandardError.Contains(
+                "hdiutil: verify failed - Resource temporarily unavailable", StringComparison.Ordinal))
+                throw new Exception($"/usr/bin/hdiutil verify (exit {result.ExitCode}): {result.StandardError}");
+
+            Console.WriteLine($"hdiutil verify reported a busy resource (attempt {attempt}/{maxAttempts}); retrying.");
+            await Task.Delay(TimeSpan.FromSeconds(attempt));
+        }
     }
 
     private static string? Entry(XDocument document, string key) => document.Root!.Element("dict")!.Elements("key").Single(element => element.Value == key).ElementsAfterSelf().First().Value;
